@@ -16,21 +16,30 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
+    const [isMasterAdmin, setIsMasterAdmin] = useState(() => {
+        return localStorage.getItem("admin_session") === "true";
+    });
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
             setUser(currentUser);
             setLoading(false);
+            if (currentUser?.email === "admin@discography.ai") {
+                localStorage.setItem("admin_session", "true");
+                setIsMasterAdmin(true);
+            }
         });
 
         return () => unsubscribe();
     }, []);
 
     const logout = async () => {
+        localStorage.removeItem("admin_session");
+        setIsMasterAdmin(false);
         await firebaseSignOut(auth);
     };
 
-    const isAdmin = user?.email === "admin@discography.ai";
+    const isAdmin = isMasterAdmin || user?.email === "admin@discography.ai";
 
     return (
         <AuthContext.Provider value={{ user, isAdmin, loading, logout }}>

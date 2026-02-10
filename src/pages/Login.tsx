@@ -34,7 +34,8 @@ export default function Login() {
         try {
             // Master Bypass for Admin
             if (email === "admin@discography.ai" && password === "154188914") {
-                navigate("/admin");
+                localStorage.setItem("admin_session", "true");
+                window.location.href = "/admin";
                 return;
             }
 
