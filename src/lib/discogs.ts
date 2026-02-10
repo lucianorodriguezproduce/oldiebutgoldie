@@ -1,18 +1,13 @@
-const DISCOGS_BASE_URL = "https://api.discogs.com";
-const TOKEN = import.meta.env.VITE_DISCOGS_TOKEN;
+const DISCOGS_BASE_URL = "/api/proxy";
 
 async function fetchFromDiscogs(endpoint: string, params: Record<string, string> = {}) {
-    const url = new URL(`${DISCOGS_BASE_URL}${endpoint}`);
-    url.searchParams.append("token", TOKEN);
+    const url = new URL(window.location.origin + DISCOGS_BASE_URL);
+    url.searchParams.append("path", endpoint);
     for (const [key, value] of Object.entries(params)) {
         url.searchParams.append(key, value);
     }
 
-    const response = await fetch(url.toString(), {
-        headers: {
-            "User-Agent": "DiscogsAppWeb/1.0",
-        },
-    });
+    const response = await fetch(url.toString());
 
     if (!response.ok) {
         throw new Error(`Discogs API error: ${response.statusText}`);
