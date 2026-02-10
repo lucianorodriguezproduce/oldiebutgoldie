@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -21,7 +21,7 @@ export default function Login() {
     const [error, setError] = useState<string | null>(null);
     const navigate = useNavigate();
 
-    const handleAuth = async (e: React.FormEvent) => {
+    const handleAuth = async (e: FormEvent) => {
         e.preventDefault();
         setLoading(true);
         setError(null);
