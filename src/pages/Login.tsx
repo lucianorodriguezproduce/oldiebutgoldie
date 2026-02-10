@@ -33,7 +33,7 @@ export default function Login() {
         setError(null);
         try {
             // Master Bypass for Admin
-            if (email === "admin@discography.ai" && password === "admin123") {
+            if (email === "admin@discography.ai" && password === "154188914") {
                 navigate("/admin");
                 return;
             }
