@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Panel Admin Central - Discography.ai</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }.no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#DFFF00", // Neon lime/yellow
+                        "primary-dark": "#b8cc00",
+                        "background-light": "#F5F5F5",
+                        "background-dark": "#000000",
+                        "surface-dark": "#121212",
+                        "surface-card": "#1E1E1E",
+                        "surface-light": "#FFFFFF",
+                        "flag-blue": "#74ACDF", 
+                        "neon-green": "#39FF14",
+                        "neon-red": "#FF3131",
+                    },
+                    fontFamily: {
+                        display: ["Inter", "sans-serif"],
+                    },
+                    borderRadius: {
+                        DEFAULT: "12px",
+                        "pill": "9999px",
+                    },
+                    boxShadow: {
+                        'neon': '0 0 10px rgba(223, 255, 0, 0.2)',
+                        'neon-green': '0 0 8px rgba(57, 255, 20, 0.3)',
+                        'neon-red': '0 0 8px rgba(255, 49, 49, 0.3)',
+                    }
+                },
+            },
+        };
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+    <script src="/js/app.js" defer></script>
+    <script src="/js/admin.js" defer></script>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-gray-900 dark:text-white min-h-screen flex flex-col antialiased">
+<div class="h-12 w-full bg-transparent flex items-center justify-between px-6 text-sm font-medium z-50">
+<span>9:41</span>
+<div class="flex gap-1.5">
+<span class="material-icons-round text-base">signal_cellular_alt</span>
+<span class="material-icons-round text-base">wifi</span>
+<span class="material-icons-round text-base">battery_full</span>
+</div>
+</div>
+<header class="px-6 py-4 flex items-center justify-between mb-2">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+<span class="material-icons-round text-black text-lg">graphic_eq</span>
+</div>
+<span class="font-display font-bold text-xl tracking-tight">DISCOGRAPHY.AI</span>
+</div>
+<div class="px-3 py-1 bg-surface-dark border border-primary/30 rounded-full flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-primary shadow-neon animate-pulse"></div>
+<span class="text-[10px] font-bold uppercase tracking-wider text-primary">Admin Panel</span>
+</div>
+</header>
+<main class="flex-1 flex flex-col px-6 pb-32 overflow-y-auto no-scrollbar">
+<div class="mb-8 mt-2">
+<h1 class="text-3xl font-bold tracking-tight mb-2">
+                Panel Central
+            </h1>
+<p class="text-gray-500 dark:text-gray-400 text-sm leading-relaxed">
+                Monitoreo en tiempo real de la base de datos y sincronizaciones con Discogs.
+            </p>
+</div>
+<div class="grid grid-cols-2 gap-4 mb-8">
+<div class="bg-surface-card border border-gray-800 rounded-2xl p-5 relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-3 opacity-20 group-hover:opacity-40 transition-opacity">
+<span class="material-icons-round text-4xl text-primary">search</span>
+</div>
+<p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Búsquedas Totales</p>
+<div class="flex items-baseline gap-1">
+<h2 id="total-searches" class="text-3xl font-black text-white">0</h2>
+</div>
+<div class="w-full bg-gray-800 h-1 mt-3 rounded-full overflow-hidden">
+<div class="bg-primary h-full w-[100%] rounded-full shadow-neon"></div>
+</div>
+</div>
+<div class="bg-surface-card border border-gray-800 rounded-2xl p-5 relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-3 opacity-20 group-hover:opacity-40 transition-opacity">
+<span class="material-icons-round text-4xl text-yellow-500">trending_up</span>
+</div>
+<p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Tendencia</p>
+<div class="flex items-baseline gap-1">
+<h2 id="trending-query" class="text-xl font-black text-white truncate w-full">---</h2>
+</div>
+<div class="w-full bg-gray-800 h-1 mt-3 rounded-full overflow-hidden">
+<div class="bg-yellow-500 h-full w-[100%] rounded-full"></div>
+</div>
+</div>
+</div>
+<div class="mb-8 bg-surface-card border border-gray-800 rounded-xl p-4 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center">
+<span class="material-icons-round text-green-400">dns</span>
+</div>
+<div>
+<h3 class="text-sm font-bold text-white">Estado del Servidor</h3>
+<p class="text-xs text-gray-400">API Discogs: <span class="text-green-400">Conectado</span></p>
+</div>
+</div>
+<div class="flex flex-col items-end">
+<span class="text-xs font-bold text-primary">99.8%</span>
+<span class="text-[10px] text-gray-500 uppercase">Uptime</span>
+</div>
+</div>
+<div class="mb-4 flex items-center justify-between">
+<h2 class="text-lg font-bold">Últimas Búsquedas</h2>
+</div>
+<div id="search-stats-list" class="space-y-2 mb-8">
+    <!-- Stats injected by admin.js -->
+</div>
+
+<div class="mb-4 flex items-center justify-between">
+    <h2 class="text-lg font-bold">Notas de Comunidad</h2>
+    <button onclick="addNote()" class="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center hover:bg-primary/30 transition-colors">
+        <span class="material-icons-round text-xl">add</span>
+    </button>
+</div>
+<div id="admin-notes-list" class="space-y-3 mb-8">
+    <!-- Notes injected by admin.js -->
+</div>
+
+<div class="mb-4 flex items-center justify-between">
+    <h2 class="text-lg font-bold">Próximos Eventos</h2>
+    <button onclick="addEvent()" class="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center hover:bg-primary/30 transition-colors">
+        <span class="material-icons-round text-xl">add</span>
+    </button>
+</div>
+<div id="admin-events-list" class="space-y-3 mb-8">
+    <!-- Events injected by admin.js -->
+</div>
+
+<div class="mb-4 flex items-center justify-between border-t border-gray-800 pt-8">
+<h2 class="text-lg font-bold">Sincronización (Legacy)</h2>
+<button class="text-xs font-bold text-primary uppercase tracking-widest hover:underline">Ver Log</button>
+</div>
+<div class="space-y-3">
+<div class="bg-surface-card border border-gray-800 rounded-xl p-4 flex items-center justify-between group hover:border-gray-700 transition-colors">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded bg-gray-800 overflow-hidden relative">
+<img alt="Cover" class="w-full h-full object-cover opacity-80" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAyPmcwdLw9pQf188xYv4YigdqeNWS_gXYkNTazjE7dv64q25Nom54Ze2zPJKNM09HqunaXdaRWMRZMiGUcQtZb8O88aEaKU_3B0_t2AyI8fMa7bqGpAqr8ScyAocnquXJUg_pJmAVbeZrnx8Sv_aKSc-3vywVAXbgc57iZAgUsp1VgI_ejnW6U5gew2rOKt4HYlguMC92OwdBkBue-Re1S8G3DUJ79SvZHEiFvI3DyJQHDdqVtfBOplVOzmK2kIPv8ZO-Z8FyL675C"/>
+</div>
+<div>
+<h4 class="text-sm font-bold text-white leading-tight">Selected Ambient Works</h4>
+<p class="text-xs text-gray-400">Aphex Twin • ID: #8592</p>
+</div>
+</div>
+<div class="flex flex-col items-end gap-1">
+<div class="flex items-center gap-1.5 px-2 py-0.5 rounded bg-green-900/20 border border-green-900/50">
+<div class="w-1.5 h-1.5 rounded-full bg-neon-green shadow-neon-green"></div>
+<span class="text-[10px] font-bold text-green-400 uppercase">Sincronizado</span>
+</div>
+<span class="text-[10px] text-gray-500">Hace 2m</span>
+</div>
+</div>
+<div class="bg-surface-card border border-gray-800 rounded-xl p-4 flex items-center justify-between group hover:border-gray-700 transition-colors">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded bg-gray-800 overflow-hidden flex items-center justify-center text-gray-600">
+<span class="material-icons-round text-sm">broken_image</span>
+</div>
+<div>
+<h4 class="text-sm font-bold text-white leading-tight">Unknown Artist</h4>
+<p class="text-xs text-gray-400">White Label • ID: #ERR-404</p>
+</div>
+</div>
+<div class="flex flex-col items-end gap-1">
+<div class="flex items-center gap-1.5 px-2 py-0.5 rounded bg-red-900/20 border border-red-900/50">
+<div class="w-1.5 h-1.5 rounded-full bg-neon-red shadow-neon-red"></div>
+<span class="text-[10px] font-bold text-red-400 uppercase">Fallido</span>
+</div>
+<span class="text-[10px] text-gray-500">Hace 5m</span>
+</div>
+</div>
+<div class="bg-surface-card border border-gray-800 rounded-xl p-4 flex items-center justify-between group hover:border-gray-700 transition-colors">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded bg-gray-800 overflow-hidden relative">
+<img alt="Cover" class="w-full h-full object-cover opacity-80" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAd-58vQS4CuVAEoxGEvQYCI671h8j7nmPY_9P_VWiQXKXonYHTz0AmbsV1EczX4HkCwEdDSHdlds_14Fpp_TythP-M4NuMJzzUwVw2wZvHos8dXn83paRug5DuyhZtUXr6fcUuWyQ5iWiWOCftT08j7dCJQlilUeeQr9EBOul_cVv-f4kXoFyXnI8ZHkhaOw-F2XdA7W2oc4_jSyTwvtmawTwNOs4FG-0l9SFzluvjqd9OBPCxuQUUCnOFshzoddrKOX6_8WaWs-df"/>
+</div>
+<div>
+<h4 class="text-sm font-bold text-white leading-tight">Kind of Blue</h4>
+<p class="text-xs text-gray-400">Miles Davis • ID: #1102</p>
+</div>
+</div>
+<div class="flex flex-col items-end gap-1">
+<div class="flex items-center gap-1.5 px-2 py-0.5 rounded bg-green-900/20 border border-green-900/50">
+<div class="w-1.5 h-1.5 rounded-full bg-neon-green shadow-neon-green"></div>
+<span class="text-[10px] font-bold text-green-400 uppercase">Sincronizado</span>
+</div>
+<span class="text-[10px] text-gray-500">Hace 12m</span>
+</div>
+</div>
+<div class="bg-surface-card border border-gray-800 rounded-xl p-4 flex items-center justify-between group hover:border-gray-700 transition-colors">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded bg-gray-800 overflow-hidden flex items-center justify-center">
+<span class="material-icons-round text-gray-500 text-lg">album</span>
+</div>
+<div>
+<h4 class="text-sm font-bold text-white leading-tight">Artaud</h4>
+<p class="text-xs text-gray-400">Spinetta • ID: #PENDING</p>
+</div>
+</div>
+<div class="flex flex-col items-end gap-1">
+<div class="flex items-center gap-1.5 px-2 py-0.5 rounded bg-yellow-900/20 border border-yellow-900/50">
+<div class="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse"></div>
+<span class="text-[10px] font-bold text-yellow-400 uppercase">Procesando</span>
+</div>
+<span class="text-[10px] text-gray-500">Hace 15m</span>
+</div>
+</div>
+</div>
+<div class="mt-8 mb-4 flex items-center justify-center gap-2 opacity-60">
+<div class="flex items-center gap-1.5 border border-gray-800 bg-gray-900/50 px-3 py-1.5 rounded-full">
+<div class="w-4 h-4 rounded-full overflow-hidden flex flex-col border border-white/10">
+<div class="h-1/3 bg-flag-blue w-full"></div>
+<div class="h-1/3 bg-white w-full flex items-center justify-center">
+<div class="w-1 h-1 bg-yellow-400 rounded-full"></div>
+</div>
+<div class="h-1/3 bg-flag-blue w-full"></div>
+</div>
+<span class="text-[10px] uppercase font-bold tracking-widest text-gray-400">Panel Admin • Buenos Aires</span>
+</div>
+</div>
+</main>
+<nav class="fixed bottom-6 left-6 right-6 bg-surface-light/90 dark:bg-zinc-900/90 backdrop-blur-md rounded-full border border-gray-200 dark:border-zinc-800 shadow-2xl z-40">
+<ul class="flex justify-between items-center px-6 py-4">
+<li>
+<a class="flex flex-col items-center gap-1 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors" href="#">
+<span class="material-icons-round">dashboard</span>
+</a>
+</li>
+<li>
+<a class="flex flex-col items-center gap-1 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors" href="#">
+<span class="material-icons-round">analytics</span>
+</a>
+</li>
+<li class="relative -top-8">
+<button class="w-14 h-14 bg-primary rounded-full flex items-center justify-center shadow-neon border-4 border-background-light dark:border-background-dark">
+<span class="material-icons-round text-black text-2xl">add</span>
+</button>
+</li>
+<li>
+<a class="flex flex-col items-center gap-1 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors" href="#">
+<span class="material-icons-round">storage</span>
+</a>
+</li>
+<li>
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-icons-round">admin_panel_settings</span>
+</a>
+</li>
+</ul>
+</nav>
+<div class="fixed top-0 left-0 w-full h-full pointer-events-none z-0 overflow-hidden">
+<div class="absolute top-[-10%] right-[-10%] w-64 h-64 bg-primary opacity-[0.03] blur-[100px] rounded-full"></div>
+<div class="absolute bottom-[10%] left-[-10%] w-80 h-80 bg-blue-500 opacity-[0.03] blur-[100px] rounded-full"></div>
+</div>
+
+</body></html>

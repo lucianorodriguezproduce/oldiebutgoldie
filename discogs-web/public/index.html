@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Acceso y Registro</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&amp;display=swap"
+        rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#DFFF00", // Neon lime/yellow
+                        "background-light": "#F5F5F5",
+                        "background-dark": "#000000",
+                        "surface-dark": "#121212",
+                        "surface-light": "#FFFFFF",
+                        "flag-blue": "#74ACDF", // Argentine flag blue
+                    },
+                    fontFamily: {
+                        display: ["Inter", "sans-serif"],
+                    },
+                    borderRadius: {
+                        DEFAULT: "12px",
+                        "pill": "9999px",
+                    },
+                    boxShadow: {
+                        'neon': '0 0 15px rgba(223, 255, 0, 0.3)',
+                    },
+                    backgroundImage: {
+                        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+                    }
+                },
+            },
+        };
+    </script>
+    <style>
+        body {
+            min-height: max(844px, 100dvh);
+        }
+    </style>
+    <style>
+        body {
+            min-height: max(884px, 100dvh);
+        }
+    </style>
+    <script src="/js/app.js" defer></script>
+</head>
+
+<body class="bg-background-dark text-white min-h-screen flex flex-col antialiased relative overflow-hidden">
+    <div class="fixed top-0 left-0 w-full h-full pointer-events-none z-0">
+        <div
+            class="absolute top-[-20%] right-[-30%] w-[500px] h-[500px] bg-primary opacity-[0.05] blur-[120px] rounded-full">
+        </div>
+        <div
+            class="absolute bottom-[-10%] left-[-20%] w-[400px] h-[400px] bg-blue-600 opacity-[0.05] blur-[100px] rounded-full">
+        </div>
+    </div>
+    <div class="h-12 w-full flex items-center justify-between px-6 text-sm font-medium z-50 text-white/80">
+        <span>9:41</span>
+        <div class="flex gap-1.5">
+            <span class="material-icons-round text-base">signal_cellular_alt</span>
+            <span class="material-icons-round text-base">wifi</span>
+            <span class="material-icons-round text-base">battery_full</span>
+        </div>
+    </div>
+    <main class="flex-1 flex flex-col px-8 relative z-10 w-full max-w-md mx-auto justify-between pb-10 pt-12">
+        <div class="flex flex-col items-start gap-8">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center shadow-neon">
+                    <span class="material-icons-round text-black text-xl">graphic_eq</span>
+                </div>
+                <span class="font-display font-bold text-xl tracking-tight text-white">DISCOGRAPHY.AI</span>
+            </div>
+            <div class="space-y-4">
+                <h1 class="text-6xl font-black tracking-tighter leading-[0.9] text-white">
+                    Tu música,<br />
+                    <span class="text-primary">tu archivo.</span>
+                </h1>
+                <p class="text-gray-400 text-lg leading-relaxed max-w-[280px]">
+                    Organizá, descubrí y valorizá tu colección con el poder de la IA.
+                </p>
+            </div>
+        </div>
+        <form id="login-form" class="w-full space-y-4 mb-8">
+            <div class="space-y-2">
+                <label for="email" class="text-xs font-bold uppercase tracking-widest text-gray-500 ml-1">Email</label>
+                <input type="email" id="email" required placeholder="admin@discography.ai"
+                    class="w-full h-14 bg-surface-dark border-gray-800 rounded-pill px-6 text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all">
+            </div>
+            <div class="space-y-2">
+                <label for="password"
+                    class="text-xs font-bold uppercase tracking-widest text-gray-500 ml-1">Contraseña</label>
+                <input type="password" id="password" required placeholder="••••••••"
+                    class="w-full h-14 bg-surface-dark border-gray-800 rounded-pill px-6 text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all">
+            </div>
+
+            <button type="submit"
+                class="w-full h-14 bg-primary hover:bg-lime-400 text-black rounded-pill font-bold text-lg flex items-center justify-center gap-3 transition-transform active:scale-95 shadow-neon mt-6">
+                <span class="material-icons-round">login</span>
+                Ingresar
+            </button>
+
+            <div class="pt-6 flex flex-col items-center gap-4">
+                <p class="text-sm text-gray-500">
+                    ¿No tenés cuenta? <button type="button"
+                        class="text-white font-bold underline decoration-primary decoration-2 underline-offset-4">Registrate
+                        acá</button>
+                </p>
+                <button type="button"
+                    class="text-xs font-medium text-gray-600 uppercase tracking-widest hover:text-white transition-colors">
+                    Recuperar Contraseña
+                </button>
+            </div>
+        </form>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const loginForm = document.getElementById('login-form');
+
+                if (loginForm) {
+                    loginForm.addEventListener('submit', (e) => {
+                        e.preventDefault();
+                        const email = document.getElementById('email').value;
+                        const password = document.getElementById('password').value;
+
+                        if (window.musicApp) {
+                            window.musicApp.login(email, password);
+                        }
+                    });
+                }
+            });
+        </script>
+        <div class="flex flex-col items-center gap-6 mt-auto">
+            <div class="flex items-center gap-2 opacity-80 hover:opacity-100 transition-opacity cursor-default">
+                <div
+                    class="flex items-center gap-2 border border-white/10 bg-white/5 backdrop-blur-md px-4 py-2 rounded-full">
+                    <div class="w-5 h-5 rounded-full overflow-hidden flex flex-col shadow-sm">
+                        <div class="h-1/3 bg-flag-blue w-full"></div>
+                        <div class="h-1/3 bg-white w-full flex items-center justify-center">
+                            <div class="w-1.5 h-1.5 bg-yellow-400 rounded-full shadow-[0_0_2px_rgba(0,0,0,0.2)]"></div>
+                        </div>
+                        <div class="h-1/3 bg-flag-blue w-full"></div>
+                    </div>
+                    <span class="text-[10px] uppercase font-bold tracking-[0.2em] text-gray-300">Hecho en
+                        Argentina</span>
+                </div>
+            </div>
+            <p class="text-[10px] text-gray-700 text-center max-w-[200px]">
+                Integrado oficialmente con la API de Discogs® v2.1
+            </p>
+        </div>
+    </main>
+
+</body>
+
+</html>
