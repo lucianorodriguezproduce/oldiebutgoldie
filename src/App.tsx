@@ -8,6 +8,7 @@ import AlbumDetail from "@/pages/AlbumDetail";
 import Collection from "@/pages/Collection";
 import Editorial from "@/pages/Editorial";
 import Wantlist from "@/pages/Wantlist";
+import Profile from "@/pages/Profile";
 import AdminLayout from "@/components/Admin/AdminLayout";
 import SyncDashboard from "@/pages/Admin/SyncDashboard";
 import TelemetryLogs from "@/components/Admin/TelemetryLogs";
@@ -39,6 +40,7 @@ function AppContent() {
             <Route path="/collection" element={<Collection />} />
             <Route path="/wantlist" element={<Wantlist />} />
             <Route path="/editorial" element={<Editorial />} />
+            <Route path="/profile" element={<Profile />} />
           </Route>
         </Route>
 

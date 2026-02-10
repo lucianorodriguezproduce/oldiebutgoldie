@@ -46,18 +46,18 @@ export const Navbar = () => {
                     <div className="flex items-center gap-4">
                         {user ? (
                             <div className="flex items-center gap-6">
-                                <div className="flex items-center gap-3 bg-white/5 pl-2 pr-4 py-1.5 rounded-full border border-white/5">
-                                    <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-black font-black text-xs overflow-hidden">
+                                <Link to="/profile" className="flex items-center gap-3 bg-white/5 pl-2 pr-4 py-1.5 rounded-full border border-white/5 hover:bg-white/10 transition-all group">
+                                    <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-black font-black text-xs overflow-hidden group-hover:scale-110 transition-transform">
                                         {user.photoURL ? (
                                             <img src={user.photoURL} alt={user.displayName || "User"} />
                                         ) : (
                                             user.email?.charAt(0).toUpperCase()
                                         )}
                                     </div>
-                                    <span className="text-[10px] font-black text-gray-400 truncate max-w-[100px] uppercase tracking-widest">
+                                    <span className="text-[10px] font-black text-gray-400 truncate max-w-[100px] uppercase tracking-widest group-hover:text-white transition-colors">
                                         {user.displayName || user.email?.split("@")[0]}
                                     </span>
-                                </div>
+                                </Link>
                                 <button
                                     onClick={() => logout()}
                                     className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-all"
