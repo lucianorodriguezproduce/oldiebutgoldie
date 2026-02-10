@@ -21,8 +21,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ error: 'Path is required' });
     }
 
+    // Use the provided token directly to ensure it works on Vercel 
+    // without needing manual env configuration in the dashboard
+    const DISCOGS_TOKEN = "cWbHttScejgMgzHxjMXNUcZGRTqjVYhouCGxMMVt";
     const discogsUrl = new URL(`https://api.discogs.com${path}`);
-    discogsUrl.searchParams.append('token', process.env.VITE_DISCOGS_TOKEN || '');
+    discogsUrl.searchParams.append('token', DISCOGS_TOKEN);
 
     Object.entries(params).forEach(([key, value]) => {
         if (Array.isArray(value)) {
@@ -35,14 +38,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
         const response = await fetch(discogsUrl.toString(), {
             headers: {
-                'User-Agent': 'DiscogsAppWeb/1.0',
+                'User-Agent': 'SonicVaultApp/1.0',
+                'Accept': 'application/json',
             },
         });
 
         const data = await response.json();
-        return res.status(response.status).json(data);
+
+        if (!response.ok) {
+            console.error('Discogs API rejected request:', data);
+            return res.status(response.status).json({
+                error: 'Discogs API Error',
+                details: data,
+                status: response.status
+            });
+        }
+
+        return res.status(200).json(data);
     } catch (error) {
-        console.error('Proxy error:', error);
-        return res.status(500).json({ error: 'Failed to fetch from Discogs' });
+        console.error('Proxy connection error:', error);
+        return res.status(500).json({ error: 'Failed to connect to Discogs' });
     }
 }
