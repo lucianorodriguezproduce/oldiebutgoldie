@@ -10,4 +10,5 @@
 - **Option A:** `ipapi.co` (Free tier: 1000 requests/day).
 - **Option B:** `ip-api.com` (Free for non-commercial, no API key).
 - **Option C:** Browser `navigator.geolocation` (Requires user permission - less ideal for telemetry).
-- **Verdict:** Use `ipapi.co` for silent telemetry on initial load/critical actions.
+- **Verdict:** Use `https://ipapi.co/json/` (Supports HTTPS).
+- **Repair (2026-02-10):** `ip-api.com` (free) does not support HTTPS, causing Mixed Content errors in production. Switched to `ipapi.co` + `ipwho.is` fallback.
