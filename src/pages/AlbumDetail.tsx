@@ -7,9 +7,14 @@ import { discogsService } from "@/lib/discogs";
 import { motion } from "framer-motion";
 import { AlbumDetailSkeleton } from "@/components/ui/Skeleton";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/context/AuthContext";
+import { useUserCollection } from "@/hooks/useUserCollection";
 
 export default function AlbumDetail() {
     const { id } = useParams<{ id: string }>();
+    const { user } = useAuth();
+    const { hasItem: isInCollection, toggleItem: toggleCollection } = useUserCollection("collection");
+    const { hasItem: isInWantlist, toggleItem: toggleWantlist } = useUserCollection("wantlist");
 
     const { data: album, isLoading, error } = useQuery({
         queryKey: ["release", id],
@@ -77,14 +82,26 @@ export default function AlbumDetail() {
 
                     <div className="flex flex-col gap-6">
                         <div className="grid grid-cols-2 gap-4">
-                            <Button className="h-20 text-lg font-black bg-primary text-black hover:bg-white transition-all transform hover:-translate-y-2 rounded-2xl shadow-xl shadow-primary/10 select-none overflow-hidden relative group">
-                                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
-                                <Library className="mr-3 h-6 w-6 relative z-10" />
-                                <span className="relative z-10">Collect</span>
+                            <Button
+                                onClick={() => user ? toggleCollection(album.id.toString(), { title: album.title, cover_image: album.images?.[0]?.uri || album.thumb }) : alert("Please synchronize to collect.")}
+                                className={`h-20 text-lg font-black transition-all transform hover:-translate-y-2 rounded-2xl shadow-xl select-none overflow-hidden relative group ${isInCollection(album.id.toString())
+                                        ? "bg-white text-black border-2 border-primary"
+                                        : "bg-primary text-black hover:bg-white shadow-primary/10"
+                                    }`}
+                            >
+                                <Library className={`mr-3 h-6 w-6 relative z-10 ${isInCollection(album.id.toString()) ? "text-primary" : ""}`} />
+                                <span className="relative z-10">{isInCollection(album.id.toString()) ? "Archived" : "Collect"}</span>
                             </Button>
-                            <Button variant="outline" className="h-20 text-lg font-black text-secondary border-secondary/20 hover:bg-secondary/10 hover:border-secondary transition-all transform hover:-translate-y-2 rounded-2xl bg-black/40 shadow-xl select-none group">
-                                <Heart className="mr-3 h-6 w-6 group-hover:fill-secondary" />
-                                Wantlist
+                            <Button
+                                onClick={() => user ? toggleWantlist(album.id.toString(), { title: album.title, cover_image: album.images?.[0]?.uri || album.thumb }) : alert("Please synchronize for wantlist.")}
+                                variant="outline"
+                                className={`h-20 text-lg font-black transition-all transform hover:-translate-y-2 rounded-2xl bg-black/40 shadow-xl select-none group ${isInWantlist(album.id.toString())
+                                        ? "border-secondary text-secondary bg-secondary/10"
+                                        : "text-secondary border-secondary/20 hover:bg-secondary/10 hover:border-secondary"
+                                    }`}
+                            >
+                                <Heart className={`mr-3 h-6 w-6 ${isInWantlist(album.id.toString()) ? "fill-secondary text-secondary" : ""}`} />
+                                {isInWantlist(album.id.toString()) ? "Targeted" : "Wantlist"}
                             </Button>
                         </div>
                         <Button variant="ghost" className="h-14 text-gray-500 hover:text-white hover:bg-white/5 rounded-2xl font-black uppercase tracking-[0.15em] text-[11px] border border-white/5 transition-all">

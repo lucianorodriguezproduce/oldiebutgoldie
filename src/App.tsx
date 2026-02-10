@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { AuthProvider } from "@/context/AuthContext";
 import Layout from "@/components/Layout/Layout";
 import Login from "@/pages/Login";
 import Home from "@/pages/Home";
@@ -16,19 +17,26 @@ const queryClient = new QueryClient({
   },
 });
 
+import { ProtectedRoute } from "@/components/Guard/ProtectedRoute";
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <Routes>
-          <Route element={<Layout />}>
-            <Route path="/" element={<Home />} />
-            <Route path="/collection" element={<Collection />} />
-            <Route path="/album/:id" element={<AlbumDetail />} />
-            <Route path="/login" element={<Login />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route element={<Layout />}>
+              <Route path="/" element={<Home />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/album/:id" element={<AlbumDetail />} />
+
+              <Route element={<ProtectedRoute />}>
+                <Route path="/collection" element={<Collection />} />
+              </Route>
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
