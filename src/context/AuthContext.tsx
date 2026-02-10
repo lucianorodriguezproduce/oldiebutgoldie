@@ -1,8 +1,6 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
-import {
-    onAuthStateChanged,
-    signOut as firebaseSignOut
-} from "firebase/auth";
+import { createContext, useContext, useEffect, useState } from "react";
+import type { ReactNode } from "react";
+import { onAuthStateChanged, signOut as firebaseSignOut } from "firebase/auth";
 import type { User } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
@@ -14,7 +12,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
 

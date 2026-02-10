@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Search, SlidersHorizontal, X } from "lucide-react";
@@ -180,7 +180,7 @@ export default function Home() {
     );
 }
 
-function Badge({ children, className }: { children: React.ReactNode, className?: string }) {
+function Badge({ children, className }: { children: ReactNode, className?: string }) {
     return (
         <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${className}`}>
             {children}
