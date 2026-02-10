@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import {
     MapPin,
     Award,
@@ -9,7 +9,6 @@ import {
     Music,
     Heart,
     Zap,
-    ExternalLink,
     Settings,
     Edit3
 } from "lucide-react";
@@ -36,7 +35,6 @@ export default function Profile() {
 
     const displayName = user?.displayName || (isAdmin ? "Master Admin" : "Sonic Collector");
     const photoURL = user?.photoURL;
-    const email = user?.email || "admin@discography.ai";
 
     return (
         <div className="space-y-16 py-10">
