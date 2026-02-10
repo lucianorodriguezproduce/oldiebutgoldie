@@ -23,6 +23,12 @@ export default function Login() {
 
     const handleAuth = async (e: FormEvent) => {
         e.preventDefault();
+
+        if (!isLogin && password.length < 6) {
+            setError("The password must be at least 6 characters long.");
+            return;
+        }
+
         setLoading(true);
         setError(null);
         try {
@@ -34,7 +40,15 @@ export default function Login() {
             navigate("/");
         } catch (err: any) {
             console.error(err);
-            setError(err.message || "Authentication failed. Please check your credentials.");
+            if (err.code === "auth/invalid-credential") {
+                setError("Invalid credentials. Please check your email and password.");
+            } else if (err.code === "auth/weak-password") {
+                setError("The password is too weak. Use at least 6 characters.");
+            } else if (err.code === "auth/unauthorized-domain") {
+                setError("This domain is not authorized for authentication. Please add it in the Firebase Console.");
+            } else {
+                setError(err.message || "Authentication failed. Please try again.");
+            }
         } finally {
             setLoading(false);
         }
