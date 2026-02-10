@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Clock, User, ArrowRight } from "lucide-react";
+import { Clock, User, ArrowRight } from "lucide-react";
 
 const articles = [
     {
