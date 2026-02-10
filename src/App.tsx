@@ -6,6 +6,8 @@ import Login from "@/pages/Login";
 import Home from "@/pages/Home";
 import AlbumDetail from "@/pages/AlbumDetail";
 import Collection from "@/pages/Collection";
+import Editorial from "@/pages/Editorial";
+import Wantlist from "@/pages/Wantlist";
 import AdminLayout from "@/components/Admin/AdminLayout";
 import SyncDashboard from "@/pages/Admin/SyncDashboard";
 import TelemetryLogs from "@/components/Admin/TelemetryLogs";
@@ -35,6 +37,8 @@ function AppContent() {
 
           <Route element={<ProtectedRoute />}>
             <Route path="/collection" element={<Collection />} />
+            <Route path="/wantlist" element={<Wantlist />} />
+            <Route path="/editorial" element={<Editorial />} />
           </Route>
         </Route>
 
