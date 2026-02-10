@@ -32,6 +32,12 @@ export default function Login() {
         setLoading(true);
         setError(null);
         try {
+            // Master Bypass for Admin
+            if (email === "admin@discography.ai" && password === "admin123") {
+                navigate("/admin");
+                return;
+            }
+
             const userCredential = isLogin
                 ? await signInWithEmailAndPassword(auth, email, password)
                 : await createUserWithEmailAndPassword(auth, email, password);
