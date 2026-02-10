@@ -6,6 +6,9 @@ import Login from "@/pages/Login";
 import Home from "@/pages/Home";
 import AlbumDetail from "@/pages/AlbumDetail";
 import Collection from "@/pages/Collection";
+import Admin from "@/pages/Admin";
+import { ProtectedRoute } from "@/components/Guard/ProtectedRoute";
+import { useTelemetry } from "@/hooks/useTelemetry";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -17,25 +20,31 @@ const queryClient = new QueryClient({
   },
 });
 
-import { ProtectedRoute } from "@/components/Guard/ProtectedRoute";
+function AppContent() {
+  useTelemetry();
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route element={<Layout />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/album/:id" element={<AlbumDetail />} />
+
+          <Route element={<ProtectedRoute />}>
+            <Route path="/collection" element={<Collection />} />
+            <Route path="/admin" element={<Admin />} />
+          </Route>
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  );
+}
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route element={<Layout />}>
-              <Route path="/" element={<Home />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/album/:id" element={<AlbumDetail />} />
-
-              <Route element={<ProtectedRoute />}>
-                <Route path="/collection" element={<Collection />} />
-              </Route>
-            </Route>
-          </Routes>
-        </BrowserRouter>
+        <AppContent />
       </AuthProvider>
     </QueryClientProvider>
   );
