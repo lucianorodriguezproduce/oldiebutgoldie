@@ -95,6 +95,60 @@ export default function SyncDashboard() {
                     </div>
                 </Card>
             </div>
+
+            {/* Sync History / Log */}
+            <Card className="bg-white/[0.03] border-white/5 backdrop-blur-3xl rounded-[2.5rem] overflow-hidden">
+                <CardHeader className="p-10 border-b border-white/5 flex flex-row items-center justify-between">
+                    <div>
+                        <CardTitle className="text-2xl font-bold text-white flex items-center gap-3">
+                            <Activity className="h-6 w-6 text-primary" />
+                            Synchronization History
+                        </CardTitle>
+                        <CardDescription className="text-gray-500 mt-1">Real-time log of data ingestion and database reconciliation.</CardDescription>
+                    </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left">
+                            <thead>
+                                <tr className="border-b border-white/5">
+                                    <th className="px-10 py-6 text-[10px] font-black text-gray-500 uppercase tracking-widest">Process</th>
+                                    <th className="px-10 py-6 text-[10px] font-black text-gray-500 uppercase tracking-widest">Timestamp</th>
+                                    <th className="px-10 py-6 text-[10px] font-black text-gray-500 uppercase tracking-widest">Region</th>
+                                    <th className="px-10 py-6 text-[10px] font-black text-gray-500 uppercase tracking-widest">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {[
+                                    { name: "Argentina Discogs Harvest", time: "2m ago", region: "LATAM-S", status: "Success" },
+                                    { name: "Master Ledger Reconciliation", time: "15m ago", region: "GLOBAL", status: "Success" },
+                                    { name: "API Rate Limit Assessment", time: "1h ago", region: "GLOBAL", status: "Warning" },
+                                    { name: "Release Metadata Update", time: "3h ago", region: "EU-W", status: "Success" },
+                                ].map((log, i) => (
+                                    <tr key={i} className="border-b border-white/[0.02] hover:bg-white/[0.01] transition-colors group">
+                                        <td className="px-10 py-6">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-2 h-2 rounded-full bg-primary" />
+                                                <span className="text-sm font-bold text-white group-hover:text-primary transition-colors">{log.name}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-10 py-6 font-mono text-xs text-gray-500">{log.time}</td>
+                                        <td className="px-10 py-6">
+                                            <Badge variant="outline" className="border-white/10 text-gray-400 font-bold">{log.region}</Badge>
+                                        </td>
+                                        <td className="px-10 py-6">
+                                            <span className={cn(
+                                                "text-[10px] font-black uppercase tracking-tighter px-3 py-1 rounded-lg",
+                                                log.status === "Success" ? "bg-green-500/10 text-green-500" : "bg-orange-500/10 text-orange-500"
+                                            )}>{log.status}</span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </CardContent>
+            </Card>
         </div>
     );
 }

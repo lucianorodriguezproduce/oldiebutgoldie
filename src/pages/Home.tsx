@@ -176,6 +176,56 @@ export default function Home() {
                     </motion.div>
                 )}
             </section>
+
+            <section className="mt-24 pb-24 border-t border-white/5 pt-24">
+                <div className="flex items-end justify-between mb-12">
+                    <div>
+                        <h2 className="text-5xl font-display font-black text-white tracking-tightest leading-none">Sonic <span className="text-primary">Editorial</span></h2>
+                        <p className="text-gray-500 mt-4 text-lg font-medium max-w-xl">Deeper narratives from the intersection of sound, art, and physical media.</p>
+                    </div>
+                    <button className="text-[10px] text-gray-400 hover:text-primary transition-colors font-black uppercase tracking-[0.2em] border-b border-gray-800 hover:border-primary pb-2">View All Stories</button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    {[
+                        {
+                            category: "Interviews",
+                            title: "Beyond the Synthesizer",
+                            subtitle: "An Exclusive Interview with the Pioneers of French Touch",
+                            image: "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=80&w=1000&auto=format&fit=crop",
+                        },
+                        {
+                            category: "Architecture",
+                            title: "The Architecture of Sound",
+                            subtitle: "Inside the Studio of a Minimalist Master",
+                            image: "https://images.unsplash.com/photo-1516280440614-37939bbacd81?q=80&w=1000&auto=format&fit=crop",
+                        },
+                        {
+                            category: "Culture",
+                            title: "Vinyl Resurgence",
+                            subtitle: "Why Physical Media Matters More Than Ever",
+                            image: "https://images.unsplash.com/photo-1603048588665-791ca8aea617?q=80&w=1000&auto=format&fit=crop",
+                        }
+                    ].map((article, i) => (
+                        <motion.div
+                            key={article.title}
+                            initial={{ opacity: 0, y: 30 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ delay: i * 0.1 }}
+                            className="group cursor-pointer"
+                        >
+                            <div className="aspect-[16/10] rounded-[2.5rem] overflow-hidden mb-6 relative ring-1 ring-white/10 group-hover:ring-primary/40 transition-all duration-700">
+                                <img src={article.image} alt={article.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000" />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover:opacity-100 transition-opacity" />
+                                <Badge className="absolute top-6 left-6 bg-white/10 backdrop-blur-md text-white border-white/10">{article.category}</Badge>
+                            </div>
+                            <h3 className="text-2xl font-bold text-white mb-2 group-hover:text-primary transition-colors">{article.title}</h3>
+                            <p className="text-gray-500 font-medium leading-relaxed">{article.subtitle}</p>
+                        </motion.div>
+                    ))}
+                </div>
+            </section>
         </div>
     );
 }

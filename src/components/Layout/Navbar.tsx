@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Disc, Search, Library, User as UserIcon, LogOut } from "lucide-react";
+import { Disc, Search, Library, User as UserIcon, LogOut, Heart, BookOpen } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { motion } from "framer-motion";
 
@@ -10,6 +10,8 @@ export const Navbar = () => {
     const navItems = [
         { path: "/", label: "Discover", icon: Search },
         { path: "/collection", label: "Archive", icon: Library },
+        { path: "/wantlist", label: "Wantlist", icon: Heart },
+        { path: "/editorial", label: "Editorial", icon: BookOpen },
     ];
 
     return (
