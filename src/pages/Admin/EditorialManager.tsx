@@ -228,7 +228,7 @@ export default function EditorialManager() {
                                                 <td colSpan={4} className="px-10 py-20 text-center text-gray-500 font-bold">No active subscriptions detected.</td>
                                             </tr>
                                         ) : (
-                                            subscribers.map((sub, i) => (
+                                            subscribers.map((sub) => (
                                                 <tr key={sub.id} className="border-b border-white/[0.02] hover:bg-white/[0.01] transition-all group">
                                                     <td className="px-10 py-6">
                                                         <div className="flex items-center gap-3">
