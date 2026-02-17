@@ -1,29 +1,18 @@
-// Seed script - temporarily uses a workaround for auth
-// Run with: node scripts/seed-editorial.mjs
+// Seed script using Firebase Admin SDK with Application Default Credentials
+// Requires: npm install firebase-admin
+// firebase-tools login provides ADC automatically
+import { initializeApp, applicationDefault } from "firebase-admin/app";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
-import { initializeApp } from "firebase/app";
-import { getFirestore, collection, addDoc, Timestamp } from "firebase/firestore";
-import { getAuth, signInAnonymously } from "firebase/auth";
-
-const firebaseConfig = {
-    apiKey: "AIzaSyBxhMKqGv-v-IKJ9WPjL0pxdA8lj0I_FQE",
-    authDomain: "buscador-discogs-11425.firebaseapp.com",
-    projectId: "buscador-discogs-11425",
-    storageBucket: "buscador-discogs-11425.firebasestorage.app",
-    messagingSenderId: "802365277362",
-    appId: "1:802365277362:web:4c7b3ab2f21a04c7f16e39"
-};
-
-const app = initializeApp(firebaseConfig);
+// Use ADC from firebase login
+const app = initializeApp({
+    credential: applicationDefault(),
+    projectId: "buscador-discogs-11425"
+});
 const db = getFirestore(app);
-const auth = getAuth(app);
 
 async function seed() {
     try {
-        // Sign in anonymously to satisfy auth rules
-        await signInAnonymously(auth);
-        console.log("Authenticated anonymously");
-
         const article = {
             title: "The Vinyl Renaissance",
             excerpt: "After decades of digital dominance, the analog warmth of vinyl has recaptured the global consciousness. From Buenos Aires crate-digging scenes to Tokyo's legendary jazz kissaten, the 12-inch format is experiencing its most significant cultural resurgence since the golden era of the 1970s.",
@@ -33,14 +22,14 @@ async function seed() {
             readTime: "8 min read",
             featured: true,
             status: "published",
-            createdAt: Timestamp.now()
+            createdAt: FieldValue.serverTimestamp()
         };
 
-        const docRef = await addDoc(collection(db, "editorial"), article);
+        const docRef = await db.collection("editorial").add(article);
         console.log("Sample article seeded with ID:", docRef.id);
         process.exit(0);
     } catch (error) {
-        console.error("Error seeding article:", error);
+        console.error("Error seeding article:", error.message || error);
         process.exit(1);
     }
 }
