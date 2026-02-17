@@ -33,6 +33,9 @@ export default function Editorial() {
         const unsub = onSnapshot(q, (snap) => {
             setArticles(snap.docs.map(d => ({ id: d.id, ...d.data() } as Article)));
             setLoading(false);
+        }, (error) => {
+            console.error("Editorial listener error:", error);
+            setLoading(false);
         });
         return unsub;
     }, []);

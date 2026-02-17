@@ -34,9 +34,9 @@ function AppContent() {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/album/:id" element={<AlbumDetail />} />
+          <Route path="/editorial" element={<Editorial />} />
 
           <Route element={<ProtectedRoute />}>
-            <Route path="/editorial" element={<Editorial />} />
             <Route path="/profile" element={<Profile />} />
           </Route>
         </Route>
