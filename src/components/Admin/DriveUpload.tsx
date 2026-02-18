@@ -46,7 +46,8 @@ export const DriveUpload = ({ onUploadSuccess }: DriveUploadProps) => {
                     setUploadStatus('success');
                     onUploadSuccess(data.directLink);
                 } else {
-                    throw new Error(data.error || "Fallo en la carga");
+                    const errorDetail = data.details || data.error || "Fallo en la carga";
+                    throw new Error(errorDetail);
                 }
             };
         } catch (error: any) {

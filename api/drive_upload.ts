@@ -20,12 +20,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
+    // Verify environment variables
+    const missingVars = [];
+    if (!GOOGLE_CLIENT_ID) missingVars.push('GOOGLE_CLIENT_ID');
+    if (!GOOGLE_CLIENT_SECRET) missingVars.push('GOOGLE_CLIENT_SECRET');
+    if (!GOOGLE_REFRESH_TOKEN) missingVars.push('GOOGLE_REFRESH_TOKEN');
+
+    if (missingVars.length > 0) {
+        console.error('CRITICAL: Missing environment variables:', missingVars);
+        return res.status(500).json({
+            error: 'Configuration Error',
+            details: `Missing environment variables: ${missingVars.join(', ')}. Please configure them in Vercel or your .env file.`
+        });
+    }
+
     try {
         const { file, fileName, fileType } = req.body;
 
-        if (!file || !fileName) {
-            return res.status(400).json({ error: 'File and fileName are required' });
+        if (!file) {
+            console.error('Upload Error: No file content received');
+            return res.status(400).json({ error: 'File content (base64) is required' });
         }
+
+        console.log(`[DriveSync] Processing upload: ${fileName} (${fileType})`);
+        console.log(`[DriveSync] Folder ID: ${DRIVE_FOLDER_ID || 'Root'}`);
 
         const auth = new google.auth.OAuth2(
             GOOGLE_CLIENT_ID,
@@ -38,14 +56,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const drive = google.drive({ version: 'v3', auth });
 
         // Convert base64 to stream
-        const buffer = Buffer.from(file, 'base64');
+        let buffer;
+        try {
+            buffer = Buffer.from(file, 'base64');
+        } catch (e: any) {
+            console.error('Base64 Decoding Failed:', e.message);
+            return res.status(400).json({ error: 'Invalid base64 encoding', details: e.message });
+        }
+
         const stream = new Readable();
         stream.push(buffer);
         stream.push(null);
 
         // 1. Upload the file
         const fileMetadata = {
-            name: fileName,
+            name: fileName || `upload_${Date.now()}`,
             parents: DRIVE_FOLDER_ID ? [DRIVE_FOLDER_ID] : [],
         };
 
@@ -54,6 +79,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             body: stream,
         };
 
+        console.log('[DriveSync] Sending file to Google Drive API...');
         const uploadResponse = await drive.files.create({
             requestBody: fileMetadata,
             media: media,
@@ -61,12 +87,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
 
         const fileId = uploadResponse.data.id;
+        console.log('[DriveSync] Upload success. ID:', fileId);
 
         if (!fileId) {
             throw new Error('Failed to get file ID after upload');
         }
 
         // 2. Change permissions to 'anyone with the link' (public)
+        console.log('[DriveSync] Setting file permissions to public...');
         await drive.permissions.create({
             fileId: fileId,
             requestBody: {
@@ -76,8 +104,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
 
         // 3. Convert webViewLink to Direct Download Link
-        // Format: https://drive.google.com/uc?export=view&id={fileId}
         const directLink = `https://drive.google.com/uc?export=view&id=${fileId}`;
+        console.log('[DriveSync] Final public link:', directLink);
 
         return res.status(200).json({
             success: true,
@@ -85,10 +113,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             directLink: directLink,
         });
     } catch (error: any) {
-        console.error('Google Drive Upload Error:', error);
+        console.error('[DriveSync] ERROR:', {
+            message: error.message,
+            code: error.code,
+            errors: error.errors,
+            data: error.response?.data
+        });
+
+        // Try to extract a friendly message
+        let friendlyMessage = error.message;
+        if (error.response?.data?.error_description) {
+            friendlyMessage = error.response.data.error_description;
+        } else if (error.errors?.[0]?.message) {
+            friendlyMessage = error.errors[0].message;
+        }
+
         return res.status(500).json({
             error: 'Failed to upload to Google Drive',
-            details: error.message
+            details: friendlyMessage,
+            fullError: error.response?.data || error.message
         });
     }
 }
