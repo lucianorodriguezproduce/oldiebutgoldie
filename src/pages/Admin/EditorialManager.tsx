@@ -17,6 +17,7 @@ import {
     X
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { DriveUpload } from "@/components/Admin/DriveUpload";
 
 interface Article {
     id: string;
@@ -375,29 +376,38 @@ export default function EditorialManager() {
                                             required
                                         />
                                     </div>
-                                    <div className="space-y-2">
-                                        <label htmlFor="article-image" className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-4">Image Source (URL)</label>
-                                        <input
-                                            id="article-image"
-                                            name="image"
-                                            value={currentArticle?.image || ""}
-                                            onChange={e => setCurrentArticle({ ...currentArticle, image: e.target.value })}
-                                            className="w-full bg-white/5 border-white/5 rounded-2xl px-6 py-4 text-white focus:border-primary transition-all outline-none"
-                                            placeholder="Unsplash / Direct link..."
-                                            required
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label htmlFor="article-readTime" className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-4">Read Duration</label>
-                                        <input
-                                            id="article-readTime"
-                                            name="readTime"
-                                            value={currentArticle?.readTime || ""}
-                                            onChange={e => setCurrentArticle({ ...currentArticle, readTime: e.target.value })}
-                                            className="w-full bg-white/5 border-white/5 rounded-2xl px-6 py-4 text-white focus:border-primary transition-all outline-none"
-                                            placeholder="e.g. 15 min read"
-                                            required
-                                        />
+                                    <div className="space-y-4 md:col-span-3">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                            <div className="space-y-2">
+                                                <label htmlFor="article-image" className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-4">Image Source (URL)</label>
+                                                <input
+                                                    id="article-image"
+                                                    name="image"
+                                                    value={currentArticle?.image || ""}
+                                                    onChange={e => setCurrentArticle({ ...currentArticle, image: e.target.value })}
+                                                    className="w-full bg-white/5 border-white/5 rounded-2xl px-6 py-4 text-white focus:border-primary transition-all outline-none"
+                                                    placeholder="Unsplash / Direct link..."
+                                                    required
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label htmlFor="article-readTime" className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-4">Read Duration</label>
+                                                <input
+                                                    id="article-readTime"
+                                                    name="readTime"
+                                                    value={currentArticle?.readTime || ""}
+                                                    onChange={e => setCurrentArticle({ ...currentArticle, readTime: e.target.value })}
+                                                    className="w-full bg-white/5 border-white/5 rounded-2xl px-6 py-4 text-white focus:border-primary transition-all outline-none"
+                                                    placeholder="e.g. 15 min read"
+                                                    required
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-[#CCFF00] uppercase tracking-widest px-4">Sincronización Google Drive (1920x1080)</label>
+                                            <DriveUpload onUploadSuccess={(link) => setCurrentArticle({ ...currentArticle, image: link })} />
+                                        </div>
                                     </div>
                                 </div>
 
