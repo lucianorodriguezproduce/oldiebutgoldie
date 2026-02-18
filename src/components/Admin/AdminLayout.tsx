@@ -14,6 +14,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
     const navItems = [
         { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
+        { label: "Analytics", href: "/admin/analytics", icon: Activity },
         { label: "Editorial Hub", href: "/admin/editorial", icon: Newspaper },
         { label: "Sync Engine", href: "/admin/sync", icon: Activity },
         { label: "System Logs", href: "/admin/logs", icon: Terminal },

@@ -8,12 +8,22 @@ import { motion, AnimatePresence } from "framer-motion";
 import { AlbumCardSkeleton } from "@/components/ui/Skeleton";
 import { useQuery } from "@tanstack/react-query";
 import { useDebounce } from "@/hooks/useDebounce";
+import { useTelemetry } from "@/context/TelemetryContext";
+import { useEffect } from "react";
 
 export default function Home() {
     const [query, setQuery] = useState("");
     const [genre, setGenre] = useState<string | null>(null);
     const debouncedQuery = useDebounce(query, 500);
     const [showFilters, setShowFilters] = useState(false);
+    const { trackEvent } = useTelemetry();
+
+    // Track search queries
+    useEffect(() => {
+        if (debouncedQuery.trim().length > 2) {
+            trackEvent("search", { query: debouncedQuery, genre });
+        }
+    }, [debouncedQuery, genre]);
 
     const { data: results, isLoading } = useQuery({
         queryKey: ["releases", debouncedQuery, genre],

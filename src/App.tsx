@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@/context/AuthContext";
+import { TelemetryProvider } from "@/context/TelemetryContext";
 import Layout from "@/components/Layout/Layout";
 import Login from "@/pages/Login";
 import Home from "@/pages/Home";
@@ -9,11 +10,11 @@ import Editorial from "@/pages/Editorial";
 import Profile from "@/pages/Profile";
 import AdminLayout from "@/components/Admin/AdminLayout";
 import SyncDashboard from "@/pages/Admin/SyncDashboard";
+import AnalyticsDashboard from "@/pages/Admin/AnalyticsDashboard";
 import TelemetryLogs from "@/components/Admin/TelemetryLogs";
 import SecuritySettings from "@/pages/Admin/SecuritySettings";
 import EditorialManager from "@/pages/Admin/EditorialManager";
 import { ProtectedRoute } from "@/components/Guard/ProtectedRoute";
-import { useTelemetry } from "@/hooks/useTelemetry";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -26,7 +27,6 @@ const queryClient = new QueryClient({
 });
 
 function AppContent() {
-  useTelemetry();
   return (
     <BrowserRouter>
       <Routes>
@@ -46,6 +46,7 @@ function AppContent() {
           <Route path="/admin" element={<AdminLayout><Outlet /></AdminLayout>}>
             <Route index element={<SyncDashboard />} />
             <Route path="sync" element={<SyncDashboard />} />
+            <Route path="analytics" element={<AnalyticsDashboard />} />
             <Route path="logs" element={<TelemetryLogs />} />
             <Route path="security" element={<SecuritySettings />} />
             <Route path="editorial" element={<EditorialManager />} />
@@ -60,7 +61,9 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <AppContent />
+        <TelemetryProvider>
+          <AppContent />
+        </TelemetryProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

@@ -9,18 +9,31 @@ import { AlbumDetailSkeleton } from "@/components/ui/Skeleton";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { useUserCollection } from "@/hooks/useUserCollection";
+import { useTelemetry } from "@/context/TelemetryContext";
+import { useEffect } from "react";
 
 export default function AlbumDetail() {
     const { id } = useParams<{ id: string }>();
     const { user } = useAuth();
     const { hasItem: isInCollection, toggleItem: toggleCollection } = useUserCollection("collection");
     const { hasItem: isInWantlist, toggleItem: toggleWantlist } = useUserCollection("wantlist");
+    const { trackEvent } = useTelemetry();
 
     const { data: album, isLoading, error } = useQuery({
         queryKey: ["release", id],
         queryFn: () => id ? discogsService.getReleaseDetails(id) : Promise.reject("No ID"),
         enabled: !!id,
     });
+
+    useEffect(() => {
+        if (album && id) {
+            trackEvent("view_release", {
+                releaseId: id,
+                title: album.title,
+                artist: album.artists?.[0]?.name
+            });
+        }
+    }, [album, id]);
 
     if (isLoading) {
         return <AlbumDetailSkeleton />;
