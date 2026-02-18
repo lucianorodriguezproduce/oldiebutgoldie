@@ -7,6 +7,7 @@ import Login from "@/pages/Login";
 import Home from "@/pages/Home";
 import AlbumDetail from "@/pages/AlbumDetail";
 import Editorial from "@/pages/Editorial";
+import ArticleDetail from "@/pages/ArticleDetail";
 import Profile from "@/pages/Profile";
 import AdminLayout from "@/components/Admin/AdminLayout";
 import SyncDashboard from "@/pages/Admin/SyncDashboard";
@@ -35,6 +36,7 @@ function AppContent() {
           <Route path="/login" element={<Login />} />
           <Route path="/album/:id" element={<AlbumDetail />} />
           <Route path="/editorial" element={<Editorial />} />
+          <Route path="/editorial/:id" element={<ArticleDetail />} />
 
           <Route element={<ProtectedRoute />}>
             <Route path="/profile" element={<Profile />} />

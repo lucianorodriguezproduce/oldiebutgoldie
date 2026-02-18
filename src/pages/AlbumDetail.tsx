@@ -64,9 +64,9 @@ export default function AlbumDetail() {
 
             <nav className="flex mb-16 text-[10px] font-black uppercase tracking-[0.2em] text-gray-600">
                 <ol className="flex items-center space-x-4">
-                    <li><Link to="/" className="hover:text-primary transition-colors">SonicVault</Link></li>
+                    <li><Link to="/" className="hover:text-primary transition-colors">Oldie but Goldie</Link></li>
                     <li><ChevronRight className="h-3 w-3 text-gray-800" /></li>
-                    <li className="text-gray-400">{album.artists?.[0]?.name || "Artist"}</li>
+                    <li className="text-gray-400">{album.artists?.[0]?.name || "Artista"}</li>
                     <li><ChevronRight className="h-3 w-3 text-gray-800" /></li>
                     <li className="text-primary truncate max-w-[200px]">{album.title}</li>
                 </ol>
@@ -96,17 +96,17 @@ export default function AlbumDetail() {
                     <div className="flex flex-col gap-6">
                         <div className="grid grid-cols-2 gap-4">
                             <Button
-                                onClick={() => user ? toggleCollection(album.id.toString(), { title: album.title, cover_image: album.images?.[0]?.uri || album.thumb }) : alert("Please synchronize to collect.")}
+                                onClick={() => user ? toggleCollection(album.id.toString(), { title: album.title, cover_image: album.images?.[0]?.uri || album.thumb }) : alert("Por favor, sincroniza para coleccionar.")}
                                 className={`h-20 text-lg font-black transition-all transform hover:-translate-y-2 rounded-2xl shadow-xl select-none overflow-hidden relative group ${isInCollection(album.id.toString())
                                     ? "bg-white text-black border-2 border-primary"
                                     : "bg-primary text-black hover:bg-white shadow-primary/10"
                                     }`}
                             >
                                 <Library className={`mr-3 h-6 w-6 relative z-10 ${isInCollection(album.id.toString()) ? "text-primary" : ""}`} />
-                                <span className="relative z-10">{isInCollection(album.id.toString()) ? "Archived" : "Collect"}</span>
+                                <span className="relative z-10">{isInCollection(album.id.toString()) ? "Archivado" : "Coleccionar"}</span>
                             </Button>
                             <Button
-                                onClick={() => user ? toggleWantlist(album.id.toString(), { title: album.title, cover_image: album.images?.[0]?.uri || album.thumb }) : alert("Please synchronize for wantlist.")}
+                                onClick={() => user ? toggleWantlist(album.id.toString(), { title: album.title, cover_image: album.images?.[0]?.uri || album.thumb }) : alert("Por favor, sincroniza para tu lista de deseos.")}
                                 variant="outline"
                                 className={`h-20 text-lg font-black transition-all transform hover:-translate-y-2 rounded-2xl bg-black/40 shadow-xl select-none group ${isInWantlist(album.id.toString())
                                     ? "border-secondary text-secondary bg-secondary/10"
@@ -114,11 +114,11 @@ export default function AlbumDetail() {
                                     }`}
                             >
                                 <Heart className={`mr-3 h-6 w-6 ${isInWantlist(album.id.toString()) ? "fill-secondary text-secondary" : ""}`} />
-                                {isInWantlist(album.id.toString()) ? "Targeted" : "Wantlist"}
+                                {isInWantlist(album.id.toString()) ? "Objetivo" : "Favoritos"}
                             </Button>
                         </div>
                         <Button variant="ghost" className="h-14 text-gray-500 hover:text-white hover:bg-white/5 rounded-2xl font-black uppercase tracking-[0.15em] text-[11px] border border-white/5 transition-all">
-                            <Share2 className="mr-3 h-5 w-5" /> Transmission Link
+                            <Share2 className="mr-3 h-5 w-5" /> Enlace de Transmisión
                         </Button>
                     </div>
 
@@ -131,30 +131,30 @@ export default function AlbumDetail() {
                         <div className="absolute -top-10 -right-10 w-40 h-40 bg-primary/10 blur-[80px] rounded-full group-hover:bg-primary/20 transition-colors duration-1000" />
                         <div className="flex items-center justify-between mb-10">
                             <h3 className="text-2xl font-display font-bold text-white flex items-center gap-4">
-                                <Store className="h-7 w-7 text-primary" /> Market Logic
+                                <Store className="h-7 w-7 text-primary" /> Lógica de Mercado
                             </h3>
-                            <Badge variant="secondary" className="bg-primary/5 text-primary border-primary/20 rounded-lg font-mono text-[10px] font-black px-3 py-1.5 tracking-tighter">API_STABLE_V1</Badge>
+                            <Badge variant="secondary" className="bg-primary/5 text-primary border-primary/20 rounded-lg font-mono text-[10px] font-black px-3 py-1.5 tracking-tighter">APP_ESTABLE_V1</Badge>
                         </div>
                         <div className="space-y-8 font-mono">
                             <div className="flex justify-between items-end border-b border-white/[0.04] pb-6">
-                                <span className="text-gray-500 text-xs font-bold uppercase tracking-widest">Floor Price</span>
+                                <span className="text-gray-500 text-xs font-bold uppercase tracking-widest">Precio Base</span>
                                 <span className="text-3xl font-black text-white tracking-widest">
                                     {album.lowest_price ? `$${album.lowest_price.toFixed(2)}` : "—"}
                                 </span>
                             </div>
                             <div className="flex justify-between items-end border-b border-white/[0.04] pb-6">
-                                <span className="text-gray-500 text-xs font-bold uppercase tracking-widest">Resonance</span>
+                                <span className="text-gray-500 text-xs font-bold uppercase tracking-widest">Resonancia</span>
                                 <div className="flex flex-col items-end">
                                     <span className="text-3xl font-black text-primary tracking-widest">
                                         {album.community?.rating?.average?.toFixed(1) || "5.0"}
                                     </span>
-                                    <span className="text-[9px] text-gray-700 uppercase font-black mt-1">{album.community?.rating?.count || 0} Community Votes</span>
+                                    <span className="text-[9px] text-gray-700 uppercase font-black mt-1">{album.community?.rating?.count || 0} Votos de la Comunidad</span>
                                 </div>
                             </div>
                         </div>
                         <a href={album.uri} target="_blank" rel="noopener noreferrer" className="block w-full">
                             <Button className="w-full mt-10 bg-black/40 border border-white/10 text-white hover:bg-white hover:text-black transition-all rounded-[1.25rem] py-8 font-black uppercase tracking-widest text-[11px] h-16">
-                                Analyze on Discogs
+                                Analizar en Discogs
                             </Button>
                         </a>
                     </motion.div>
@@ -179,7 +179,7 @@ export default function AlbumDetail() {
                             {album.community?.have > 1000 && (
                                 <div className="flex items-center gap-2 bg-primary/10 px-5 py-2 rounded-full border border-primary/20">
                                     <Award className="h-3.5 w-3.5 text-primary" />
-                                    <span className="text-[10px] font-black text-primary uppercase">Elite Favorite</span>
+                                    <span className="text-[10px] font-black text-primary uppercase">Favorito de Élite</span>
                                 </div>
                             )}
                         </div>
@@ -190,10 +190,10 @@ export default function AlbumDetail() {
 
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-10 p-10 bg-white/[0.02] rounded-[3rem] border border-white/[0.04] backdrop-blur-2xl">
                             {[
-                                { label: "Label", value: album.labels?.[0]?.name },
+                                { label: "Sello", value: album.labels?.[0]?.name },
                                 { label: "Cat #", value: album.labels?.[0]?.catno },
-                                { label: "Genre", value: album.genres?.[0] },
-                                { label: "Country", value: album.country },
+                                { label: "Género", value: album.genres?.[0] },
+                                { label: "País", value: album.country },
                             ].map((item) => (
                                 <div key={item.label}>
                                     <span className="block text-[10px] text-gray-600 uppercase font-black tracking-[0.2em] mb-3">{item.label}</span>
@@ -218,8 +218,8 @@ export default function AlbumDetail() {
                         transition={{ delay: 0.5 }}
                     >
                         <div className="flex items-center justify-between mb-10 border-b border-white/[0.05] pb-6">
-                            <h3 className="text-4xl font-display font-bold text-white tracking-tightest">Sequence</h3>
-                            <span className="font-mono text-[11px] text-gray-700 uppercase font-black tracking-widest bg-white/5 px-4 py-2 rounded-xl">{album.tracklist?.length || 0} TRACKS TOTAL</span>
+                            <h3 className="text-4xl font-display font-bold text-white tracking-tightest">Lista de Temas</h3>
+                            <span className="font-mono text-[11px] text-gray-700 uppercase font-black tracking-widest bg-white/5 px-4 py-2 rounded-xl">{album.tracklist?.length || 0} PISTAS EN TOTAL</span>
                         </div>
                         <div className="grid grid-cols-1 gap-2">
                             {album.tracklist?.map((track: any, index: number) => (
@@ -245,7 +245,7 @@ export default function AlbumDetail() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-12 pb-32">
                         <div className="bg-gradient-to-tr from-white/[0.02] to-transparent p-10 rounded-[3rem] border border-white/[0.04]">
-                            <h4 className="text-gray-600 font-black mb-10 uppercase tracking-[0.25em] text-[10px]">Sonic Spectrum</h4>
+                            <h4 className="text-gray-600 font-black mb-10 uppercase tracking-[0.25em] text-[10px]">Espectro Sonoro</h4>
                             <div className="flex flex-wrap gap-3">
                                 {album.styles?.map((style: string) => (
                                     <Badge key={style} variant="outline" className="text-gray-300 border-white/10 bg-black/40 font-black text-[10px] px-5 py-2.5 rounded-xl uppercase tracking-widest hover:border-primary/50 transition-colors">{style}</Badge>
@@ -253,15 +253,15 @@ export default function AlbumDetail() {
                             </div>
                         </div>
                         <div className="bg-gradient-to-tr from-white/[0.02] to-transparent p-10 rounded-[3rem] border border-white/[0.04]">
-                            <h4 className="text-gray-600 font-black mb-10 uppercase tracking-[0.25em] text-[10px]">Ownership Data</h4>
+                            <h4 className="text-gray-600 font-black mb-10 uppercase tracking-[0.25em] text-[10px]">Datos de Propiedad</h4>
                             <div className="grid grid-cols-2 gap-8">
                                 <div className="flex flex-col">
                                     <span className="text-5xl font-black text-white tracking-widest">{album.community?.have || 0}</span>
-                                    <span className="text-[10px] uppercase font-black tracking-[0.15em] text-gray-500 mt-3">Active Vaults</span>
+                                    <span className="text-[10px] uppercase font-black tracking-[0.15em] text-gray-500 mt-3">Coleccionistas</span>
                                 </div>
                                 <div className="flex flex-col">
                                     <span className="text-5xl font-black text-secondary tracking-widest">{album.community?.want || 0}</span>
-                                    <span className="text-[10px] uppercase font-black tracking-[0.15em] text-gray-500 mt-3">Target Seekers</span>
+                                    <span className="text-[10px] uppercase font-black tracking-[0.15em] text-gray-500 mt-3">Buscados</span>
                                 </div>
                             </div>
                         </div>
