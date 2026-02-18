@@ -117,26 +117,34 @@ export default function Login() {
                     <CardContent className="space-y-6">
                         <form onSubmit={handleAuth} className="space-y-4">
                             <div className="space-y-2">
+                                <label htmlFor="email-input" className="sr-only">Email Address</label>
                                 <div className="relative">
                                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                                     <Input
+                                        id="email-input"
+                                        name="email"
                                         type="email"
                                         placeholder="your@email.com"
                                         className="pl-12 bg-black/40 border-white/5 h-14 rounded-xl text-white focus-visible:ring-primary"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
                                         required
+                                        autoComplete="email"
                                     />
                                 </div>
                             </div>
                             <div className="space-y-2">
+                                <label htmlFor="password-input" className="sr-only">Password</label>
                                 <Input
+                                    id="password-input"
+                                    name="password"
                                     type="password"
                                     placeholder="••••••••"
                                     className="bg-black/40 border-white/5 h-14 rounded-xl text-white focus-visible:ring-primary px-6"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     required
+                                    autoComplete={isLogin ? "current-password" : "new-password"}
                                 />
                             </div>
 
