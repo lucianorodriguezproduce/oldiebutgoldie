@@ -41,7 +41,9 @@ export default function Home() {
 
     // Auto-scroll on step change
     useEffect(() => {
-        scrollToTop();
+        if (step > 0) {
+            scrollToTop();
+        }
     }, [step, selectedItem]);
 
     // Recovery Logic & Auth Sync
@@ -50,6 +52,8 @@ export default function Home() {
             const backup = localStorage.getItem("oldie_backup");
             if (backup) {
                 try {
+                    // Small delay to ensure auth state and firestore are fully synced for new users
+                    await new Promise(resolve => setTimeout(resolve, 1000));
                     const data = JSON.parse(backup);
                     await performSubmission(currentUser.uid, data);
                     localStorage.removeItem("oldie_backup");
@@ -64,8 +68,9 @@ export default function Home() {
                 const redirectedUser = await handleRedirectResult();
                 if (redirectedUser) {
                     setUser(redirectedUser);
+                    setStep(1); // Return to search/selection view while processing
+                    scrollToTop(); // Force scroll up to see Processing message
                     await processBackup(redirectedUser);
-                    setStep(1);
                 }
             } catch (err) {
                 console.error("Redirect check failed:", err);
@@ -141,7 +146,7 @@ export default function Home() {
         setStep(1);
     };
 
-    const createBackup = () => {
+    const createBackup = async () => {
         if (!selectedItem || !format || !condition || !intent) return null;
         const backup = {
             item: selectedItem,
@@ -154,14 +159,13 @@ export default function Home() {
     };
 
     const handleGoogleSignIn = async () => {
-        createBackup();
+        await createBackup();
         setIsSubmitting(true);
         try {
             await signInWithGoogle();
         } catch (error) {
             console.error("Google Auth error:", error);
             alert("Error al vincular con Google.");
-        } finally {
             setIsSubmitting(false);
         }
     };
@@ -170,14 +174,14 @@ export default function Home() {
         if (e) e.preventDefault();
         if (!email || !password) return;
 
-        createBackup();
+        await createBackup();
         setIsSubmitting(true);
         try {
             const loggedUser = await authenticateUser(email, password);
             if (loggedUser) {
                 // Auto-confirm will be handled by onAuthStateChanged if backup exists
                 // but we can also trigger it manually here for faster feedback
-                const backup = createBackup();
+                const backup = await createBackup();
                 if (backup) {
                     await performSubmission(loggedUser.uid, backup);
                     localStorage.removeItem("oldie_backup");

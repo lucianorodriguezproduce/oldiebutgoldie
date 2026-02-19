@@ -24,7 +24,10 @@ export const handleRedirectResult = async () => {
     try {
         const result = await getRedirectResult(auth);
         if (result?.user) {
-            await syncUserToFirestore(result.user);
+            // For new users, ensure their profile exists in the users collection 
+            // before the order is created in Home.tsx
+            const isNewUser = result.user.metadata.creationTime === result.user.metadata.lastSignInTime;
+            await syncUserToFirestore(result.user, isNewUser);
             return result.user;
         }
         return null;
@@ -63,14 +66,23 @@ export const authenticateUser = async (email: string, pass: string) => {
     }
 };
 
-export const syncUserToFirestore = async (user: any) => {
+export const syncUserToFirestore = async (user: any, isNewUser: boolean = false) => {
     const userRef = doc(db, "users", user.uid);
-    await setDoc(userRef, {
+    const data: any = {
         uid: user.uid,
         email: user.email,
         display_name: user.displayName || user.email.split('@')[0],
         last_login: serverTimestamp(),
-    }, { merge: true });
+    };
+
+    // If it is strictly a new user, we want to set it rather than merge 
+    // to guarantee the document is physically created before moving on.
+    if (isNewUser) {
+        data.created_at = serverTimestamp();
+        await setDoc(userRef, data);
+    } else {
+        await setDoc(userRef, data, { merge: true });
+    }
 };
 
 export const subscribeToAuthChanges = (callback: (user: any) => void) => {
