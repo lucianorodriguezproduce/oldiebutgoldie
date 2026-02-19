@@ -24,6 +24,7 @@ export interface DiscogsSearchResult {
     thumb: string;
     year?: string;
     label?: string[];
+    country?: string;
     genre?: string[];
     style?: string[];
     resource_url: string;
@@ -32,17 +33,18 @@ export interface DiscogsSearchResult {
 }
 
 export const discogsService = {
-    async searchReleases(query: string, genre?: string): Promise<DiscogsSearchResult[]> {
-        if (!query) return [];
+    async searchReleases(query: string, page: number = 1, genre?: string): Promise<{ results: DiscogsSearchResult[], pagination: any }> {
+        if (!query) return { results: [], pagination: {} };
         const params: Record<string, string> = {
             q: query,
             type: "release",
-            per_page: "20",
+            per_page: "5",
+            page: page.toString(),
         };
         if (genre) params.genre = genre;
 
         const data = await fetchFromDiscogs("/database/search", params);
-        return data.results;
+        return { results: data.results, pagination: data.pagination };
     },
 
     async getReleaseDetails(id: string) {
