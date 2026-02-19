@@ -19,6 +19,7 @@ export default function Home() {
     const [condition, setCondition] = useState<Condition | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
+    const [isRecoveringBackup, setIsRecoveringBackup] = useState(false);
     const [step, setStep] = useState(1);
 
     const [searchResults, setSearchResults] = useState<DiscogsSearchResult[]>([]);
@@ -46,46 +47,47 @@ export default function Home() {
         }
     }, [step, selectedItem]);
 
-    // Recovery Logic & Auth Sync
+    // The Rescue Pattern -> Strict Event-Based Recovery
     useEffect(() => {
-        const processBackup = async (currentUser: User) => {
+        let isMounted = true;
+
+        const processRescue = async (currentUser: User) => {
             const backup = localStorage.getItem("oldie_backup");
             if (backup) {
+                if (isMounted) setIsRecoveringBackup(true);
+                scrollToTop();
                 try {
-                    // Small delay to ensure auth state and firestore are fully synced for new users
-                    await new Promise(resolve => setTimeout(resolve, 1000));
                     const data = JSON.parse(backup);
                     await performSubmission(currentUser.uid, data);
                     localStorage.removeItem("oldie_backup");
                 } catch (e) {
                     console.error("Backup recovery failed:", e);
+                    // On failure, we leave it in localStorage for manual retry if needed
+                } finally {
+                    if (isMounted) {
+                        setIsRecoveringBackup(false);
+                        setStep(1);
+                    }
                 }
             }
         };
-
-        const checkRedirect = async () => {
-            try {
-                const redirectedUser = await handleRedirectResult();
-                if (redirectedUser) {
-                    setUser(redirectedUser);
-                    setStep(1); // Return to search/selection view while processing
-                    scrollToTop(); // Force scroll up to see Processing message
-                    await processBackup(redirectedUser);
-                }
-            } catch (err) {
-                console.error("Redirect check failed:", err);
-            }
-        };
-
-        checkRedirect();
 
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+            if (!isMounted) return;
             setUser(currentUser);
             if (currentUser) {
-                processBackup(currentUser);
+                processRescue(currentUser);
             }
         });
-        return () => unsubscribe();
+
+        // Still call this so handleRedirectResult creates the firestore profile
+        // but we don't depend on it for the backup logic anymore.
+        handleRedirectResult().catch(err => console.error("Redirect check failed:", err));
+
+        return () => {
+            isMounted = false;
+            unsubscribe();
+        };
     }, []);
 
     // Effect for real-time Discogs search
@@ -219,6 +221,26 @@ export default function Home() {
             setIsSubmitting(false);
         }
     };
+
+    if (isRecoveringBackup) {
+        return (
+            <div className="min-h-[70vh] flex flex-col items-center justify-center text-center space-y-8 px-4 font-sans absolute inset-0 bg-[#050505] z-50">
+                <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    className="w-16 h-16 border-4 border-white/10 border-t-primary rounded-full mb-8 shadow-[0_0_30px_rgba(204,255,0,0.2)]"
+                />
+                <div className="space-y-4 max-w-sm mx-auto">
+                    <h2 className="text-2xl md:text-3xl font-display font-black text-white uppercase tracking-tighter animate-pulse">
+                        Protegiendo tu selección...
+                    </h2>
+                    <p className="text-gray-500 font-medium tracking-wide">
+                        Sincronizando tu pedido con Oldie but Goldie. No cierres esta ventana.
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
     if (isSuccess) {
         return (
