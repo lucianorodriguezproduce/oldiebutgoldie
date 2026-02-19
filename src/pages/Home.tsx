@@ -5,7 +5,7 @@ import { db, auth } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { useDebounce } from "@/hooks/useDebounce";
 import { discogsService, type DiscogsSearchResult } from "@/lib/discogs";
-import { signInWithGoogle, signInWithEmail, handleRedirectResult } from "@/lib/auth";
+import { signInWithGoogle, signInWithEmail, signUpWithEmail, handleRedirectResult } from "@/lib/auth";
 import { onAuthStateChanged, type User } from "firebase/auth";
 
 type Intent = "COMPRAR" | "VENDER";
@@ -33,6 +33,7 @@ export default function Home() {
     const [user, setUser] = useState<User | null>(null);
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [isRegistering, setIsRegistering] = useState(false);
 
     const scrollToTop = () => {
         window.scrollTo({ top: 0, behavior: "smooth" });
@@ -52,8 +53,22 @@ export default function Home() {
                 const redirectedUser = await handleRedirectResult();
                 if (redirectedUser) {
                     setUser(redirectedUser);
-                    // If we have a selected item and other details, try to auto-submit?
-                    // For now, just ensure the modal closes if they were in step 2
+
+                    // Recover pending order from localStorage
+                    const savedOrder = localStorage.getItem("pending_order");
+                    if (savedOrder) {
+                        const orderData = JSON.parse(savedOrder);
+                        // Rehydrate state to avoid data loss on final submit
+                        setSelectedItem(orderData.item);
+                        setFormat(orderData.format);
+                        setCondition(orderData.condition);
+                        setIntent(orderData.intent);
+
+                        // Attempt auto-submit
+                        await submitOrder(redirectedUser.uid, orderData);
+                        localStorage.removeItem("pending_order");
+                    }
+
                     if (step === 2) setStep(1);
                 }
             } catch (err) {
@@ -63,8 +78,21 @@ export default function Home() {
 
         checkRedirect();
 
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             setUser(currentUser);
+            if (currentUser) {
+                const savedOrder = localStorage.getItem("pending_order");
+                if (savedOrder) {
+                    const orderData = JSON.parse(savedOrder);
+                    setSelectedItem(orderData.item);
+                    setFormat(orderData.format);
+                    setCondition(orderData.condition);
+                    setIntent(orderData.intent);
+
+                    await submitOrder(currentUser.uid, orderData);
+                    localStorage.removeItem("pending_order");
+                }
+            }
         });
         return () => unsubscribe();
     }, []);
@@ -128,36 +156,55 @@ export default function Home() {
     };
 
     const handleGoogleSignIn = async () => {
+        if (!selectedItem || !format || !condition || !intent) return;
+
+        // Persist state before redirect
+        const orderData = {
+            item: selectedItem,
+            format,
+            condition,
+            intent
+        };
+        localStorage.setItem("pending_order", JSON.stringify(orderData));
+
         setIsSubmitting(true);
         try {
             await signInWithGoogle();
-            // signInWithRedirect does not return anything, the result is handled by handleRedirectResult on page load
         } catch (error) {
             console.error("Login induction error:", error);
             alert("Error al vincular con Google. Intente nuevamente.");
+            localStorage.removeItem("pending_order");
         } finally {
             setIsSubmitting(false);
         }
     };
 
-    const handleEmailSignIn = async () => {
+    const handleEmailAction = async () => {
         if (!email || !password) return;
         setIsSubmitting(true);
         try {
-            const loggedUser = await signInWithEmail(email, password);
+            const loggedUser = isRegistering
+                ? await signUpWithEmail(email, password)
+                : await signInWithEmail(email, password);
+
             if (loggedUser) {
                 await submitOrder(loggedUser.uid);
             }
         } catch (error) {
-            console.error("Email login error:", error);
-            alert("Error en credenciales técnicas. Verifique su acceso.");
+            console.error("Auth error:", error);
+            alert(isRegistering ? "Error al crear cuenta. Verifique sus datos." : "Credenciales inválidas.");
         } finally {
             setIsSubmitting(false);
         }
     };
 
-    const submitOrder = async (uid?: string) => {
-        if (!selectedItem || !format || !condition || !intent) return;
+    const submitOrder = async (uid?: string, rehydratedData?: any) => {
+        const item = rehydratedData?.item || selectedItem;
+        const f = rehydratedData?.format || format;
+        const c = rehydratedData?.condition || condition;
+        const i = rehydratedData?.intent || intent;
+
+        if (!item || !f || !c || !i) return;
 
         setIsSubmitting(true);
         try {
@@ -166,18 +213,19 @@ export default function Home() {
 
             await addDoc(collection(db, "orders"), {
                 user_id: currentUid,
-                item_id: selectedItem.id,
+                item_id: item.id,
                 details: {
-                    format,
-                    condition,
-                    intent,
-                    artist: selectedItem.title.split(' - ')[0],
-                    album: selectedItem.title.split(' - ')[1] || selectedItem.title,
+                    format: f,
+                    condition: c,
+                    intent: i,
+                    artist: item.title.split(' - ')[0],
+                    album: item.title.split(' - ')[1] || item.title,
                 },
                 timestamp: serverTimestamp(),
                 status: 'pending'
             });
             setIsSuccess(true);
+            scrollToTop();
         } catch (error) {
             console.error("Error saving order:", error);
             alert("Error al procesar el pedido. Reintente en unos instantes.");
@@ -483,86 +531,101 @@ export default function Home() {
             {/* MODAL: ACCESO RÁPIDO (Auth Step 4) */}
             <AnimatePresence>
                 {step === 2 && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 backdrop-blur-3xl bg-black/80">
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9, y: 40 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9, y: 40 }}
-                            className="bg-[#0A0A0A] border-2 border-primary/40 rounded-[2rem] md:rounded-[3rem] w-full max-w-2xl p-8 md:p-16 space-y-12 relative overflow-hidden shadow-[0_0_120px_rgba(204,255,0,0.15)]"
-                        >
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary to-transparent" />
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 backdrop-blur-3xl bg-black/90 overflow-y-auto">
+                        <div className="min-h-full w-full flex items-center justify-center py-8">
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.9, y: 40 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.9, y: 40 }}
+                                className="bg-[#0A0A0A] border-2 border-primary/40 rounded-[2rem] md:rounded-[3rem] w-full max-w-2xl p-8 md:p-14 space-y-10 relative overflow-hidden shadow-[0_0_120px_rgba(204,255,0,0.15)]"
+                            >
+                                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary to-transparent" />
 
-                            <div className="space-y-4 text-center">
-                                <div className="flex items-center justify-center gap-4 mb-2">
-                                    <MessageSquare className="h-8 w-8 text-primary" />
-                                    <h3 className="text-3xl md:text-5xl font-display font-black text-white uppercase tracking-tighter">Vincular Operación</h3>
-                                </div>
-                                <p className="text-gray-500 font-medium text-sm md:text-base px-4 leading-relaxed uppercase tracking-widest text-[10px]">
-                                    Identifícate para persistir tus parámetros en la red
-                                </p>
-                            </div>
-
-                            <div className="space-y-8">
-                                <button
-                                    onClick={handleGoogleSignIn}
-                                    disabled={isSubmitting}
-                                    className="w-full bg-white text-black py-6 md:py-8 rounded-2xl md:rounded-3xl font-black uppercase tracking-[0.2em] text-xs md:text-sm flex items-center justify-center gap-4 hover:bg-primary transition-all shadow-xl group border-0"
-                                >
-                                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="" className="w-6 h-6" />
-                                    Continuar con Google
-                                </button>
-
-                                <div className="relative flex items-center gap-4 py-2">
-                                    <div className="flex-1 h-px bg-white/10" />
-                                    <span className="text-[9px] font-black text-white/20 uppercase tracking-[0.4em]">O usar credenciales</span>
-                                    <div className="flex-1 h-px bg-white/10" />
-                                </div>
-
-                                <div className="space-y-4">
-                                    <div className="relative group/input">
-                                        <Mail className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500 group-focus-within/input:text-primary transition-colors" />
-                                        <input
-                                            type="email"
-                                            value={email}
-                                            onChange={(e) => setEmail(e.target.value)}
-                                            placeholder="Email de enlace..."
-                                            className="w-full bg-white/5 border-2 border-white/5 rounded-2xl py-6 pl-16 pr-8 text-white placeholder:text-gray-800 focus:outline-none focus:border-primary/50 transition-all font-sans"
-                                        />
+                                <div className="space-y-4 text-center">
+                                    <div className="flex items-center justify-center gap-4 mb-2">
+                                        <MessageSquare className="h-8 w-8 text-primary" />
+                                        <h3 className="text-3xl md:text-5xl font-display font-black text-white uppercase tracking-tighter">
+                                            {isRegistering ? "Crear Cuenta" : "Vincular Operación"}
+                                        </h3>
                                     </div>
-                                    <div className="relative group/input">
-                                        <Layers className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500 group-focus-within/input:text-primary transition-colors" />
-                                        <input
-                                            type="password"
-                                            value={password}
-                                            onChange={(e) => setPassword(e.target.value)}
-                                            placeholder="Clave técnica..."
-                                            className="w-full bg-white/5 border-2 border-white/5 rounded-2xl py-6 pl-16 pr-8 text-white placeholder:text-gray-800 focus:outline-none focus:border-primary/50 transition-all font-sans"
-                                        />
-                                    </div>
+                                    <p className="text-gray-500 font-medium text-sm md:text-base px-4 leading-relaxed uppercase tracking-widest text-[10px]">
+                                        {isRegistering ? "Inicia tu protocolo de coleccionista" : "Identifícate para persistir tus parámetros en la red"}
+                                    </p>
                                 </div>
 
-                                <div className="flex flex-col md:flex-row gap-4">
+                                <div className="space-y-8">
                                     <button
-                                        type="button"
-                                        onClick={() => setStep(1)}
-                                        className="px-8 py-6 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] text-gray-600 hover:text-white transition-all order-2 md:order-1"
-                                    >
-                                        ATRÁS
-                                    </button>
-                                    <button
-                                        onClick={() => user ? submitOrder(user.uid) : handleEmailSignIn()}
+                                        onClick={handleGoogleSignIn}
                                         disabled={isSubmitting}
-                                        className="flex-1 bg-white/5 border-2 border-white/10 text-white py-6 md:py-8 rounded-2xl font-black uppercase tracking-[0.3em] text-[10px] md:text-xs hover:bg-black transition-all order-1 md:order-2 disabled:opacity-30"
+                                        className="w-full bg-white text-black py-6 md:py-8 rounded-2xl md:rounded-3xl font-black uppercase tracking-[0.2em] text-xs md:text-sm flex items-center justify-center gap-4 hover:bg-primary transition-all shadow-xl group border-0"
                                     >
-                                        {user ? "CONFIRMAR PEDIDO" : "INICIAR SESIÓN"}
+                                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="" className="w-6 h-6" />
+                                        Continuar con Google
+                                    </button>
+
+                                    <div className="relative flex items-center gap-4 py-2">
+                                        <div className="flex-1 h-px bg-white/10" />
+                                        <span className="text-[9px] font-black text-white/20 uppercase tracking-[0.4em]">O usar credenciales</span>
+                                        <div className="flex-1 h-px bg-white/10" />
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <div className="relative group/input">
+                                            <Mail className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500 group-focus-within/input:text-primary transition-colors" />
+                                            <input
+                                                type="email"
+                                                id="auth-email"
+                                                name="email"
+                                                autoComplete="email"
+                                                value={email}
+                                                onChange={(e) => setEmail(e.target.value)}
+                                                placeholder="Email de enlace..."
+                                                className="w-full bg-white/5 border-2 border-white/5 rounded-2xl py-6 pl-16 pr-8 text-white placeholder:text-gray-800 focus:outline-none focus:border-primary/50 transition-all font-sans"
+                                            />
+                                        </div>
+                                        <div className="relative group/input">
+                                            <Layers className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500 group-focus-within/input:text-primary transition-colors" />
+                                            <input
+                                                type="password"
+                                                id="auth-password"
+                                                name="password"
+                                                autoComplete={isRegistering ? "new-password" : "current-password"}
+                                                value={password}
+                                                onChange={(e) => setPassword(e.target.value)}
+                                                placeholder="Clave técnica..."
+                                                className="w-full bg-white/5 border-2 border-white/5 rounded-2xl py-6 pl-16 pr-8 text-white placeholder:text-gray-800 focus:outline-none focus:border-primary/50 transition-all font-sans"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-col md:flex-row gap-4">
+                                        <button
+                                            type="button"
+                                            onClick={() => setStep(1)}
+                                            className="px-8 py-6 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] text-gray-600 hover:text-white transition-all order-2 md:order-1"
+                                        >
+                                            ATRÁS
+                                        </button>
+                                        <button
+                                            onClick={() => user ? submitOrder(user.uid) : handleEmailAction()}
+                                            disabled={isSubmitting}
+                                            className="flex-1 bg-primary text-black py-6 md:py-8 rounded-2xl font-black uppercase tracking-[0.3em] text-[10px] md:text-xs hover:bg-white transition-all order-1 md:order-2 disabled:opacity-30 shadow-[0_0_30px_rgba(204,255,0,0.2)]"
+                                        >
+                                            {user ? "CONFIRMAR Y VINCULAR" : (isRegistering ? "REGISTRAR Y VINCULAR" : "INICIAR Y VINCULAR")}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="text-center">
+                                    <button
+                                        onClick={() => setIsRegistering(!isRegistering)}
+                                        className="text-[10px] font-black text-gray-600 uppercase tracking-widest hover:text-primary transition-colors"
+                                    >
+                                        {isRegistering ? "¿Ya tienes cuenta? Inicia sesión" : "¿No tienes cuenta? Regístrate aquí"}
                                     </button>
                                 </div>
-                            </div>
-
-                            <p className="text-center text-[9px] font-black text-gray-600 uppercase tracking-widest">
-                                ¿Ya tienes cuenta? <span className="text-primary cursor-pointer">Inicia sesión</span>
-                            </p>
-                        </motion.div>
+                            </motion.div>
+                        </div>
                     </div>
                 )}
             </AnimatePresence>

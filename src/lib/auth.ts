@@ -1,4 +1,11 @@
-import { GoogleAuthProvider, signInWithRedirect, getRedirectResult, signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
+import {
+    GoogleAuthProvider,
+    signInWithRedirect,
+    getRedirectResult,
+    signInWithEmailAndPassword,
+    createUserWithEmailAndPassword,
+    onAuthStateChanged
+} from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "./firebase";
 
@@ -35,6 +42,18 @@ export const signInWithEmail = async (email: string, pass: string) => {
         return user;
     } catch (error) {
         console.error("Error signing in with Email:", error);
+        throw error;
+    }
+};
+
+export const signUpWithEmail = async (email: string, pass: string) => {
+    try {
+        const result = await createUserWithEmailAndPassword(auth, email, pass);
+        const user = result.user;
+        await syncUserToFirestore(user);
+        return user;
+    } catch (error) {
+        console.error("Error signing up with Email:", error);
         throw error;
     }
 };
