@@ -122,9 +122,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         let googleError = error.message;
         if (error.response?.data?.error) {
             const gErr = error.response.data.error;
-            googleError = `${gErr.message || error.message} (${gErr.code || error.code})`;
-            if (gErr.errors && gErr.errors.length > 0) {
-                googleError += `: ${gErr.errors[0].reason} - ${gErr.errors[0].message}`;
+            if (typeof gErr === 'string') {
+                googleError = `${gErr}`;
+            } else {
+                googleError = `${gErr.message || error.message} (${gErr.code || error.code})`;
+                if (gErr.errors && gErr.errors.length > 0) {
+                    googleError += `: ${gErr.errors[0].reason} - ${gErr.errors[0].message}`;
+                }
             }
         } else if (error.response?.data?.error_description) {
             googleError = error.response.data.error_description;
