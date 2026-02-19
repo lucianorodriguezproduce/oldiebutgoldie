@@ -2,11 +2,11 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { google } from 'googleapis';
 import { Readable } from 'stream';
 
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID?.trim();
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET?.trim();
-const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI?.trim();
-const GOOGLE_REFRESH_TOKEN = process.env.GOOGLE_REFRESH_TOKEN?.trim();
-const DRIVE_FOLDER_ID = process.env.DRIVE_FOLDER_ID?.trim();
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID?.trim().replace(/^=/, '');
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET?.trim().replace(/^=/, '');
+const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI?.trim().replace(/^=/, '');
+const GOOGLE_REFRESH_TOKEN = process.env.GOOGLE_REFRESH_TOKEN?.trim().replace(/^=/, '');
+const DRIVE_FOLDER_ID = process.env.DRIVE_FOLDER_ID?.trim().replace(/^=/, '');
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'OPTIONS') {
