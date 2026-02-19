@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, ChevronRight, CheckCircle2, MessageSquare, Mail, Layers, Disc, Database, Package, RefreshCw, MapPin, Tag, Plus, ArrowRight } from "lucide-react";
+import { Search, ChevronRight, CheckCircle2, Mail, Layers, Database, Package, RefreshCw, MapPin, Tag, Plus, ArrowRight } from "lucide-react";
 import { db, auth } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { useDebounce } from "@/hooks/useDebounce";
