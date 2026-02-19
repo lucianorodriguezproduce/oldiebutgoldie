@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, ChevronRight, CheckCircle2, Mail, Layers } from "lucide-react";
+import { Search, ChevronRight, CheckCircle2, Mail, Layers, MapPin, Tag, Plus, ArrowRight } from "lucide-react";
 import { db, auth } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -266,6 +266,8 @@ export default function Home() {
                         <div className="relative group w-full">
                             <Search className="absolute left-6 md:left-8 top-1/2 -translate-y-1/2 h-5 md:h-6 w-5 md:w-6 text-gray-500 group-focus-within:text-primary transition-colors" />
                             <input
+                                id="searchQuery"
+                                name="searchQuery"
                                 type="text"
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
