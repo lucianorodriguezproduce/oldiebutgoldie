@@ -137,7 +137,7 @@ export default function Editorial() {
                                 <Badge className="bg-primary text-black font-black uppercase tracking-widest px-4 md:px-6 py-1.5 md:py-2 rounded-full text-[10px] md:text-xs shadow-xl shadow-primary/20 self-start">
                                     {featured.featured ? "Destacado" : "Novedad"}
                                 </Badge>
-                                <h1 className="text-4xl md:text-[9rem] font-display font-black text-white tracking-tightest leading-[0.9] md:leading-[0.85] uppercase">
+                                <h1 className="text-4xl md:text-[8rem] font-display font-black text-white tracking-tightest leading-[1] md:leading-[0.95] uppercase pt-2">
                                     {featured.title}
                                 </h1>
                                 <p className="hidden md:block text-gray-400 text-2xl font-medium leading-relaxed max-w-2xl border-l-4 border-primary pl-8">
