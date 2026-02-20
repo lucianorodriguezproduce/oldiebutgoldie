@@ -367,18 +367,17 @@ export default function Home() {
     }
 
     return (
-        <div className={`mx-auto font-sans w-full transition-all duration-300 ${isSearchActive && !selectedItem ? 'h-[100dvh] flex flex-col overflow-hidden bg-neutral-950' : 'max-w-4xl py-8 md:py-20 flex flex-col items-center justify-center min-h-[80vh] px-4'}`}>
+        <div className={`mx-auto font-sans w-full transition-all duration-300 ${isSearchActive && !selectedItem ? '' : 'max-w-4xl py-8 md:py-20 flex flex-col items-center justify-center min-h-[80vh] px-4'}`}>
             <AnimatePresence mode="wait">
                 {!selectedItem ? (
                     <motion.div
                         key="step1-search-container"
                         initial={{ opacity: 0, scale: 0.98 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        // Fixed vertical alignment: justify-start ensures top alignment when active, removing the dead space above the header
-                        className={`w-full flex flex-col items-center ${isSearchActive ? 'h-full flex-1 justify-start' : 'justify-center gap-12 md:gap-16 text-center'}`}
+                        className={isSearchActive ? 'fixed inset-0 z-[100] flex flex-col bg-neutral-950' : 'w-full flex justify-center gap-12 md:gap-16 text-center flex-col items-center'}
                     >
                         {/* BLOQUE SUPERIOR (Header Fijo) */}
-                        <div className={`w-full transition-all flex flex-col items-center ${isSearchActive ? 'flex-none shrink-0 z-10 bg-neutral-950 pt-[env(safe-area-inset-top,1rem)] md:pt-8 pb-4 px-4 border-b border-white/5 shadow-2xl' : ''}`}>
+                        <div className={isSearchActive ? 'flex-none bg-neutral-950 px-4 pt-safe-top pb-3 border-b border-neutral-800 shadow-md z-10' : 'w-full transition-all flex flex-col items-center'}>
                             <AnimatePresence mode="wait">
                                 {!isSearchActive ? (
                                     <motion.header
@@ -402,9 +401,9 @@ export default function Home() {
                                         key="header-active"
                                         initial={{ opacity: 0, y: 20 }}
                                         animate={{ opacity: 1, y: 0 }}
-                                        className="w-full text-center md:text-left mb-2 md:mb-4 max-w-4xl mx-auto"
+                                        className="w-full text-center md:text-left mb-2 md:mb-4 max-w-4xl mx-auto mt-4"
                                     >
-                                        <h1 className="text-5xl md:text-7xl font-display font-black text-white italic uppercase tracking-tighter pt-2 md:pt-0">
+                                        <h1 className="text-5xl md:text-7xl font-display font-black text-white italic uppercase tracking-tighter">
                                             RESULTADOS
                                         </h1>
                                     </motion.header>
@@ -427,7 +426,7 @@ export default function Home() {
                                     value={query}
                                     onChange={(e) => setQuery(e.target.value)}
                                     placeholder="Artista, Álbum o Referencia..."
-                                    className="w-full bg-white/5 border-2 border-white/5 hover:border-white/10 rounded-[1.5rem] md:rounded-[2.5rem] py-6 md:py-8 pl-14 md:pl-20 pr-16 md:pr-20 text-xl md:text-2xl font-bold text-white placeholder:text-gray-700/50 focus:outline-none focus:ring-0 focus:border-primary/50 transition-all focus:bg-neutral-900 shadow-2xl"
+                                    className={`w-full bg-white/5 border-2 border-white/5 hover:border-white/10 rounded-[1.5rem] md:rounded-[2.5rem] py-6 md:py-8 pl-14 md:pl-20 pr-16 md:pr-20 text-xl md:text-2xl font-bold text-white placeholder:text-gray-700/50 focus:outline-none focus:ring-0 focus:border-primary/50 transition-all focus:bg-neutral-900 shadow-2xl ${isSearchActive ? 'mt-3' : ''}`}
                                 />
                                 <AnimatePresence>
                                     {query && (
@@ -457,7 +456,7 @@ export default function Home() {
                                         initial={{ opacity: 0, y: 10, height: 0 }}
                                         animate={{ opacity: 1, y: 0, height: "auto" }}
                                         exit={{ opacity: 0, y: -10, height: 0 }}
-                                        className="flex items-center justify-start md:justify-center gap-2 md:gap-3 overflow-x-auto pb-4 pt-5 px-4 -mx-4 md:px-0 md:mx-0 w-[calc(100%+2rem)] md:w-full hide-scrollbar snap-x max-w-4xl mx-auto"
+                                        className="flex items-center justify-start md:justify-center gap-2 md:gap-3 overflow-x-auto pb-4 pt-5 px-4 -mx-4 md:px-0 md:mx-0 w-[calc(100%+2rem)] md:w-full hide-scrollbar snap-x max-w-4xl mx-auto mt-4"
                                     >
                                         {["todo", "artistas", "álbumes"].map((f) => (
                                             <button
@@ -476,9 +475,9 @@ export default function Home() {
                             </AnimatePresence>
                         </div>
 
-                        {/* BLOQUE INFERIOR (Resultados Scrollables Independentemente) */}
-                        <div className={`w-full ${isSearchActive ? 'flex-1 overflow-y-auto overscroll-contain p-4 pb-[env(safe-area-inset-bottom,2rem)] block bg-[#050505]' : 'hidden'}`}>
-                            <div className="max-w-4xl mx-auto w-full pb-[10vh]">
+                        {/* ÁREA DE RESULTADOS (Scroll Aislado) */}
+                        <div className={isSearchActive ? 'flex-1 overflow-y-auto overscroll-contain px-4 pt-4 pb-[50vh]' : 'hidden'}>
+                            <div className="max-w-4xl mx-auto w-full">
                                 <AnimatePresence>
                                     {isSearchActive && searchResults.length > 0 && (
                                         <motion.div
@@ -501,8 +500,10 @@ export default function Home() {
                                                 >
                                                     <div className="absolute left-0 top-0 bottom-0 w-2 bg-transparent group-hover:bg-primary transition-colors" />
                                                     <div className="p-4 md:p-6 flex items-center gap-4 md:gap-6 ml-1">
-                                                        <div className="w-16 md:w-20 h-16 md:h-20 rounded-xl md:rounded-2xl overflow-hidden bg-black flex-shrink-0 border border-white/10 shadow-lg">
-                                                            <img src={result.thumb || result.cover_image} alt="" className="w-full h-full object-cover grayscale-[0.3] group-hover:grayscale-0 transition-all duration-500" />
+                                                        <div className="w-16 md:w-20 h-16 md:h-20 rounded-xl md:rounded-2xl overflow-hidden bg-neutral-800 flex-shrink-0 border border-white/10 shadow-lg">
+                                                            {(result.thumb || result.cover_image) && (
+                                                                <img src={result.thumb || result.cover_image} alt="" className="w-full h-full object-cover grayscale-[0.3] group-hover:grayscale-0 transition-all duration-500" />
+                                                            )}
                                                         </div>
                                                         <div className="flex-1 min-w-0 flex flex-col items-start gap-1 text-left">
                                                             <h4 className="text-xl md:text-2xl font-bold font-display italic text-white truncate w-full group-hover:text-primary transition-colors">
