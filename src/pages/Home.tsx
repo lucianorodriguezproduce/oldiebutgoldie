@@ -121,8 +121,9 @@ export default function Home() {
         return `#ORD-${result}`;
     };
 
-    const buildOrderPayload = (uid: string) => {
-        if (!selectedItem || !format || !condition || !intent) return null;
+    const buildOrderPayload = (uid: string, intentOverride?: Intent) => {
+        const resolvedIntent = intentOverride || intent;
+        if (!selectedItem || !format || !condition || !resolvedIntent) return null;
 
         const currentUser = auth.currentUser;
 
@@ -136,7 +137,7 @@ export default function Home() {
             details: {
                 format,
                 condition,
-                intent,
+                intent: resolvedIntent,
                 artist: selectedItem.title.split(' - ')[0],
                 album: selectedItem.title.split(' - ')[1] || selectedItem.title,
                 cover_image: selectedItem.cover_image || selectedItem.thumb || '',
@@ -146,7 +147,7 @@ export default function Home() {
         };
 
         // Add pricing info for VENDER orders
-        if (intent === "VENDER" && price) {
+        if (resolvedIntent === "VENDER" && price) {
             payload.details.price = parseFloat(price);
             payload.details.currency = currency;
         }
@@ -157,8 +158,8 @@ export default function Home() {
         return payload;
     };
 
-    const performSubmission = async (uid: string) => {
-        const payload = buildOrderPayload(uid);
+    const performSubmission = async (uid: string, intentOverride?: Intent) => {
+        const payload = buildOrderPayload(uid, intentOverride);
         if (!payload) return;
         await addDoc(collection(db, "orders"), payload);
     };
@@ -197,7 +198,7 @@ export default function Home() {
         if (user) {
             setIsSubmitting(true);
             try {
-                await performSubmission(user.uid);
+                await performSubmission(user.uid, selectedIntent);
                 setIsSuccess(true);
                 scrollToTop();
             } catch (error) {
