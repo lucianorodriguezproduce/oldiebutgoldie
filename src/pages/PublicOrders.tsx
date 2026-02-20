@@ -15,6 +15,7 @@ interface PublicOrder {
     artist: string;
     imageUrl: string;
     status: 'pending' | 'quoted' | 'sold' | 'rejected';
+    intent?: string;
     createdAt: Date;
 }
 
@@ -43,6 +44,7 @@ export default function PublicOrders() {
                         artist: data.details?.artist || 'Unknown Artist',
                         imageUrl: data.details?.cover_image || '',
                         status: data.status || 'pending',
+                        intent: data.details?.intent || 'COMPRAR',
                         createdAt: data.timestamp?.toDate() || new Date(),
                     };
                 });
@@ -191,6 +193,17 @@ export default function PublicOrders() {
                                             <div className="absolute top-3 right-3 z-10">
                                                 {getStatusBadge(order.status)}
                                             </div>
+
+                                            {/* Intent Badge */}
+                                            {order.intent && (
+                                                <div className="absolute top-3 left-3 z-10">
+                                                    <div className={`px-2 py-1 rounded-[4px] border backdrop-blur-md ${order.intent === 'VENDER' ? 'bg-amber-500/10 border-amber-500/30 text-amber-500' : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'}`}>
+                                                        <span className="text-[9px] uppercase tracking-widest font-black">
+                                                            {order.intent === 'VENDER' ? 'Disponible' : 'Buscado'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
 
                                         {/* Meta Section */}

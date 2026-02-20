@@ -714,10 +714,12 @@ export default function Home() {
                                                 <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">Fecha Registro</p>
                                                 <p className="text-white font-mono">{publicOrder.timestamp.toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
                                             </div>
-                                            <div className="space-y-2">
-                                                <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">Precio Usuario</p>
-                                                <p className="text-primary font-bold font-mono text-lg">{publicOrder.price ? `$${publicOrder.price.toLocaleString('es-AR')}` : "A Confirmar"}</p>
-                                            </div>
+                                            {publicOrder.isOwner && (
+                                                <div className="space-y-2">
+                                                    <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">Precio Usuario</p>
+                                                    <p className="text-primary font-bold font-mono text-lg">{publicOrder.price ? `$${publicOrder.price.toLocaleString('es-AR')}` : "A Confirmar"}</p>
+                                                </div>
+                                            )}
                                             <div className="space-y-2">
                                                 <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">Formato</p>
                                                 <p className="text-white font-bold">{publicOrder.format || "N/A"}</p>
@@ -726,9 +728,13 @@ export default function Home() {
                                                 <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">Condición Reportada</p>
                                                 <p className="text-white font-bold">{publicOrder.condition || "N/A"}</p>
                                             </div>
-                                            <div className="space-y-2">
-                                                <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">Operación</p>
-                                                <p className="text-white font-bold">{publicOrder.intent === 'COMPRAR' ? 'Búsqueda de Adquisición' : 'Venta Registrada'}</p>
+                                            <div className="space-y-2 flex flex-col items-start">
+                                                <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest mb-1">Operación</p>
+                                                <div className={`px-2 py-0.5 rounded-[4px] border backdrop-blur-md ${publicOrder.intent === 'VENDER' ? 'bg-amber-500/10 border-amber-500/30 text-amber-500' : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'}`}>
+                                                    <span className="text-[10px] uppercase tracking-widest font-black">
+                                                        {publicOrder.intent === 'VENDER' ? 'Disponible' : 'Buscado'}
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
 

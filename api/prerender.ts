@@ -33,7 +33,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // FIREBASE CROSS-REFERENCE FOR DYNAMIC SEO
         let orderStatusStr = "";
-        let orderPriceStr = "";
+        let orderIntentStr = "SOLICITUD";
         try {
             const projectId = process.env.VITE_FIREBASE_PROJECT_ID || 'intras-projects';
             const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery`;
@@ -62,9 +62,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 if (fbData && fbData.length > 0 && fbData[0].document) {
                     const status = fbData[0].document.fields?.status?.stringValue;
                     const detailsMap = fbData[0].document.fields?.details?.mapValue?.fields;
-                    const price = detailsMap?.price?.integerValue || detailsMap?.price?.doubleValue;
+                    const intent = detailsMap?.intent?.stringValue;
+
                     if (status) orderStatusStr = status.toUpperCase();
-                    if (price) orderPriceStr = `$${price}`;
+                    if (intent) {
+                        orderIntentStr = intent === 'VENDER' ? 'OFERTA' : 'SOLICITUD';
+                    }
                 }
             }
         } catch (e) {
@@ -102,9 +105,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const title = discogsData.title ? `${discogsData.title} | Oldie but Goldie` : defaultTitle;
 
         // Generate description based on whether an order exists in Firebase
-        const priceSuffix = orderPriceStr ? ` Precio Base: ${orderPriceStr}` : "";
         const description = orderStatusStr
-            ? `Orden de ${title} generada en Oldie but Goldie. Estado: ${orderStatusStr}.${priceSuffix} Especialistas en formato físico.`
+            ? `Actividad de Coleccionismo: ${title} (${orderIntentStr}) en Oldie but Goldie. Estado: ${orderStatusStr}.`
             : defaultDescription;
 
         // Ensure image is absolute and HTTPS. Discogs sometimes returns HTTP or missing images.
