@@ -107,7 +107,7 @@ export const Navbar = () => {
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: "100%" }}
                         transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                        className="fixed inset-0 top-20 bg-black z-40 md:hidden flex flex-col p-8 space-y-8"
+                        className="fixed inset-0 top-20 bg-neutral-950/[0.98] backdrop-blur-xl z-[60] md:hidden flex flex-col p-8 space-y-8"
                     >
                         {navItems.map((item) => (
                             <Link
