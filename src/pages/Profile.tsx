@@ -395,8 +395,16 @@ export default function Profile() {
                                                     </div>
                                                 </div>
 
-                                                {/* Status + Date */}
+                                                {/* Status + Date + Offer */}
                                                 <div className="flex flex-col items-start md:items-end gap-3 flex-shrink-0">
+                                                    {order.details.intent === "COMPRAR" && order.admin_offer_price && (
+                                                        <div className="bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-xl flex flex-col items-end shadow-sm shadow-primary/5">
+                                                            <span className="text-[9px] font-black uppercase tracking-widest text-primary">Oferta</span>
+                                                            <span className="text-sm font-black text-white">
+                                                                {order.admin_offer_currency === "USD" ? "US$" : "$"} {order.admin_offer_price.toLocaleString()}
+                                                            </span>
+                                                        </div>
+                                                    )}
                                                     {getStatusBadge(order.status)}
                                                     <span className="text-gray-700 text-[10px] font-bold flex items-center gap-1.5">
                                                         <Clock className="h-3.5 w-3.5" /> {formatDate(order.timestamp)}

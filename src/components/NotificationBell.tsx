@@ -31,6 +31,10 @@ export default function NotificationBell() {
     const dropdownRef = useRef<HTMLDivElement>(null);
     const navigate = useNavigate();
 
+    const openOrderDrawer = (orderId: string) => {
+        navigate(`/profile?order=${orderId}`);
+    };
+
     const unreadCount = notifications.filter(n => !n.read).length;
 
     // Real-time listener for user's notifications
@@ -155,6 +159,7 @@ export default function NotificationBell() {
                             ) : (
                                 notifications.map((notif) => (
                                     <button
+                                        type="button"
                                         key={notif.id}
                                         onClick={(e) => {
                                             e.preventDefault();
@@ -162,7 +167,7 @@ export default function NotificationBell() {
                                             if (!notif.read) markAsRead(notif.id);
                                             setIsOpen(false);
                                             if (notif.order_id) {
-                                                navigate(`/profile?order=${notif.order_id}`);
+                                                openOrderDrawer(notif.order_id);
                                             }
                                         }}
                                         className={`w-full text-left px-5 py-4 flex items-start gap-3 transition-all border-b border-white/[0.03] last:border-0 ${notif.read
