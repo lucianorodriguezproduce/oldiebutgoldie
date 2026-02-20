@@ -15,6 +15,7 @@ import AnalyticsDashboard from "@/pages/Admin/AnalyticsDashboard";
 import TelemetryLogs from "@/components/Admin/TelemetryLogs";
 import SecuritySettings from "@/pages/Admin/SecuritySettings";
 import EditorialManager from "@/pages/Admin/EditorialManager";
+import AdminOrders from "@/pages/AdminOrders";
 import { ProtectedRoute } from "@/components/Guard/ProtectedRoute";
 
 const queryClient = new QueryClient({
@@ -52,6 +53,7 @@ function AppContent() {
             <Route path="logs" element={<TelemetryLogs />} />
             <Route path="security" element={<SecuritySettings />} />
             <Route path="editorial" element={<EditorialManager />} />
+            <Route path="orders" element={<AdminOrders />} />
           </Route>
         </Route>
       </Routes>

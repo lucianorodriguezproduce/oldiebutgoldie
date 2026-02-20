@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Activity, Terminal, Shield, LogOut, Disc, Newspaper } from "lucide-react";
+import { LayoutDashboard, Activity, Terminal, Shield, LogOut, Disc, Newspaper, ShoppingBag } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
 
@@ -16,6 +16,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
         { label: "Analytics", href: "/admin/analytics", icon: Activity },
         { label: "Editorial Hub", href: "/admin/editorial", icon: Newspaper },
+        { label: "Orders", href: "/admin/orders", icon: ShoppingBag },
         { label: "Sync Engine", href: "/admin/sync", icon: Activity },
         { label: "System Logs", href: "/admin/logs", icon: Terminal },
         { label: "Security", href: "/admin/security", icon: Shield },
