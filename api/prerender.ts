@@ -33,11 +33,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 seconds strict timeout
 
+        const fetchHeaders: Record<string, string> = {
+            'User-Agent': 'OldieButGoldieBot/1.0 +https://oldie-but-goldie.vercel.app'
+        };
+
+        if (process.env.DISCOGS_API_TOKEN) {
+            fetchHeaders['Authorization'] = `Discogs token=${process.env.DISCOGS_API_TOKEN}`;
+        }
+
         const DISCOGS_URL = `https://api.discogs.com/${targetType}s/${targetId}`;
         const discogsRes = await fetch(DISCOGS_URL, {
-            headers: {
-                'User-Agent': 'OldieButGoldieBot/1.0 +https://oldie-but-goldie.vercel.app'
-            },
+            headers: fetchHeaders,
             signal: controller.signal
         });
 
