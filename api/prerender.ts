@@ -1,116 +1,114 @@
 import fs from 'fs';
 import path from 'path';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 // This function intercepts requests to /item/:type/:id to inject SEO tags before serving the SPA index.html
 
-export default async function handler(req, res) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+    // 1. Aggressive Caching for Edge
+    const CACHE_CONTROL = 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800';
+    res.setHeader('Cache-Control', CACHE_CONTROL);
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+
+    const defaultImage = 'https://oldie-but-goldie.vercel.app/og-image.jpg';
+    const defaultTitle = 'Oldie but Goldie';
+    const defaultDescription = 'Comprar/Vender formato físico. Consultar disponibilidad vía WhatsApp.';
+
+    // URL Parsing
+    const urlObj = new URL(req.url || '', `https://${req.headers.host || 'localhost'}`);
+    const pathSegments = urlObj.pathname.split('/').filter(Boolean);
+
+    let targetType = 'release';
+    let targetId = '';
+
+    if (pathSegments.length >= 3 && pathSegments[0] === 'item') {
+        targetType = pathSegments[1];
+        targetId = pathSegments[2];
+    } else {
+        return serveFallback(res, defaultTitle, defaultDescription, defaultImage, urlObj.href);
+    }
+
     try {
-        // 1. Extract type and ID from the URL path
-        // Example URL: /item/release/12345
-        const urlObj = new URL(req.url, `https://${req.headers.host}`);
-        const pathSegments = urlObj.pathname.split('/').filter(Boolean);
+        // 2. Fetch with Strict Timeout (WhatsApp bots abandon quickly)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 seconds strict timeout
 
-        let targetType = 'release';
-        let targetId = '';
-
-        if (pathSegments.length >= 3 && pathSegments[0] === 'item') {
-            targetType = pathSegments[1];
-            targetId = pathSegments[2];
-        } else {
-            // Fallback if not matching expected structure
-            return serveStaticIndex(res);
-        }
-
-        // 2. Fetch data from Discogs API
         const DISCOGS_URL = `https://api.discogs.com/${targetType}s/${targetId}`;
         const discogsRes = await fetch(DISCOGS_URL, {
             headers: {
-                // Must provide a generic user agent for public endpoints
-                'User-Agent': 'OldieButGoldie/1.0 +https://oldie-but-goldie.vercel.app'
-            }
+                'User-Agent': 'OldieButGoldieBot/1.0 +https://oldie-but-goldie.vercel.app'
+            },
+            signal: controller.signal
         });
 
+        clearTimeout(timeoutId);
+
         if (!discogsRes.ok) {
-            console.error(`Discogs API failed: ${discogsRes.status}`);
-            return serveStaticIndex(res);
+            throw new Error(`Discogs returned ${discogsRes.status}`);
         }
 
         const data = await discogsRes.json();
 
-        // 3. Prepare SEO metadata
-        const title = data.title ? `${data.title} - Oldie but Goldie` : 'Oldie but Goldie';
-        const description = data.title ? `Compra, vende o cotiza ${data.title} de forma instantánea en Oldie but Goldie.` : 'El sistema definitivo para coleccionismo físico.';
-        const image = data.images?.[0]?.uri || data.thumb || 'https://oldie-but-goldie.vercel.app/og-image.jpg';
-        const url = `https://oldie-but-goldie.vercel.app/item/${targetType}/${targetId}`;
-        const price = data.lowest_price ? data.lowest_price.toString() : null;
+        // 3. Precise Meta Tags per User Instructions
+        const title = data.title ? `${data.title} | Oldie but Goldie` : defaultTitle;
+        const description = defaultDescription; // User requested exact static description for WhatsApp
 
-        // Structured Data Building
-        const schema = {
-            "@context": "https://schema.org",
-            "@type": "Product",
-            "name": data.title || 'Unknown Item',
-            "image": [image],
-            "description": `Formato físico de ${data.title || 'este artículo'}.`,
-        };
-
-        if (price) {
-            schema.offers = {
-                "@type": "Offer",
-                "priceCurrency": "USD", // Defaulting based on Discogs generic response or adjust as needed
-                "price": price,
-                "availability": "https://schema.org/InStock"
-            };
+        // Ensure image is absolute and HTTPS. Discogs sometimes returns HTTP or missing images
+        let image = data.images?.[0]?.uri || data.thumb || defaultImage;
+        if (image.startsWith('http://')) {
+            image = image.replace('http://', 'https://');
         }
 
-        // 4. Read the static index.html built by Vite
-        const indexPath = path.join(process.cwd(), 'dist', 'index.html');
-        let html = fs.readFileSync(indexPath, 'utf8');
+        const url = urlObj.href;
 
-        // 5. Inject into <head>
-        const injection = `
-            <title>${title}</title>
-            <meta name="description" content="${description}" />
-            <link rel="canonical" href="${url}" />
-            
-            <meta property="og:type" content="product" />
-            <meta property="og:url" content="${url}" />
-            <meta property="og:title" content="${title}" />
-            <meta property="og:description" content="${description}" />
-            <meta property="og:image" content="${image}" />
-            
-            <meta name="twitter:card" content="summary_large_image" />
-            <meta name="twitter:url" content="${url}" />
-            <meta name="twitter:title" content="${title}" />
-            <meta name="twitter:description" content="${description}" />
-            <meta name="twitter:image" content="${image}" />
-            
-            <script type="application/ld+json">
-                ${JSON.stringify(schema)}
-            </script>
-        `;
-
-        // Replace the generic <title> tag with our injected block
-        // Or inject right before </head>
-        html = html.replace('</head>', `${injection}</head>`);
-
-        // 6. Send the modified HTML
-        res.setHeader('Content-Type', 'text/html; charset=utf-8');
-        res.setHeader('Cache-Control', 's-maxage=86400, stale-while-revalidate'); // Cache at the Edge for 1 day
-        res.status(200).send(html);
+        return serveFallback(res, title, description, image, url);
 
     } catch (error) {
-        console.error('Prerender error:', error);
-        return serveStaticIndex(res);
+        console.error('Prerender API Error/Timeout:', (error as Error).message);
+        // 4. Bulletproof Fallback
+        return serveFallback(res, defaultTitle, defaultDescription, defaultImage, urlObj.href);
     }
 }
 
-function serveStaticIndex(res) {
+function serveFallback(res: VercelResponse, title: string, description: string, image: string, url: string) {
+    const injection = `
+        <title>${title}</title>
+        <meta name="description" content="${description}" />
+        <link rel="canonical" href="${url}" />
+        
+        <meta property="og:type" content="music.album" />
+        <meta property="og:url" content="${url}" />
+        <meta property="og:title" content="${title}" />
+        <meta property="og:description" content="${description}" />
+        <meta property="og:image" content="${image}" />
+        <meta property="og:image:secure_url" content="${image}" />
+        
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content="${url}" />
+        <meta name="twitter:title" content="${title}" />
+        <meta name="twitter:description" content="${description}" />
+        <meta name="twitter:image" content="${image}" />
+    `;
+
     try {
         const indexPath = path.join(process.cwd(), 'dist', 'index.html');
-        const html = fs.readFileSync(indexPath, 'utf8');
-        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        let html = fs.readFileSync(indexPath, 'utf8');
+        html = html.replace('</head>', `${injection}</head>`);
         res.status(200).send(html);
     } catch (e) {
-        res.status(500).send('Internal Server Error');
+        // Absolute worst case: dist/index.html is missing (Vercel deployment issue)
+        // Return a valid minimalist HTML document just for the bots
+        res.status(200).send(`
+            <!DOCTYPE html>
+            <html lang="es">
+            <head>
+                <meta charset="UTF-8">
+                ${injection}
+            </head>
+            <body>
+                <script>window.location.href = "/";</script>
+            </body>
+            </html>
+        `);
     }
 }
