@@ -279,7 +279,7 @@ export default function Profile() {
                                                 initial={{ opacity: 0, x: -20 }}
                                                 animate={{ opacity: 1, x: 0 }}
                                                 transition={{ delay: i * 0.05 }}
-                                                onClick={() => setSelectedOrder(order)}
+                                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedOrder(order); }}
                                                 className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 flex items-center gap-6 hover:border-primary/20 transition-all group cursor-pointer"
                                             >
                                                 {order.details.cover_image && (
@@ -342,7 +342,7 @@ export default function Profile() {
                                             initial={{ opacity: 0, y: 15 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ delay: i * 0.04 }}
-                                            onClick={() => setSelectedOrder(order)}
+                                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedOrder(order); }}
                                             className={`bg-white/[0.02] border rounded-[1.5rem] overflow-hidden transition-all group cursor-pointer ${order.admin_offer_price
                                                 ? "border-purple-500/20 hover:border-purple-500/40"
                                                 : "border-white/5 hover:border-primary/20"

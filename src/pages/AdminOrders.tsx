@@ -258,8 +258,8 @@ export default function AdminOrders() {
                         key={f.value}
                         onClick={() => setStatusFilter(f.value as StatusFilter)}
                         className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${statusFilter === f.value
-                                ? "bg-primary text-black border-primary"
-                                : "bg-white/5 text-gray-500 border-white/5 hover:border-white/10"
+                            ? "bg-primary text-black border-primary"
+                            : "bg-white/5 text-gray-500 border-white/5 hover:border-white/10"
                             }`}
                     >
                         {f.label}
@@ -293,7 +293,7 @@ export default function AdminOrders() {
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0 }}
                                     transition={{ delay: i * 0.02 }}
-                                    onClick={() => openOrder(order)}
+                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); openOrder(order); }}
                                     className="bg-white/[0.02] border border-white/5 rounded-xl p-4 md:p-5 flex items-center gap-4 hover:border-white/10 hover:bg-white/[0.03] transition-all cursor-pointer group"
                                 >
                                     {/* Cover Thumbnail */}
@@ -324,8 +324,8 @@ export default function AdminOrders() {
 
                                     {/* Intent Badge */}
                                     <span className={`hidden sm:inline px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border flex-shrink-0 ${order.details.intent === "COMPRAR"
-                                            ? "bg-green-500/10 text-green-400 border-green-500/20"
-                                            : "bg-orange-500/10 text-orange-400 border-orange-500/20"
+                                        ? "bg-green-500/10 text-green-400 border-green-500/20"
+                                        : "bg-orange-500/10 text-orange-400 border-orange-500/20"
                                         }`}>
                                         {order.details.intent}
                                     </span>

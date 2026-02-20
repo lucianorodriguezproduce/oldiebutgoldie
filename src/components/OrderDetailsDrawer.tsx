@@ -15,25 +15,11 @@ export default function OrderDetailsDrawer({ isOpen, onClose, title, children, f
     useEffect(() => {
         if (isOpen) {
             document.body.style.overflow = "hidden";
-            // Prevent iOS bounce scroll
-            document.body.style.position = "fixed";
-            document.body.style.width = "100%";
-            document.body.style.top = `-${window.scrollY}px`;
         } else {
-            const scrollY = document.body.style.top;
-            document.body.style.overflow = "";
-            document.body.style.position = "";
-            document.body.style.width = "";
-            document.body.style.top = "";
-            if (scrollY) {
-                window.scrollTo(0, parseInt(scrollY || "0") * -1);
-            }
+            document.body.style.overflow = "unset";
         }
         return () => {
-            document.body.style.overflow = "";
-            document.body.style.position = "";
-            document.body.style.width = "";
-            document.body.style.top = "";
+            document.body.style.overflow = "unset";
         };
     }, [isOpen]);
 
@@ -66,10 +52,10 @@ export default function OrderDetailsDrawer({ isOpen, onClose, title, children, f
                         animate={{ x: 0 }}
                         exit={{ x: "100%" }}
                         transition={{ type: "spring", damping: 30, stiffness: 300 }}
-                        className="fixed inset-0 sm:inset-y-0 sm:left-auto sm:right-0 sm:w-[480px] md:w-[520px] bg-neutral-950 sm:border-l sm:border-white/5 z-[110] flex flex-col shadow-[-20px_0_60px_rgba(0,0,0,0.8)]"
+                        className="fixed inset-y-0 right-0 z-[110] flex flex-col w-full max-w-md bg-neutral-950 h-[100dvh] sm:h-screen sm:border-l sm:border-white/5 shadow-[-20px_0_60px_rgba(0,0,0,0.8)]"
                     >
                         {/* Header */}
-                        <div className="flex items-center justify-between px-5 sm:px-8 py-4 sm:py-5 border-b border-white/5 flex-shrink-0 safe-area-top">
+                        <div className="flex-none flex items-center justify-between px-5 sm:px-8 py-4 sm:py-5 border-b border-white/5 safe-area-top">
                             <span className="text-sm font-mono font-bold text-gray-400 uppercase tracking-widest truncate">
                                 {title || "Detalle de Pedido"}
                             </span>
@@ -83,7 +69,7 @@ export default function OrderDetailsDrawer({ isOpen, onClose, title, children, f
 
                         {/* Body — scrollable with touch support */}
                         <div
-                            className="flex-1 overflow-y-auto overscroll-contain px-5 sm:px-8 py-6 space-y-6"
+                            className="flex-1 overflow-y-auto overscroll-contain px-5 sm:px-8 py-6 pb-6 space-y-6"
                             style={{ WebkitOverflowScrolling: "touch" }}
                         >
                             {children}
@@ -91,7 +77,7 @@ export default function OrderDetailsDrawer({ isOpen, onClose, title, children, f
 
                         {/* Footer — fixed bottom */}
                         {footer && (
-                            <div className="px-5 sm:px-8 py-4 sm:py-5 border-t border-white/5 flex-shrink-0 space-y-3 safe-area-bottom">
+                            <div className="flex-none px-5 sm:px-8 py-4 sm:py-5 border-t border-white/5 space-y-3 pb-safe">
                                 {footer}
                             </div>
                         )}

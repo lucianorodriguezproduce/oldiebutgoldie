@@ -156,7 +156,9 @@ export default function NotificationBell() {
                                 notifications.map((notif) => (
                                     <button
                                         key={notif.id}
-                                        onClick={() => {
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
                                             if (!notif.read) markAsRead(notif.id);
                                             setIsOpen(false);
                                             if (notif.order_id) {
