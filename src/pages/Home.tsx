@@ -13,7 +13,7 @@ type Format = "CD" | "VINILO" | "CASSETTE" | "OTROS";
 type Condition = "NUEVO" | "USADO";
 
 export default function Home() {
-    const { user, orderRecovered, clearOrderRecovered } = useAuth();
+    const { user } = useAuth();
 
     const [intent, setIntent] = useState<Intent | null>(null);
     const [query, setQuery] = useState("");
@@ -44,15 +44,6 @@ export default function Home() {
     useEffect(() => {
         scrollToTop();
     }, [step, selectedItem]);
-
-    // React to global order recovery from AuthContext
-    useEffect(() => {
-        if (orderRecovered) {
-            setIsSuccess(true);
-            setStep(1);
-            scrollToTop();
-        }
-    }, [orderRecovered]);
 
     // Effect for real-time Discogs search
     useEffect(() => {
@@ -112,29 +103,37 @@ export default function Home() {
         setStep(1);
     };
 
-    const createBackup = () => {
-        if (!selectedItem || !format || !condition || !intent) return null;
-        const backup = {
-            item: selectedItem,
-            format,
-            condition,
-            intent
-        };
-        localStorage.setItem("oldie_backup", JSON.stringify(backup));
-        return backup;
+    const performSubmission = async (uid: string) => {
+        if (!selectedItem || !format || !condition || !intent) return;
+
+        await addDoc(collection(db, "orders"), {
+            user_id: uid,
+            item_id: selectedItem.id,
+            details: {
+                format,
+                condition,
+                intent,
+                artist: selectedItem.title.split(' - ')[0],
+                album: selectedItem.title.split(' - ')[1] || selectedItem.title,
+            },
+            timestamp: serverTimestamp(),
+            status: 'pending'
+        });
     };
 
     const handleGoogleSignIn = async () => {
-        createBackup();
         setIsSubmitting(true);
         try {
-            // The backup is now in localStorage.
-            // signInWithRedirect will navigate away. When Google returns,
-            // AuthContext's global listener will pick up the user + backup.
-            await signInWithGoogle();
+            const googleUser = await signInWithGoogle();
+            if (googleUser) {
+                await performSubmission(googleUser.uid);
+                setIsSuccess(true);
+                scrollToTop();
+            }
         } catch (error) {
             console.error("Google Auth error:", error);
             alert("Error al vincular con Google.");
+        } finally {
             setIsSubmitting(false);
         }
     };
@@ -143,32 +142,13 @@ export default function Home() {
         if (e) e.preventDefault();
         if (!email || !password) return;
 
-        createBackup();
         setIsSubmitting(true);
         try {
             const loggedUser = await authenticateUser(email, password);
             if (loggedUser) {
-                // For manual auth, the global listener in AuthContext will
-                // fire onAuthStateChanged and rescue the backup automatically.
-                // But we can also do a direct submission for instant feedback.
-                const backup = createBackup();
-                if (backup) {
-                    await addDoc(collection(db, "orders"), {
-                        user_id: loggedUser.uid,
-                        item_id: backup.item.id,
-                        details: {
-                            format: backup.format,
-                            condition: backup.condition,
-                            intent: backup.intent,
-                            artist: backup.item.title.split(' - ')[0],
-                            album: backup.item.title.split(' - ')[1] || backup.item.title,
-                        },
-                        timestamp: serverTimestamp(),
-                        status: 'pending'
-                    });
-                    localStorage.removeItem("oldie_backup");
-                    setIsSuccess(true);
-                }
+                await performSubmission(loggedUser.uid);
+                setIsSuccess(true);
+                scrollToTop();
             }
         } catch (error) {
             console.error("Manual Auth error:", error);
@@ -196,7 +176,6 @@ export default function Home() {
                 </div>
                 <button
                     onClick={() => {
-                        clearOrderRecovered();
                         setIsSuccess(false);
                         handleResetSelection();
                     }}

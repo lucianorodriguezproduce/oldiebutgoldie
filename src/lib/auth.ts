@@ -1,7 +1,6 @@
 import {
     GoogleAuthProvider,
-    signInWithRedirect,
-    getRedirectResult,
+    signInWithPopup,
     signInWithEmailAndPassword,
     createUserWithEmailAndPassword,
     onAuthStateChanged
@@ -11,28 +10,25 @@ import { auth, db } from "./firebase";
 
 export const googleProvider = new GoogleAuthProvider();
 
+/**
+ * Google Sign-In via Popup (replaces signInWithRedirect).
+ * The user stays on the page, the popup handles auth, and the result
+ * is returned directly — no redirect, no localStorage recovery needed.
+ */
 export const signInWithGoogle = async () => {
     try {
-        await signInWithRedirect(auth, googleProvider);
-    } catch (error) {
-        console.error("Error signing in with Google Redirect:", error);
-        throw error;
-    }
-};
-
-export const handleRedirectResult = async () => {
-    try {
-        const result = await getRedirectResult(auth);
-        if (result?.user) {
-            // For new users, ensure their profile exists in the users collection 
-            // before the order is created in Home.tsx
-            const isNewUser = result.user.metadata.creationTime === result.user.metadata.lastSignInTime;
-            await syncUserToFirestore(result.user, isNewUser);
-            return result.user;
+        const result = await signInWithPopup(auth, googleProvider);
+        if (result.user) {
+            await syncUserToFirestore(result.user);
         }
-        return null;
-    } catch (error) {
-        console.error("Error handling redirect result:", error);
+        return result.user;
+    } catch (error: any) {
+        // Handle popup closed by user gracefully
+        if (error.code === 'auth/popup-closed-by-user') {
+            console.log("User closed the popup, no action needed.");
+            return null;
+        }
+        console.error("Error signing in with Google:", error);
         throw error;
     }
 };
@@ -43,13 +39,11 @@ export const handleRedirectResult = async () => {
  */
 export const authenticateUser = async (email: string, pass: string) => {
     try {
-        // Attempt registration first
         const result = await createUserWithEmailAndPassword(auth, email, pass);
         const user = result.user;
         await syncUserToFirestore(user);
         return user;
     } catch (error: any) {
-        // If email already in use, attempt sign in
         if (error.code === 'auth/email-already-in-use') {
             try {
                 const result = await signInWithEmailAndPassword(auth, email, pass);
@@ -66,23 +60,14 @@ export const authenticateUser = async (email: string, pass: string) => {
     }
 };
 
-export const syncUserToFirestore = async (user: any, isNewUser: boolean = false) => {
+export const syncUserToFirestore = async (user: any) => {
     const userRef = doc(db, "users", user.uid);
-    const data: any = {
+    await setDoc(userRef, {
         uid: user.uid,
         email: user.email,
-        display_name: user.displayName || user.email.split('@')[0],
+        display_name: user.displayName || user.email?.split('@')[0] || 'User',
         last_login: serverTimestamp(),
-    };
-
-    // If it is strictly a new user, we want to set it rather than merge 
-    // to guarantee the document is physically created before moving on.
-    if (isNewUser) {
-        data.created_at = serverTimestamp();
-        await setDoc(userRef, data);
-    } else {
-        await setDoc(userRef, data, { merge: true });
-    }
+    }, { merge: true });
 };
 
 export const subscribeToAuthChanges = (callback: (user: any) => void) => {
