@@ -131,6 +131,7 @@ export default function Profile() {
     const getStatusBadge = (status: string) => {
         const map: Record<string, { label: string; color: string }> = {
             pending: { label: "Pendiente", color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" },
+            negotiating: { label: "En Negociación", color: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
             confirmed: { label: "Confirmado", color: "bg-primary/10 text-primary border-primary/20" },
             completed: { label: "Completado", color: "bg-green-500/10 text-green-500 border-green-500/20" },
             cancelled: { label: "Cancelado", color: "bg-red-500/10 text-red-500 border-red-500/20" },
