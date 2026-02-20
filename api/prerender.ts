@@ -29,6 +29,45 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
+        const url = `https://${req.headers.host || 'localhost'}/item/${targetType}/${targetId}`;
+
+        // FIREBASE CROSS-REFERENCE FOR DYNAMIC SEO
+        let orderStatusStr = "";
+        try {
+            const projectId = process.env.VITE_FIREBASE_PROJECT_ID || 'intras-projects';
+            const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery`;
+
+            const fbResponse = await fetch(firestoreUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    structuredQuery: {
+                        from: [{ collectionId: "orders" }],
+                        where: {
+                            fieldFilter: {
+                                field: { fieldPath: "item_id" },
+                                op: "EQUAL",
+                                value: { integerValue: parseInt(targetId) } // Assuming targetId is an integer for item_id
+                            }
+                        },
+                        limit: 1
+                    }
+                }),
+                signal: AbortSignal.timeout(1000) // 1s strict timeout for cross-reference so we don't block the scraper too long
+            });
+
+            if (fbResponse.ok) {
+                const fbData = await fbResponse.json();
+                if (fbData && fbData.length > 0 && fbData[0].document) {
+                    const status = fbData[0].document.fields?.status?.stringValue;
+                    if (status) orderStatusStr = status.toUpperCase();
+                }
+            }
+        } catch (e) {
+            console.error("Firebase prerender cross-ref failed: ", e);
+            // Non-blocking failure, proceed with default SEO
+        }
+
         // 2. Fetch with Strict Timeout (WhatsApp bots abandon quickly)
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 seconds strict timeout
@@ -53,20 +92,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             throw new Error(`Discogs returned ${discogsRes.status}`);
         }
 
-        const data = await discogsRes.json();
+        const discogsData = await discogsRes.json();
 
         // 3. Precise Meta Tags per User Instructions
-        const title = data.title ? `${data.title} | Oldie but Goldie` : defaultTitle;
-        const description = defaultDescription; // User requested exact static description for WhatsApp
+        const title = discogsData.title ? `${discogsData.title} | Oldie but Goldie` : defaultTitle;
+
+        // Generate description based on whether an order exists in Firebase
+        const description = orderStatusStr
+            ? `Orden de ${title} generada en Oldie but Goldie. Estado: ${orderStatusStr}. Especialistas en formato físico.`
+            : defaultDescription;
 
         // Ensure image is absolute and HTTPS. Discogs sometimes returns HTTP or missing images.
         // Also fallback to higher resolution image first.
-        let image = data.images?.[0]?.resource_url || data.images?.[0]?.uri || data.thumb || defaultImage;
+        let image = discogsData.images?.[0]?.resource_url || discogsData.images?.[0]?.uri || discogsData.thumb || defaultImage;
         if (image.startsWith('http://')) {
             image = image.replace('http://', 'https://');
         }
-
-        const url = urlObj.href;
 
         return serveFallback(res, title, description, image, url);
 
