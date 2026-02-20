@@ -1,16 +1,14 @@
 {
-    "headers": [
-        {
-            "source": "/(.*)",
-            "headers": [
-                {
-                    "key": "Cross-Origin-Opener-Policy",
-                    "value": "same-origin-allow-popups"
-                }
-            ]
-        }
-    ],
+    "framework": "vite",
     "rewrites": [
+        {
+            "source": "/api/proxy",
+            "destination": "/api/proxy"
+        },
+        {
+            "source": "/item/:type/:id",
+            "destination": "/api/prerender"
+        },
         {
             "source": "/(.*)",
             "destination": "/index.html"

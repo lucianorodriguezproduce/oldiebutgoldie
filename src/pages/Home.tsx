@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, ChevronRight, CheckCircle2, Mail, Layers, DollarSign, TrendingUp, MessageCircle, X } from "lucide-react";
 import { db, auth } from "@/lib/firebase";
@@ -8,6 +9,7 @@ import { discogsService, type DiscogsSearchResult } from "@/lib/discogs";
 import { authenticateUser, signInWithGoogle } from "@/lib/auth";
 import { useAuth } from "@/context/AuthContext";
 import { generateWhatsAppLink } from "@/utils/whatsapp";
+import { SEO } from "@/components/SEO";
 
 type Intent = "COMPRAR" | "VENDER";
 type Format = "CD" | "VINILO" | "CASSETTE" | "OTROS";
@@ -16,6 +18,8 @@ type Currency = "ARS" | "USD";
 
 export default function Home() {
     const { user } = useAuth();
+    const { type: routeType, id: routeId } = useParams<{ type: string, id: string }>();
+    const navigate = useNavigate();
 
     const [intent, setIntent] = useState<Intent | null>(null);
     const [query, setQuery] = useState("");
@@ -55,6 +59,43 @@ export default function Home() {
     useEffect(() => {
         scrollToTop();
     }, [step, selectedItem]);
+
+    // Handle initial route loading if hitting /item/:type/:id directly
+    useEffect(() => {
+        const loadItemFromRoute = async () => {
+            if (routeId && routeType && !selectedItem) {
+                setIsLoadingSearch(true);
+                try {
+                    let data;
+                    if (routeType === 'release') {
+                        data = await discogsService.getReleaseDetails(routeId);
+                    } else if (routeType === 'master') {
+                        data = await discogsService.getMasterDetails(routeId);
+                    }
+
+                    if (data) {
+                        setSelectedItem({
+                            id: data.id,
+                            title: data.title || (data.artists ? `${data.artists[0]?.name} - ${data.title}` : 'Desconocido'),
+                            cover_image: data.images?.[0]?.uri || data.thumb || '',
+                            thumb: data.thumb || '',
+                            type: routeType,
+                            uri: data.uri || '',
+                            resource_url: data.resource_url || ''
+                        });
+                        setIsSearchActive(false);
+                    }
+                } catch (error) {
+                    console.error("Failed to load item from route:", error);
+                    navigate('/');
+                } finally {
+                    setIsLoadingSearch(false);
+                }
+            }
+        };
+
+        loadItemFromRoute();
+    }, [routeId, routeType]);
 
     // Auto-scroll logic for results container (Mobile Keyboard Fix)
     useEffect(() => {
@@ -114,9 +155,9 @@ export default function Home() {
     };
 
     const handleEntityDrillDown = async (result: DiscogsSearchResult) => {
-        if (result.type === "release") {
-            setSelectedItem(result);
-            setIsSearchActive(false);
+        if (result.type === "release" || result.type === "master") {
+            // Use Client-Side Routing to preserve UX, which also updates the URL for sharing/SEO
+            navigate(`/item/${result.type}/${result.id}`);
             return;
         }
 
@@ -162,6 +203,11 @@ export default function Home() {
         setHasMore(false);
         setStep(1);
         setIsSearchActive(false);
+
+        // Clean URL if we are coming from a dynamic route
+        if (routeId) {
+            navigate('/', { replace: true });
+        }
     };
 
     const generateOrderNumber = () => {
@@ -368,6 +414,32 @@ export default function Home() {
 
     return (
         <div className={`mx-auto font-sans w-full transition-all duration-300 ${isSearchActive && !selectedItem ? 'h-[100dvh] flex flex-col overflow-hidden bg-neutral-950' : 'max-w-4xl py-8 md:py-20 flex flex-col items-center justify-center min-h-[80vh] px-4'}`}>
+            {/* Dynamic SEO Injection for Individual Items */}
+            {selectedItem && (
+                <SEO
+                    title={`${selectedItem.title} - Oldie but Goldie`}
+                    description={`Compra, vende o cotiza ${selectedItem.title} de forma instantánea.`}
+                    image={selectedItem.cover_image || selectedItem.thumb}
+                    url={`https://oldie-but-goldie.vercel.app/item/${selectedItem.type}/${selectedItem.id}`}
+                    type="product"
+                    schema={{
+                        "@context": "https://schema.org",
+                        "@type": "Product",
+                        "name": selectedItem.title,
+                        "image": [selectedItem.cover_image || selectedItem.thumb],
+                        "description": `Formato físico de ${selectedItem.title}.`,
+                        ...(marketPrice ? {
+                            "offers": {
+                                "@type": "Offer",
+                                "priceCurrency": "USD",
+                                "price": marketPrice.toString(),
+                                "availability": "https://schema.org/InStock"
+                            }
+                        } : {})
+                    }}
+                />
+            )}
+
             <AnimatePresence mode="wait">
                 {!selectedItem ? (
                     <motion.div
