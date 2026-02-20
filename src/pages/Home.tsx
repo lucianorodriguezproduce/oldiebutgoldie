@@ -367,187 +367,191 @@ export default function Home() {
     }
 
     return (
-        <div className="max-w-4xl mx-auto py-8 md:py-20 flex flex-col items-center justify-center min-h-[80vh] px-4 font-sans">
+        <div className={`mx-auto font-sans w-full transition-all duration-300 ${isSearchActive && !selectedItem ? 'h-[100dvh] flex flex-col overflow-hidden bg-neutral-950' : 'max-w-4xl py-8 md:py-20 flex flex-col items-center justify-center min-h-[80vh] px-4'}`}>
             <AnimatePresence mode="wait">
                 {!selectedItem ? (
                     <motion.div
                         key="step1-search-container"
                         initial={{ opacity: 0, scale: 0.98 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        // Using flex to strictly control vertical gaps dynamically without relying on static margins
-                        // Reduced top padding/margin for active state to avoid massive empty space
-                        className={`w-full flex items-center flex-col text-center ${isSearchActive ? 'gap-0 md:gap-2 mt-4' : 'gap-12 md:gap-16'}`}
+                        // Removed previous text-center gap logic and replaced with absolute flex architecture
+                        className={`w-full flex flex-col items-center justify-center ${isSearchActive ? 'h-full flex-1' : 'gap-12 md:gap-16 text-center'}`}
                     >
-                        <AnimatePresence mode="wait">
-                            {!isSearchActive ? (
-                                <motion.header
-                                    key="header-default"
-                                    initial={{ opacity: 0, y: -20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -20, height: 0 }}
-                                    className="space-y-4 overflow-hidden"
-                                >
-                                    <div className="flex items-center justify-center gap-3 mb-2">
-                                        <div className="h-2 w-2 bg-primary animate-pulse rounded-full" />
-                                        <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60">Sistema de Intención v4.5</span>
-                                    </div>
-                                    <h1 className="text-4xl md:text-7xl font-display font-black text-white uppercase tracking-tightest leading-[0.85]">
-                                        Protocolo <br />
-                                        <span className="text-primary text-5xl md:text-8xl">Buscador</span>
-                                    </h1>
-                                </motion.header>
-                            ) : (
-                                <motion.header
-                                    key="header-active"
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    // Header compression: removed massive bottom margin, kept very tight
-                                    className="text-center md:text-left mb-2 md:mb-4"
-                                >
-                                    <h1 className="text-5xl md:text-7xl font-display font-black text-white italic uppercase tracking-tighter pt-2 md:pt-0">
-                                        RESULTADOS
-                                    </h1>
-                                </motion.header>
-                            )}
-                        </AnimatePresence>
-
-                        <motion.div layout className="relative group w-full flex items-center justify-center">
-                            <Search className="absolute left-6 md:left-8 top-1/2 -translate-y-1/2 h-5 md:h-6 w-5 md:w-6 text-gray-500 group-focus-within:text-primary transition-colors" />
-                            <input
-                                id="searchQuery"
-                                name="searchQuery"
-                                type="text"
-                                onFocus={() => setIsSearchActive(true)}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                        e.preventDefault();
-                                        e.currentTarget.blur();
-                                    }
-                                }}
-                                value={query}
-                                onChange={(e) => setQuery(e.target.value)}
-                                placeholder="Artista, Álbum o Referencia..."
-                                // Added strict focus states: transparent ring/outline and force dark background to prevent Safari auto-fill white backgrounds
-                                className="w-full bg-white/5 border-2 border-white/5 hover:border-white/10 rounded-[1.5rem] md:rounded-[2.5rem] py-6 md:py-8 pl-14 md:pl-20 pr-16 md:pr-20 text-xl md:text-2xl font-bold text-white placeholder:text-gray-700/50 focus:outline-none focus:ring-0 focus:border-primary/50 transition-all focus:bg-neutral-900 shadow-2xl"
-                            />
-                            <AnimatePresence>
-                                {query && (
-                                    <motion.button
-                                        initial={{ opacity: 0, scale: 0.8 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.8 }}
-                                        onClick={() => {
-                                            setQuery("");
-                                            setIsSearchActive(false);
-                                            setSearchResults([]);
-                                            setHasMore(false);
-                                        }}
-                                        className="absolute right-6 md:right-8 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center"
+                        {/* BLOQUE SUPERIOR (Header Fijo) */}
+                        <div className={`w-full transition-all flex flex-col items-center ${isSearchActive ? 'flex-none shrink-0 z-10 bg-neutral-950 pt-[env(safe-area-inset-top,1rem)] md:pt-8 pb-4 px-4 border-b border-white/5 shadow-2xl' : ''}`}>
+                            <AnimatePresence mode="wait">
+                                {!isSearchActive ? (
+                                    <motion.header
+                                        key="header-default"
+                                        initial={{ opacity: 0, y: -20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -20, height: 0 }}
+                                        className="space-y-4 overflow-hidden"
                                     >
-                                        <X className="h-5 md:h-6 w-5 md:w-6" />
-                                    </motion.button>
+                                        <div className="flex items-center justify-center gap-3 mb-2">
+                                            <div className="h-2 w-2 bg-primary animate-pulse rounded-full" />
+                                            <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60">Sistema de Intención v4.5</span>
+                                        </div>
+                                        <h1 className="text-4xl md:text-7xl font-display font-black text-white uppercase tracking-tightest leading-[0.85]">
+                                            Protocolo <br />
+                                            <span className="text-primary text-5xl md:text-8xl">Buscador</span>
+                                        </h1>
+                                    </motion.header>
+                                ) : (
+                                    <motion.header
+                                        key="header-active"
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="w-full text-center md:text-left mb-2 md:mb-4 max-w-4xl mx-auto"
+                                    >
+                                        <h1 className="text-5xl md:text-7xl font-display font-black text-white italic uppercase tracking-tighter pt-2 md:pt-0">
+                                            RESULTADOS
+                                        </h1>
+                                    </motion.header>
                                 )}
                             </AnimatePresence>
-                        </motion.div>
 
-                        <AnimatePresence>
-                            {isSearchActive && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 10, height: 0 }}
-                                    animate={{ opacity: 1, y: 0, height: "auto" }}
-                                    exit={{ opacity: 0, y: -10, height: 0 }}
-                                    // Added mt-4 or mt-5 equivalent (pt-4) to give breathing room from the input, but keeping the gap controlled
-                                    className="flex items-center justify-start md:justify-center gap-2 md:gap-3 overflow-x-auto pb-6 pt-5 px-4 -mx-4 md:px-0 md:mx-0 w-[calc(100%+2rem)] md:w-full hide-scrollbar snap-x"
-                                >
-                                    {["todo", "artistas", "álbumes"].map((f) => (
-                                        <button
-                                            key={f}
-                                            onClick={() => setSearchFilter(f as any)}
-                                            className={`px-8 py-3 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest whitespace-nowrap transition-all border-2 snap-center shrink-0 ${searchFilter === f
-                                                ? "bg-primary border-primary text-black shadow-[0_0_20px_rgba(204,255,0,0.3)]"
-                                                : "bg-transparent border-white/20 text-white hover:border-white/40 hover:bg-white/5"
-                                                }`}
-                                        >
-                                            {f}
-                                        </button>
-                                    ))}
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-
-                        <AnimatePresence>
-                            {isSearchActive && searchResults.length > 0 && (
-                                <motion.div
-                                    ref={resultsContainerRef}
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0 }}
-                                    // Massive padding bottom ensures the last item is never hidden behind the mobile keyboard
-                                    className="space-y-3 md:space-y-4 text-left mt-2 md:mt-4 pb-[60vh] md:pb-8"
-                                >
-                                    {searchResults.map((result, i) => (
+                            <motion.div layout className={`relative group w-full flex items-center justify-center ${isSearchActive ? 'max-w-4xl mx-auto' : ''}`}>
+                                <Search className="absolute left-6 md:left-8 top-1/2 -translate-y-1/2 h-5 md:h-6 w-5 md:w-6 text-gray-500 group-focus-within:text-primary transition-colors" />
+                                <input
+                                    id="searchQuery"
+                                    name="searchQuery"
+                                    type="text"
+                                    onFocus={() => setIsSearchActive(true)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            e.currentTarget.blur();
+                                        }
+                                    }}
+                                    value={query}
+                                    onChange={(e) => setQuery(e.target.value)}
+                                    placeholder="Artista, Álbum o Referencia..."
+                                    className="w-full bg-white/5 border-2 border-white/5 hover:border-white/10 rounded-[1.5rem] md:rounded-[2.5rem] py-6 md:py-8 pl-14 md:pl-20 pr-16 md:pr-20 text-xl md:text-2xl font-bold text-white placeholder:text-gray-700/50 focus:outline-none focus:ring-0 focus:border-primary/50 transition-all focus:bg-neutral-900 shadow-2xl"
+                                />
+                                <AnimatePresence>
+                                    {query && (
                                         <motion.button
-                                            initial={{ opacity: 0, y: 20 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: i * 0.05 }}
-                                            key={`${result.id}-${result.type}`}
-                                            type="button"
-                                            onClick={() => handleEntityDrillDown(result)}
-                                            className="w-full relative overflow-hidden bg-white/[0.03] border-2 border-white/10 rounded-2xl md:rounded-[2rem] hover:border-primary/40 transition-all group active:scale-[0.98]"
+                                            initial={{ opacity: 0, scale: 0.8 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            exit={{ opacity: 0, scale: 0.8 }}
+                                            onClick={() => {
+                                                setQuery("");
+                                                setIsSearchActive(false);
+                                                setSearchResults([]);
+                                                setHasMore(false);
+                                            }}
+                                            className="absolute right-6 md:right-8 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center"
                                         >
-                                            <div className="absolute left-0 top-0 bottom-0 w-2 bg-transparent group-hover:bg-primary transition-colors" />
-                                            <div className="p-4 md:p-6 flex items-center gap-4 md:gap-6 ml-1">
-                                                <div className="w-16 md:w-20 h-16 md:h-20 rounded-xl md:rounded-2xl overflow-hidden bg-black flex-shrink-0 border border-white/10 shadow-lg">
-                                                    <img src={result.thumb || result.cover_image} alt="" className="w-full h-full object-cover grayscale-[0.3] group-hover:grayscale-0 transition-all duration-500" />
-                                                </div>
-                                                <div className="flex-1 min-w-0 flex flex-col items-start gap-1 text-left">
-                                                    <h4 className="text-xl md:text-2xl font-bold font-display italic text-white truncate w-full group-hover:text-primary transition-colors">
-                                                        {result.title.split(' - ')[1] || result.title}
-                                                    </h4>
-                                                    <span className="text-xs md:text-sm font-black text-gray-400 uppercase tracking-widest leading-none truncate w-full">
-                                                        {result.title.split(' - ')[0]}
-                                                    </span>
-                                                    <span className="text-[10px] text-gray-500 font-mono mt-2 tracking-widest uppercase">
-                                                        {result.year || "N/A"} • {result.type}
-                                                    </span>
-                                                </div>
-                                                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-primary/10 group-hover:border-primary/30 transition-all">
-                                                    <ChevronRight className="h-5 w-5 text-gray-500 group-hover:text-primary transition-colors" />
-                                                </div>
-                                            </div>
+                                            <X className="h-5 md:h-6 w-5 md:w-6" />
                                         </motion.button>
-                                    ))}
-
-                                    {hasMore && (
-                                        <div className="pt-8 text-center pb-20">
-                                            <button
-                                                onClick={handleLoadMore}
-                                                disabled={isLoadingSearch}
-                                                className="bg-black hover:bg-white/5 border border-white/20 text-white px-8 py-4 rounded-full font-black uppercase text-xs tracking-widest transition-all hover:border-white/40 flex items-center justify-center gap-3 mx-auto min-w-[200px]"
-                                            >
-                                                {isLoadingSearch ? (
-                                                    <div className="h-4 w-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                                                ) : "Cargar Más"}
-                                            </button>
-                                        </div>
                                     )}
-                                </motion.div>
-                            )}
+                                </AnimatePresence>
+                            </motion.div>
 
-                            {isSearchActive && isLoadingSearch && searchResults.length === 0 && (
-                                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-20 flex flex-col items-center justify-center gap-4 text-center">
-                                    <div className="h-8 w-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-                                    <span className="text-xs font-black uppercase tracking-widest text-gray-500">Analizando base de datos...</span>
-                                </motion.div>
-                            )}
+                            <AnimatePresence>
+                                {isSearchActive && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10, height: 0 }}
+                                        animate={{ opacity: 1, y: 0, height: "auto" }}
+                                        exit={{ opacity: 0, y: -10, height: 0 }}
+                                        className="flex items-center justify-start md:justify-center gap-2 md:gap-3 overflow-x-auto pb-4 pt-5 px-4 -mx-4 md:px-0 md:mx-0 w-[calc(100%+2rem)] md:w-full hide-scrollbar snap-x max-w-4xl mx-auto"
+                                    >
+                                        {["todo", "artistas", "álbumes"].map((f) => (
+                                            <button
+                                                key={f}
+                                                onClick={() => setSearchFilter(f as any)}
+                                                className={`px-8 py-3 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest whitespace-nowrap transition-all border-2 snap-center shrink-0 ${searchFilter === f
+                                                    ? "bg-primary border-primary text-black shadow-[0_0_20px_rgba(204,255,0,0.3)]"
+                                                    : "bg-transparent border-white/20 text-white hover:border-white/40 hover:bg-white/5"
+                                                    }`}
+                                            >
+                                                {f}
+                                            </button>
+                                        ))}
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
 
-                            {isSearchActive && !isLoadingSearch && debouncedQuery.length >= 3 && searchResults.length === 0 && (
-                                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-20 text-center space-y-4">
-                                    <p className="text-gray-500 font-medium text-lg">No se encontraron resultados para "{query}"</p>
-                                    <button onClick={() => setQuery("")} className="text-primary text-xs font-black uppercase tracking-widest hover:underline hover:text-white transition-colors">Limpiar búsqueda</button>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
+                        {/* BLOQUE INFERIOR (Resultados Scrollables Independentemente) */}
+                        <div className={`w-full ${isSearchActive ? 'flex-1 overflow-y-auto overscroll-contain p-4 pb-[env(safe-area-inset-bottom,2rem)] block bg-[#050505]' : 'hidden'}`}>
+                            <div className="max-w-4xl mx-auto w-full pb-[10vh]">
+                                <AnimatePresence>
+                                    {isSearchActive && searchResults.length > 0 && (
+                                        <motion.div
+                                            ref={resultsContainerRef}
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            exit={{ opacity: 0 }}
+                                            // Removed massive margins/padding as flex-1 container handles scrolling now
+                                            className="space-y-3 md:space-y-4 text-left"
+                                        >
+                                            {searchResults.map((result, i) => (
+                                                <motion.button
+                                                    initial={{ opacity: 0, y: 20 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    transition={{ delay: i * 0.05 }}
+                                                    key={`${result.id}-${result.type}`}
+                                                    type="button"
+                                                    onClick={() => handleEntityDrillDown(result)}
+                                                    className="w-full relative overflow-hidden bg-white/[0.03] border-2 border-white/10 rounded-2xl md:rounded-[2rem] hover:border-primary/40 transition-all group active:scale-[0.98]"
+                                                >
+                                                    <div className="absolute left-0 top-0 bottom-0 w-2 bg-transparent group-hover:bg-primary transition-colors" />
+                                                    <div className="p-4 md:p-6 flex items-center gap-4 md:gap-6 ml-1">
+                                                        <div className="w-16 md:w-20 h-16 md:h-20 rounded-xl md:rounded-2xl overflow-hidden bg-black flex-shrink-0 border border-white/10 shadow-lg">
+                                                            <img src={result.thumb || result.cover_image} alt="" className="w-full h-full object-cover grayscale-[0.3] group-hover:grayscale-0 transition-all duration-500" />
+                                                        </div>
+                                                        <div className="flex-1 min-w-0 flex flex-col items-start gap-1 text-left">
+                                                            <h4 className="text-xl md:text-2xl font-bold font-display italic text-white truncate w-full group-hover:text-primary transition-colors">
+                                                                {result.title.split(' - ')[1] || result.title}
+                                                            </h4>
+                                                            <span className="text-xs md:text-sm font-black text-gray-400 uppercase tracking-widest leading-none truncate w-full">
+                                                                {result.title.split(' - ')[0]}
+                                                            </span>
+                                                            <span className="text-[10px] text-gray-500 font-mono mt-2 tracking-widest uppercase">
+                                                                {result.year || "N/A"} • {result.type}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-primary/10 group-hover:border-primary/30 transition-all">
+                                                            <ChevronRight className="h-5 w-5 text-gray-500 group-hover:text-primary transition-colors" />
+                                                        </div>
+                                                    </div>
+                                                </motion.button>
+                                            ))}
+
+                                            {hasMore && (
+                                                <div className="pt-8 text-center pb-8">
+                                                    <button
+                                                        onClick={handleLoadMore}
+                                                        disabled={isLoadingSearch}
+                                                        className="bg-black hover:bg-white/5 border border-white/20 text-white px-8 py-4 rounded-full font-black uppercase text-xs tracking-widest transition-all hover:border-white/40 flex items-center justify-center gap-3 mx-auto min-w-[200px]"
+                                                    >
+                                                        {isLoadingSearch ? (
+                                                            <div className="h-4 w-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                                                        ) : "Cargar Más"}
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </motion.div>
+                                    )}
+
+                                    {isSearchActive && isLoadingSearch && searchResults.length === 0 && (
+                                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-20 flex flex-col items-center justify-center gap-4 text-center">
+                                            <div className="h-8 w-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+                                            <span className="text-xs font-black uppercase tracking-widest text-gray-500">Analizando base de datos...</span>
+                                        </motion.div>
+                                    )}
+
+                                    {isSearchActive && !isLoadingSearch && debouncedQuery.length >= 3 && searchResults.length === 0 && (
+                                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-20 text-center space-y-4">
+                                            <p className="text-gray-500 font-medium text-lg">No se encontraron resultados para "{query}"</p>
+                                            <button onClick={() => setQuery("")} className="text-primary text-xs font-black uppercase tracking-widest hover:underline hover:text-white transition-colors">Limpiar búsqueda</button>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
+                        </div>
                     </motion.div>
                 ) : (
                     <motion.div
