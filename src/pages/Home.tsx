@@ -732,7 +732,7 @@ export default function Home() {
                                                 <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest mb-1">Operación</p>
                                                 <div className={`px-2 py-0.5 rounded-[4px] border backdrop-blur-md ${publicOrder.intent === 'VENDER' ? 'bg-amber-500/10 border-amber-500/30 text-amber-500' : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'}`}>
                                                     <span className="text-[10px] uppercase tracking-widest font-black">
-                                                        {publicOrder.intent === 'VENDER' ? 'Disponible' : 'Buscado'}
+                                                        {publicOrder.intent === 'VENDER' ? 'EN VENTA' : 'EN COMPRA'}
                                                     </span>
                                                 </div>
                                             </div>

@@ -66,7 +66,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
                     if (status) orderStatusStr = status.toUpperCase();
                     if (intent) {
-                        orderIntentStr = intent === 'VENDER' ? 'OFERTA' : 'SOLICITUD';
+                        orderIntentStr = intent === 'VENDER' ? 'EN VENTA' : 'EN COMPRA';
                     }
                 }
             }
@@ -106,7 +106,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // Generate description based on whether an order exists in Firebase
         const description = orderStatusStr
-            ? `Actividad de Coleccionismo: ${title} (${orderIntentStr}) en Oldie but Goldie. Estado: ${orderStatusStr}.`
+            ? `Orden de ${orderIntentStr}: ${title} en Oldie but Goldie. Estado: ${orderStatusStr}.`
             : defaultDescription;
 
         // Ensure image is absolute and HTTPS. Discogs sometimes returns HTTP or missing images.

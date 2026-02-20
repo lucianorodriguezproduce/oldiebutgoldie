@@ -193,17 +193,6 @@ export default function PublicOrders() {
                                             <div className="absolute top-3 right-3 z-10">
                                                 {getStatusBadge(order.status)}
                                             </div>
-
-                                            {/* Intent Badge */}
-                                            {order.intent && (
-                                                <div className="absolute top-3 left-3 z-10">
-                                                    <div className={`px-2 py-1 rounded-[4px] border backdrop-blur-md ${order.intent === 'VENDER' ? 'bg-amber-500/10 border-amber-500/30 text-amber-500' : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'}`}>
-                                                        <span className="text-[9px] uppercase tracking-widest font-black">
-                                                            {order.intent === 'VENDER' ? 'Disponible' : 'Buscado'}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            )}
                                         </div>
 
                                         {/* Meta Section */}
@@ -217,10 +206,20 @@ export default function PublicOrders() {
                                                 </p>
                                             </div>
 
-                                            <div className="mt-4 flex items-center justify-between pt-4 border-t border-white/5">
-                                                <span className="text-[10px] text-gray-500 font-mono uppercase tracking-wider">
-                                                    {getRelativeTime(order.createdAt)}
-                                                </span>
+                                            <div className="mt-4 flex flex-col md:flex-row md:items-center justify-between pt-4 border-t border-white/5 gap-2 md:gap-0">
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-[10px] text-gray-500 font-mono uppercase tracking-wider">
+                                                        {getRelativeTime(order.createdAt)}
+                                                    </span>
+                                                    {order.intent && (
+                                                        <div className="flex items-center gap-1.5">
+                                                            <div className={`w-1.5 h-1.5 rounded-full ${order.intent === 'VENDER' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+                                                            <span className={`text-[9px] font-mono uppercase tracking-widest ${order.intent === 'VENDER' ? 'text-amber-500/80 border-b border-amber-500/20' : 'text-emerald-400/80 border-b border-emerald-500/20'}`}>
+                                                                {order.intent === 'VENDER' ? 'EN VENTA' : 'EN COMPRA'}
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                </div>
                                                 <span className="text-[10px] text-white/30 font-bold opacity-0 group-hover:opacity-100 transition-opacity">
                                                     Ver ID <span className="text-primary">{order.itemId}</span>
                                                 </span>
