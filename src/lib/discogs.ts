@@ -23,6 +23,7 @@ export interface DiscogsSearchResult {
     cover_image: string;
     thumb: string;
     year?: string;
+    format?: string[];
     label?: string[];
     country?: string;
     genre?: string[];

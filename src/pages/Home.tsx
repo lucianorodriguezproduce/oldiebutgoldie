@@ -41,6 +41,8 @@ export default function Home() {
     const [searchResults, setSearchResults] = useState<DiscogsSearchResult[]>([]);
     const [isLoadingSearch, setIsLoadingSearch] = useState(false);
     const [selectedItem, setSelectedItem] = useState<DiscogsSearchResult | null>(null);
+    const [recommendations, setRecommendations] = useState<DiscogsSearchResult[]>([]);
+    const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
     const [publicOrder, setPublicOrder] = useState<any>(null); // For rendering the Collector Receipt
     const [currentPage, setCurrentPage] = useState(1);
     const [hasMore, setHasMore] = useState(false);
@@ -82,7 +84,9 @@ export default function Home() {
                             thumb: data.thumb || '',
                             type: routeType,
                             uri: data.uri || '',
-                            resource_url: data.resource_url || ''
+                            resource_url: data.resource_url || '',
+                            genre: data.genres || [],
+                            year: data.year?.toString() || ''
                         });
                         setIsSearchActive(false);
 
@@ -219,6 +223,38 @@ export default function Home() {
             setIsLoadingSearch(false);
         }
     };
+
+    // Recommendation Engine Effect
+    useEffect(() => {
+        const fetchRecommendations = async () => {
+            if (!selectedItem) {
+                setRecommendations([]);
+                return;
+            }
+
+            // Don't fetch if it's an artist (we don't show recommendations on artist level in Home, though we shouldn't get here unless it's a direct route load or order view)
+            if (selectedItem.type === 'artist') return;
+
+            setIsLoadingRecommendations(true);
+            try {
+                let genreToSearch = "Electronic"; // Default fallback
+                if (selectedItem.genre && selectedItem.genre.length > 0) {
+                    genreToSearch = selectedItem.genre[0];
+                }
+                const results = await discogsService.getTrending(genreToSearch);
+
+                // Filter out the currently selected item so it doesn't recommend itself
+                const filtered = results.filter(r => r.id !== selectedItem.id).slice(0, 4);
+                setRecommendations(filtered);
+            } catch (error) {
+                console.error("Recommendations error:", error);
+            } finally {
+                setIsLoadingRecommendations(false);
+            }
+        };
+
+        fetchRecommendations();
+    }, [selectedItem]);
 
     const handleResetSelection = () => {
         setSelectedItem(null);
@@ -642,9 +678,35 @@ export default function Home() {
                                                             <span className="text-xs md:text-sm font-black text-gray-400 uppercase tracking-widest leading-none truncate w-full">
                                                                 {result.title.split(' - ')[0]}
                                                             </span>
-                                                            <span className="text-[10px] text-gray-500 font-mono mt-2 tracking-widest uppercase">
-                                                                {result.year || "N/A"} • {result.type}
-                                                            </span>
+                                                            <div className="flex items-center gap-2 mt-2 flex-wrap">
+                                                                {result.type === 'artist' ? (
+                                                                    <span className="text-[10px] text-primary/80 font-mono tracking-widest uppercase border border-primary/20 bg-primary/5 px-2 py-0.5 rounded">
+                                                                        Ver Discografía
+                                                                    </span>
+                                                                ) : (
+                                                                    <>
+                                                                        {result.year && result.year !== "0" && result.year.toUpperCase() !== "N/A" && (
+                                                                            <span className="text-[10px] text-gray-400 font-mono tracking-widest uppercase">
+                                                                                {result.year}
+                                                                            </span>
+                                                                        )}
+                                                                        {(result.format && result.format.length > 0) ? (
+                                                                            <>
+                                                                                {result.year && result.year !== "0" && result.year.toUpperCase() !== "N/A" && (
+                                                                                    <span className="text-[10px] text-gray-600 font-mono">•</span>
+                                                                                )}
+                                                                                <span className="text-[10px] text-gray-500 font-mono tracking-widest uppercase">
+                                                                                    {result.format[0]}
+                                                                                </span>
+                                                                            </>
+                                                                        ) : (
+                                                                            <span className="text-[10px] text-gray-500 font-mono tracking-widest uppercase ml-1">
+                                                                                {result.type}
+                                                                            </span>
+                                                                        )}
+                                                                    </>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                         <div className="flex-shrink-0 w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-primary/10 group-hover:border-primary/30 transition-all">
                                                             <ChevronRight className="h-5 w-5 text-gray-500 group-hover:text-primary transition-colors" />
@@ -821,17 +883,54 @@ export default function Home() {
                                         </div>
                                         <h3 className="text-3xl lg:text-4xl font-display font-black text-white uppercase tracking-tighter leading-none mt-4 md:mt-0">{selectedItem.title}</h3>
                                         <div className="grid grid-cols-2 gap-6">
-                                            <div>
-                                                <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">Año</p>
-                                                <p className="text-white font-bold">{selectedItem.year || "N/A"}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">Género</p>
-                                                <p className="text-primary font-bold">{selectedItem.genre?.[0] || "N/A"}</p>
-                                            </div>
+                                            {selectedItem.year && selectedItem.year !== "0" && selectedItem.year.toUpperCase() !== "N/A" && (
+                                                <div>
+                                                    <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">Año</p>
+                                                    <p className="text-white font-bold">{selectedItem.year}</p>
+                                                </div>
+                                            )}
+                                            {selectedItem.genre && selectedItem.genre.length > 0 && selectedItem.genre[0].toUpperCase() !== "N/A" && (
+                                                <div>
+                                                    <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">Género</p>
+                                                    <p className="text-primary font-bold">{selectedItem.genre[0]}</p>
+                                                </div>
+                                            )}
                                         </div>
                                         <button onClick={handleResetSelection} className="text-[10px] font-black uppercase tracking-widest text-gray-700 hover:text-primary transition-colors underline decoration-primary/20">Cambiar Selección</button>
                                     </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Recommendations Section */}
+                        {selectedItem && recommendations.length > 0 && !publicOrder && (
+                            <div className="pt-8 md:pt-12 fade-in">
+                                <h4 className="text-xl md:text-2xl font-display font-black text-white italic uppercase tracking-tighter mb-4 md:mb-6 pl-2 border-l-4 border-primary">
+                                    Otros tesoros que podrían interesarte
+                                </h4>
+                                <div className="flex overflow-x-auto gap-4 md:gap-6 pb-6 hide-scrollbar snap-x snap-mandatory">
+                                    {recommendations.map((rec) => (
+                                        <button
+                                            key={`rec-${rec.id}`}
+                                            onClick={() => navigate(`/item/${rec.type}/${rec.id}`)}
+                                            className="w-[280px] md:w-[320px] flex-shrink-0 relative overflow-hidden bg-white/[0.03] border-2 border-white/5 hover:border-white/20 rounded-2xl md:rounded-[2rem] transition-all group snap-start text-left flex flex-col items-start p-4 hover:bg-white/[0.05]"
+                                        >
+                                            <div className="w-full aspect-square rounded-xl overflow-hidden bg-black mb-4 relative shadow-lg">
+                                                <img src={rec.cover_image || rec.thumb} alt={rec.title} className="w-full h-full object-cover grayscale-[0.3] group-hover:grayscale-0 transition-transform duration-700 group-hover:scale-105" />
+                                            </div>
+                                            <h5 className="text-lg font-bold font-display italic text-white truncate w-full group-hover:text-primary transition-colors">
+                                                {rec.title.split(' - ')[1] || rec.title}
+                                            </h5>
+                                            <span className="text-xs font-black text-gray-500 uppercase tracking-widest leading-none truncate w-full mt-1">
+                                                {rec.title.split(' - ')[0]}
+                                            </span>
+                                        </button>
+                                    ))}
+                                    {isLoadingRecommendations && (
+                                        <div className="w-[280px] md:w-[320px] flex-shrink-0 flex items-center justify-center snap-start">
+                                            <div className="h-6 w-6 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}
