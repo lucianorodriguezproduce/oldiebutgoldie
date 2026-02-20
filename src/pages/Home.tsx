@@ -1,25 +1,26 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, ChevronRight, CheckCircle2, Mail, Layers, MapPin, Tag, Plus, ArrowRight } from "lucide-react";
-import { db, auth } from "@/lib/firebase";
+import { Search, ChevronRight, CheckCircle2, Mail, Layers } from "lucide-react";
+import { db } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { useDebounce } from "@/hooks/useDebounce";
 import { discogsService, type DiscogsSearchResult } from "@/lib/discogs";
-import { authenticateUser, signInWithGoogle, handleRedirectResult } from "@/lib/auth";
-import { onAuthStateChanged, type User } from "firebase/auth";
+import { authenticateUser, signInWithGoogle } from "@/lib/auth";
+import { useAuth } from "@/context/AuthContext";
 
 type Intent = "COMPRAR" | "VENDER";
 type Format = "CD" | "VINILO" | "CASSETTE" | "OTROS";
 type Condition = "NUEVO" | "USADO";
 
 export default function Home() {
+    const { user, orderRecovered, clearOrderRecovered } = useAuth();
+
     const [intent, setIntent] = useState<Intent | null>(null);
     const [query, setQuery] = useState("");
     const [format, setFormat] = useState<Format | null>(null);
     const [condition, setCondition] = useState<Condition | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
-    const [isRecoveringBackup, setIsRecoveringBackup] = useState(false);
     const [step, setStep] = useState(1);
 
     const [searchResults, setSearchResults] = useState<DiscogsSearchResult[]>([]);
@@ -29,8 +30,7 @@ export default function Home() {
     const [currentPage, setCurrentPage] = useState(1);
     const [hasMore, setHasMore] = useState(false);
 
-    // Auth States
-    const [user, setUser] = useState<User | null>(null);
+    // Local Auth UI states (only for the manual form)
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
 
@@ -42,53 +42,17 @@ export default function Home() {
 
     // Auto-scroll on step change
     useEffect(() => {
-        if (step > 0) {
-            scrollToTop();
-        }
+        scrollToTop();
     }, [step, selectedItem]);
 
-    // The Rescue Pattern -> Strict Event-Based Recovery
+    // React to global order recovery from AuthContext
     useEffect(() => {
-        let isMounted = true;
-
-        const processRescue = async (currentUser: User) => {
-            const backup = localStorage.getItem("oldie_backup");
-            if (backup) {
-                if (isMounted) setIsRecoveringBackup(true);
-                scrollToTop();
-                try {
-                    const data = JSON.parse(backup);
-                    await performSubmission(currentUser.uid, data);
-                    localStorage.removeItem("oldie_backup");
-                } catch (e) {
-                    console.error("Backup recovery failed:", e);
-                    // On failure, we leave it in localStorage for manual retry if needed
-                } finally {
-                    if (isMounted) {
-                        setIsRecoveringBackup(false);
-                        setStep(1);
-                    }
-                }
-            }
-        };
-
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-            if (!isMounted) return;
-            setUser(currentUser);
-            if (currentUser) {
-                processRescue(currentUser);
-            }
-        });
-
-        // Still call this so handleRedirectResult creates the firestore profile
-        // but we don't depend on it for the backup logic anymore.
-        handleRedirectResult().catch(err => console.error("Redirect check failed:", err));
-
-        return () => {
-            isMounted = false;
-            unsubscribe();
-        };
-    }, []);
+        if (orderRecovered) {
+            setIsSuccess(true);
+            setStep(1);
+            scrollToTop();
+        }
+    }, [orderRecovered]);
 
     // Effect for real-time Discogs search
     useEffect(() => {
@@ -148,7 +112,7 @@ export default function Home() {
         setStep(1);
     };
 
-    const createBackup = async () => {
+    const createBackup = () => {
         if (!selectedItem || !format || !condition || !intent) return null;
         const backup = {
             item: selectedItem,
@@ -161,9 +125,12 @@ export default function Home() {
     };
 
     const handleGoogleSignIn = async () => {
-        await createBackup();
+        createBackup();
         setIsSubmitting(true);
         try {
+            // The backup is now in localStorage.
+            // signInWithRedirect will navigate away. When Google returns,
+            // AuthContext's global listener will pick up the user + backup.
             await signInWithGoogle();
         } catch (error) {
             console.error("Google Auth error:", error);
@@ -176,17 +143,31 @@ export default function Home() {
         if (e) e.preventDefault();
         if (!email || !password) return;
 
-        await createBackup();
+        createBackup();
         setIsSubmitting(true);
         try {
             const loggedUser = await authenticateUser(email, password);
             if (loggedUser) {
-                // Auto-confirm will be handled by onAuthStateChanged if backup exists
-                // but we can also trigger it manually here for faster feedback
-                const backup = await createBackup();
+                // For manual auth, the global listener in AuthContext will
+                // fire onAuthStateChanged and rescue the backup automatically.
+                // But we can also do a direct submission for instant feedback.
+                const backup = createBackup();
                 if (backup) {
-                    await performSubmission(loggedUser.uid, backup);
+                    await addDoc(collection(db, "orders"), {
+                        user_id: loggedUser.uid,
+                        item_id: backup.item.id,
+                        details: {
+                            format: backup.format,
+                            condition: backup.condition,
+                            intent: backup.intent,
+                            artist: backup.item.title.split(' - ')[0],
+                            album: backup.item.title.split(' - ')[1] || backup.item.title,
+                        },
+                        timestamp: serverTimestamp(),
+                        status: 'pending'
+                    });
                     localStorage.removeItem("oldie_backup");
+                    setIsSuccess(true);
                 }
             }
         } catch (error) {
@@ -196,51 +177,6 @@ export default function Home() {
             setIsSubmitting(false);
         }
     };
-
-    const performSubmission = async (uid: string, data: any) => {
-        setIsSubmitting(true);
-        try {
-            await addDoc(collection(db, "orders"), {
-                user_id: uid,
-                item_id: data.item.id,
-                details: {
-                    format: data.format,
-                    condition: data.condition,
-                    intent: data.intent,
-                    artist: data.item.title.split(' - ')[0],
-                    album: data.item.title.split(' - ')[1] || data.item.title,
-                },
-                timestamp: serverTimestamp(),
-                status: 'pending'
-            });
-            setIsSuccess(true);
-        } catch (error) {
-            console.error("Firestore error:", error);
-            alert("Error al procesar el pedido.");
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    if (isRecoveringBackup) {
-        return (
-            <div className="min-h-[70vh] flex flex-col items-center justify-center text-center space-y-8 px-4 font-sans absolute inset-0 bg-[#050505] z-50">
-                <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                    className="w-16 h-16 border-4 border-white/10 border-t-primary rounded-full mb-8 shadow-[0_0_30px_rgba(204,255,0,0.2)]"
-                />
-                <div className="space-y-4 max-w-sm mx-auto">
-                    <h2 className="text-2xl md:text-3xl font-display font-black text-white uppercase tracking-tighter animate-pulse">
-                        Protegiendo tu selección...
-                    </h2>
-                    <p className="text-gray-500 font-medium tracking-wide">
-                        Sincronizando tu pedido con Oldie but Goldie. No cierres esta ventana.
-                    </p>
-                </div>
-            </div>
-        );
-    }
 
     if (isSuccess) {
         return (
@@ -259,7 +195,11 @@ export default function Home() {
                     </p>
                 </div>
                 <button
-                    onClick={() => window.location.reload()}
+                    onClick={() => {
+                        clearOrderRecovered();
+                        setIsSuccess(false);
+                        handleResetSelection();
+                    }}
                     className="bg-white/5 border border-white/10 text-white px-8 py-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-white/10 transition-all"
                 >
                     Nueva Búsqueda
