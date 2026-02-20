@@ -36,7 +36,7 @@ export default function RevisarLote() {
             user_email: currentUser?.email || "Sin email",
             user_name: currentUser?.displayName || "Usuario Registrado",
             user_photo: currentUser?.photoURL || "",
-            thumbnailUrl: loteItems[0]?.cover_image || "",
+            thumbnailUrl: loteItems[0]?.cover_image || "https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png",
             order_number: generateOrderNumber(),
             isBatch: true,
             status: 'pending',
@@ -62,11 +62,15 @@ export default function RevisarLote() {
             }))
         };
 
-        // Sanitize object to remove undefined values before sending to Firebase
-        const cleanPayload = JSON.parse(JSON.stringify(payload));
+        // Clean payload to prevent undefined errors
+        const safePayload = JSON.parse(JSON.stringify(payload));
 
-        await addDoc(collection(db, "orders"), cleanPayload);
-        setSubmittedOrder(cleanPayload);
+        // Wait for DB insertion
+        const docRef = await addDoc(collection(db, "orders"), safePayload);
+
+        // Inject the created UUID so WhatsApp module can build /orden/:id
+        const completeOrder = { id: docRef.id, ...safePayload };
+        setSubmittedOrder(completeOrder);
         clearLote();
     };
 

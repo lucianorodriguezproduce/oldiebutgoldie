@@ -45,7 +45,7 @@ export default function PublicOrders() {
                         imageUrl: data.details?.cover_image || '',
                         status: data.status || 'pending',
                         intent: data.details?.intent || 'COMPRAR',
-                        createdAt: data.timestamp?.toDate() || new Date(),
+                        createdAt: data.timestamp?.toDate ? data.timestamp.toDate() : (data.timestamp?.seconds ? new Date(data.timestamp.seconds * 1000) : new Date(data.timestamp || Date.now())),
                     };
                 });
 

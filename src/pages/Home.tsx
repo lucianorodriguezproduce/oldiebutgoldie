@@ -9,6 +9,7 @@ import { discogsService, type DiscogsSearchResult } from "@/lib/discogs";
 import { authenticateUser, signInWithGoogle } from "@/lib/auth";
 import { useAuth } from "@/context/AuthContext";
 import { generateWhatsAppLink } from "@/utils/whatsapp";
+import type { OrderData } from "@/utils/whatsapp";
 import { pushViewItem, pushViewItemFromOrder, pushWhatsAppContactFromOrder } from "@/utils/analytics";
 import { SEO } from "@/components/SEO";
 import { useLote } from "@/context/LoteContext";
@@ -341,7 +342,7 @@ export default function Home() {
             user_email: currentUser?.email || "Sin email",
             user_name: currentUser?.displayName || "Usuario Registrado",
             user_photo: currentUser?.photoURL || "",
-            thumbnailUrl: selectedItem?.cover_image || selectedItem?.thumb || '',
+            thumbnailUrl: selectedItem?.cover_image || selectedItem?.thumb || "https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png",
             order_number: generateOrderNumber(),
             item_id: selectedItem.id,
             details: {
@@ -376,8 +377,11 @@ export default function Home() {
         if (!payload) return;
 
         try {
-            const docRef = await addDoc(collection(db, 'orders'), payload);
-            setSubmittedOrder({ id: docRef.id, ...payload });
+            // Save order to Firebase
+            const docRef = await addDoc(collection(db, "orders"), payload);
+
+            const completeOrder = { id: docRef.id, ...payload };
+            setSubmittedOrder(completeOrder as OrderData);
         } catch (error) {
             console.error("Error creating order:", error);
             alert("Error al procesar el pedido.");
