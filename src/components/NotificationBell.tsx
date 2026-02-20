@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bell, Check, Clock } from "lucide-react";
+import { Bell, Check, Clock, ExternalLink } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
+import { useNavigate } from "react-router-dom";
 import {
     collection,
     query,
@@ -28,6 +29,7 @@ export default function NotificationBell() {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const navigate = useNavigate();
 
     const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -154,7 +156,13 @@ export default function NotificationBell() {
                                 notifications.map((notif) => (
                                     <button
                                         key={notif.id}
-                                        onClick={() => !notif.read && markAsRead(notif.id)}
+                                        onClick={() => {
+                                            if (!notif.read) markAsRead(notif.id);
+                                            setIsOpen(false);
+                                            if (notif.order_id) {
+                                                navigate(`/profile?order=${notif.order_id}`);
+                                            }
+                                        }}
                                         className={`w-full text-left px-5 py-4 flex items-start gap-3 transition-all border-b border-white/[0.03] last:border-0 ${notif.read
                                             ? "opacity-50 hover:opacity-70"
                                             : "bg-primary/[0.03] hover:bg-primary/[0.06]"
@@ -178,6 +186,10 @@ export default function NotificationBell() {
                                             <Clock className="h-2.5 w-2.5" />
                                             {formatTime(notif.timestamp)}
                                         </span>
+
+                                        {notif.order_id && (
+                                            <ExternalLink className="h-3 w-3 text-gray-700 flex-shrink-0 mt-1 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        )}
                                     </button>
                                 ))
                             )}

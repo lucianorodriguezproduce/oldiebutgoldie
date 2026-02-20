@@ -26,7 +26,7 @@ import { db } from "@/lib/firebase";
 import { collection, onSnapshot, query, orderBy, where, doc, deleteDoc } from "firebase/firestore";
 import { useState, useEffect } from "react";
 import { AlbumCardSkeleton } from "@/components/ui/Skeleton";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import OrderDetailsDrawer from "@/components/OrderDetailsDrawer";
 
 interface ProfileItem {
@@ -69,6 +69,21 @@ export default function Profile() {
     const [loading, setLoading] = useState(true);
     const [ordersLoading, setOrdersLoading] = useState(true);
     const [selectedOrder, setSelectedOrder] = useState<OrderItem | null>(null);
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    // Deep-link: auto-open drawer if ?order=ORDER_ID is in the URL
+    useEffect(() => {
+        const orderId = searchParams.get("order");
+        if (orderId && orderItems.length > 0 && !ordersLoading) {
+            const found = orderItems.find(o => o.id === orderId);
+            if (found) {
+                setSelectedOrder(found);
+                setActiveTab("orders");
+            }
+            // Clean URL to prevent re-triggering
+            setSearchParams({}, { replace: true });
+        }
+    }, [orderItems, ordersLoading, searchParams]);
 
     useEffect(() => {
         if (!user) return;

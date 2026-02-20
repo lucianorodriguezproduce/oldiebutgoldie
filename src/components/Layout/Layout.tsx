@@ -9,7 +9,7 @@ export default function Layout() {
     return (
         <div className="min-h-screen bg-black text-white font-sans selection:bg-primary selection:text-black">
             <Navbar />
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-20 overflow-hidden">
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-20 overflow-x-hidden">
                 <AnimatePresence mode="wait">
                     <motion.div
                         key={pathname}
