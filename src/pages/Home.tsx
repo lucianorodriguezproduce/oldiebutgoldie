@@ -241,11 +241,18 @@ export default function Home() {
                 if (selectedItem.genre && selectedItem.genre.length > 0) {
                     genreToSearch = selectedItem.genre[0];
                 }
-                const results = await discogsService.getTrending(genreToSearch);
+                const results = await discogsService.getCuratedRecommendations(genreToSearch);
 
-                // Filter out the currently selected item so it doesn't recommend itself
-                const filtered = results.filter(r => r.id !== selectedItem.id).slice(0, 4);
-                setRecommendations(filtered);
+                // Strictly filter out the currently selected item, and remove items with no cover_image or no "Artist - Album" format
+                const cleanResults = results.filter(r =>
+                    r.id !== selectedItem.id &&
+                    r.cover_image &&
+                    !r.cover_image.includes('spacer') &&
+                    r.title &&
+                    r.title.includes(' - ')
+                ).slice(0, 4);
+
+                setRecommendations(cleanResults);
             } catch (error) {
                 console.error("Recommendations error:", error);
             } finally {
@@ -902,39 +909,6 @@ export default function Home() {
                             </div>
                         )}
 
-                        {/* Recommendations Section */}
-                        {selectedItem && recommendations.length > 0 && !publicOrder && (
-                            <div className="pt-8 md:pt-12 fade-in">
-                                <h4 className="text-xl md:text-2xl font-display font-black text-white italic uppercase tracking-tighter mb-4 md:mb-6 pl-2 border-l-4 border-primary">
-                                    Otros tesoros que podrían interesarte
-                                </h4>
-                                <div className="flex overflow-x-auto gap-4 md:gap-6 pb-6 hide-scrollbar snap-x snap-mandatory">
-                                    {recommendations.map((rec) => (
-                                        <button
-                                            key={`rec-${rec.id}`}
-                                            onClick={() => navigate(`/item/${rec.type}/${rec.id}`)}
-                                            className="w-[280px] md:w-[320px] flex-shrink-0 relative overflow-hidden bg-white/[0.03] border-2 border-white/5 hover:border-white/20 rounded-2xl md:rounded-[2rem] transition-all group snap-start text-left flex flex-col items-start p-4 hover:bg-white/[0.05]"
-                                        >
-                                            <div className="w-full aspect-square rounded-xl overflow-hidden bg-black mb-4 relative shadow-lg">
-                                                <img src={rec.cover_image || rec.thumb} alt={rec.title} className="w-full h-full object-cover grayscale-[0.3] group-hover:grayscale-0 transition-transform duration-700 group-hover:scale-105" />
-                                            </div>
-                                            <h5 className="text-lg font-bold font-display italic text-white truncate w-full group-hover:text-primary transition-colors">
-                                                {rec.title.split(' - ')[1] || rec.title}
-                                            </h5>
-                                            <span className="text-xs font-black text-gray-500 uppercase tracking-widest leading-none truncate w-full mt-1">
-                                                {rec.title.split(' - ')[0]}
-                                            </span>
-                                        </button>
-                                    ))}
-                                    {isLoadingRecommendations && (
-                                        <div className="w-[280px] md:w-[320px] flex-shrink-0 flex items-center justify-center snap-start">
-                                            <div className="h-6 w-6 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-
                         {/* Step 1: Format, Condition, Intent */}
                         {step === 1 && !publicOrder && (
                             <motion.div
@@ -1131,6 +1105,39 @@ export default function Home() {
                                     <button onClick={() => setStep(intent === "VENDER" ? 2 : 1)} className="w-full text-[10px] font-black uppercase text-gray-700 hover:text-white transition-colors">Atrás</button>
                                 </div>
                             </motion.div>
+                        )}
+
+                        {/* Recommendations Section - Repositioned at the bottom */}
+                        {selectedItem && recommendations.length > 0 && (
+                            <div className="pt-16 pb-8 md:pt-24 md:pb-12 fade-in w-full border-t border-white/5 mt-16">
+                                <h4 className="text-xl md:text-2xl font-display font-black text-white italic uppercase tracking-tighter mb-4 md:mb-6 pl-2 border-l-4 border-primary">
+                                    Otros tesoros que podrían interesarte
+                                </h4>
+                                <div className="flex overflow-x-auto gap-4 md:gap-6 pb-6 hide-scrollbar snap-x snap-mandatory">
+                                    {recommendations.map((rec) => (
+                                        <button
+                                            key={`rec-${rec.id}`}
+                                            onClick={() => navigate(`/item/${rec.type}/${rec.id}`)}
+                                            className="w-[280px] md:w-[320px] flex-shrink-0 relative overflow-hidden bg-white/[0.03] border-2 border-white/5 hover:border-white/20 rounded-2xl md:rounded-[2rem] transition-all group snap-start text-left flex flex-col items-start p-4 hover:bg-white/[0.05]"
+                                        >
+                                            <div className="w-full aspect-square rounded-xl overflow-hidden bg-black mb-4 relative shadow-lg">
+                                                <img src={rec.cover_image || rec.thumb} alt={rec.title} className="w-full h-full object-cover grayscale-[0.3] group-hover:grayscale-0 transition-transform duration-700 group-hover:scale-105" />
+                                            </div>
+                                            <h5 className="text-lg font-bold font-display italic text-white truncate w-full group-hover:text-primary transition-colors">
+                                                {rec.title.split(' - ')[1] || rec.title}
+                                            </h5>
+                                            <span className="text-xs font-black text-gray-500 uppercase tracking-widest leading-none truncate w-full mt-1">
+                                                {rec.title.split(' - ')[0]}
+                                            </span>
+                                        </button>
+                                    ))}
+                                    {isLoadingRecommendations && (
+                                        <div className="w-[280px] md:w-[320px] flex-shrink-0 flex items-center justify-center snap-start">
+                                            <div className="h-6 w-6 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         )}
                     </motion.div>
                 )}

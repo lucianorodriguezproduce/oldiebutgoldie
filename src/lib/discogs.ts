@@ -137,4 +137,45 @@ export const discogsService = {
         const data = await fetchFromDiscogs("/database/search", params);
         return data.results;
     },
+
+    async getCuratedRecommendations(genre: string): Promise<DiscogsSearchResult[]> {
+        const sideAParams: Record<string, string> = {
+            genre: genre || "Electronic",
+            type: "release",
+            per_page: "10",
+        };
+        const sideBParams: Record<string, string> = {
+            genre: genre || "Electronic",
+            type: "release",
+            format: "Limited Edition",
+            per_page: "10",
+        };
+
+        try {
+            const [sideAResponse, sideBResponse] = await Promise.all([
+                fetchFromDiscogs("/database/search", sideAParams),
+                fetchFromDiscogs("/database/search", sideBParams)
+            ]);
+
+            const sideA = sideAResponse.results || [];
+            const sideB = sideBResponse.results || [];
+
+            const mixer: DiscogsSearchResult[] = [];
+            const maxLength = Math.max(sideA.length, sideB.length);
+
+            // Interleave Mainstream and Underground results
+            for (let i = 0; i < maxLength; i++) {
+                if (i < sideA.length) mixer.push(sideA[i]);
+                if (i < sideB.length) mixer.push(sideB[i]);
+            }
+
+            // Remove exact duplicates
+            const uniqueMixer = Array.from(new Map(mixer.map(item => [item.id, item])).values());
+            return uniqueMixer;
+        } catch (error) {
+            console.error("Error fetching curated recommendations:", error);
+            // Fallback to basic search
+            return this.getTrending(genre);
+        }
+    },
 };
