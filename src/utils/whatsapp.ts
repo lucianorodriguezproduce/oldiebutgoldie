@@ -14,6 +14,8 @@ export interface OrderData {
         price?: number;
         currency?: string;
     };
+    isBatch?: boolean;
+    items?: any[];
 }
 
 export const generateWhatsAppLink = (order: OrderData): string => {
@@ -34,7 +36,14 @@ export const generateWhatsAppLink = (order: OrderData): string => {
 
     let message = `Hola Oldie but Goldie! ${actionText}: ${itemTitle}.`;
 
-    if (idStr) {
+    if (order.isBatch && order.items && order.items.length > 0) {
+        actionText = "Me interesa este lote";
+        message = `Hola Oldie but Goldie! ${actionText} de ${order.items.length} ítems:\n`;
+        order.items.forEach((item, idx) => {
+            const itemPrice = item.price ? ` | ${item.currency === 'USD' ? 'US$' : '$'}${item.price.toLocaleString()}` : '';
+            message += `\n${idx + 1}. ${item.artist} - ${item.album} (${item.format} | ${item.condition}) [${item.intent}]${itemPrice}`;
+        });
+    } else if (idStr) {
         message += ` Aquí puedes ver los detalles: https://buscadordiscogs-mslb.vercel.app/item/${typeStr}/${idStr}`;
     }
 
@@ -42,14 +51,16 @@ export const generateWhatsAppLink = (order: OrderData): string => {
         message += `\n\nOrden de referencia: ${order.order_number}`;
     }
 
-    message += `\nFormato: ${order.details.format} | Estado: ${order.details.condition}`;
+    if (!order.isBatch) {
+        message += `\nFormato: ${order.details.format} | Estado: ${order.details.condition}`;
+    }
 
     if (order.admin_offer_price) {
         const currency = order.admin_offer_currency === "USD" ? "US$" : "$";
-        message += `\nCotización Admin: ${currency} ${order.admin_offer_price.toLocaleString()}`;
-    } else if (order.details.price) {
+        message += `\nCotización Admin Lote/Disco: ${currency} ${order.admin_offer_price.toLocaleString()}`;
+    } else if (!order.isBatch && order.details.price) {
         const currency = order.details.currency === "USD" ? "US$" : "$";
-        message += `\nPrecio: ${currency} ${order.details.price.toLocaleString()}`;
+        message += `\nPrecio Sugerido: ${currency} ${order.details.price.toLocaleString()}`;
     }
 
     const encodedMessage = encodeURIComponent(message);

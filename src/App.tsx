@@ -2,6 +2,8 @@ import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@/context/AuthContext";
 import { TelemetryProvider } from "@/context/TelemetryContext";
+import { LoteProvider } from "@/context/LoteContext";
+import { FloatingLoteWidget } from "@/components/FloatingLoteWidget";
 import Layout from "@/components/Layout/Layout";
 import Login from "@/pages/Login";
 import Home from "@/pages/Home";
@@ -11,6 +13,7 @@ import Editorial from "@/pages/Editorial";
 import ArticleDetail from "@/pages/ArticleDetail";
 import Eventos from "@/pages/Eventos";
 import Profile from "@/pages/Profile";
+import RevisarLote from "@/pages/RevisarLote";
 import AdminLayout from "@/components/Admin/AdminLayout";
 import AnalyticsDashboard from "@/pages/Admin/AnalyticsDashboard";
 import EditorialManager from "@/pages/Admin/EditorialManager";
@@ -35,6 +38,7 @@ function AppContent() {
         <Route element={<Layout />}>
           <Route path="/" element={<Home />} />
           <Route path="/actividad" element={<PublicOrders />} />
+          <Route path="/revisar-lote" element={<RevisarLote />} />
           <Route path="/item/:type/:id" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/album/:id" element={<AlbumDetail />} />
@@ -67,7 +71,9 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <TelemetryProvider>
-          <AppContent />
+          <LoteProvider>
+            <AppContent />
+          </LoteProvider>
         </TelemetryProvider>
       </AuthProvider>
     </QueryClientProvider>

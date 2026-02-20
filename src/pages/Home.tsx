@@ -11,6 +11,7 @@ import { useAuth } from "@/context/AuthContext";
 import { generateWhatsAppLink } from "@/utils/whatsapp";
 import { pushViewItem, pushViewItemFromOrder, pushWhatsAppContactFromOrder } from "@/utils/analytics";
 import { SEO } from "@/components/SEO";
+import { useLote } from "@/context/LoteContext";
 
 type Intent = "COMPRAR" | "VENDER";
 type Format = "CD" | "VINILO" | "CASSETTE" | "OTROS";
@@ -21,6 +22,7 @@ export default function Home() {
     const { user } = useAuth();
     const { type: routeType, id: routeId } = useParams<{ type: string, id: string }>();
     const navigate = useNavigate();
+    const { loteItems, toggleItem, isInLote } = useLote();
 
     const [intent, setIntent] = useState<Intent | null>(null);
     const [query, setQuery] = useState("");
@@ -365,10 +367,8 @@ export default function Home() {
     };
 
     const performSubmission = async (uid: string, intentOverride?: Intent) => {
-        const payload = buildOrderPayload(uid, intentOverride);
-        if (!payload) return;
-        await addDoc(collection(db, "orders"), payload);
-        setSubmittedOrder(payload);
+        // Obsolete in Home.tsx - logic moved to Lote Context + RevisarLote
+        console.warn("performSubmission called from Home.tsx - this should be dead code in the batch flow");
     };
 
     // Fetch market price from Discogs for the selected release
@@ -390,57 +390,51 @@ export default function Home() {
         }
     };
 
-    // Handle intent selection — if user is logged in, skip auth
-    const handleIntentSelect = async (selectedIntent: Intent) => {
+    // Handle intent selection (Add to Lote)
+    const handleIntentSelect = (selectedIntent: Intent) => {
         setIntent(selectedIntent);
 
-        // For VENDER, fetch market price and go to pricing step
         if (selectedIntent === "VENDER") {
             fetchMarketPrice();
             setStep(2); // price step
             return;
         }
 
-        // For COMPRAR: if already logged in, submit directly
-        if (user) {
-            setIsSubmitting(true);
-            try {
-                await performSubmission(user.uid, selectedIntent);
-                setIsSuccess(true);
-                scrollToTop();
-            } catch (error) {
-                console.error("Submission error:", error);
-                alert("Error al procesar el pedido.");
-            } finally {
-                setIsSubmitting(false);
-            }
-        } else {
-            setStep(3); // auth step
+        // For COMPRAR: Add directly to batch, don't trigger auth here
+        if (selectedItem && format && condition) {
+            toggleItem({
+                id: selectedItem.id,
+                title: selectedItem.title,
+                cover_image: selectedItem.cover_image || selectedItem.thumb || '',
+                format,
+                condition,
+                intent: "COMPRAR"
+            });
+            handleResetSelection(); // Reset visual state so they can keep searching
+            scrollToTop();
         }
     };
 
     // Handle price confirmation for VENDER
-    const handlePriceConfirm = async () => {
+    const handlePriceConfirm = () => {
         if (!price || parseFloat(price) <= 0) {
             alert("Ingresa un precio válido.");
             return;
         }
 
-        // If already logged in, submit directly
-        if (user) {
-            setIsSubmitting(true);
-            try {
-                await performSubmission(user.uid);
-                setIsSuccess(true);
-                scrollToTop();
-            } catch (error) {
-                console.error("Submission error:", error);
-                alert("Error al procesar el pedido.");
-            } finally {
-                setIsSubmitting(false);
-            }
-        } else {
-            setStep(3); // auth step
+        if (selectedItem && format && condition) {
+            toggleItem({
+                id: selectedItem.id,
+                title: selectedItem.title,
+                cover_image: selectedItem.cover_image || selectedItem.thumb || '',
+                format,
+                condition,
+                intent: "VENDER",
+                price: parseFloat(price),
+                currency
+            });
+            handleResetSelection();
+            scrollToTop();
         }
     };
 
@@ -966,10 +960,12 @@ export default function Home() {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-8 border-t border-white/5">
                                         <button
                                             onClick={() => handleIntentSelect("COMPRAR")}
-                                            disabled={isSubmitting}
-                                            className="bg-white/10 hover:bg-primary hover:text-black py-8 rounded-[1.5rem] font-black uppercase tracking-tighter text-2xl md:text-3xl transition-all disabled:opacity-50"
+                                            className={`py-8 rounded-[1.5rem] font-black uppercase tracking-tighter text-2xl md:text-3xl transition-all ${isInLote(selectedItem.id)
+                                                    ? "bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white border-2 border-red-500/20"
+                                                    : "bg-white/10 hover:bg-primary hover:text-black border-2 border-transparent"
+                                                }`}
                                         >
-                                            {isSubmitting && intent === "COMPRAR" ? "Procesando..." : "Comprar"}
+                                            {isInLote(selectedItem.id) ? "Quitar del Lote (-)" : "Añadir a mi lote (+)"}
                                         </button>
                                         <button
                                             onClick={() => handleIntentSelect("VENDER")}
@@ -1047,10 +1043,10 @@ export default function Home() {
 
                                 <button
                                     onClick={handlePriceConfirm}
-                                    disabled={isSubmitting || !price}
+                                    disabled={!price}
                                     className="w-full bg-primary text-black py-8 rounded-2xl font-black uppercase text-xs tracking-widest shadow-[0_0_40px_rgba(204,255,0,0.2)] hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
                                 >
-                                    {isSubmitting ? "PROCESANDO..." : "CONFIRMAR PRECIO Y PUBLICAR"}
+                                    Añadir Lote de Venta (+)
                                 </button>
 
                                 <button onClick={() => { setIntent(null); setStep(1); }} className="w-full text-[10px] font-black uppercase text-gray-700 hover:text-white transition-colors">Atrás</button>

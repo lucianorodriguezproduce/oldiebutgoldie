@@ -56,6 +56,8 @@ interface OrderDoc {
         price?: number;
         currency?: string;
     };
+    isBatch?: boolean;
+    items?: any[];
 }
 
 type StatusFilter = "all" | "pending" | "negotiating" | "completed" | "cancelled" | "quoted";
@@ -169,14 +171,21 @@ export default function AdminOrders() {
 
     const handleWhatsAppContact = (order: OrderDoc) => {
         const name = order.user_name || "Cliente";
-        const item = `${order.details.artist} - ${order.details.album}`;
-        const intent = order.details.intent === "COMPRAR" ? "comprar" : "vender";
-        const priceText = order.details.price
-            ? ` por ${order.details.currency === "USD" ? "US$" : "$"}${order.details.price.toLocaleString()}`
-            : "";
-        const message = encodeURIComponent(
-            `Hola ${name}! Te contactamos desde Oldie but Goldie por tu pedido de ${intent}: ${item}${priceText}. ¿Seguimos coordinando?`
-        );
+        let message;
+        if (order.isBatch) {
+            message = encodeURIComponent(
+                `Hola ${name}! Te contactamos desde Oldie but Goldie por tu Lote de ${order.items?.length} ítems. ¿Seguimos coordinando?`
+            );
+        } else {
+            const item = `${order.details.artist} - ${order.details.album}`;
+            const intent = order.details.intent === "COMPRAR" ? "comprar" : "vender";
+            const priceText = order.details.price
+                ? ` por ${order.details.currency === "USD" ? "US$" : "$"}${order.details.price.toLocaleString()}`
+                : "";
+            message = encodeURIComponent(
+                `Hola ${name}! Te contactamos desde Oldie but Goldie por tu pedido de ${intent}: ${item}${priceText}. ¿Seguimos coordinando?`
+            );
+        }
         window.open(`https://wa.me/?text=${message}`, "_blank");
     };
 
@@ -312,7 +321,7 @@ export default function AdminOrders() {
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2">
                                             <h3 className="text-sm font-bold text-white truncate">
-                                                {order.details.artist} — {order.details.album}
+                                                {order.isBatch ? `Lote de ${order.items?.length} Ítems` : `${order.details.artist} — ${order.details.album}`}
                                             </h3>
                                         </div>
                                         <div className="flex items-center gap-3 mt-1">
@@ -331,17 +340,19 @@ export default function AdminOrders() {
                                         {order.details.intent}
                                     </span>
 
-                                    {/* Discogs Quick Link */}
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            window.open(`https://www.discogs.com/search?q=${encodeURIComponent(`${order.details.artist} ${order.details.album}`)}`, "_blank");
-                                        }}
-                                        className="hidden md:flex flex-shrink-0 items-center justify-center w-7 h-7 rounded-md bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 hover:bg-yellow-500 hover:text-black transition-colors"
-                                        title="Buscar en Discogs"
-                                    >
-                                        <Disc className="h-3.5 w-3.5" />
-                                    </button>
+                                    {/* Discogs Quick Link (Disable for batch or link to first item) */}
+                                    {!order.isBatch && (
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                window.open(`https://www.discogs.com/search?q=${encodeURIComponent(`${order.details.artist} ${order.details.album}`)}`, "_blank");
+                                            }}
+                                            className="hidden md:flex flex-shrink-0 items-center justify-center w-7 h-7 rounded-md bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 hover:bg-yellow-500 hover:text-black transition-colors"
+                                            title="Buscar en Discogs"
+                                        >
+                                            <Disc className="h-3.5 w-3.5" />
+                                        </button>
+                                    )}
 
                                     {/* Inline Status Check */}
                                     <div className="relative flex-shrink-0" onClick={(e) => e.stopPropagation()}>
@@ -473,7 +484,7 @@ export default function AdminOrders() {
                                                 type="number"
                                                 min="0"
                                                 step="0.01"
-                                                placeholder="Precio..."
+                                                placeholder={selectedOrder.isBatch ? "Cotizar el lote entero..." : "Precio..."}
                                                 value={quotePrice}
                                                 onChange={e => setQuotePrice(e.target.value)}
                                                 className="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 pl-9 pr-4 text-white text-sm font-bold focus:border-purple-400/40 focus:outline-none"
@@ -519,44 +530,82 @@ export default function AdminOrders() {
                             </div>
                         </div>
 
-                        {/* Cover Image */}
-                        {selectedOrder.details.cover_image && (
+                        {/* Cover Image or Batch Image Placeholder */}
+                        {selectedOrder.isBatch ? (
+                            <div className="w-full aspect-square md:aspect-[2/1] max-h-[160px] rounded-2xl overflow-hidden border border-white/10 bg-white/[0.02] flex items-center justify-center">
+                                <span className="text-3xl font-display font-black text-gray-600 uppercase tracking-tighter">
+                                    Lote de {selectedOrder.items?.length} Elementos
+                                </span>
+                            </div>
+                        ) : selectedOrder.details.cover_image && (
                             <div className="w-full aspect-square max-h-[280px] rounded-2xl overflow-hidden border border-white/10">
                                 <img src={selectedOrder.details.cover_image} alt="" className="w-full h-full object-cover" />
                             </div>
                         )}
 
-                        {/* Item Info */}
+                        {/* Item Info / Lote Items */}
                         <div className="space-y-2">
-                            <h3 className="text-2xl font-display font-black text-white uppercase tracking-tight leading-tight">
-                                {selectedOrder.details.artist}
-                            </h3>
-                            <p className="text-lg text-gray-400 font-bold">{selectedOrder.details.album}</p>
+                            {selectedOrder.isBatch && selectedOrder.items ? (
+                                <div className="space-y-3 mt-4">
+                                    <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500 mb-2">Desglose de Lote</h4>
+                                    {selectedOrder.items.map((item, idx) => (
+                                        <div key={idx} className="flex gap-4 p-3 rounded-xl bg-white/[0.02] border border-white/5 items-center">
+                                            <div className="w-12 h-12 flex-shrink-0 bg-black rounded-lg overflow-hidden">
+                                                <img src={item.cover_image} alt="" className="w-full h-full object-cover" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-bold text-white text-sm truncate">{item.title}</p>
+                                                <p className="text-xs text-gray-500 font-bold">{item.format} • {item.condition}</p>
+                                            </div>
+                                            <div className="flex-shrink-0 flex flex-col items-end">
+                                                <span className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded border ${item.intent === 'COMPRAR' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-orange-500/10 text-orange-400 border-orange-500/20'
+                                                    }`}>
+                                                    {item.intent}
+                                                </span>
+                                                {item.price && (
+                                                    <span className="text-[10px] text-primary font-mono mt-1">
+                                                        {item.currency === "USD" ? "US$" : "$"}{item.price.toLocaleString()}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <>
+                                    <h3 className="text-2xl font-display font-black text-white uppercase tracking-tight leading-tight">
+                                        {selectedOrder.details.artist}
+                                    </h3>
+                                    <p className="text-lg text-gray-400 font-bold">{selectedOrder.details.album}</p>
+                                </>
+                            )}
                         </div>
 
-                        {/* Details Grid */}
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-white/[0.03] border border-white/5 rounded-xl p-4 space-y-1">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-gray-600">Intención</p>
-                                <p className={`text-sm font-black uppercase ${selectedOrder.details.intent === "COMPRAR" ? "text-green-400" : "text-orange-400"}`}>
-                                    {selectedOrder.details.intent}
-                                </p>
+                        {/* Details Grid (Hide for Batch as it exists inside items) */}
+                        {!selectedOrder.isBatch && (
+                            <div className="grid grid-cols-2 gap-3 mt-6">
+                                <div className="bg-white/[0.03] border border-white/5 rounded-xl p-4 space-y-1">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-gray-600">Intención</p>
+                                    <p className={`text-sm font-black uppercase ${selectedOrder.details.intent === "COMPRAR" ? "text-green-400" : "text-orange-400"}`}>
+                                        {selectedOrder.details.intent}
+                                    </p>
+                                </div>
+                                <div className="bg-white/[0.03] border border-white/5 rounded-xl p-4 space-y-1">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-gray-600">Estado</p>
+                                    <p className={`text-sm font-black ${getStatusConfig(selectedOrder.status).color}`}>
+                                        {getStatusConfig(selectedOrder.status).label}
+                                    </p>
+                                </div>
+                                <div className="bg-white/[0.03] border border-white/5 rounded-xl p-4 space-y-1">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-gray-600">Formato</p>
+                                    <p className="text-sm font-bold text-white">{selectedOrder.details.format}</p>
+                                </div>
+                                <div className="bg-white/[0.03] border border-white/5 rounded-xl p-4 space-y-1">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-gray-600">Condición</p>
+                                    <p className="text-sm font-bold text-white">{selectedOrder.details.condition}</p>
+                                </div>
                             </div>
-                            <div className="bg-white/[0.03] border border-white/5 rounded-xl p-4 space-y-1">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-gray-600">Estado</p>
-                                <p className={`text-sm font-black ${getStatusConfig(selectedOrder.status).color}`}>
-                                    {getStatusConfig(selectedOrder.status).label}
-                                </p>
-                            </div>
-                            <div className="bg-white/[0.03] border border-white/5 rounded-xl p-4 space-y-1">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-gray-600">Formato</p>
-                                <p className="text-sm font-bold text-white">{selectedOrder.details.format}</p>
-                            </div>
-                            <div className="bg-white/[0.03] border border-white/5 rounded-xl p-4 space-y-1">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-gray-600">Condición</p>
-                                <p className="text-sm font-bold text-white">{selectedOrder.details.condition}</p>
-                            </div>
-                        </div>
+                        )}
 
                         {/* Price Info */}
                         {selectedOrder.details.price && (
@@ -583,10 +632,10 @@ export default function AdminOrders() {
 
                         {/* Admin Offer (if already quoted) */}
                         {selectedOrder.admin_offer_price && (
-                            <div className="bg-purple-500/[0.05] border border-purple-500/15 rounded-xl p-4 flex items-center justify-between">
+                            <div className="bg-purple-500/[0.05] border border-purple-500/15 rounded-xl p-4 flex items-center justify-between mt-6">
                                 <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-purple-400">
                                     <BadgeDollarSign className="h-3.5 w-3.5" />
-                                    Cotizado
+                                    {selectedOrder.isBatch ? "Lote Cotizado" : "Cotizado"}
                                 </span>
                                 <span className="text-xl font-display font-black text-white">
                                     {selectedOrder.admin_offer_currency === "USD" ? "US$" : "$"} {selectedOrder.admin_offer_price.toLocaleString()}
@@ -595,7 +644,7 @@ export default function AdminOrders() {
                         )}
 
                         {/* Date */}
-                        <div className="flex items-center gap-2 text-gray-600 text-xs font-bold">
+                        <div className="flex items-center gap-2 text-gray-600 text-xs font-bold mt-4">
                             <Clock className="h-3.5 w-3.5" />
                             {formatDate(selectedOrder.timestamp)}
                         </div>
