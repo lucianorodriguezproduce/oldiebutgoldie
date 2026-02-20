@@ -17,7 +17,10 @@ import {
     Search,
     DollarSign,
     Clock,
-    Tag
+    Tag,
+    Hash,
+    MessageCircle,
+    BadgeDollarSign
 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, query, orderBy, where, doc, deleteDoc } from "firebase/firestore";
@@ -37,8 +40,11 @@ interface OrderItem {
     id: string;
     item_id: number;
     user_id: string;
+    order_number?: string;
     status: string;
     timestamp: any;
+    admin_offer_price?: number;
+    admin_offer_currency?: string;
     details: {
         format: string;
         condition: string;
@@ -131,6 +137,7 @@ export default function Profile() {
     const getStatusBadge = (status: string) => {
         const map: Record<string, { label: string; color: string }> = {
             pending: { label: "Pendiente", color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" },
+            quoted: { label: "Cotizado", color: "bg-purple-500/10 text-purple-400 border-purple-500/20" },
             negotiating: { label: "En Negociación", color: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
             confirmed: { label: "Confirmado", color: "bg-primary/10 text-primary border-primary/20" },
             completed: { label: "Completado", color: "bg-green-500/10 text-green-500 border-green-500/20" },
@@ -305,7 +312,7 @@ export default function Profile() {
                             {ordersLoading ? (
                                 <div className="space-y-4">
                                     {Array.from({ length: 4 }).map((_, i) => (
-                                        <div key={i} className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 h-24 animate-pulse" />
+                                        <div key={i} className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 h-32 animate-pulse" />
                                     ))}
                                 </div>
                             ) : orderItems.length === 0 ? (
@@ -317,52 +324,104 @@ export default function Profile() {
                                     </div>
                                 </div>
                             ) : (
-                                <div className="space-y-4">
+                                <div className="space-y-5">
                                     {orderItems.map((order, i) => (
                                         <motion.div
                                             key={order.id}
                                             initial={{ opacity: 0, y: 15 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ delay: i * 0.04 }}
-                                            className="bg-white/[0.03] border border-white/5 rounded-[1.5rem] p-6 md:p-8 flex flex-col md:flex-row items-start md:items-center gap-6 hover:border-primary/20 transition-all group"
+                                            className={`bg-white/[0.02] border rounded-[1.5rem] overflow-hidden transition-all group ${order.admin_offer_price
+                                                ? "border-purple-500/20 hover:border-purple-500/40"
+                                                : "border-white/5 hover:border-primary/20"
+                                                }`}
                                         >
-                                            {order.details.cover_image ? (
-                                                <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl overflow-hidden bg-white/5 flex-shrink-0 border border-white/10 group-hover:border-primary/30 transition-all">
-                                                    <img src={order.details.cover_image} alt="" className="w-full h-full object-cover grayscale-[0.3] group-hover:grayscale-0 transition-all duration-500" />
-                                                </div>
-                                            ) : (
-                                                <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-white/5 flex-shrink-0 border border-white/10 flex items-center justify-center">
-                                                    <Music className="h-8 w-8 text-gray-700" />
-                                                </div>
-                                            )}
+                                            {/* Main Card */}
+                                            <div className="p-6 md:p-8 flex flex-col md:flex-row items-start md:items-center gap-6">
+                                                {/* Cover */}
+                                                {order.details.cover_image ? (
+                                                    <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl overflow-hidden bg-white/5 flex-shrink-0 border border-white/10 group-hover:border-primary/30 transition-all">
+                                                        <img src={order.details.cover_image} alt="" className="w-full h-full object-cover grayscale-[0.3] group-hover:grayscale-0 transition-all duration-500" />
+                                                    </div>
+                                                ) : (
+                                                    <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-white/5 flex-shrink-0 border border-white/10 flex items-center justify-center">
+                                                        <Music className="h-8 w-8 text-gray-700" />
+                                                    </div>
+                                                )}
 
-                                            <div className="flex-1 min-w-0 space-y-3">
-                                                <h4 className="text-lg md:text-xl font-display font-black text-white uppercase tracking-tight truncate group-hover:text-primary transition-colors">
-                                                    {order.details.artist} — {order.details.album}
-                                                </h4>
-                                                <div className="flex flex-wrap items-center gap-3">
-                                                    <span className={`px-3 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest border ${order.details.intent === "COMPRAR" ? "bg-blue-500/10 text-blue-400 border-blue-500/20" : "bg-green-500/10 text-green-400 border-green-500/20"}`}>
-                                                        {order.details.intent}
-                                                    </span>
-                                                    <span className="flex items-center gap-1 text-gray-500 text-[10px] font-black uppercase">
-                                                        <Tag className="h-3 w-3" /> {order.details.format}
-                                                    </span>
-                                                    <span className="text-gray-600 text-[10px] font-bold uppercase">{order.details.condition}</span>
-                                                    {order.details.price && (
-                                                        <span className="flex items-center gap-1 text-primary text-sm font-black">
-                                                            <DollarSign className="h-3.5 w-3.5" />
-                                                            {order.details.currency === "USD" ? "US$" : "$"}{order.details.price.toLocaleString()}
+                                                {/* Details */}
+                                                <div className="flex-1 min-w-0 space-y-3">
+                                                    {/* Order Number */}
+                                                    {order.order_number && (
+                                                        <span className="inline-flex items-center gap-1.5 text-[9px] font-mono font-bold text-gray-600 uppercase tracking-wider">
+                                                            <Hash className="h-3 w-3" />
+                                                            {order.order_number}
                                                         </span>
                                                     )}
+
+                                                    <h4 className="text-lg md:text-xl font-display font-black text-white uppercase tracking-tight truncate group-hover:text-primary transition-colors">
+                                                        {order.details.artist} — {order.details.album}
+                                                    </h4>
+
+                                                    <div className="flex flex-wrap items-center gap-3">
+                                                        <span className={`px-3 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest border ${order.details.intent === "COMPRAR"
+                                                            ? "bg-green-500/10 text-green-400 border-green-500/20"
+                                                            : "bg-orange-500/10 text-orange-400 border-orange-500/20"
+                                                            }`}>
+                                                            {order.details.intent}
+                                                        </span>
+                                                        <span className="flex items-center gap-1 text-gray-500 text-[10px] font-black uppercase">
+                                                            <Tag className="h-3 w-3" /> {order.details.format}
+                                                        </span>
+                                                        <span className="text-gray-600 text-[10px] font-bold uppercase">{order.details.condition}</span>
+                                                        {order.details.price && (
+                                                            <span className="flex items-center gap-1 text-primary text-sm font-black">
+                                                                <DollarSign className="h-3.5 w-3.5" />
+                                                                {order.details.currency === "USD" ? "US$" : "$"}{order.details.price.toLocaleString()}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Status + Date */}
+                                                <div className="flex flex-col items-start md:items-end gap-3 flex-shrink-0">
+                                                    {getStatusBadge(order.status)}
+                                                    <span className="text-gray-700 text-[10px] font-bold flex items-center gap-1.5">
+                                                        <Clock className="h-3.5 w-3.5" /> {formatDate(order.timestamp)}
+                                                    </span>
                                                 </div>
                                             </div>
 
-                                            <div className="flex flex-col items-start md:items-end gap-3 flex-shrink-0">
-                                                {getStatusBadge(order.status)}
-                                                <span className="text-gray-700 text-[10px] font-bold flex items-center gap-1.5">
-                                                    <Clock className="h-3.5 w-3.5" /> {formatDate(order.timestamp)}
-                                                </span>
-                                            </div>
+                                            {/* Admin Offer Panel — visible when admin has quoted */}
+                                            {order.admin_offer_price && (
+                                                <div className="mx-6 md:mx-8 mb-6 p-5 bg-purple-500/[0.05] border border-purple-500/15 rounded-2xl">
+                                                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                                                        <div className="space-y-1.5">
+                                                            <div className="flex items-center gap-2">
+                                                                <BadgeDollarSign className="h-4 w-4 text-purple-400" />
+                                                                <span className="text-[10px] font-black uppercase tracking-widest text-purple-400">Cotización Recibida</span>
+                                                            </div>
+                                                            <p className="text-2xl font-display font-black text-white tracking-tight">
+                                                                {order.admin_offer_currency === "USD" ? "US$" : "$"} {order.admin_offer_price.toLocaleString()}
+                                                            </p>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => {
+                                                                const item = `${order.details.artist} - ${order.details.album}`;
+                                                                const currSymbol = order.admin_offer_currency === "USD" ? "US$" : "$";
+                                                                const msg = encodeURIComponent(
+                                                                    `Hola! Vi la cotización de ${currSymbol} ${order.admin_offer_price?.toLocaleString()} para ${item} (${order.order_number || "pedido"}). Me interesa avanzar.`
+                                                                );
+                                                                window.open(`https://wa.me/?text=${msg}`, "_blank");
+                                                            }}
+                                                            className="flex items-center gap-2 px-6 py-3 bg-green-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-green-400 hover:scale-105 active:scale-95 transition-all shadow-lg shadow-green-500/20"
+                                                        >
+                                                            <MessageCircle className="h-4 w-4" />
+                                                            Contactar por WhatsApp
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </motion.div>
                                     ))}
                                 </div>

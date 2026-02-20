@@ -114,6 +114,13 @@ export default function Home() {
         setStep(1);
     };
 
+    const generateOrderNumber = () => {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let result = '';
+        for (let i = 0; i < 5; i++) result += chars.charAt(Math.floor(Math.random() * chars.length));
+        return `#ORD-${result}`;
+    };
+
     const buildOrderPayload = (uid: string) => {
         if (!selectedItem || !format || !condition || !intent) return null;
 
@@ -124,6 +131,7 @@ export default function Home() {
             user_email: currentUser?.email || "Sin email",
             user_name: currentUser?.displayName || "Usuario Registrado",
             user_photo: currentUser?.photoURL || "",
+            order_number: generateOrderNumber(),
             item_id: selectedItem.id,
             details: {
                 format,
