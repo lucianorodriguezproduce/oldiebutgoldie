@@ -1138,6 +1138,43 @@ export default function Home() {
                             </motion.div>
                         )}
 
+                        {/* Inline Toast Notification */}
+                        <AnimatePresence>
+                            {showToast && (
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.9, y: -20 }}
+                                    className="bg-[#111] border border-primary/30 shadow-[0_0_40px_rgba(204,255,0,0.15)] rounded-[2rem] p-6 max-w-lg mx-auto w-full mt-12 mb-4"
+                                >
+                                    <div className="text-center space-y-4">
+                                        <div className="flex items-center justify-center gap-3">
+                                            <CheckCircle2 className="text-primary h-6 w-6" />
+                                            <span className="text-white font-black uppercase tracking-widest text-sm text-center">Ítem añadido al lote</span>
+                                        </div>
+                                        <div className="flex flex-col gap-2 pt-2">
+                                            <button
+                                                onClick={() => navigate('/revisar-lote')}
+                                                className="w-full bg-primary text-black py-4 rounded-xl font-black uppercase tracking-widest text-xs hover:scale-[1.02] transition-all"
+                                            >
+                                                Ir a finalizar lote
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setShowToast(false);
+                                                    handleResetSelection();
+                                                    scrollToTop();
+                                                }}
+                                                className="w-full bg-white/5 border border-white/10 text-white py-4 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-white/10 transition-all"
+                                            >
+                                                Seguir buscando
+                                            </button>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
                         {/* Recommendations Section - Repositioned at the bottom */}
                         {selectedItem && recommendations.length > 0 && (
                             <div className="pt-16 pb-8 md:pt-24 md:pb-12 fade-in w-full border-t border-white/5 mt-16">
@@ -1170,41 +1207,6 @@ export default function Home() {
                                 </div>
                             </div>
                         )}
-                    </motion.div>
-                )}
-            </AnimatePresence>
-            <AnimatePresence>
-                {showToast && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 50, x: "-50%", scale: 0.9 }}
-                        animate={{ opacity: 1, y: 0, x: "-50%", scale: 1 }}
-                        exit={{ opacity: 0, y: 20, x: "-50%", scale: 0.9 }}
-                        className="fixed bottom-24 md:bottom-12 left-1/2 z-[60] bg-[#111] border border-primary/30 shadow-[0_0_40px_rgba(204,255,0,0.15)] rounded-2xl p-4 md:p-6 w-[90%] max-w-sm"
-                    >
-                        <div className="text-center space-y-4">
-                            <div className="flex items-center justify-center gap-3">
-                                <CheckCircle2 className="text-primary h-6 w-6" />
-                                <span className="text-white font-black uppercase tracking-widest text-sm text-center">Ítem añadido al lote</span>
-                            </div>
-                            <div className="flex flex-col gap-2 pt-2">
-                                <button
-                                    onClick={() => navigate('/revisar-lote')}
-                                    className="w-full bg-primary text-black py-3 rounded-xl font-black uppercase tracking-widest text-[10px] hover:scale-[1.02] transition-all"
-                                >
-                                    Ir a finalizar lote
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setShowToast(false);
-                                        handleResetSelection();
-                                        scrollToTop();
-                                    }}
-                                    className="w-full bg-white/5 border border-white/10 text-white py-3 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-white/10 transition-all"
-                                >
-                                    Seguir buscando
-                                </button>
-                            </div>
-                        </div>
                     </motion.div>
                 )}
             </AnimatePresence>
