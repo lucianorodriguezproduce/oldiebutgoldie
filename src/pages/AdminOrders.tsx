@@ -23,7 +23,8 @@ import {
     XCircle,
     Handshake,
     Filter,
-    User as UserIcon
+    User as UserIcon,
+    TrendingUp
 } from "lucide-react";
 
 interface OrderDoc {
@@ -35,6 +36,7 @@ interface OrderDoc {
     item_id: number;
     status: string;
     timestamp: any;
+    market_reference?: number | null;
     details: {
         format: string;
         condition: string;
@@ -289,6 +291,12 @@ export default function AdminOrders() {
                                                 {order.details.price && (
                                                     <span className="text-primary font-black text-xs normal-case">
                                                         {order.details.currency === "USD" ? "US$" : "$"}{order.details.price.toLocaleString()}
+                                                    </span>
+                                                )}
+                                                {order.details.intent === "VENDER" && order.market_reference && (
+                                                    <span className="flex items-center gap-1 text-yellow-500/70 font-mono text-[10px] normal-case">
+                                                        <TrendingUp className="h-3 w-3" />
+                                                        Ref: US${order.market_reference.toFixed(2)}
                                                     </span>
                                                 )}
                                                 <span className="flex items-center gap-1 text-gray-700">

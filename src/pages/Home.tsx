@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, ChevronRight, CheckCircle2, Mail, Layers, DollarSign } from "lucide-react";
+import { Search, ChevronRight, CheckCircle2, Mail, Layers, DollarSign, TrendingUp } from "lucide-react";
 import { db, auth } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -27,6 +27,8 @@ export default function Home() {
     // Sell-specific states
     const [price, setPrice] = useState("");
     const [currency, setCurrency] = useState<Currency>("ARS");
+    const [marketPrice, setMarketPrice] = useState<number | null>(null);
+    const [isLoadingMarket, setIsLoadingMarket] = useState(false);
 
     const [searchResults, setSearchResults] = useState<DiscogsSearchResult[]>([]);
     const [isLoadingSearch, setIsLoadingSearch] = useState(false);
@@ -104,6 +106,8 @@ export default function Home() {
         setIntent(null);
         setPrice("");
         setCurrency("ARS");
+        setMarketPrice(null);
+        setIsLoadingMarket(false);
         setSearchResults([]);
         setShowDropdown(false);
         setHasMore(false);
@@ -139,6 +143,9 @@ export default function Home() {
             payload.details.currency = currency;
         }
 
+        // Attach market reference for margin analysis
+        payload.market_reference = marketPrice;
+
         return payload;
     };
 
@@ -148,12 +155,32 @@ export default function Home() {
         await addDoc(collection(db, "orders"), payload);
     };
 
+    // Fetch market price from Discogs for the selected release
+    const fetchMarketPrice = async () => {
+        if (!selectedItem) return;
+        setIsLoadingMarket(true);
+        try {
+            const releaseData = await discogsService.getReleaseDetails(selectedItem.id.toString());
+            if (releaseData?.lowest_price) {
+                setMarketPrice(releaseData.lowest_price);
+            } else {
+                setMarketPrice(null);
+            }
+        } catch (error) {
+            console.error("Market price fetch error:", error);
+            setMarketPrice(null);
+        } finally {
+            setIsLoadingMarket(false);
+        }
+    };
+
     // Handle intent selection — if user is logged in, skip auth
     const handleIntentSelect = async (selectedIntent: Intent) => {
         setIntent(selectedIntent);
 
-        // For VENDER, go to pricing step first
+        // For VENDER, fetch market price and go to pricing step
         if (selectedIntent === "VENDER") {
+            fetchMarketPrice();
             setStep(2); // price step
             return;
         }
@@ -438,6 +465,21 @@ export default function Home() {
                                     <h3 className="text-3xl md:text-4xl font-display font-black text-white uppercase tracking-tighter">Precio de Venta</h3>
                                     <p className="text-[10px] font-black text-gray-600 uppercase tracking-widest italic">Establecer valor de mercado para tu pieza</p>
                                 </div>
+
+                                {/* Market Price Anchor */}
+                                {isLoadingMarket ? (
+                                    <div className="flex items-center justify-center gap-3 py-4 px-6 bg-white/[0.02] border border-white/5 rounded-xl">
+                                        <div className="h-3 w-3 border-2 border-yellow-500/40 border-t-yellow-500 rounded-full animate-spin" />
+                                        <span className="text-[10px] font-mono font-bold text-gray-600 uppercase tracking-widest">Consultando valor de mercado global...</span>
+                                    </div>
+                                ) : marketPrice !== null && (
+                                    <div className="flex items-center gap-3 py-4 px-6 bg-yellow-500/[0.04] border border-yellow-500/10 rounded-xl">
+                                        <TrendingUp className="h-4 w-4 text-yellow-500/70 flex-shrink-0" />
+                                        <span className="text-[11px] font-mono font-bold text-yellow-500/80 uppercase tracking-wider">
+                                            Valor de referencia global (Discogs): US$ {marketPrice.toFixed(2)}
+                                        </span>
+                                    </div>
+                                )}
 
                                 <div className="space-y-6">
                                     <label className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 italic block px-4"> [ 03 ] Moneda </label>
