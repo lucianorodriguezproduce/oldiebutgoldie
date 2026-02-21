@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import type { OrderData } from '@/utils/whatsapp';
-import { formatDate, getReadableDate } from '@/utils/date';
+import { getReadableDate } from '@/utils/date';
 
 interface OrderCardProps {
     order: any; // Using any or an extended OrderData to catch legacy fields without crashing

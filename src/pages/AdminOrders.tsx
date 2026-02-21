@@ -83,7 +83,7 @@ const STATUS_OPTIONS = [
 
 import { Link } from "react-router-dom";
 import { Trash2 } from "lucide-react";
-import { formatDate, getReadableDate } from "@/utils/date";
+import { getReadableDate } from "@/utils/date";
 
 export default function AdminOrders() {
     const { showLoading, hideLoading } = useLoading();

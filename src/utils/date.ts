@@ -28,28 +28,32 @@ export const formatDate = (date: any) => {
 };
 
 export const getReadableDate = (ts: any) => {
-    if (!ts) return "Procesando...";
+    if (!ts) return "Pendiente de sincronización";
     try {
         let date: Date;
-        if (ts.toDate) {
+        if (typeof ts.toDate === 'function') {
             date = ts.toDate();
         } else if (ts.seconds) {
             date = new Date(ts.seconds * 1000);
         } else if (ts instanceof Date) {
             date = ts;
         } else {
-            date = new Date(ts);
+            const parsed = new Date(ts);
+            if (isNaN(parsed.getTime())) return "Pendiente de sincronización";
+            date = parsed;
         }
 
-        if (isNaN(date.getTime())) return "Fecha no disponible";
+        if (isNaN(date.getTime())) return "Pendiente de sincronización";
 
-        return date.toLocaleDateString('es-AR', {
-            day: 'numeric',
-            month: 'numeric',
-            year: 'numeric'
+        return date.toLocaleString('es-AR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
         });
     } catch (error) {
         console.error("Error formatting date:", error);
-        return "Fecha no disponible";
+        return "Pendiente de sincronización";
     }
 };

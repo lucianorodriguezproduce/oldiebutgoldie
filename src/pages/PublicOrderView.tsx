@@ -4,13 +4,15 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { SEO } from "@/components/SEO";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Music, Disc, Lock, Clock } from "lucide-react";
+import { ChevronLeft, Music, Disc, Lock, Clock, X } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useNavigate } from "react-router-dom";
 import { useLoading } from "@/context/LoadingContext";
-import { formatDate, getReadableDate } from "@/utils/date";
+import { getReadableDate } from "@/utils/date";
 
 export default function PublicOrderView() {
     const { id } = useParams<{ id: string }>();
+    const navigate = useNavigate();
     const { user, isAdmin } = useAuth();
     const { showLoading, hideLoading } = useLoading();
     const [order, setOrder] = useState<any>(null);
@@ -40,7 +42,7 @@ export default function PublicOrderView() {
         fetchOrder();
     }, [id]);
 
-    if (loading) {
+    if (loading || !order || !(order.createdAt || order.timestamp)) {
         return null;
     }
 
@@ -108,12 +110,35 @@ export default function PublicOrderView() {
                 schema={schemaMarkup}
             />
 
+            <div className={`
+                fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-xl border-b border-white/5 md:hidden h-14 flex items-center justify-between px-4 transition-all
+                ${loading ? "opacity-0 invisible" : "opacity-100 visible"}
+            `}>
+                <div className="flex items-center gap-3">
+                    <span className="text-[10px] font-mono font-bold text-gray-400">REF: {order?.order_number || id?.slice(0, 8)}</span>
+                </div>
+                <button
+                    onClick={() => navigate(-1)}
+                    className="w-11 h-11 flex items-center justify-center bg-white/5 rounded-full border border-white/10 active:scale-90 transition-all"
+                >
+                    <X className="w-5 h-5 text-white" />
+                </button>
+            </div>
+
             <div className="max-w-4xl mx-auto px-4 py-8 md:py-16 space-y-12">
                 <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div className="space-y-4">
-                        <Link to="/actividad" className="inline-flex items-center gap-2 text-[10px] font-black uppercase text-gray-500 hover:text-white transition-colors">
-                            <ChevronLeft className="w-4 h-4" /> Feed de Actividad
-                        </Link>
+                        <div className="flex items-center justify-between md:block">
+                            <Link to="/actividad" className="inline-flex items-center gap-2 text-[10px] font-black uppercase text-gray-500 hover:text-white transition-colors">
+                                <ChevronLeft className="w-4 h-4" /> Feed de Actividad
+                            </Link>
+                            <button
+                                onClick={() => navigate(-1)}
+                                className="md:hidden p-2 text-gray-500 hover:text-white"
+                            >
+                                <X className="h-6 w-6" />
+                            </button>
+                        </div>
                         <h1 className="text-4xl md:text-5xl font-display font-black text-white hover:text-primary transition-colors tracking-tightest leading-none">
                             Detalle del Lote
                         </h1>

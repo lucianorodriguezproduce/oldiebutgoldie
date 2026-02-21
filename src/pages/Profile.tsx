@@ -28,7 +28,7 @@ import {
     CheckCircle2
 } from "lucide-react";
 import { db } from "@/lib/firebase";
-import { formatDate, getReadableDate } from "@/utils/date";
+import { getReadableDate } from "@/utils/date";
 import { collection, onSnapshot, query, orderBy, where, doc, deleteDoc, updateDoc, addDoc, serverTimestamp } from "firebase/firestore";
 import { useState, useEffect } from "react";
 import { AlbumCardSkeleton } from "@/components/ui/Skeleton";
