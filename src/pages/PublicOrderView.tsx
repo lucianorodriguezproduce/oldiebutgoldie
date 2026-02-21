@@ -4,7 +4,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { SEO } from "@/components/SEO";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Music, Disc, Lock } from "lucide-react";
+import { ChevronLeft, Music, Disc, Lock, Clock } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useLoading } from "@/context/LoadingContext";
 
@@ -127,91 +127,146 @@ export default function PublicOrderView() {
                 </header>
 
                 <div className="space-y-6">
-                    <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 italic">Ítems Involucrados ({items.length})</h3>
-                    <AnimatePresence>
-                        {items.map((item: any, idx: number) => (
-                            <motion.div
-                                key={idx}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: idx * 0.05 }}
-                                className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 flex items-center gap-4 hover:bg-white/[0.04] hover:border-white/10 transition-all group"
-                            >
-                                <div className="w-16 h-16 rounded-xl overflow-hidden bg-black flex-shrink-0 shadow-lg border border-white/5 group-hover:border-primary/30 transition-colors">
-                                    {item.cover_image ? (
-                                        <img src={item.cover_image} alt="" className="w-full h-full object-cover grayscale-[0.2] group-hover:grayscale-0 transition-all" />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center">
-                                            <Music className="w-6 h-6 text-white/10" />
+                    <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 italic">
+                        Ítems Involucrados ({items.length})
+                    </h3>
+
+                    {!items || !Array.isArray(items) || items.length === 0 ? (
+                        <div className="bg-white/5 border border-dashed border-white/10 rounded-2xl p-12 text-center">
+                            <Music className="w-12 h-12 text-white/10 mx-auto mb-4" />
+                            <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">No hay discos en este lote</p>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 gap-4">
+                            <AnimatePresence>
+                                {items.map((item: any, idx: number) => (
+                                    <motion.div
+                                        key={idx}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: idx * 0.05 }}
+                                        className="bg-white/[0.02] border border-white/5 rounded-[2rem] p-4 flex flex-col sm:flex-row items-center sm:items-center gap-5 hover:bg-white/[0.04] hover:border-white/10 transition-all group overflow-hidden relative"
+                                    >
+                                        {/* Disk Thumbnail */}
+                                        <div className="w-full sm:w-24 aspect-square rounded-2xl overflow-hidden bg-black flex-shrink-0 shadow-2xl border border-white/5 group-hover:border-primary/30 transition-colors">
+                                            {item.cover_image ? (
+                                                <img src={item.cover_image} alt="" className="w-full h-full object-cover grayscale-[0.2] group-hover:grayscale-0 transition-all duration-700" />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center">
+                                                    <Music className="w-8 h-8 text-white/10" />
+                                                </div>
+                                            )}
                                         </div>
-                                    )}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <h4 className="text-white font-bold truncate group-hover:text-primary transition-colors">
-                                        {item.title || `${item.artist} - ${item.album}`}
-                                    </h4>
-                                    <div className="flex items-center gap-2 mt-2 flex-wrap">
-                                        <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded border ${item.intent === 'COMPRAR'
-                                            ? 'bg-green-500/10 text-green-400 border-green-500/20'
-                                            : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
-                                            }`}>
-                                            {item.intent}
-                                        </span>
-                                        <span className="text-xs text-gray-500 font-bold">{item.format} • {item.condition}</span>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        ))}
-                    </AnimatePresence>
+
+                                        {/* Item Logic */}
+                                        <div className="flex-1 min-w-0 w-full text-center sm:text-left space-y-3">
+                                            <div className="space-y-1">
+                                                <h4 className="text-xl sm:text-lg font-display font-black text-white truncate group-hover:text-primary transition-colors uppercase tracking-tight">
+                                                    {item.album || item.title?.split(' - ')[1] || 'Unknown Album'}
+                                                </h4>
+                                                <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">
+                                                    {item.artist || item.title?.split(' - ')[0] || 'Unknown Artist'}
+                                                </p>
+                                            </div>
+
+                                            {/* Badges Row */}
+                                            <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap pt-1">
+                                                <span className="bg-primary/10 text-primary border border-primary/20 text-[9px] font-black uppercase tracking-tighter px-3 py-1.5 rounded-full">
+                                                    {item.format || "N/A"}
+                                                </span>
+                                                <span className="bg-white/5 text-white border border-white/10 text-[9px] font-black uppercase tracking-tighter px-3 py-1.5 rounded-full">
+                                                    {item.condition || "N/A"}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* Status Tag (Floating Desktop) */}
+                                        <div className="absolute top-4 right-4 sm:static flex-shrink-0">
+                                            <span className={`text-[8px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg border shadow-sm ${(item.intent || order.status || 'COMPRAR') === 'COMPRAR'
+                                                ? 'bg-green-500/10 text-green-400 border-green-500/20'
+                                                : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                                                }`}>
+                                                {item.intent || order.status || 'COMPRAR'}
+                                            </span>
+                                        </div>
+                                    </motion.div>
+                                ))}
+                            </AnimatePresence>
+                        </div>
+                    )}
                 </div>
 
-                <div className="flex flex-col gap-6">
-                    {/* Price Info Block */}
-                    {(order.adminPrice || order.totalPrice || order.details?.price) && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {(order.totalPrice || order.details?.price) && order.details?.intent?.includes("VENDER") && (
-                                <div className="p-6 rounded-[2rem] bg-orange-500/5 border border-orange-500/10 flex flex-col justify-between">
-                                    <p className="text-[10px] uppercase tracking-widest font-black text-orange-400 mb-2">Oferta Original del Vendedor</p>
-                                    <p className="text-3xl font-display font-black text-white">
+                {/* Price & Negotiation Visibility (TAREA 4) */}
+                <div className="space-y-6 pt-6 border-t border-white/5">
+                    <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 italic">Resumen de Negociación</h3>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Initial Offer */}
+                        {(order.totalPrice || order.details?.price) && (
+                            <div className="p-8 rounded-[2.5rem] bg-orange-500/5 border border-orange-500/10 flex flex-col justify-between group hover:bg-orange-500/10 transition-all">
+                                <p className="text-[10px] uppercase tracking-[0.2em] font-black text-orange-400/70 mb-4">Oferta Inicial del Usuario</p>
+                                <div className="flex items-baseline gap-2">
+                                    <span className="text-4xl font-display font-black text-white">
                                         {canSeePrice ? (
-                                            `${order.currency || order.details?.currency === "USD" ? "US$" : "$"} ${(order.totalPrice || order.details?.price).toLocaleString()}`
+                                            `${order.currency || (order.details?.currency === "USD" ? "US$" : "$")} ${(order.totalPrice || order.details?.price).toLocaleString()}`
                                         ) : (
-                                            <span className="text-gray-600 flex items-center gap-2 italic opacity-50"><Lock className="h-4 w-4" /> Privado</span>
+                                            <span className="text-gray-700 flex items-center gap-2 italic opacity-40"><Lock className="h-4 w-4" /> Privado</span>
                                         )}
-                                    </p>
+                                    </span>
                                 </div>
-                            )}
-                            {order.adminPrice && (
-                                <div className="p-6 rounded-[2rem] bg-primary/10 border border-primary/20 flex flex-col justify-between shadow-xl shadow-primary/5">
-                                    <p className="text-[10px] uppercase tracking-widest font-black text-primary mb-2">Contraoferta de OBG</p>
-                                    <p className="text-3xl font-display font-black text-white">
+                            </div>
+                        )}
+
+                        {/* Admin Counter-Offer */}
+                        {order.adminPrice && (
+                            <div className="p-8 rounded-[2.5rem] bg-primary/10 border border-primary/20 flex flex-col justify-between shadow-2xl shadow-primary/5 group hover:bg-primary/20 transition-all">
+                                <p className="text-[10px] uppercase tracking-[0.2em] font-black text-primary mb-4">Propuesta de Oldie but Goldie</p>
+                                <div className="flex items-baseline gap-2">
+                                    <span className="text-4xl font-display font-black text-white">
                                         {canSeePrice ? (
                                             `${order.adminCurrency === "USD" ? "US$" : "$"} ${order.adminPrice.toLocaleString()}`
                                         ) : (
-                                            <span className="text-gray-600 flex items-center gap-2 italic opacity-50"><Lock className="h-4 w-4" /> Privado</span>
+                                            <span className="text-gray-700 flex items-center gap-2 italic opacity-40"><Lock className="h-4 w-4" /> Privado</span>
                                         )}
-                                    </p>
+                                    </span>
                                 </div>
-                            )}
-                        </div>
-                    )}
+                            </div>
+                        )}
+                    </div>
 
-                    <div className="p-6 rounded-[2rem] bg-white/[0.02] border border-white/5 flex flex-col md:flex-row justify-between gap-4 items-start md:items-center">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                                <span className="text-primary font-black">{(order.user_name || "C").charAt(0)}</span>
+                    {/* Metadata Footer */}
+                    <div className="p-8 rounded-[2.5rem] bg-white/[0.02] border border-white/5 flex flex-col md:flex-row justify-between gap-8 items-start md:items-center">
+                        <div className="flex items-center gap-4">
+                            <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-inner">
+                                <span className="text-xl text-primary font-black uppercase">{(order.user_name || "C").charAt(0)}</span>
                             </div>
                             <div>
-                                <p className="text-xs text-gray-500 font-bold">Iniciado por</p>
-                                <p className="text-white font-black">{order.user_name || "Cliente"}</p>
+                                <p className="text-[10px] text-gray-600 font-black uppercase tracking-widest mb-1">Iniciado por</p>
+                                <p className="text-white text-lg font-black tracking-tight">{order.user_name || "Coleccionista Registrado"}</p>
                             </div>
                         </div>
-                        <div className="text-right">
-                            <p className="text-[10px] uppercase tracking-widest font-black text-gray-500 mb-1">Estado</p>
-                            <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all ${order.status === 'pending_acceptance' ? 'bg-orange-500/10 border-orange-500/20 text-orange-400' : 'bg-white/5 border-white/10 text-white'
-                                }`}>
-                                {order.status === 'pending_acceptance' ? 'Esperando Aceptación' : order.status}
-                            </span>
+
+                        <div className="space-y-4 w-full md:w-auto">
+                            <div className="flex flex-col md:items-end">
+                                <p className="text-[10px] uppercase tracking-widest font-black text-gray-600 mb-2">Estado de la Orden</p>
+                                <span className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] border transition-all ${order.status === 'pending_acceptance'
+                                    ? 'bg-orange-500/10 border-orange-500/20 text-orange-400'
+                                    : 'bg-white/5 border-white/10 text-white'
+                                    }`}>
+                                    {order.status === 'pending_acceptance' ? 'Esperando Aceptación' : order.status}
+                                </span>
+                            </div>
+
+                            <div className="flex items-center gap-2 text-gray-700 text-[10px] font-black uppercase tracking-widest md:justify-end">
+                                <Clock className="h-3.5 w-3.5" />
+                                {(() => {
+                                    const dateObj = order.createdAt || order.timestamp;
+                                    if (dateObj?.toDate) return dateObj.toDate().toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' });
+                                    if (dateObj?.seconds) return new Date(dateObj.seconds * 1000).toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' });
+                                    if (dateObj instanceof Date) return dateObj.toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' });
+                                    return "Fecha pendiente";
+                                })()}
+                            </div>
                         </div>
                     </div>
                 </div>
