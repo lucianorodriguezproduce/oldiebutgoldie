@@ -50,6 +50,8 @@ interface OrderDoc {
     admin_offer_currency?: string;
     adminPrice?: number;
     adminCurrency?: string;
+    totalPrice?: number;
+    currency?: string;
     details: {
         format: string;
         condition: string;
@@ -70,7 +72,7 @@ const STATUS_OPTIONS = [
     { value: "pending", label: "Pendiente", icon: Clock, color: "text-yellow-500", bg: "bg-yellow-500/10 border-yellow-500/20" },
     { value: "quoted", label: "Cotizado", icon: BadgeDollarSign, color: "text-purple-400", bg: "bg-purple-500/10 border-purple-500/20" },
     { value: "negotiating", label: "En Negociación", icon: Handshake, color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/20" },
-    { value: "counteroffered", label: "Contraofertado", icon: Send, color: "text-orange-400", bg: "bg-orange-500/10 border-orange-500/20" },
+    { value: "counteroffered", label: "Precio Definido", icon: Send, color: "text-orange-400", bg: "bg-orange-500/10 border-orange-500/20" },
     { value: "pending_acceptance", label: "Esperando Cliente", icon: Clock, color: "text-orange-400", bg: "bg-orange-500/10 border-orange-500/20" },
     { value: "completed", label: "Completado", icon: CheckCircle2, color: "text-green-500", bg: "bg-green-500/10 border-green-500/20" },
     { value: "cancelled", label: "Cancelado", icon: XCircle, color: "text-red-500", bg: "bg-red-500/10 border-red-500/20" },
@@ -106,6 +108,20 @@ export default function AdminOrders() {
         });
         return () => unsub();
     }, []);
+
+    // Keep selectedOrder in sync with orders list (TAREA 5 - DIRECTIVA 7)
+    useEffect(() => {
+        if (selectedOrder) {
+            const latest = orders.find(o => o.id === selectedOrder.id);
+            if (latest && JSON.stringify(latest) !== JSON.stringify(selectedOrder)) {
+                setSelectedOrder(latest);
+            }
+        }
+    }, [orders, selectedOrder?.id]);
+
+    // Reverting incorrect block from previous tool call
+    // (This was accidentally applied to AdminOrders.tsx instead of AnalyticsDashboard.tsx)
+    // I will remove it if it was added. Let me check the file content first.
 
     const handleStatusChange = async (orderId: string, newStatus: string) => {
         setUpdatingId(orderId);
@@ -353,6 +369,9 @@ export default function AdminOrders() {
             </div>
 
             {/* ====== Admin Order Detail Drawer ====== */}
+            {/* Debugging (TAREA 1 - DIRECTIVA 7) */}
+            {selectedOrder && (console.log("DEBUG_ORDER:", selectedOrder), null)}
+
             < OrderDetailsDrawer
                 isOpen={!!selectedOrder}
                 onClose={() => { setSelectedOrder(null); setActiveDropdown(null); }}
@@ -440,8 +459,8 @@ export default function AdminOrders() {
                                             onClick={() => handleSetAdminPrice(selectedOrder)}
                                             disabled={quotingId === selectedOrder.id || !quotePrice || selectedOrder.adminPrice === parseFloat(quotePrice)}
                                             className={`px-4 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-40 ${selectedOrder.adminPrice && selectedOrder.adminPrice === parseFloat(quotePrice)
-                                                    ? "bg-green-600 text-white"
-                                                    : "bg-orange-600 text-white hover:bg-orange-500"
+                                                ? "bg-green-600 text-white"
+                                                : "bg-orange-600 text-white hover:bg-orange-500"
                                                 }`}
                                         >
                                             {selectedOrder.adminPrice && selectedOrder.adminPrice === parseFloat(quotePrice) ? (
@@ -518,9 +537,11 @@ export default function AdminOrders() {
                             <div className="flex items-center gap-3">
                                 <DollarSign className="h-6 w-6 text-orange-500" />
                                 <span className="text-4xl font-display font-black text-white">
-                                    {selectedOrder.details.price
-                                        ? `${selectedOrder.details.currency === 'USD' ? 'US$' : '$'} ${selectedOrder.details.price.toLocaleString()}`
-                                        : "Sin precio especificado"}
+                                    {selectedOrder.totalPrice
+                                        ? `${selectedOrder.currency === 'USD' ? 'US$' : '$'} ${selectedOrder.totalPrice.toLocaleString()}`
+                                        : (selectedOrder.details?.price
+                                            ? `${selectedOrder.details.currency === 'USD' ? 'US$' : '$'} ${selectedOrder.details.price.toLocaleString()}`
+                                            : "Precio no especificado")}
                                 </span>
                             </div>
                         </div>

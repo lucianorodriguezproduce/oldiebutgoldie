@@ -76,6 +76,10 @@ export const generateWhatsAppLink = (order: OrderData): string => {
     } else if (order.admin_offer_price) {
         const currency = order.admin_offer_currency === "USD" ? "US$" : "$";
         message += `\nCotización Admin Lote/Disco: ${currency} ${order.admin_offer_price.toLocaleString()}`;
+    } else if (order.totalPrice || (order as any).price) {
+        const currency = order.currency || order.details.currency === "USD" ? "US$" : "$";
+        const price = order.totalPrice || (order as any).price;
+        message += `\nTu oferta original: ${currency} ${price.toLocaleString()}`;
     } else if (!order.isBatch && order.details.price) {
         const currency = order.details.currency === "USD" ? "US$" : "$";
         message += `\nPrecio Sugerido: ${currency} ${order.details.price.toLocaleString()}`;

@@ -20,7 +20,10 @@ import {
     Tag,
     Hash,
     MessageCircle,
-    BadgeDollarSign
+    BadgeDollarSign,
+    Activity,
+    Globe,
+    PieChart
 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, query, orderBy, where, doc, deleteDoc } from "firebase/firestore";
@@ -62,6 +65,8 @@ interface OrderItem {
         price?: number;
         currency?: string;
     };
+    totalPrice?: number; // Added based on the JSX change
+    currency?: string; // Added based on the JSX change
 }
 
 export default function Profile() {
@@ -414,16 +419,30 @@ export default function Profile() {
                     selectedOrder && (
                         <div className="space-y-4">
                             {selectedOrder.adminPrice && (
-                                <div className="flex items-center justify-between bg-primary/10 border border-primary/20 p-4 rounded-xl">
-                                    <div>
+                                <div className="flex flex-col gap-4">
+                                    {/* User's Original Offer */}
+                                    <div className="bg-white/5 rounded-xl p-4 border border-white/10">
                                         <div className="flex items-center gap-2 mb-1">
-                                            <BadgeDollarSign className="h-4 w-4 text-primary" />
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-primary">Oldie but Goldie te ofrece</span>
+                                            <DollarSign className="h-3.5 w-3.5 text-gray-500" />
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Tu oferta inicial</span>
                                         </div>
-                                        <p className="text-3xl font-display font-black text-white tracking-tight">
-                                            {selectedOrder.adminCurrency === "USD" ? "US$" : "$"} {selectedOrder.adminPrice.toLocaleString()}
+                                        <p className="text-xl font-bold text-gray-400">
+                                            {selectedOrder.currency === "USD" ? "US$" : "$"} {(selectedOrder.totalPrice || selectedOrder.details.price || 0).toLocaleString()}
                                         </p>
                                     </div>
+
+                                    {/* Admin Counter-Offer */}
+                                    {selectedOrder.adminPrice && (
+                                        <div className="bg-primary/5 rounded-xl p-4 border border-primary/20">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <BadgeDollarSign className="h-4 w-4 text-primary" />
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-primary">Oldie but Goldie te ofrece</span>
+                                            </div>
+                                            <p className="text-3xl font-display font-black text-white tracking-tight">
+                                                {selectedOrder.adminCurrency === "USD" ? "US$" : "$"} {selectedOrder.adminPrice.toLocaleString()}
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                             {!selectedOrder.adminPrice && selectedOrder.admin_offer_price && (

@@ -3,7 +3,7 @@ import { db } from "@/lib/firebase";
 import { collection, query, orderBy, limit, getDocs, Timestamp, where } from "firebase/firestore";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Activity, Globe, Search, ShoppingBag, PieChart, DollarSign, TrendingUp } from "lucide-react";
+import { MapPin, Activity, Globe, Search, ShoppingBag, PieChart, DollarSign, TrendingUp, BadgeDollarSign } from "lucide-react";
 
 interface InteractionEvent {
     id: string;
@@ -29,7 +29,9 @@ export default function AnalyticsDashboard() {
         buyIntent: 0,
         sellIntent: 0,
         potentialVolumeARS: 0,
-        realVolumeARS: 0
+        realVolumeARS: 0,
+        facturacionPotencial: 0,
+        ticketPromedio: 0
     });
     const [loading, setLoading] = useState(true);
 
@@ -84,8 +86,8 @@ export default function AnalyticsDashboard() {
                 let buyIntentCount = 0;
                 let sellIntentCount = 0;
                 activeOrders.forEach(o => {
-                    if (o.details?.intent === "COMPRAR") buyIntentCount++;
-                    if (o.details?.intent === "VENDER") sellIntentCount++;
+                    if (o.type === 'buy' || o.details?.intent === "COMPRAR") buyIntentCount++;
+                    if (o.type === 'sell' || o.details?.intent === "VENDER") sellIntentCount++;
                 });
 
                 setStats({
@@ -97,7 +99,11 @@ export default function AnalyticsDashboard() {
                     buyIntent: buyIntentCount,
                     sellIntent: sellIntentCount,
                     potentialVolumeARS: activeOrders.reduce((sum, o: any) => sum + (o.totalPrice || o.details?.price || 0), 0),
-                    realVolumeARS: activeOrders.reduce((sum, o: any) => sum + (o.adminPrice || o.totalPrice || o.details?.price || 0), 0)
+                    realVolumeARS: activeOrders.reduce((sum, o: any) => sum + (o.adminPrice || o.totalPrice || o.details?.price || 0), 0),
+                    facturacionPotencial: activeOrders.reduce((sum, o: any) => sum + (o.adminPrice || o.totalPrice || o.details?.price || 0), 0),
+                    ticketPromedio: activeOrders.length > 0
+                        ? activeOrders.reduce((sum, o: any) => sum + (o.totalPrice || o.details?.price || 0), 0) / activeOrders.length
+                        : 0
                 });
 
             } catch (error) {
@@ -140,15 +146,6 @@ export default function AnalyticsDashboard() {
                     <p className="text-xs text-gray-600 mt-2 font-bold uppercase tracking-widest">In Pipeline</p>
                 </Card>
 
-                <Card className="bg-white/[0.03] border-white/5 p-8 rounded-[2.5rem]">
-                    <div className="flex items-center gap-4 mb-4">
-                        <Activity className="h-6 w-6 text-purple-400" />
-                        <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500">Telemetry</h3>
-                    </div>
-                    <p className="text-5xl font-black text-white">{events.length}</p>
-                    <p className="text-xs text-gray-600 mt-2 font-bold uppercase tracking-widest">Live Signals</p>
-                </Card>
-
                 <Card className="bg-white/[0.03] border-white/5 p-8 rounded-[2.5rem] relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 blur-[60px] rounded-full" />
                     <div className="flex items-center gap-4 mb-4">
@@ -163,42 +160,55 @@ export default function AnalyticsDashboard() {
                     <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-[60px] rounded-full" />
                     <div className="flex items-center gap-4 mb-4">
                         <TrendingUp className="h-6 w-6 text-primary" />
-                        <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500">Volumen Real (ROI)</h3>
+                        <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500">Facturación Potencial</h3>
                     </div>
-                    <p className="text-4xl font-black text-white">$ {stats.realVolumeARS.toLocaleString()}</p>
-                    <p className="text-xs text-gray-600 mt-2 font-bold uppercase tracking-widest">Precios OBG</p>
+                    <p className="text-4xl font-black text-white">$ {stats.facturacionPotencial.toLocaleString()}</p>
+                    <p className="text-xs text-gray-600 mt-2 font-bold uppercase tracking-widest">AdminPrice || TotalPrice</p>
+                </Card>
+
+                <Card className="bg-white/[0.03] border-white/5 p-8 rounded-[2.5rem] relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 blur-[60px] rounded-full" />
+                    <div className="flex items-center gap-4 mb-4">
+                        <BadgeDollarSign className="h-6 w-6 text-purple-400" />
+                        <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500">Ticket Promedio</h3>
+                    </div>
+                    <p className="text-4xl font-black text-white">$ {stats.ticketPromedio.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+                    <p className="text-xs text-gray-600 mt-2 font-bold uppercase tracking-widest">Valor medio por lote</p>
                 </Card>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
                 <div className="space-y-8">
                     <h3 className="text-2xl font-bold text-white flex items-center gap-3">
-                        <PieChart className="h-6 w-6 text-primary" /> Operational Intent (Active)
+                        <PieChart className="h-6 w-6 text-primary" /> Intención de Mercado (Buy vs Sell)
                     </h3>
                     <div className="bg-white/[0.02] border border-white/5 rounded-[2rem] p-8 space-y-6">
                         {stats.activeOrdersCount > 0 ? (
                             <>
                                 <div className="flex items-center justify-between text-sm font-bold uppercase tracking-wider">
-                                    <span className="text-green-400">Buying: {stats.buyIntent}</span>
-                                    <span className="text-orange-400">Selling: {stats.sellIntent}</span>
+                                    <span className="text-green-400">Total Compra: {stats.buyIntent}</span>
+                                    <span className="text-orange-400">Total Venta: {stats.sellIntent}</span>
                                 </div>
-                                <div className="h-8 w-full bg-white/5 rounded-full overflow-hidden flex">
+                                <div className="h-4 w-full bg-white/5 rounded-full overflow-hidden flex">
                                     <div
-                                        className="h-full bg-green-500 transition-all duration-1000"
+                                        className="h-full bg-green-500 transition-all duration-1000 shadow-[0_0_15px_rgba(34,197,94,0.3)]"
                                         style={{ width: `${(stats.buyIntent / stats.activeOrdersCount) * 100}%` }}
                                     />
                                     <div
-                                        className="h-full bg-orange-500 transition-all duration-1000"
+                                        className="h-full bg-orange-500 transition-all duration-1000 shadow-[0_0_15px_rgba(249,115,22,0.3)]"
                                         style={{ width: `${(stats.sellIntent / stats.activeOrdersCount) * 100}%` }}
                                     />
                                 </div>
+                                <p className="text-[10px] text-center text-gray-500 font-bold uppercase tracking-widest">
+                                    Proporción de mercado basada en órdenes activas
+                                </p>
                             </>
                         ) : (
                             <p className="text-gray-600 text-center py-4">No active orders to analyze.</p>
                         )}
                     </div>
 
-                    <h3 className="text-2xl font-bold text-white flex items-center gap-3 mt-8">
+                    <h3 className="text-2xl font-bold text-white flex items-center gap-3">
                         <MapPin className="h-6 w-6 text-blue-400" /> Top Locations
                     </h3>
                     <div className="bg-white/[0.02] border border-white/5 rounded-[2rem] p-8 space-y-6">
