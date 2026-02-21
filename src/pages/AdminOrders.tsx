@@ -78,6 +78,9 @@ const STATUS_OPTIONS = [
     { value: "cancelled", label: "Cancelado", icon: XCircle, color: "text-red-500", bg: "bg-red-500/10 border-red-500/20" },
 ];
 
+import { Link } from "react-router-dom";
+import { Trash2 } from "lucide-react";
+
 export default function AdminOrders() {
     const [orders, setOrders] = useState<OrderDoc[]>([]);
     const [loading, setLoading] = useState(true);
@@ -284,13 +287,20 @@ export default function AdminOrders() {
 
     return (
         <div className="space-y-10">
-            <header>
-                <h1 className="text-5xl font-display font-black text-white tracking-tightest">
-                    Gestión de <span className="text-primary">Pedidos</span>
-                </h1>
-                <p className="text-gray-500 mt-2 font-medium">
-                    Panel de control administrativo. Click en un pedido para ver detalles y operar.
-                </p>
+            <header className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-5xl font-display font-black text-white tracking-tightest">
+                        Gestión de <span className="text-primary">Pedidos</span>
+                    </h1>
+                    <p className="text-gray-500 mt-2 font-medium">
+                        Panel de control administrativo. Click en un pedido para ver detalles y operar.
+                    </p>
+                </div>
+                <Link to="/admin/purge">
+                    <button className="flex items-center gap-2 px-4 py-2 bg-red-500/10 border border-red-500/20 text-red-500 rounded-xl hover:bg-red-500/20 transition-all text-[10px] font-black uppercase tracking-widest">
+                        <Trash2 className="h-4 w-4" /> Purga de Datos
+                    </button>
+                </Link>
             </header>
 
             {/* Stats Cards */}

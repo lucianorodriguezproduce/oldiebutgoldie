@@ -17,6 +17,7 @@ interface LoteContextType {
     addItemToBatch: (item: BatchItem) => void;
     isInLote: (id: number) => boolean;
     clearLote: () => void;
+    hardReset: () => void;
     totalCount: number;
 }
 
@@ -70,6 +71,13 @@ export function LoteProvider({ children }: { children: ReactNode }) {
         setLoteItems([]);
     };
 
+    const hardReset = () => {
+        sessionStorage.clear();
+        localStorage.clear();
+        setLoteItems([]);
+        window.location.reload();
+    };
+
     return (
         <LoteContext.Provider value={{
             loteItems,
@@ -77,6 +85,7 @@ export function LoteProvider({ children }: { children: ReactNode }) {
             addItemToBatch,
             isInLote,
             clearLote,
+            hardReset,
             totalCount: loteItems.length
         }}>
             {children}

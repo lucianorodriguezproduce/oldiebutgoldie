@@ -20,6 +20,7 @@ import AnalyticsDashboard from "@/pages/Admin/AnalyticsDashboard";
 import EditorialManager from "@/pages/Admin/EditorialManager";
 import CommunityManager from "@/pages/Admin/CommunityManager";
 import AdminOrders from "@/pages/AdminOrders";
+import DatabasePurge from "@/pages/Admin/DatabasePurge";
 import { ProtectedRoute } from "@/components/Guard/ProtectedRoute";
 
 const queryClient = new QueryClient({
@@ -61,6 +62,7 @@ function AppContent() {
             <Route path="community" element={<CommunityManager />} />
             <Route path="editorial" element={<EditorialManager />} />
             <Route path="orders" element={<AdminOrders />} />
+            <Route path="purge" element={<DatabasePurge />} />
           </Route>
         </Route>
       </Routes>
