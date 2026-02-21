@@ -7,7 +7,6 @@ export interface BatchItem {
     cover_image: string;
     format: string;
     condition: string;
-    intent: "COMPRAR" | "VENDER";
     price?: number;
     currency?: string;
 }

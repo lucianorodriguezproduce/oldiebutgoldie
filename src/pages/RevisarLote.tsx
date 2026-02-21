@@ -43,6 +43,7 @@ export default function RevisarLote() {
             order_number: generateOrderNumber(),
             isBatch: true,
             status: 'pending',
+            type: batchIntent === 'COMPRAR' ? 'buy' : 'sell',
             totalPrice: batchIntent === 'VENDER' ? Number(totalPrice) : null,
             currency: batchIntent === 'VENDER' ? currency : null,
             timestamp: serverTimestamp(),
@@ -61,7 +62,6 @@ export default function RevisarLote() {
                 cover_image: item.cover_image,
                 format: item.format,
                 condition: item.condition,
-                intent: item.intent,
                 price: item.price,
                 currency: item.currency,
             }))
@@ -243,12 +243,6 @@ export default function RevisarLote() {
                                 <div className="flex-1 min-w-0">
                                     <h4 className="text-white font-bold truncate leading-tight">{item.title}</h4>
                                     <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                        <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded border ${item.intent === 'COMPRAR'
-                                            ? 'bg-green-500/10 text-green-400 border-green-500/20'
-                                            : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
-                                            }`}>
-                                            {item.intent}
-                                        </span>
                                         <span className="text-xs text-gray-500 font-bold">{item.format} • {item.condition}</span>
                                         {item.price && (
                                             <span className="text-xs text-primary font-mono ml-auto">
@@ -309,11 +303,11 @@ export default function RevisarLote() {
                                     className="pt-4 space-y-2 border-t border-white/5"
                                 >
                                     <h4 className="text-white font-black uppercase text-[10px] tracking-widest text-center">Precio pretendido por el lote</h4>
-                                    <div className="flex bg-black/50 p-1.5 rounded-xl gap-2">
+                                    <div className="flex flex-col md:flex-row bg-black/50 p-1.5 rounded-xl gap-2 w-full">
                                         <select
                                             value={currency}
                                             onChange={(e) => setCurrency(e.target.value as 'ARS' | 'USD')}
-                                            className="bg-[#111] border border-white/10 text-white rounded-lg px-3 py-3 text-xs font-bold focus:outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/40 text-center cursor-pointer"
+                                            className="w-full md:w-[30%] bg-[#111] border border-white/10 text-white rounded-lg px-3 py-3 md:py-4 text-xs font-bold focus:outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/40 text-center cursor-pointer"
                                         >
                                             <option value="ARS">ARS $</option>
                                             <option value="USD">USD $</option>
@@ -324,7 +318,7 @@ export default function RevisarLote() {
                                             value={totalPrice}
                                             onChange={(e) => setTotalPrice(e.target.value)}
                                             placeholder="Ej: 50000"
-                                            className="flex-1 bg-white/5 border border-white/10 text-white rounded-lg px-4 py-3 text-sm font-bold focus:outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/40 text-center"
+                                            className="w-full md:w-[70%] flex-1 bg-white/5 border border-white/10 text-white rounded-lg px-4 py-3 md:py-4 text-sm font-bold focus:outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/40 text-center"
                                         />
                                     </div>
                                 </motion.div>
