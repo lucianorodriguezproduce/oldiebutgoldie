@@ -62,7 +62,7 @@ export default function Home() {
 
     // The instruction's provided code block starts here:
     // Local Auth UI states (only for the manual form)
-    const [debouncedQuery] = useDebounce(query, 300); // Changed from searchQuery to query to match existing state
+    const debouncedQuery = useDebounce(query, 300);
     const resultsContainerRef = useRef<HTMLDivElement>(null);
     // End of the instruction's provided code block
 
@@ -265,7 +265,7 @@ export default function Home() {
                 const results = await discogsService.getCuratedRecommendations(genreToSearch);
 
                 // Strictly filter out the currently selected item, and remove items with no cover_image or no "Artist - Album" format
-                const cleanResults = results.filter(r =>
+                const cleanResults = (results || []).filter(r =>
                     r.id !== selectedItem.id &&
                     r.cover_image &&
                     !r.cover_image.includes('spacer') &&
@@ -693,7 +693,7 @@ export default function Home() {
                         <div className={`w-full ${isSearchActive ? 'flex-1 overflow-y-auto overscroll-contain p-4 pb-[env(safe-area-inset-bottom,2rem)] block bg-[#050505]' : 'hidden'}`}>
                             <div className="max-w-4xl mx-auto w-full pb-[10vh]">
                                 <AnimatePresence>
-                                    {isSearchActive && searchResults.length > 0 && (
+                                    {isSearchActive && (searchResults || []).length > 0 && (
                                         <motion.div
                                             ref={resultsContainerRef}
                                             initial={{ opacity: 0 }}
@@ -702,7 +702,7 @@ export default function Home() {
                                             // Removed massive margins/padding as flex-1 container handles scrolling now
                                             className="space-y-3 md:space-y-4 text-left"
                                         >
-                                            {searchResults.map((result, i) => (
+                                            {(searchResults || []).map((result, i) => (
                                                 <motion.button
                                                     initial={{ opacity: 0, y: 20 }}
                                                     animate={{ opacity: 1, y: 0 }}
@@ -719,10 +719,10 @@ export default function Home() {
                                                         </div>
                                                         <div className="flex-1 min-w-0 flex flex-col items-start gap-1 text-left">
                                                             <h4 className="text-xl md:text-2xl font-bold font-display italic text-white truncate w-full group-hover:text-primary transition-colors">
-                                                                {result.title.split(' - ')[1] || result.title}
+                                                                {(result.title || "").split(' - ')[1] || result.title || "Untitled"}
                                                             </h4>
                                                             <span className="text-xs md:text-sm font-black text-gray-400 uppercase tracking-widest leading-none truncate w-full">
-                                                                {result.title.split(' - ')[0]}
+                                                                {(result.title || "").split(' - ')[0] || "Unknown Artist"}
                                                             </span>
                                                             <div className="flex items-center gap-2 mt-2 flex-wrap">
                                                                 {result.type === 'artist' ? (
@@ -736,7 +736,7 @@ export default function Home() {
                                                                                 {result.year}
                                                                             </span>
                                                                         )}
-                                                                        {(result.format && result.format.length > 0) ? (
+                                                                        {(Array.isArray(result.format) && result.format.length > 0) ? (
                                                                             <>
                                                                                 {result.year && result.year !== "0" && result.year.toUpperCase() !== "N/A" && (
                                                                                     <span className="text-[10px] text-gray-600 font-mono">•</span>
@@ -746,8 +746,8 @@ export default function Home() {
                                                                                 </span>
                                                                             </>
                                                                         ) : (
-                                                                            <span className="text-[10px] text-gray-500 font-mono tracking-widest uppercase ml-1">
-                                                                                {result.type}
+                                                                            <span className="text-[10px] text-gray-500 font-mono tracking-widest uppercase">
+                                                                                {result.type || "release"}
                                                                             </span>
                                                                         )}
                                                                     </>
@@ -777,16 +777,16 @@ export default function Home() {
                                         </motion.div>
                                     )}
 
-                                    {isSearchActive && isLoadingSearch && searchResults.length === 0 && (
+                                    {isSearchActive && isLoadingSearch && (searchResults || []).length === 0 && (
                                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-20 flex flex-col items-center justify-center gap-4 text-center">
                                             <div className="h-8 w-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
                                             <span className="text-xs font-black uppercase tracking-widest text-gray-500">Analizando base de datos...</span>
                                         </motion.div>
                                     )}
 
-                                    {isSearchActive && !isLoadingSearch && debouncedQuery.length >= 3 && searchResults.length === 0 && (
+                                    {isSearchActive && !isLoadingSearch && (debouncedQuery || "").length >= 3 && (searchResults || []).length === 0 && (
                                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-20 text-center space-y-4">
-                                            <p className="text-gray-500 font-medium text-lg">No se encontraron resultados para "{query}"</p>
+                                            <p className="text-gray-500 font-medium text-lg font-display italic">"No se encontraron tesoros para {query}"</p>
                                             <button onClick={() => setQuery("")} className="text-primary text-xs font-black uppercase tracking-widest hover:underline hover:text-white transition-colors">Limpiar búsqueda</button>
                                         </motion.div>
                                     )}
