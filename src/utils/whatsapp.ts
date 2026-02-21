@@ -17,6 +17,8 @@ export interface OrderData {
     };
     isBatch?: boolean;
     items?: any[];
+    totalPrice?: number;
+    currency?: string;
 }
 
 export const generateWhatsAppLink = (order: OrderData): string => {
@@ -39,13 +41,13 @@ export const generateWhatsAppLink = (order: OrderData): string => {
 
     if (order.isBatch && order.items && order.items.length > 0) {
         if (intentStr === "COMPRAR" || intentStr === "EN COMPRA") {
-            actionText = "Quiero comprar este lote";
+            message = `Hola Oldie but Goldie! Quiero comprar este lote de ${order.items.length} ítems:\n`;
         } else if (intentStr === "VENDER" || intentStr === "EN VENTA") {
-            actionText = "Quiero vender este lote";
+            const priceStr = order.totalPrice ? ` por ${order.currency === 'USD' ? 'US$' : '$'}${order.totalPrice.toLocaleString()}` : '';
+            message = `Hola Oldie but Goldie! Quiero venderte este lote${priceStr}. Detalle (${order.items.length} ítems):\n`;
         } else {
-            actionText = "Me interesa este lote";
+            message = `Hola Oldie but Goldie! Me interesa este lote de ${order.items.length} ítems:\n`;
         }
-        message = `Hola Oldie but Goldie! ${actionText} de ${order.items.length} ítems:\n`;
         order.items.forEach((item, idx) => {
             const itemPrice = item.price ? ` | ${item.currency === 'USD' ? 'US$' : '$'}${item.price.toLocaleString()}` : '';
             message += `\n${idx + 1}. ${item.artist} - ${item.album} (${item.format} | ${item.condition}) [${item.intent}]${itemPrice}`;

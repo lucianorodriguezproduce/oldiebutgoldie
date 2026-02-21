@@ -21,6 +21,8 @@ export default function RevisarLote() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [batchIntent, setBatchIntent] = useState<'COMPRAR' | 'VENDER' | null>(null);
+    const [totalPrice, setTotalPrice] = useState("");
+    const [currency, setCurrency] = useState<'ARS' | 'USD'>("ARS");
 
     const generateOrderNumber = () => {
         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -41,6 +43,8 @@ export default function RevisarLote() {
             order_number: generateOrderNumber(),
             isBatch: true,
             status: 'pending',
+            totalPrice: batchIntent === 'VENDER' ? Number(totalPrice) : null,
+            currency: batchIntent === 'VENDER' ? currency : null,
             timestamp: serverTimestamp(),
             // Store legacy fields based on the first item to not break simplistic queries immediately
             item_id: loteItems[0]?.id,
@@ -80,6 +84,10 @@ export default function RevisarLote() {
             alert("Debes seleccionar la intención del lote (Comprar o Vender).");
             return;
         }
+        if (batchIntent === 'VENDER' && (!totalPrice || Number(totalPrice) <= 0)) {
+            alert("Debes ingresar un precio pretendido válido para vender el lote.");
+            return;
+        }
         if (user) {
             setIsSubmitting(true);
             try {
@@ -98,6 +106,10 @@ export default function RevisarLote() {
     const handleGoogleSignIn = async () => {
         if (!batchIntent) {
             alert("Debes seleccionar la intención del lote antes de continuar.");
+            return;
+        }
+        if (batchIntent === 'VENDER' && (!totalPrice || Number(totalPrice) <= 0)) {
+            alert("Debes ingresar un precio pretendido válido para vender el lote.");
             return;
         }
         setIsSubmitting(true);
@@ -120,6 +132,10 @@ export default function RevisarLote() {
         if (!email || !password) return;
         if (!batchIntent) {
             alert("Debes seleccionar la intención del lote antes de continuar.");
+            return;
+        }
+        if (batchIntent === 'VENDER' && (!totalPrice || Number(totalPrice) <= 0)) {
+            alert("Debes ingresar un precio pretendido válido para vender el lote.");
             return;
         }
 
@@ -285,12 +301,40 @@ export default function RevisarLote() {
                                     Quiero Vender
                                 </button>
                             </div>
+
+                            {batchIntent === 'VENDER' && (
+                                <motion.div
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    className="pt-4 space-y-2 border-t border-white/5"
+                                >
+                                    <h4 className="text-white font-black uppercase text-[10px] tracking-widest text-center">Precio pretendido por el lote</h4>
+                                    <div className="flex bg-black/50 p-1.5 rounded-xl gap-2">
+                                        <select
+                                            value={currency}
+                                            onChange={(e) => setCurrency(e.target.value as 'ARS' | 'USD')}
+                                            className="bg-[#111] border border-white/10 text-white rounded-lg px-3 py-3 text-xs font-bold focus:outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/40 text-center cursor-pointer"
+                                        >
+                                            <option value="ARS">ARS $</option>
+                                            <option value="USD">USD $</option>
+                                        </select>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            value={totalPrice}
+                                            onChange={(e) => setTotalPrice(e.target.value)}
+                                            placeholder="Ej: 50000"
+                                            className="flex-1 bg-white/5 border border-white/10 text-white rounded-lg px-4 py-3 text-sm font-bold focus:outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/40 text-center"
+                                        />
+                                    </div>
+                                </motion.div>
+                            )}
                         </div>
 
                         {user ? (
                             <button
                                 onClick={handleCheckout}
-                                disabled={isSubmitting || !batchIntent}
+                                disabled={isSubmitting || !batchIntent || (batchIntent === 'VENDER' && (!totalPrice || Number(totalPrice) <= 0))}
                                 className="w-full bg-primary text-black py-6 rounded-2xl font-black uppercase text-sm tracking-widest shadow-[0_0_40px_rgba(204,255,0,0.2)] hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center gap-2"
                             >
                                 {isSubmitting ? (
@@ -303,7 +347,7 @@ export default function RevisarLote() {
                             <div className="space-y-6">
                                 <button
                                     onClick={handleGoogleSignIn}
-                                    disabled={!batchIntent}
+                                    disabled={!batchIntent || (batchIntent === 'VENDER' && (!totalPrice || Number(totalPrice) <= 0))}
                                     className="w-full bg-white text-black py-4 rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-3 hover:bg-primary transition-all shadow-lg disabled:opacity-50"
                                 >
                                     <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="" className="w-4 h-4" />
@@ -339,7 +383,7 @@ export default function RevisarLote() {
                                     </div>
                                     <button
                                         type="submit"
-                                        disabled={isSubmitting || !batchIntent}
+                                        disabled={isSubmitting || !batchIntent || (batchIntent === 'VENDER' && (!totalPrice || Number(totalPrice) <= 0))}
                                         className="w-full bg-primary text-black py-4 rounded-xl font-black uppercase text-[10px] tracking-widest hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
                                     >
                                         {isSubmitting ? "CONECTANDO..." : "REGISTRARSE Y ENVIAR"}
