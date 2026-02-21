@@ -140,8 +140,8 @@ export default function Profile() {
     const photoURL = user?.photoURL;
 
     const stats = [
-        { label: "Pedidos", value: orderItems.length.toString(), icon: ShoppingBag, color: "text-primary" },
-        { label: "Deseados", value: wantlistItems.length.toString(), icon: Heart, color: "text-red-500" },
+        { label: "Pedidos", value: (orderItems || []).length.toString(), icon: ShoppingBag, color: "text-primary" },
+        { label: "Deseados", value: (wantlistItems || []).length.toString(), icon: Heart, color: "text-red-500" },
         { label: "Nivel", value: "Elite", icon: Award, color: "text-yellow-500" },
     ];
 
@@ -266,7 +266,7 @@ export default function Profile() {
                                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
                                         {Array.from({ length: 6 }).map((_, i) => <AlbumCardSkeleton key={i} />)}
                                     </div>
-                                ) : orderItems.length === 0 ? (
+                                ) : (orderItems || []).length === 0 ? (
                                     <div className="py-20 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[3rem] space-y-6 text-center">
                                         <ShoppingBag className="h-12 w-12 text-gray-700" />
                                         <div className="space-y-2">
@@ -276,7 +276,7 @@ export default function Profile() {
                                     </div>
                                 ) : (
                                     <div className="space-y-4">
-                                        {orderItems.slice(0, 5).map((order, i) => (
+                                        {(orderItems || []).slice(0, 5).map((order, i) => (
                                             <motion.div
                                                 key={order.id}
                                                 initial={{ opacity: 0, x: -20 }}
@@ -315,7 +315,7 @@ export default function Profile() {
                                         <div key={i} className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 h-32 animate-pulse" />
                                     ))}
                                 </div>
-                            ) : orderItems.length === 0 ? (
+                            ) : (orderItems || []).length === 0 ? (
                                 <div className="col-span-full py-40 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[3rem] space-y-6 text-center">
                                     <ShoppingBag className="h-12 w-12 text-gray-700" />
                                     <div className="space-y-2">
@@ -325,7 +325,7 @@ export default function Profile() {
                                 </div>
                             ) : (
                                 <div className="space-y-5">
-                                    {orderItems.map((order, i) => (
+                                    {(orderItems || []).map((order, i) => (
                                         <motion.div
                                             key={order.id}
                                             initial={{ opacity: 0, y: 15 }}
@@ -449,16 +449,16 @@ export default function Profile() {
                         {/* Item Info */}
                         <div className="space-y-2">
                             <h3 className="text-2xl font-display font-black text-white uppercase tracking-tight leading-tight">
-                                {selectedOrder.details.artist}
+                                {selectedOrder.details?.artist || (selectedOrder as any).artist || 'Unknown Artist'}
                             </h3>
-                            <p className="text-lg text-gray-400 font-bold">{selectedOrder.details.album}</p>
+                            <p className="text-lg text-gray-400 font-bold">{selectedOrder.details?.album || (selectedOrder as any).title || 'Unknown Album'}</p>
                         </div>
 
                         {/* Details Grid */}
                         <div className="grid grid-cols-2 gap-4">
                             <div className="bg-white/[0.03] border border-white/5 rounded-xl p-4 space-y-1">
                                 <p className="text-[9px] font-black uppercase tracking-widest text-gray-600">Intención</p>
-                                <p className={`text-sm font-black uppercase ${selectedOrder.details.intent === "COMPRAR" ? "text-green-400" : "text-orange-400"}`}>{selectedOrder.details.intent}</p>
+                                <p className={`text-sm font-black uppercase ${(selectedOrder.details?.intent || selectedOrder.status) === "COMPRAR" ? "text-green-400" : "text-orange-400"}`}>{selectedOrder.details?.intent || 'COMPRAR'}</p>
                             </div>
                             <div className="bg-white/[0.03] border border-white/5 rounded-xl p-4 space-y-1">
                                 <p className="text-[9px] font-black uppercase tracking-widest text-gray-600">Estado</p>

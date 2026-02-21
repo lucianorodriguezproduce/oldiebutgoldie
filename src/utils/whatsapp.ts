@@ -7,11 +7,11 @@ export interface OrderData {
     admin_offer_price?: number;
     admin_offer_currency?: string;
     details: {
-        intent: string;
-        artist: string;
-        album: string;
-        format: string;
-        condition: string;
+        intent?: string;
+        artist?: string;
+        album?: string;
+        format?: string;
+        condition?: string;
         price?: number;
         currency?: string;
     };
@@ -23,9 +23,11 @@ export interface OrderData {
 
 export const generateWhatsAppLink = (order: OrderData): string => {
     const phoneNumber = "5492974188914";
-    const itemTitle = `${order.details.album} - ${order.details.artist}`;
+    const safeAlbum = (order.details?.album || "").trim();
+    const safeArtist = (order.details?.artist || "").trim();
+    const itemTitle = `${safeAlbum} - ${safeArtist}`;
 
-    const intentStr = order.details.intent ? order.details.intent.toUpperCase() : "";
+    const intentStr = order.details?.intent ? order.details.intent.toUpperCase().trim() : "";
     let actionText = "Me interesa este disco";
 
     if (intentStr === "COMPRAR" || intentStr === "EN COMPRA") {
@@ -57,11 +59,11 @@ export const generateWhatsAppLink = (order: OrderData): string => {
     }
 
     if (order.order_number) {
-        message += `\n\nOrden de referencia: ${order.order_number}`;
+        message += `\n\nOrden de referencia: ${(order.order_number || "").trim()}`;
     }
 
-    if (!order.isBatch) {
-        message += `\nFormato: ${order.details.format} | Estado: ${order.details.condition}`;
+    if (!order.isBatch && order.details) {
+        message += `\nFormato: ${(order.details.format || "").trim()} | Estado: ${(order.details.condition || "").trim()}`;
     }
 
     if (order.admin_offer_price) {

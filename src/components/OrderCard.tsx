@@ -94,7 +94,7 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
     const coverImage = order.thumbnailUrl || order.details?.cover_image || order.imageUrl || "https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png";
     const title = isBatch ? `Lote de ${items.length} discos` : (order.details?.album || order.title || 'Unknown Title');
     const artist = isBatch ? 'Múltiples Artistas' : (order.details?.artist || order.artist || 'Unknown Artist');
-    const intent = isBatch ? 'COMPRAR LOTE' : (order.details?.intent || order.intent || 'COMPRAR');
+    const intent = isBatch ? (order.type === 'buy' ? 'COMPRAR LOTE' : 'VENDER LOTE') : (order.details?.intent || order.intent || 'COMPRAR');
     const format = isBatch ? 'Varios Formatos' : (order.details?.format || 'N/A');
     const condition = isBatch ? 'Varias Condiciones' : (order.details?.condition || 'N/A');
     const status = order.status || 'pending';
@@ -237,21 +237,16 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                                 className="overflow-hidden"
                             >
                                 <div className="px-6 pb-6 pt-2 space-y-2">
-                                    {items.map((item: any, idx: number) => (
+                                    {(items || []).map((item: any, idx: number) => (
                                         <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-black/40 border border-white/5">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-8 h-8 rounded-lg overflow-hidden bg-white/5">
                                                     {item.cover_image && <img src={item.cover_image} className="w-full h-full object-cover" />}
                                                 </div>
                                                 <div>
-                                                    <p className="text-xs font-bold text-white truncate max-w-[150px] md:max-w-xs">{item.artist} - {item.album}</p>
-                                                    <p className="text-[9px] text-gray-500 uppercase">{item.format} • {item.condition}</p>
+                                                    <p className="text-xs font-bold text-white truncate max-w-[150px] md:max-w-xs">{item.artist || 'Unknown'} - {item.album || 'Unknown'}</p>
+                                                    <p className="text-[9px] text-gray-500 uppercase">{item.format || '?'} • {item.condition || '?'}</p>
                                                 </div>
-                                            </div>
-                                            <div className="text-right">
-                                                <span className={`text-[9px] px-2 py-0.5 rounded border uppercase tracking-widest ${item.intent === 'COMPRAR' ? 'text-green-400 border-green-500/20' : 'text-orange-400 border-orange-500/20'}`}>
-                                                    {item.intent}
-                                                </span>
                                             </div>
                                         </div>
                                     ))}

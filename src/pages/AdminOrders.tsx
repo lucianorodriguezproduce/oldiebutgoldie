@@ -110,7 +110,9 @@ export default function AdminOrders() {
             const order = orders.find(o => o.id === orderId);
             if (order) {
                 const statusLabel = STATUS_OPTIONS.find(s => s.value === newStatus)?.label || newStatus;
-                const itemTitle = `${order.details.artist} - ${order.details.album}`;
+                const artist = (order.details?.artist || (order as any).artist || 'Unknown Artist').trim();
+                const album = (order.details?.album || (order as any).title || 'Unknown Album').trim();
+                const itemTitle = `${artist} - ${album}`;
                 await addDoc(collection(db, "notifications"), {
                     user_id: order.user_id,
                     title: "Actualización de Pedido",
@@ -176,12 +178,14 @@ export default function AdminOrders() {
         let message;
         if (order.isBatch) {
             message = encodeURIComponent(
-                `Hola ${name}! Te contactamos desde Oldie but Goldie por tu Lote de ${order.items?.length} ítems. ¿Seguimos coordinando?`
+                `Hola ${name}! Te contactamos desde Oldie but Goldie por tu Lote de ${(order.items || []).length} ítems. ¿Seguimos coordinando?`
             );
         } else {
-            const item = `${order.details.artist} - ${order.details.album}`;
-            const intent = order.details.intent === "COMPRAR" ? "comprar" : "vender";
-            const priceText = order.details.price
+            const artist = (order.details?.artist || (order as any).artist || "Unknown Artist").trim();
+            const album = (order.details?.album || (order as any).title || "Unknown Album").trim();
+            const item = `${artist} - ${album}`;
+            const intent = (order.details?.intent || order.status || "COMPRAR") === "COMPRAR" ? "comprar" : "vender";
+            const priceText = order.details?.price
                 ? ` por ${order.details.currency === "USD" ? "US$" : "$"}${order.details.price.toLocaleString()}`
                 : "";
             message = encodeURIComponent(
@@ -445,10 +449,10 @@ export default function AdminOrders() {
 
                         {/* Item Info / Lote Items */}
                         <div className="space-y-2">
-                            {selectedOrder.isBatch && selectedOrder.items ? (
+                            {selectedOrder.isBatch && (selectedOrder.items || []).length > 0 ? (
                                 <div className="space-y-3 mt-4">
                                     <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500 mb-2">Desglose de Lote</h4>
-                                    {selectedOrder.items.map((item, idx) => (
+                                    {(selectedOrder.items || []).map((item, idx) => (
                                         <div key={idx} className="flex gap-4 p-3 rounded-xl bg-white/[0.02] border border-white/5 items-center">
                                             <div className="w-12 h-12 flex-shrink-0 bg-black rounded-lg overflow-hidden">
                                                 <img src={item.cover_image} alt="" className="w-full h-full object-cover" />
@@ -474,9 +478,9 @@ export default function AdminOrders() {
                             ) : (
                                 <>
                                     <h3 className="text-2xl font-display font-black text-white uppercase tracking-tight leading-tight">
-                                        {selectedOrder.details.artist}
+                                        {selectedOrder.details?.artist || (selectedOrder as any).artist || 'Unknown Artist'}
                                     </h3>
-                                    <p className="text-lg text-gray-400 font-bold">{selectedOrder.details.album}</p>
+                                    <p className="text-lg text-gray-400 font-bold">{selectedOrder.details?.album || (selectedOrder as any).title || 'Unknown Album'}</p>
                                 </>
                             )}
                         </div>

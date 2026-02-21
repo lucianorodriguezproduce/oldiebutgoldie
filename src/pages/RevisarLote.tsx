@@ -67,8 +67,28 @@ export default function RevisarLote() {
             }))
         };
 
-        // Clean payload to prevent undefined errors
-        const safePayload = JSON.parse(JSON.stringify(payload));
+        // Clean payload to prevent undefined errors in Firestore
+        // Also enforcing that type is not undefined
+        if (!payload.type) {
+            alert("Error del Sistema: No se pudo determinar el tipo de transacción.");
+            return;
+        }
+
+        // Deep clean function to recursively remove undefined
+        const cleanObject = (obj: any): any => {
+            if (Array.isArray(obj)) return obj.map(cleanObject);
+            if (obj !== null && typeof obj === 'object') {
+                return Object.entries(obj).reduce((acc, [key, value]) => {
+                    if (value !== undefined) {
+                        acc[key] = cleanObject(value);
+                    }
+                    return acc;
+                }, {} as any);
+            }
+            return obj;
+        };
+
+        const safePayload = cleanObject(payload);
 
         // Wait for DB insertion
         const docRef = await addDoc(collection(db, "orders"), safePayload);
@@ -211,6 +231,33 @@ export default function RevisarLote() {
 
     return (
         <div className="max-w-4xl mx-auto py-8 md:py-16 px-4 font-sans space-y-12">
+
+            <AnimatePresence>
+                {isSubmitting && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md"
+                    >
+                        <div className="bg-[#0A0A0A] border border-white/10 p-8 rounded-3xl shadow-2xl flex flex-col items-center gap-6 max-w-sm w-full mx-4 text-center">
+                            <div className="relative w-16 h-16">
+                                <div className="absolute inset-0 rounded-full border-t-2 border-primary animate-spin"></div>
+                                <div className="absolute inset-2 rounded-full border-r-2 border-white/20 animate-spin flex items-center justify-center" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}>
+                                    <ShoppingBag className="w-5 h-5 text-primary/50" />
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <h3 className="text-xl font-display font-black text-white uppercase tracking-tighter">Procesando tu Pedido</h3>
+                                <p className="text-xs text-gray-500 font-bold uppercase tracking-widest leading-relaxed">
+                                    Por favor no cierres esta ventana. Estamos registrando la información...
+                                </p>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             <header className="flex items-center gap-4 mb-8">
                 <button
                     onClick={() => navigate('/')}
@@ -318,7 +365,7 @@ export default function RevisarLote() {
                                             value={totalPrice}
                                             onChange={(e) => setTotalPrice(e.target.value)}
                                             placeholder="Ej: 50000"
-                                            className="w-full md:w-[70%] flex-1 bg-white/5 border border-white/10 text-white rounded-lg px-4 py-3 md:py-4 text-sm font-bold focus:outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/40 text-center"
+                                            className="w-full md:w-[70%] bg-white/5 border border-white/10 text-white rounded-lg px-4 py-3 md:py-4 text-sm font-bold focus:outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/40 text-center"
                                         />
                                     </div>
                                 </motion.div>

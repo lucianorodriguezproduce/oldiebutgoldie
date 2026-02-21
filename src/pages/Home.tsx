@@ -308,8 +308,9 @@ export default function Home() {
     const handleShare = async () => {
         if (!selectedItem) return;
 
-        const artist = selectedItem.title.split(' - ')[0];
-        const album = selectedItem.title.split(' - ')[1] || selectedItem.title;
+        const safeTitle = (selectedItem.title || "").trim();
+        const artist = (safeTitle.split(' - ')[0] || "").trim();
+        const album = (safeTitle.split(' - ')[1] || safeTitle || "").trim();
         const text = `Mira este hallazgo en Oldie but Goldie: ${album} de ${artist}. ¿Qué te parece?`;
 
         // Use the absolute URL of the item
@@ -361,7 +362,8 @@ export default function Home() {
                 cover_image: selectedItem.cover_image || selectedItem.thumb || '',
             },
             timestamp: serverTimestamp(),
-            status: 'pending'
+            status: 'pending',
+            type: resolvedIntent // Root type for schema consistency
         };
 
         // Add pricing info for VENDER orders
@@ -375,13 +377,31 @@ export default function Home() {
             payload.market_reference = marketPrice;
         }
 
-        // Deep clean undefined values to prevent Firebase addDoc 400 errors
-        return JSON.parse(JSON.stringify(payload));
+        // Deep clean function to recursively remove undefined
+        const cleanObject = (obj: any): any => {
+            if (Array.isArray(obj)) return obj.map(cleanObject);
+            if (obj !== null && typeof obj === 'object') {
+                return Object.entries(obj).reduce((acc, [key, value]) => {
+                    if (value !== undefined) {
+                        acc[key] = cleanObject(value);
+                    }
+                    return acc;
+                }, {} as any);
+            }
+            return obj;
+        };
+
+        return cleanObject(payload);
     };
 
     const performSubmission = async (uid: string, intentOverride?: Intent) => {
         const payload = buildOrderPayload(uid, intentOverride);
         if (!payload) return;
+
+        if (!payload.type) {
+            alert("Error del Sistema: No se pudo determinar el tipo de transacción.");
+            return;
+        }
 
         try {
             // Save order to Firebase
