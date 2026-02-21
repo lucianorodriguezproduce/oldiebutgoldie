@@ -31,6 +31,7 @@ export default function AnalyticsDashboard() {
         potentialVolumeARS: 0,
         realVolumeARS: 0,
         facturacionPotencial: 0,
+        facturacionReal: 0,
         ticketPromedio: 0
     });
     const [loading, setLoading] = useState(true);
@@ -78,7 +79,7 @@ export default function AnalyticsDashboard() {
                 // Fetch Active Orders
                 const ordersQuery = query(
                     collection(db, "orders"),
-                    where("status", "in", ["pending", "quoted", "negotiating", "counteroffered", "pending_acceptance"]),
+                    where("status", "in", ["pending", "quoted", "negotiating", "counteroffered", "pending_acceptance", "venta_finalizada", "contraoferta_usuario"]),
                     orderBy("timestamp", "desc")
                 );
                 const ordersSnap = await getDocs(ordersQuery);
@@ -102,6 +103,7 @@ export default function AnalyticsDashboard() {
                     potentialVolumeARS: activeOrders.reduce((sum, o: any) => sum + (o.totalPrice || o.details?.price || 0), 0),
                     realVolumeARS: activeOrders.reduce((sum, o: any) => sum + (o.adminPrice || o.totalPrice || o.details?.price || 0), 0),
                     facturacionPotencial: activeOrders.reduce((sum, o: any) => sum + (o.adminPrice || o.totalPrice || o.details?.price || 0), 0),
+                    facturacionReal: activeOrders.filter((o: any) => o.status === "venta_finalizada").reduce((sum, o: any) => sum + (o.adminPrice || o.totalPrice || o.details?.price || 0), 0),
                     ticketPromedio: activeOrders.length > 0
                         ? activeOrders.reduce((sum, o: any) => sum + (o.totalPrice || o.details?.price || 0), 0) / activeOrders.length
                         : 0
@@ -161,10 +163,10 @@ export default function AnalyticsDashboard() {
                     <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-[60px] rounded-full" />
                     <div className="flex items-center gap-4 mb-4">
                         <TrendingUp className="h-6 w-6 text-primary" />
-                        <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500">Facturación Potencial</h3>
+                        <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500">Ventas Confirmadas</h3>
                     </div>
-                    <p className="text-4xl font-black text-white">$ {stats.facturacionPotencial.toLocaleString()}</p>
-                    <p className="text-xs text-gray-600 mt-2 font-bold uppercase tracking-widest">AdminPrice || TotalPrice</p>
+                    <p className="text-4xl font-black text-white">$ {stats.facturacionReal.toLocaleString()}</p>
+                    <p className="text-xs text-gray-600 mt-2 font-bold uppercase tracking-widest">Estado: venta_finalizada</p>
                 </Card>
 
                 <Card className="bg-white/[0.03] border-white/5 p-8 rounded-[2.5rem] relative overflow-hidden">

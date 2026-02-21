@@ -73,7 +73,8 @@ const STATUS_OPTIONS = [
     { value: "quoted", label: "Cotizado", icon: BadgeDollarSign, color: "text-purple-400", bg: "bg-purple-500/10 border-purple-500/20" },
     { value: "negotiating", label: "En Negociación", icon: Handshake, color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/20" },
     { value: "counteroffered", label: "Precio Definido", icon: Send, color: "text-orange-400", bg: "bg-orange-500/10 border-orange-500/20" },
-    { value: "pending_acceptance", label: "Esperando Cliente", icon: Clock, color: "text-orange-400", bg: "bg-orange-500/10 border-orange-500/20" },
+    { value: "pending_acceptance", label: "Esperando Cliente", icon: Clock, color: "text-orange-400", bg: "bg-orange-400/10 border-orange-400/20" },
+    { value: "venta_finalizada", label: "Venta Finalizada", icon: CheckCircle2, color: "text-primary", bg: "bg-primary/10 border-primary/20" },
     { value: "completed", label: "Completado", icon: CheckCircle2, color: "text-green-500", bg: "bg-green-500/10 border-green-500/20" },
     { value: "cancelled", label: "Cancelado", icon: XCircle, color: "text-red-500", bg: "bg-red-500/10 border-red-500/20" },
 ];
@@ -277,6 +278,7 @@ export default function AdminOrders() {
     const pendingCount = orders.filter(o => o.status === "pending").length;
     const negotiatingCount = orders.filter(o => o.status === "negotiating").length;
     const completedCount = orders.filter(o => o.status === "completed").length;
+    const itemsCount = orders.filter(o => o.status === "venta_finalizada").length;
     const quotedCount = orders.filter(o => o.status === "quoted").length;
 
     const openOrder = (order: OrderDoc) => {
@@ -309,6 +311,7 @@ export default function AdminOrders() {
                     { label: "Pendientes", count: pendingCount, color: "yellow-500", icon: Clock },
                     { label: "Cotizados", count: quotedCount, color: "purple-400", icon: BadgeDollarSign },
                     { label: "Negociando", count: negotiatingCount, color: "blue-400", icon: Handshake },
+                    { label: "Finalizados", count: itemsCount, color: "primary", icon: CheckCircle2 },
                     { label: "Completados", count: completedCount, color: "green-500", icon: CheckCircle2 },
                     { label: "Total", count: orders.length, color: "primary", icon: ShoppingBag },
                 ].map(stat => (
@@ -335,6 +338,7 @@ export default function AdminOrders() {
                     { value: "pending", label: "Pendientes" },
                     { value: "quoted", label: "Cotizados" },
                     { value: "negotiating", label: "Negociando" },
+                    { value: "venta_finalizada", label: "Finalizados" },
                     { value: "completed", label: "Completados" },
                     { value: "cancelled", label: "Cancelados" },
                 ].map(f => (
@@ -393,16 +397,16 @@ export default function AdminOrders() {
                             <div className="relative">
                                 <button
                                     onClick={() => setActiveDropdown(activeDropdown ? null : selectedOrder.id)}
-                                    disabled={updatingId === selectedOrder.id}
+                                    disabled={updatingId === selectedOrder.id || selectedOrder.status === "venta_finalizada"}
                                     className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${getStatusConfig(selectedOrder.status).bg
-                                        } ${getStatusConfig(selectedOrder.status).color} ${updatingId === selectedOrder.id ? "opacity-50" : ""
+                                        } ${getStatusConfig(selectedOrder.status).color} ${updatingId === selectedOrder.id ? "opacity-50" : ""} ${selectedOrder.status === "venta_finalizada" ? "cursor-not-allowed" : ""
                                         }`}
                                 >
                                     <span className="flex items-center gap-2">
                                         {(() => { const Icon = getStatusConfig(selectedOrder.status).icon; return <Icon className="h-3.5 w-3.5" />; })()}
                                         {updatingId === selectedOrder.id ? "Actualizando..." : getStatusConfig(selectedOrder.status).label}
                                     </span>
-                                    <ChevronDown className={`h-3.5 w-3.5 transition-transform ${activeDropdown ? "rotate-180" : ""}`} />
+                                    {selectedOrder.status !== "venta_finalizada" && <ChevronDown className={`h-3.5 w-3.5 transition-transform ${activeDropdown ? "rotate-180" : ""}`} />}
                                 </button>
 
                                 <AnimatePresence>
@@ -438,7 +442,7 @@ export default function AdminOrders() {
                             </div>
 
                             {/* Counter-offer Form (VENDER orders) */}
-                            {selectedOrder.details.intent === "VENDER" && (
+                            {selectedOrder.details.intent === "VENDER" && selectedOrder.status !== "venta_finalizada" && (
                                 <div className="space-y-3 pt-2 border-t border-white/5">
                                     <span className="text-[9px] font-black uppercase tracking-widest text-orange-400/70 flex items-center gap-1.5">
                                         <BadgeDollarSign className="h-3.5 w-3.5" />

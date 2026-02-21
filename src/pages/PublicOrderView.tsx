@@ -4,12 +4,17 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { SEO } from "@/components/SEO";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Music, Disc, Loader2 } from "lucide-react";
+import { ChevronLeft, Music, Disc, Loader2, Lock } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 export default function PublicOrderView() {
     const { id } = useParams<{ id: string }>();
+    const { user, isAdmin } = useAuth();
     const [order, setOrder] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+
+    const isOwner = user?.uid === order?.user_id;
+    const canSeePrice = isAdmin || isOwner;
 
     useEffect(() => {
         const fetchOrder = async () => {
@@ -168,7 +173,11 @@ export default function PublicOrderView() {
                                 <div className="p-6 rounded-[2rem] bg-orange-500/5 border border-orange-500/10 flex flex-col justify-between">
                                     <p className="text-[10px] uppercase tracking-widest font-black text-orange-400 mb-2">Oferta Original del Vendedor</p>
                                     <p className="text-3xl font-display font-black text-white">
-                                        {order.currency || order.details?.currency === "USD" ? "US$" : "$"} {(order.totalPrice || order.details?.price).toLocaleString()}
+                                        {canSeePrice ? (
+                                            `${order.currency || order.details?.currency === "USD" ? "US$" : "$"} ${(order.totalPrice || order.details?.price).toLocaleString()}`
+                                        ) : (
+                                            <span className="text-gray-600 flex items-center gap-2 italic opacity-50"><Lock className="h-4 w-4" /> Privado</span>
+                                        )}
                                     </p>
                                 </div>
                             )}
@@ -176,7 +185,11 @@ export default function PublicOrderView() {
                                 <div className="p-6 rounded-[2rem] bg-primary/10 border border-primary/20 flex flex-col justify-between shadow-xl shadow-primary/5">
                                     <p className="text-[10px] uppercase tracking-widest font-black text-primary mb-2">Contraoferta de OBG</p>
                                     <p className="text-3xl font-display font-black text-white">
-                                        {order.adminCurrency === "USD" ? "US$" : "$"} {order.adminPrice.toLocaleString()}
+                                        {canSeePrice ? (
+                                            `${order.adminCurrency === "USD" ? "US$" : "$"} ${order.adminPrice.toLocaleString()}`
+                                        ) : (
+                                            <span className="text-gray-600 flex items-center gap-2 italic opacity-50"><Lock className="h-4 w-4" /> Privado</span>
+                                        )}
                                     </p>
                                 </div>
                             )}

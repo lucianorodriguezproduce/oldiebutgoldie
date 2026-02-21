@@ -21,12 +21,13 @@ import {
     Hash,
     MessageCircle,
     BadgeDollarSign,
-    Activity,
     Globe,
-    PieChart
+    PieChart,
+    Handshake,
+    CheckCircle2
 } from "lucide-react";
 import { db } from "@/lib/firebase";
-import { collection, onSnapshot, query, orderBy, where, doc, deleteDoc } from "firebase/firestore";
+import { collection, onSnapshot, query, orderBy, where, doc, deleteDoc, updateDoc, addDoc, serverTimestamp } from "firebase/firestore";
 import { useState, useEffect } from "react";
 import { AlbumCardSkeleton } from "@/components/ui/Skeleton";
 import { Link, useSearchParams } from "react-router-dom";
@@ -81,6 +82,11 @@ export default function Profile() {
     const [ordersLoading, setOrdersLoading] = useState(true);
     const [selectedOrder, setSelectedOrder] = useState<OrderItem | null>(null);
     const [searchParams, setSearchParams] = useSearchParams();
+
+    // Negotiation State
+    const [counterOfferPrice, setCounterOfferPrice] = useState("");
+    const [isNegotiating, setIsNegotiating] = useState(false);
+    const [showCounterInput, setShowCounterInput] = useState(false);
 
     // Deep-link: auto-open drawer if ?order=ORDER_ID is in the URL
     useEffect(() => {
@@ -139,6 +145,67 @@ export default function Profile() {
     const removeItem = async (type: "collection" | "wantlist", id: string) => {
         if (!user) return;
         await deleteDoc(doc(db, "users", user.uid, type, id));
+    };
+
+    const handleAcceptProposal = async (order: OrderItem) => {
+        if (!user) return;
+        setIsNegotiating(true);
+        try {
+            await updateDoc(doc(db, "orders", order.id), {
+                status: "venta_finalizada"
+            });
+
+            // Notify Admin
+            await addDoc(collection(db, "notifications"), {
+                user_id: "admin", // Special flag for administrative notifications
+                title: "Venta Finalizada 🎉",
+                message: `${user.displayName || 'Un cliente'} ha ACEPTADO el trato por el pedido ${order.order_number || order.id}.`,
+                read: false,
+                timestamp: serverTimestamp(),
+                order_id: order.id
+            });
+
+            setSelectedOrder(prev => prev ? { ...prev, status: "venta_finalizada" } : null);
+            alert("¡Felicidades! Has finalizado la venta. Coordina el pago por WhatsApp.");
+        } catch (error) {
+            console.error("Error accepting proposal:", error);
+            alert("Hubo un error al procesar la aceptación.");
+        } finally {
+            setIsNegotiating(false);
+        }
+    };
+
+    const handleCounterOffer = async (order: OrderItem) => {
+        const priceVal = parseFloat(counterOfferPrice);
+        if (isNaN(priceVal) || priceVal <= 0) return;
+
+        setIsNegotiating(true);
+        try {
+            await updateDoc(doc(db, "orders", order.id), {
+                totalPrice: priceVal,
+                status: "contraoferta_usuario"
+            });
+
+            // Notify Admin
+            await addDoc(collection(db, "notifications"), {
+                user_id: "admin",
+                title: "Nueva Contraoferta del Usuario",
+                message: `${user?.displayName || 'Cliente'} propone ${order.currency || '$'} ${priceVal.toLocaleString()} por el pedido ${order.order_number || order.id}.`,
+                read: false,
+                timestamp: serverTimestamp(),
+                order_id: order.id
+            });
+
+            setSelectedOrder(prev => prev ? { ...prev, totalPrice: priceVal, status: "contraoferta_usuario" } : null);
+            setCounterOfferPrice("");
+            setShowCounterInput(false);
+            alert("Has enviado una contraoferta. Espera la respuesta de Oldie but Goldie.");
+        } catch (error) {
+            console.error("Error sending counter-offer:", error);
+            alert("Hubo un error al enviar la contraoferta.");
+        } finally {
+            setIsNegotiating(false);
+        }
     };
 
     if (!user && !isAdmin) return null;
@@ -418,56 +485,132 @@ export default function Profile() {
                 footer={
                     selectedOrder && (
                         <div className="space-y-4">
-                            {selectedOrder.adminPrice && (
-                                <div className="flex flex-col gap-4">
-                                    {/* User's Original Offer */}
-                                    <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <DollarSign className="h-3.5 w-3.5 text-gray-500" />
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Tu oferta inicial</span>
+                            {selectedOrder.status === "venta_finalizada" ? (
+                                <div className="bg-green-500/10 border border-green-500/20 rounded-2xl p-6 space-y-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-green-500/20 rounded-full">
+                                            <CheckCircle2 className="h-5 w-5 text-green-500" />
                                         </div>
-                                        <p className="text-xl font-bold text-gray-400">
-                                            {selectedOrder.currency === "USD" ? "US$" : "$"} {(selectedOrder.totalPrice || selectedOrder.details.price || 0).toLocaleString()}
-                                        </p>
+                                        <p className="text-lg font-black text-white uppercase tracking-tighter">¡Trato Cerrado!</p>
                                     </div>
-
-                                    {/* Admin Counter-Offer */}
-                                    {selectedOrder.adminPrice && (
-                                        <div className="bg-primary/5 rounded-xl p-4 border border-primary/20">
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <BadgeDollarSign className="h-4 w-4 text-primary" />
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-primary">Oldie but Goldie te ofrece</span>
+                                    <p className="text-xs text-gray-400 font-medium">Coordina el pago y el envío directamente con nuestro equipo aquí:</p>
+                                    <button
+                                        onClick={() => {
+                                            pushWhatsAppContactFromOrder(selectedOrder);
+                                            const msg = encodeURIComponent(`Hola! Acepté el trato por el lote ${selectedOrder.order_number || selectedOrder.id}. Coordinemos el pago y el envío.`);
+                                            window.open(`https://wa.me/5491140411796?text=${msg}`, "_blank");
+                                        }}
+                                        className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-green-600 hover:bg-green-500 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-green-500/20"
+                                    >
+                                        <MessageCircle className="h-4 w-4" />
+                                        Coordinar Pago y Envío
+                                    </button>
+                                </div>
+                            ) : (
+                                <>
+                                    {(selectedOrder.adminPrice || selectedOrder.admin_offer_price) && (
+                                        <div className="flex flex-col gap-4">
+                                            {/* User's Current Offer / Value */}
+                                            <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <DollarSign className="h-3.5 w-3.5 text-gray-500" />
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Tu oferta actual</span>
+                                                </div>
+                                                <p className="text-xl font-bold text-gray-400">
+                                                    {selectedOrder.currency === "USD" ? "US$" : "$"} {(selectedOrder.totalPrice || selectedOrder.details.price || 0).toLocaleString()}
+                                                </p>
                                             </div>
-                                            <p className="text-3xl font-display font-black text-white tracking-tight">
-                                                {selectedOrder.adminCurrency === "USD" ? "US$" : "$"} {selectedOrder.adminPrice.toLocaleString()}
-                                            </p>
+
+                                            {/* Admin Counter-Offer */}
+                                            {(selectedOrder.adminPrice || selectedOrder.admin_offer_price) && (
+                                                <div className="bg-primary/5 rounded-xl p-4 border border-primary/20">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <BadgeDollarSign className="h-4 w-4 text-primary" />
+                                                        <span className="text-[10px] font-black uppercase tracking-widest text-primary">Oldie but Goldie te ofrece</span>
+                                                    </div>
+                                                    <p className="text-3xl font-display font-black text-white tracking-tight">
+                                                        {(selectedOrder.adminCurrency || selectedOrder.admin_offer_currency) === "USD" ? "US$" : "$"} {(selectedOrder.adminPrice || selectedOrder.admin_offer_price || 0).toLocaleString()}
+                                                    </p>
+                                                </div>
+                                            )}
+
+                                            {/* Negotiation Buttons (if there's an offer to respond to) */}
+                                            {(selectedOrder.adminPrice || selectedOrder.admin_offer_price) && selectedOrder.status !== "contraoferta_usuario" && (
+                                                <div className="space-y-3">
+                                                    {!showCounterInput ? (
+                                                        <div className="grid grid-cols-2 gap-3">
+                                                            <button
+                                                                onClick={() => handleAcceptProposal(selectedOrder)}
+                                                                disabled={isNegotiating}
+                                                                className="flex items-center justify-center gap-2 px-4 py-4 bg-primary text-black rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white transition-all disabled:opacity-50"
+                                                            >
+                                                                <CheckCircle2 className="h-4 w-4" /> Aceptar
+                                                            </button>
+                                                            <button
+                                                                onClick={() => setShowCounterInput(true)}
+                                                                disabled={isNegotiating}
+                                                                className="flex items-center justify-center gap-2 px-4 py-4 bg-white/5 border border-white/10 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all disabled:opacity-50"
+                                                            >
+                                                                <Handshake className="h-4 w-4" /> Contraoferta
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <motion.div
+                                                            initial={{ opacity: 0, y: 10 }}
+                                                            animate={{ opacity: 1, y: 0 }}
+                                                            className="bg-neutral-900 border border-white/10 p-4 rounded-2xl space-y-3 shadow-2xl"
+                                                        >
+                                                            <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">¿Cuánto pides por el lote?</p>
+                                                            <div className="flex gap-2">
+                                                                <div className="relative flex-1">
+                                                                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-600" />
+                                                                    <input
+                                                                        type="number"
+                                                                        value={counterOfferPrice}
+                                                                        onChange={e => setCounterOfferPrice(e.target.value)}
+                                                                        placeholder="Ej: 50000"
+                                                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-9 py-3 text-white font-bold text-sm focus:border-primary focus:outline-none transition-all"
+                                                                    />
+                                                                </div>
+                                                                <button
+                                                                    onClick={() => handleCounterOffer(selectedOrder)}
+                                                                    disabled={!counterOfferPrice || isNegotiating}
+                                                                    className="px-6 bg-primary text-black rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-white transition-all disabled:opacity-20"
+                                                                >
+                                                                    Enviar
+                                                                </button>
+                                                            </div>
+                                                            <button
+                                                                onClick={() => setShowCounterInput(false)}
+                                                                className="w-full text-center text-[9px] font-bold text-gray-600 uppercase tracking-widest hover:text-white transition-colors"
+                                                            >
+                                                                Cancelar
+                                                            </button>
+                                                        </motion.div>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                     )}
-                                </div>
-                            )}
-                            {!selectedOrder.adminPrice && selectedOrder.admin_offer_price && (
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <BadgeDollarSign className="h-4 w-4 text-purple-400" />
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-purple-400">Cotización Recibida</span>
+
+                                    {selectedOrder.status === "contraoferta_usuario" && (
+                                        <div className="bg-blue-500/5 border border-blue-500/10 rounded-xl p-4 text-center">
+                                            <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Esperando respuesta de OBG</p>
                                         </div>
-                                        <p className="text-3xl font-display font-black text-white tracking-tight">
-                                            {selectedOrder.admin_offer_currency === "USD" ? "US$" : "$"} {selectedOrder.admin_offer_price.toLocaleString()}
-                                        </p>
-                                    </div>
-                                </div>
+                                    )}
+
+                                    <button
+                                        onClick={() => {
+                                            pushWhatsAppContactFromOrder(selectedOrder);
+                                            window.open(generateWhatsAppLink(selectedOrder), "_blank");
+                                        }}
+                                        className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-green-600/20 hover:bg-green-600/30 text-green-500 border border-green-500/20 rounded-xl text-xs font-black uppercase tracking-widest active:scale-95 transition-all"
+                                    >
+                                        <MessageCircle className="h-4 w-4" />
+                                        Dudas o Consultas
+                                    </button>
+                                </>
                             )}
-                            <button
-                                onClick={() => {
-                                    pushWhatsAppContactFromOrder(selectedOrder);
-                                    window.open(generateWhatsAppLink(selectedOrder), "_blank");
-                                }}
-                                className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-green-600 hover:bg-green-500 text-white rounded-xl text-xs font-black uppercase tracking-widest active:scale-95 transition-all shadow-lg shadow-green-500/20"
-                            >
-                                <MessageCircle className="h-4 w-4" />
-                                {selectedOrder.adminPrice ? "Aceptar Precio y Contactar" : "Contactar por WhatsApp"}
-                            </button>
                         </div>
                     )
                 }

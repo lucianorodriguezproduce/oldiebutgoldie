@@ -15,6 +15,7 @@ import {
     DollarSign,
     Hash
 } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 import type { OrderData } from '@/utils/whatsapp';
 
 interface OrderCardProps {
@@ -24,7 +25,12 @@ interface OrderCardProps {
 }
 
 export default function OrderCard({ order, context, onClick }: OrderCardProps) {
+    const { user, isAdmin } = useAuth();
     const [isExpanded, setIsExpanded] = useState(false);
+
+    // Ownership check for privacy
+    const isOwner = user?.uid === order.user_id;
+    const canSeePrice = isAdmin || isOwner;
 
     // Format relative time safely
     const getRelativeTime = (timestamp: any) => {
@@ -110,6 +116,8 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
         // This is the new adminPrice field for negotiation.
         const adminPrice = order.adminPrice;
         const adminCurrency = order.adminCurrency || "ARS";
+
+        if (!canSeePrice) return null;
 
         return (
             <div className="flex flex-col gap-2 w-full mt-4">
@@ -212,7 +220,11 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                         {!isBatch && order.details?.price && (
                             <span className="flex items-center gap-1 text-primary text-xs md:text-sm font-black">
                                 <DollarSign className="h-3.5 w-3.5" />
-                                {order.details.currency === "USD" ? "US$" : "$"}{order.details.price.toLocaleString()}
+                                {canSeePrice ? (
+                                    `${order.details.currency === "USD" ? "US$" : "$"} ${order.details.price.toLocaleString()}`
+                                ) : (
+                                    <span className="text-gray-600 italic opacity-50">Privado</span>
+                                )}
                             </span>
                         )}
                     </div>
