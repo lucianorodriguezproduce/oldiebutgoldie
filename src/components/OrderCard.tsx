@@ -100,13 +100,46 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
     const status = order.status || 'pending';
 
     const renderPriceOffer = () => {
-        if (!order.admin_offer_price) return null;
+        // 1. OFERTA DEL VENDEDOR (From User)
+        // If it's a VENDER (Sell) order, the user's price is their bid.
+        const userPrice = order.totalPrice || order.details?.price;
+        const userCurrency = order.currency || order.details?.currency || "ARS";
+        const isSellOrder = intent.includes("VENDER");
+
+        // 2. CONTRAOFERTA (From Admin)
+        // This is the new adminPrice field for negotiation.
+        const adminPrice = order.adminPrice;
+        const adminCurrency = order.adminCurrency || "ARS";
+
         return (
-            <div className={`mt-4 bg-primary/10 border border-primary/20 px-3 py-2 rounded-xl flex flex-col items-end shadow-sm shadow-primary/5 ${context === 'admin' ? "mr-4" : ""}`}>
-                <span className="text-[9px] font-black uppercase tracking-widest text-primary">Nuestra Oferta</span>
-                <span className="text-sm font-black text-white">
-                    {order.admin_offer_currency === "USD" ? "US$" : "$"} {order.admin_offer_price.toLocaleString()}
-                </span>
+            <div className="flex flex-col gap-2 w-full mt-4">
+                {isSellOrder && userPrice && (
+                    <div className={`bg-orange-500/10 border border-orange-500/20 px-3 py-2 rounded-xl flex flex-col items-end shadow-sm shadow-orange-500/5 ${context === 'admin' ? "mr-4" : ""}`}>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-orange-400">Oferta del Vendedor</span>
+                        <span className="text-sm font-black text-white">
+                            {userCurrency === "USD" ? "US$" : "$"} {userPrice.toLocaleString()}
+                        </span>
+                    </div>
+                )}
+
+                {adminPrice && (
+                    <div className={`bg-primary/10 border border-primary/20 px-3 py-2 rounded-xl flex flex-col items-end shadow-sm shadow-primary/5 ${context === 'admin' ? "mr-4" : ""}`}>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-primary">Contraoferta de OBG</span>
+                        <span className="text-sm font-black text-white">
+                            {adminCurrency === "USD" ? "US$" : "$"} {adminPrice.toLocaleString()}
+                        </span>
+                    </div>
+                )}
+
+                {/* Legacy admin_offer_price for backward compatibility */}
+                {!adminPrice && order.admin_offer_price && (
+                    <div className={`bg-purple-500/10 border border-purple-500/20 px-3 py-2 rounded-xl flex flex-col items-end shadow-sm shadow-purple-500/5 ${context === 'admin' ? "mr-4" : ""}`}>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-purple-400">Nuestra Oferta</span>
+                        <span className="text-sm font-black text-white">
+                            {order.admin_offer_currency === "USD" ? "US$" : "$"} {order.admin_offer_price.toLocaleString()}
+                        </span>
+                    </div>
+                )}
             </div>
         );
     };

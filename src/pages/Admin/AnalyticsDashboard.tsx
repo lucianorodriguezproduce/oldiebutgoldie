@@ -3,7 +3,7 @@ import { db } from "@/lib/firebase";
 import { collection, query, orderBy, limit, getDocs, Timestamp, where } from "firebase/firestore";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Activity, Globe, Search, ShoppingBag, PieChart } from "lucide-react";
+import { MapPin, Activity, Globe, Search, ShoppingBag, PieChart, DollarSign, TrendingUp } from "lucide-react";
 
 interface InteractionEvent {
     id: string;
@@ -27,7 +27,9 @@ export default function AnalyticsDashboard() {
         recentSearches: [] as string[],
         activeOrdersCount: 0,
         buyIntent: 0,
-        sellIntent: 0
+        sellIntent: 0,
+        potentialVolumeARS: 0,
+        realVolumeARS: 0
     });
     const [loading, setLoading] = useState(true);
 
@@ -93,7 +95,9 @@ export default function AnalyticsDashboard() {
                     recentSearches: [...new Set(searches)].slice(0, 10), // Unique, top 10
                     activeOrdersCount: activeOrders.length,
                     buyIntent: buyIntentCount,
-                    sellIntent: sellIntentCount
+                    sellIntent: sellIntentCount,
+                    potentialVolumeARS: activeOrders.reduce((sum, o: any) => sum + (o.totalPrice || o.details?.price || 0), 0),
+                    realVolumeARS: activeOrders.reduce((sum, o: any) => sum + (o.adminPrice || 0), 0)
                 });
 
             } catch (error) {
@@ -145,22 +149,24 @@ export default function AnalyticsDashboard() {
                     <p className="text-xs text-gray-600 mt-2 font-bold uppercase tracking-widest">Live Signals</p>
                 </Card>
 
-                <Card className="bg-white/[0.03] border-white/5 p-8 rounded-[2.5rem]">
+                <Card className="bg-white/[0.03] border-white/5 p-8 rounded-[2.5rem] relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 blur-[60px] rounded-full" />
                     <div className="flex items-center gap-4 mb-4">
-                        <Globe className="h-6 w-6 text-blue-400" />
-                        <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500">Regions</h3>
+                        <DollarSign className="h-6 w-6 text-orange-400" />
+                        <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500">Volumen Potencial</h3>
                     </div>
-                    <p className="text-5xl font-black text-white">{Object.keys(stats.topCountries).length}</p>
-                    <p className="text-xs text-gray-600 mt-2 font-bold uppercase tracking-widest">Unique Countries</p>
+                    <p className="text-4xl font-black text-white">$ {stats.potentialVolumeARS.toLocaleString()}</p>
+                    <p className="text-xs text-gray-600 mt-2 font-bold uppercase tracking-widest">Ofertas Usuarios</p>
                 </Card>
 
-                <Card className="bg-white/[0.03] border-white/5 p-8 rounded-[2.5rem]">
+                <Card className="bg-white/[0.03] border-white/5 p-8 rounded-[2.5rem] relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-[60px] rounded-full" />
                     <div className="flex items-center gap-4 mb-4">
-                        <Search className="h-6 w-6 text-green-400" />
-                        <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500">Search Velocity</h3>
+                        <TrendingUp className="h-6 w-6 text-primary" />
+                        <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500">Volumen Real (ROI)</h3>
                     </div>
-                    <p className="text-5xl font-black text-white">{(stats.recentSearches || []).length}</p>
-                    <p className="text-xs text-gray-600 mt-2 font-bold uppercase tracking-widest">Unique Queries</p>
+                    <p className="text-4xl font-black text-white">$ {stats.realVolumeARS.toLocaleString()}</p>
+                    <p className="text-xs text-gray-600 mt-2 font-bold uppercase tracking-widest">Precios OBG</p>
                 </Card>
             </div>
 

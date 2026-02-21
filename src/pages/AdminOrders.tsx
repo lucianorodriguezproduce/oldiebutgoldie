@@ -48,6 +48,8 @@ interface OrderDoc {
     market_reference?: number | null;
     admin_offer_price?: number;
     admin_offer_currency?: string;
+    adminPrice?: number;
+    adminCurrency?: string;
     details: {
         format: string;
         condition: string;
@@ -68,6 +70,7 @@ const STATUS_OPTIONS = [
     { value: "pending", label: "Pendiente", icon: Clock, color: "text-yellow-500", bg: "bg-yellow-500/10 border-yellow-500/20" },
     { value: "quoted", label: "Cotizado", icon: BadgeDollarSign, color: "text-purple-400", bg: "bg-purple-500/10 border-purple-500/20" },
     { value: "negotiating", label: "En Negociación", icon: Handshake, color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/20" },
+    { value: "pending_acceptance", label: "Pendiente de Aceptación", icon: Clock, color: "text-orange-400", bg: "bg-orange-500/10 border-orange-500/20" },
     { value: "completed", label: "Completado", icon: CheckCircle2, color: "text-green-500", bg: "bg-green-500/10 border-green-500/20" },
     { value: "cancelled", label: "Cancelado", icon: XCircle, color: "text-red-500", bg: "bg-red-500/10 border-red-500/20" },
 ];
@@ -131,6 +134,44 @@ export default function AdminOrders() {
         } finally {
             setUpdatingId(null);
             setActiveDropdown(null);
+        }
+    };
+
+    const handleSetAdminPrice = async (order: OrderDoc) => {
+        const priceVal = parseFloat(quotePrice || "0");
+        const currencyVal = quoteCurrency || "ARS";
+        if (!priceVal || priceVal <= 0) return;
+
+        setQuotingId(order.id);
+        try {
+            await updateDoc(doc(db, "orders", order.id), {
+                adminPrice: priceVal,
+                adminCurrency: currencyVal,
+                status: "pending_acceptance"
+            });
+
+            const currSymbol = currencyVal === "USD" ? "US$" : "$";
+            await addDoc(collection(db, "notifications"), {
+                user_id: order.user_id,
+                title: "Contraoferta Recibida",
+                message: `Oldie but Goldie ha definido un precio de ${currSymbol} ${priceVal.toLocaleString()} para tu lote/disco.`,
+                read: false,
+                timestamp: serverTimestamp(),
+                order_id: order.id
+            });
+
+            setSelectedOrder(prev => prev ? {
+                ...prev,
+                adminPrice: priceVal,
+                adminCurrency: currencyVal,
+                status: "pending_acceptance"
+            } : null);
+
+            setQuotePrice("");
+        } catch (error) {
+            console.error("Error setting admin price:", error);
+        } finally {
+            setQuotingId(null);
         }
     };
 
@@ -365,6 +406,45 @@ export default function AdminOrders() {
                                     )}
                                 </AnimatePresence>
                             </div>
+
+                            {/* Counter-offer Form (VENDER orders) */}
+                            {selectedOrder.details.intent === "VENDER" && (
+                                <div className="space-y-3 pt-2 border-t border-white/5">
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-orange-400/70 flex items-center gap-1.5">
+                                        <BadgeDollarSign className="h-3.5 w-3.5" />
+                                        Definir Precio de Venta/Lote
+                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <select
+                                            value={quoteCurrency}
+                                            onChange={e => setQuoteCurrency(e.target.value)}
+                                            className="bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white text-xs font-bold focus:border-orange-400/40 focus:outline-none"
+                                        >
+                                            <option value="ARS">ARS $</option>
+                                            <option value="USD">USD US$</option>
+                                        </select>
+                                        <div className="relative flex-1">
+                                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-600" />
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                step="0.01"
+                                                placeholder="Precio contraoferta..."
+                                                value={quotePrice}
+                                                onChange={e => setQuotePrice(e.target.value)}
+                                                className="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 pl-9 pr-4 text-white text-sm font-bold focus:border-orange-400/40 focus:outline-none"
+                                            />
+                                        </div>
+                                        <button
+                                            onClick={() => handleSetAdminPrice(selectedOrder)}
+                                            disabled={quotingId === selectedOrder.id || !quotePrice}
+                                            className="px-4 py-2.5 bg-orange-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-orange-500 transition-all disabled:opacity-40"
+                                        >
+                                            <Send className="h-3.5 w-3.5" />
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Quote Form (COMPRAR orders without existing quote) */}
                             {selectedOrder.details.intent === "COMPRAR" && !selectedOrder.admin_offer_price && (

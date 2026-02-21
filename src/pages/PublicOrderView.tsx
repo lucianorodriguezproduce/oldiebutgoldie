@@ -160,7 +160,29 @@ export default function PublicOrderView() {
                     </AnimatePresence>
                 </div>
 
-                {order.user_name && order.status && (
+                <div className="flex flex-col gap-6">
+                    {/* Price Info Block */}
+                    {(order.adminPrice || order.totalPrice || order.details?.price) && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {(order.totalPrice || order.details?.price) && order.details?.intent?.includes("VENDER") && (
+                                <div className="p-6 rounded-[2rem] bg-orange-500/5 border border-orange-500/10 flex flex-col justify-between">
+                                    <p className="text-[10px] uppercase tracking-widest font-black text-orange-400 mb-2">Oferta Original del Vendedor</p>
+                                    <p className="text-3xl font-display font-black text-white">
+                                        {order.currency || order.details?.currency === "USD" ? "US$" : "$"} {(order.totalPrice || order.details?.price).toLocaleString()}
+                                    </p>
+                                </div>
+                            )}
+                            {order.adminPrice && (
+                                <div className="p-6 rounded-[2rem] bg-primary/10 border border-primary/20 flex flex-col justify-between shadow-xl shadow-primary/5">
+                                    <p className="text-[10px] uppercase tracking-widest font-black text-primary mb-2">Contraoferta de OBG</p>
+                                    <p className="text-3xl font-display font-black text-white">
+                                        {order.adminCurrency === "USD" ? "US$" : "$"} {order.adminPrice.toLocaleString()}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     <div className="p-6 rounded-[2rem] bg-white/[0.02] border border-white/5 flex flex-col md:flex-row justify-between gap-4 items-start md:items-center">
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -173,12 +195,13 @@ export default function PublicOrderView() {
                         </div>
                         <div className="text-right">
                             <p className="text-[10px] uppercase tracking-widest font-black text-gray-500 mb-1">Estado</p>
-                            <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border bg-white/5 border-white/10 text-white">
-                                {order.status}
+                            <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all ${order.status === 'pending_acceptance' ? 'bg-orange-500/10 border-orange-500/20 text-orange-400' : 'bg-white/5 border-white/10 text-white'
+                                }`}>
+                                {order.status === 'pending_acceptance' ? 'Esperando Aceptación' : order.status}
                             </span>
                         </div>
                     </div>
-                )}
+                </div>
             </div>
         </div>
     );

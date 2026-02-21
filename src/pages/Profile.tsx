@@ -50,6 +50,8 @@ interface OrderItem {
     timestamp: any;
     admin_offer_price?: number;
     admin_offer_currency?: string;
+    adminPrice?: number;
+    adminCurrency?: string;
     details: {
         format: string;
         condition: string;
@@ -160,6 +162,7 @@ export default function Profile() {
             pending: { label: "Pendiente", color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" },
             quoted: { label: "Cotizado", color: "bg-purple-500/10 text-purple-400 border-purple-500/20" },
             negotiating: { label: "En Negociación", color: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
+            pending_acceptance: { label: "Esperando tu ok", color: "bg-orange-500/10 text-orange-400 border-orange-500/20" },
             confirmed: { label: "Confirmado", color: "bg-primary/10 text-primary border-primary/20" },
             completed: { label: "Completado", color: "bg-green-500/10 text-green-500 border-green-500/20" },
             cancelled: { label: "Cancelado", color: "bg-red-500/10 text-red-500 border-red-500/20" },
@@ -410,7 +413,20 @@ export default function Profile() {
                 footer={
                     selectedOrder && (
                         <div className="space-y-4">
-                            {selectedOrder.admin_offer_price && (
+                            {selectedOrder.adminPrice && (
+                                <div className="flex items-center justify-between bg-primary/10 border border-primary/20 p-4 rounded-xl">
+                                    <div>
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <BadgeDollarSign className="h-4 w-4 text-primary" />
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-primary">Precio asignado por Oldie but Goldie</span>
+                                        </div>
+                                        <p className="text-3xl font-display font-black text-white tracking-tight">
+                                            {selectedOrder.adminCurrency === "USD" ? "US$" : "$"} {selectedOrder.adminPrice.toLocaleString()}
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+                            {!selectedOrder.adminPrice && selectedOrder.admin_offer_price && (
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <div className="flex items-center gap-2 mb-1">
@@ -431,7 +447,7 @@ export default function Profile() {
                                 className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-green-600 hover:bg-green-500 text-white rounded-xl text-xs font-black uppercase tracking-widest active:scale-95 transition-all shadow-lg shadow-green-500/20"
                             >
                                 <MessageCircle className="h-4 w-4" />
-                                Contactar por WhatsApp
+                                {selectedOrder.adminPrice ? "Aceptar Precio y Contactar" : "Contactar por WhatsApp"}
                             </button>
                         </div>
                     )

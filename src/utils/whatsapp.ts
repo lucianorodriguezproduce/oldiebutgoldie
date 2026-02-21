@@ -6,6 +6,8 @@ export interface OrderData {
     item_type?: string;
     admin_offer_price?: number;
     admin_offer_currency?: string;
+    adminPrice?: number;
+    adminCurrency?: string;
     details: {
         intent?: string;
         artist?: string;
@@ -68,7 +70,10 @@ export const generateWhatsAppLink = (order: OrderData): string => {
         message += `\nFormato: ${format} | Estado: ${condition}`;
     }
 
-    if (order.admin_offer_price) {
+    if (order.adminPrice) {
+        const currency = order.adminCurrency === "USD" ? "US$" : "$";
+        message += `\n\n✅ Acepto la contraoferta de ${currency} ${order.adminPrice.toLocaleString()} por mi lote.`;
+    } else if (order.admin_offer_price) {
         const currency = order.admin_offer_currency === "USD" ? "US$" : "$";
         message += `\nCotización Admin Lote/Disco: ${currency} ${order.admin_offer_price.toLocaleString()}`;
     } else if (!order.isBatch && order.details.price) {
