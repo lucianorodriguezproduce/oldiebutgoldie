@@ -26,7 +26,7 @@ const LoteContext = createContext<LoteContextType | undefined>(undefined);
 export function LoteProvider({ children }: { children: ReactNode }) {
     const [loteItems, setLoteItems] = useState<BatchItem[]>(() => {
         try {
-            const saved = sessionStorage.getItem("stitch_lote");
+            const saved = localStorage.getItem("stitch_lote");
             return saved ? JSON.parse(saved) : [];
         } catch {
             return [];
@@ -34,7 +34,7 @@ export function LoteProvider({ children }: { children: ReactNode }) {
     });
 
     useEffect(() => {
-        sessionStorage.setItem("stitch_lote", JSON.stringify(loteItems));
+        localStorage.setItem("stitch_lote", JSON.stringify(loteItems));
     }, [loteItems]);
 
     const toggleItem = (item: BatchItem) => {
@@ -44,7 +44,7 @@ export function LoteProvider({ children }: { children: ReactNode }) {
                 ? prev.filter(i => i.id !== item.id)
                 : [...prev, item];
 
-            sessionStorage.setItem("stitch_lote", JSON.stringify(nextItems));
+            localStorage.setItem("stitch_lote", JSON.stringify(nextItems));
             return nextItems;
         });
     };
@@ -59,7 +59,7 @@ export function LoteProvider({ children }: { children: ReactNode }) {
             } else {
                 nextItems = [...prev, item];
             }
-            sessionStorage.setItem("stitch_lote", JSON.stringify(nextItems));
+            localStorage.setItem("stitch_lote", JSON.stringify(nextItems));
             return nextItems;
         });
     };
@@ -67,7 +67,7 @@ export function LoteProvider({ children }: { children: ReactNode }) {
     const isInLote = (id: number) => loteItems.some(i => i.id === id);
 
     const clearLote = () => {
-        sessionStorage.removeItem("stitch_lote");
+        localStorage.removeItem("stitch_lote");
         setLoteItems([]);
     };
 

@@ -49,24 +49,20 @@ export default function RevisarLote() {
             currency: batchIntent === 'VENDER' ? currency : null,
             timestamp: serverTimestamp(),
             createdAt: serverTimestamp(),
-            // Store legacy fields based on the first item to not break simplistic queries immediately
-            item_id: loteItems[0]?.id,
+            items: loteItems.map(item => ({
+                id: item.id || Math.floor(Math.random() * 1000000),
+                title: item.title || "Sin Título",
+                artist: item.title?.split(' - ')[0] || "No especificado",
+                album: item.title?.split(' - ')[1] || item.title || "No especificado",
+                cover_image: item.cover_image || "https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png",
+                format: item.format || "No especificado",
+                condition: item.condition || "No especificado",
+                price: item.price || 0,
+                currency: item.currency || "ARS",
+            })),
             details: {
                 intent: batchIntent,
-                artist: loteItems[0]?.title.split(' - ')[0],
-                album: loteItems[0]?.title.split(' - ')[1] || loteItems[0]?.title,
             },
-            items: loteItems.map(item => ({
-                id: item.id,
-                title: item.title,
-                artist: item.title.split(' - ')[0],
-                album: item.title.split(' - ')[1] || item.title,
-                cover_image: item.cover_image,
-                format: item.format,
-                condition: item.condition,
-                price: item.price,
-                currency: item.currency,
-            }))
         };
 
         // Clean payload to prevent undefined errors in Firestore
@@ -102,6 +98,8 @@ export default function RevisarLote() {
     };
 
     const handleCheckout = async () => {
+        if (isSubmitting) return; // Prevent double clicks
+
         if (!batchIntent) {
             alert("Debes seleccionar la intención del lote (Comprar o Vender).");
             return;
