@@ -55,7 +55,11 @@ export default function PublicOrderView() {
     }, [id]);
 
     if (loading) {
-        return null;
+        return (
+            <div className="min-h-screen bg-black flex items-center justify-center">
+                <p className="text-primary font-black uppercase tracking-widest animate-pulse">Cargando datos...</p>
+            </div>
+        );
     }
 
     if (!order) {
@@ -131,7 +135,19 @@ export default function PublicOrderView() {
                         <h1 className="text-4xl md:text-5xl font-display font-black text-white hover:text-primary transition-colors tracking-tightest leading-none">
                             Detalle del Lote
                         </h1>
-                        <p className="text-sm font-mono text-gray-400">REF: {order.order_number || id}</p>
+
+                        {/* Header — TAREA 2 */}
+                        <div className="flex flex-col gap-1 mt-6">
+                            <p className="text-sm font-mono text-white">ID: {order.id}</p>
+                            <p className="text-sm text-gray-400">
+                                Fecha: {order?.createdAt?.seconds
+                                    ? new Date(order.createdAt.seconds * 1000).toLocaleString('es-AR')
+                                    : (order?.timestamp?.seconds
+                                        ? new Date(order.timestamp.seconds * 1000).toLocaleString('es-AR')
+                                        : "Cargando...")}
+                            </p>
+                            <p className="uppercase font-bold text-xs text-primary">{order.status}</p>
+                        </div>
                     </div>
 
                     {order.thumbnailUrl && (
@@ -141,8 +157,8 @@ export default function PublicOrderView() {
                     )}
                 </header>
 
-                <div className="space-y-6">
-                    <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 italic">
+                <div className="space-y-0">
+                    <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 italic mb-4">
                         Ítems Involucrados ({items.length})
                     </h3>
 
@@ -152,7 +168,7 @@ export default function PublicOrderView() {
                             <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">No hay discos en este lote</p>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 gap-4">
+                        <div className="space-y-0">
                             <AnimatePresence>
                                 {items.map((item: any, idx: number) => (
                                     <motion.div
@@ -160,49 +176,12 @@ export default function PublicOrderView() {
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: idx * 0.05 }}
-                                        className="bg-white/[0.02] border border-white/5 rounded-[2rem] p-4 flex flex-col sm:flex-row items-center sm:items-center gap-5 hover:bg-white/[0.04] hover:border-white/10 transition-all group overflow-hidden relative"
+                                        className="border-b border-white/10 py-4"
                                     >
-                                        {/* Disk Thumbnail */}
-                                        <div className="w-full sm:w-24 aspect-square rounded-2xl overflow-hidden bg-black flex-shrink-0 shadow-2xl border border-white/5 group-hover:border-primary/30 transition-colors">
-                                            {item.cover_image ? (
-                                                <img src={item.cover_image} alt="" className="w-full h-full object-cover grayscale-[0.2] group-hover:grayscale-0 transition-all duration-700" />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center">
-                                                    <Music className="w-8 h-8 text-white/10" />
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* Item Logic */}
-                                        <div className="flex-1 min-w-0 w-full text-center sm:text-left space-y-3">
-                                            <div className="space-y-1">
-                                                <h4 className="text-xl sm:text-lg font-display font-black text-white truncate group-hover:text-primary transition-colors uppercase tracking-tight">
-                                                    {item.album || item.title?.split(' - ')[1] || 'Unknown Album'}
-                                                </h4>
-                                                <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">
-                                                    {item.artist || item.title?.split(' - ')[0] || 'Unknown Artist'}
-                                                </p>
-                                            </div>
-
-                                            {/* Badges Row */}
-                                            <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap pt-1">
-                                                <span className="bg-primary/10 text-primary border border-primary/20 text-[9px] font-black uppercase tracking-tighter px-3 py-1.5 rounded-full">
-                                                    {item.format || "N/A"}
-                                                </span>
-                                                <span className="bg-white/5 text-white border border-white/10 text-[9px] font-black uppercase tracking-tighter px-3 py-1.5 rounded-full">
-                                                    {item.condition || "N/A"}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        {/* Status Tag (Floating Desktop) */}
-                                        <div className="absolute top-4 right-4 sm:static flex-shrink-0">
-                                            <span className={`text-[8px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg border shadow-sm ${(item.intent || order.status || 'COMPRAR') === 'COMPRAR'
-                                                ? 'bg-green-500/10 text-green-400 border-green-500/20'
-                                                : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
-                                                }`}>
-                                                {item.intent || order.status || 'COMPRAR'}
-                                            </span>
+                                        <h4 className="font-bold text-white uppercase text-sm">{item.title || `${item.artist} - ${item.album}`}</h4>
+                                        <div className="flex gap-2 mt-2">
+                                            <span className="bg-gray-800 text-gray-300 px-2 py-1 text-[10px] font-bold uppercase rounded">{item.format}</span>
+                                            <span className="bg-blue-900/30 text-blue-400 px-2 py-1 text-[10px] font-bold uppercase rounded border border-blue-500/20">{item.condition}</span>
                                         </div>
                                     </motion.div>
                                 ))}

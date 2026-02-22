@@ -60,22 +60,23 @@ export default function OrderDetailsDrawer({ isOpen, onClose, title, children, f
                             onClick={onClose}
                             style={{
                                 position: 'fixed',
-                                top: '10px',
-                                right: '10px',
-                                zIndex: 1000, // Higher than fixed panels
+                                top: '16px',
+                                right: '16px',
+                                zIndex: 999,
+                                width: '40px',
+                                height: '40px',
                                 background: '#000',
                                 color: '#fff',
                                 borderRadius: '50%',
-                                width: '35px',
-                                height: '35px',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                border: '1px solid rgba(255,255,255,0.1)'
+                                cursor: 'pointer',
+                                border: 'none'
                             }}
                             className="shadow-2xl active:scale-95 transition-transform"
                         >
-                            <X className="h-5 w-5 mx-auto" />
+                            <X className="h-6 w-6" />
                         </button>
 
                         {/* Header */}
