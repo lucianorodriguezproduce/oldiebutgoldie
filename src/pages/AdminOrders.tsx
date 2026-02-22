@@ -561,20 +561,24 @@ export default function AdminOrders() {
                 }
             >
                 {selectedOrder && (
-                    <div className="px-4">
-                        {/* Header — TAREA 2 */}
-                        <div className="flex flex-col gap-1 mb-6">
-                            <p className="text-sm font-mono text-white">ID: {selectedOrder.id}</p>
-                            <p className="text-sm text-gray-400">
+                    <div className="px-4 py-8">
+                        {/* Header — TAREA 2 & 4 */}
+                        <div className="flex flex-col gap-1 mb-8">
+                            <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">ID: {selectedOrder.id}</p>
+                            <p className="text-sm text-gray-400 font-bold uppercase">
                                 Fecha: {selectedOrder?.createdAt?.seconds
                                     ? new Date(selectedOrder.createdAt.seconds * 1000).toLocaleString('es-AR')
                                     : (selectedOrder?.timestamp?.seconds
                                         ? new Date(selectedOrder.timestamp.seconds * 1000).toLocaleString('es-AR')
                                         : "Cargando...")}
                             </p>
-                            <p className="uppercase font-bold text-xs text-primary">{selectedOrder.status}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                                <span className="bg-primary/10 text-primary border border-primary/20 px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest">
+                                    {selectedOrder.status}
+                                </span>
+                            </div>
 
-                            <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mt-1">
+                            <span className="text-[10px] text-gray-600 uppercase tracking-widest font-bold mt-2">
                                 Operación: <span className={selectedOrder.type === 'buy' ? 'text-green-400' : 'text-orange-400'}>
                                     {selectedOrder.type === 'buy' ? 'Compra' : 'Venta'}
                                 </span>
@@ -582,32 +586,40 @@ export default function AdminOrders() {
                         </div>
 
                         {/* Item Mapping — TAREA 3 */}
-                        <div className="space-y-0 mb-6">
-                            <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500 italic mb-2">Discos en este Pedido</h4>
+                        <div className="space-y-0 mb-8">
+                            <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500 italic mb-4">Detalle del Lote</h4>
 
                             {selectedOrder.items && selectedOrder.items.length > 0 ? (
                                 selectedOrder.items.map((item: any, idx: number) => (
-                                    <div key={idx} className="border-b border-white/10 py-4">
-                                        <h4 className="font-bold text-white uppercase text-sm">{item.title} - {item.artist}</h4>
-                                        <div className="flex gap-2 mt-2">
-                                            <span className="bg-gray-800 text-gray-300 px-2 py-1 text-[10px] font-bold uppercase rounded">{item.format}</span>
-                                            <span className="bg-blue-900/30 text-blue-400 px-2 py-1 text-[10px] font-bold uppercase rounded border border-blue-500/20">{item.condition}</span>
+                                    <div key={idx} className="border-b border-white/10 py-5 flex flex-col gap-2">
+                                        <div className="space-y-1">
+                                            <h4 className="font-bold text-white uppercase text-base leading-tight">{item.title}</h4>
+                                            <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">{item.artist}</p>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2 mt-1">
+                                            <span className="bg-gray-800 text-gray-300 px-2 py-1 text-[9px] font-black uppercase rounded">{item.format}</span>
+                                            <span className="bg-blue-900/30 text-blue-400 px-2 py-1 text-[9px] font-black uppercase rounded border border-blue-500/20">{item.condition}</span>
                                         </div>
                                     </div>
                                 ))
                             ) : !selectedOrder.isBatch ? (
-                                <div className="border-b border-white/10 py-4">
-                                    <h4 className="font-bold text-white uppercase text-sm">
-                                        {selectedOrder.details?.artist} - {selectedOrder.details?.album}
-                                    </h4>
-                                    <div className="flex gap-2 mt-2">
-                                        <span className="bg-gray-800 text-gray-300 px-2 py-1 text-[10px] font-bold uppercase rounded">{selectedOrder.details?.format}</span>
-                                        <span className="bg-blue-900/30 text-blue-400 px-2 py-1 text-[10px] font-bold uppercase rounded border border-blue-500/20">{selectedOrder.details?.condition}</span>
+                                <div className="border-b border-white/10 py-5 flex flex-col gap-2">
+                                    <div className="space-y-1">
+                                        <h4 className="font-bold text-white uppercase text-base leading-tight">
+                                            {selectedOrder.details?.album}
+                                        </h4>
+                                        <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">
+                                            {selectedOrder.details?.artist}
+                                        </p>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2 mt-1">
+                                        <span className="bg-gray-800 text-gray-300 px-2 py-1 text-[9px] font-black uppercase rounded">{selectedOrder.details?.format}</span>
+                                        <span className="bg-blue-900/30 text-blue-400 px-2 py-1 text-[9px] font-black uppercase rounded border border-blue-500/20">{selectedOrder.details?.condition}</span>
                                     </div>
                                 </div>
                             ) : (
                                 <div className="p-8 text-center bg-white/[0.02] border border-dashed border-white/10 rounded-2xl">
-                                    <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">No hay discos registrados</p>
+                                    <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">Sin ítems registrados</p>
                                 </div>
                             )}
                         </div>

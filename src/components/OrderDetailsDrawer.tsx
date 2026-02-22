@@ -59,24 +59,24 @@ export default function OrderDetailsDrawer({ isOpen, onClose, title, children, f
                         <button
                             onClick={onClose}
                             style={{
-                                position: 'fixed',
-                                top: '16px',
-                                right: '16px',
-                                zIndex: 999,
-                                width: '40px',
-                                height: '40px',
-                                background: '#000',
-                                color: '#fff',
+                                position: 'absolute',
+                                top: '12px',
+                                right: '12px',
+                                width: '32px',
+                                height: '32px',
+                                background: '#f3f4f6',
+                                color: '#000',
                                 borderRadius: '50%',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 cursor: 'pointer',
-                                border: 'none'
+                                border: '1px solid #e5e7eb',
+                                zIndex: 50
                             }}
-                            className="shadow-2xl active:scale-95 transition-transform"
+                            className="shadow-sm active:scale-95 transition-transform"
                         >
-                            <X className="h-6 w-6" />
+                            <X className="h-4 w-4" />
                         </button>
 
                         {/* Header */}

@@ -136,17 +136,21 @@ export default function PublicOrderView() {
                             Detalle del Lote
                         </h1>
 
-                        {/* Header — TAREA 2 */}
+                        {/* Header — TAREA 2 & 4 */}
                         <div className="flex flex-col gap-1 mt-6">
-                            <p className="text-sm font-mono text-white">ID: {order.id}</p>
-                            <p className="text-sm text-gray-400">
+                            <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">ID: {order.id}</p>
+                            <p className="text-sm text-gray-400 font-bold uppercase">
                                 Fecha: {order?.createdAt?.seconds
                                     ? new Date(order.createdAt.seconds * 1000).toLocaleString('es-AR')
                                     : (order?.timestamp?.seconds
                                         ? new Date(order.timestamp.seconds * 1000).toLocaleString('es-AR')
                                         : "Cargando...")}
                             </p>
-                            <p className="uppercase font-bold text-xs text-primary">{order.status}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                                <span className="bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest">
+                                    {order.status}
+                                </span>
+                            </div>
                         </div>
                     </div>
 
@@ -176,12 +180,17 @@ export default function PublicOrderView() {
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: idx * 0.05 }}
-                                        className="border-b border-white/10 py-4"
+                                        className="border-b border-white/10 py-5 flex flex-col gap-1"
                                     >
-                                        <h4 className="font-bold text-white uppercase text-sm">{item.title || `${item.artist} - ${item.album}`}</h4>
-                                        <div className="flex gap-2 mt-2">
-                                            <span className="bg-gray-800 text-gray-300 px-2 py-1 text-[10px] font-bold uppercase rounded">{item.format}</span>
-                                            <span className="bg-blue-900/30 text-blue-400 px-2 py-1 text-[10px] font-bold uppercase rounded border border-blue-500/20">{item.condition}</span>
+                                        <h4 className="font-bold text-white uppercase text-base leading-tight">
+                                            {item.title || (item.artist && item.album ? `${item.artist} - ${item.album}` : 'Sin Título')}
+                                        </h4>
+                                        {item.artist && (
+                                            <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">{item.artist}</p>
+                                        )}
+                                        <div className="flex flex-wrap gap-2 mt-2">
+                                            <span className="bg-gray-800 text-gray-300 px-2 py-1 text-[9px] font-black uppercase rounded">{item.format}</span>
+                                            <span className="bg-blue-900/30 text-blue-400 px-2 py-1 text-[9px] font-black uppercase rounded border border-blue-500/20">{item.condition}</span>
                                         </div>
                                     </motion.div>
                                 ))}
