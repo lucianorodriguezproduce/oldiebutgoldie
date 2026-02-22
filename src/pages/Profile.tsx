@@ -39,6 +39,7 @@ import { generateWhatsAppLink } from '@/utils/whatsapp';
 import type { OrderData } from '@/utils/whatsapp';
 import OrderCard from '@/components/OrderCard';
 import { pushWhatsAppContactFromOrder } from "@/utils/analytics";
+import NegotiationBanner from "@/components/NegotiationBanner";
 
 interface ProfileItem {
     id: string;
@@ -79,7 +80,7 @@ interface OrderItem {
 
 export default function Profile() {
     const { user, isAdmin } = useAuth();
-    const { showLoading, hideLoading } = useLoading();
+    const { showLoading, hideLoading, isLoading } = useLoading();
     const [activeTab, setActiveTab] = useState<"overview" | "orders" | "wantlist">("overview");
 
     // Firestore Data State
@@ -96,6 +97,45 @@ export default function Profile() {
     const [isNegotiating, setIsNegotiating] = useState(false);
     const [showCounterInput, setShowCounterInput] = useState(false);
 
+    const handleAcceptOffer = async () => {
+        if (!selectedOrder || isLoading) return;
+        showLoading("Aceptando propuesta...");
+        try {
+            const orderRef = doc(db, "orders", selectedOrder.id);
+            await updateDoc(orderRef, {
+                status: "venta_finalizada",
+                acceptedAt: serverTimestamp()
+            });
+            // Update local state to reflect change immediately
+            setSelectedOrder({ ...selectedOrder, status: "venta_finalizada" });
+            alert("¡Propuesta aceptada! La venta se ha finalizado.");
+        } catch (error) {
+            console.error("Error accepting offer:", error);
+            alert("Hubo un error al aceptar la propuesta.");
+        } finally {
+            hideLoading();
+        }
+    };
+
+    const handleRejectOffer = async () => {
+        if (!selectedOrder || isLoading) return;
+        if (!confirm("¿Estás seguro de que quieres rechazar esta propuesta?")) return;
+
+        showLoading("Procesando...");
+        try {
+            const orderRef = doc(db, "orders", selectedOrder.id);
+            await updateDoc(orderRef, {
+                status: "negotiating", // Revert to negotiation if rejected
+                rejectedAt: serverTimestamp()
+            });
+            setSelectedOrder({ ...selectedOrder, status: "negotiating" });
+        } catch (error) {
+            console.error("Error rejecting offer:", error);
+        } finally {
+            hideLoading();
+        }
+    };
+
     // Deep-link: auto-open drawer if ?order=ORDER_ID is in the URL
     useEffect(() => {
         const orderId = searchParams.get("order");
@@ -109,6 +149,16 @@ export default function Profile() {
             setSearchParams({}, { replace: true });
         }
     }, [orderItems, ordersLoading, searchParams]);
+
+    // Keep selectedOrder in sync with live data
+    useEffect(() => {
+        if (selectedOrder) {
+            const latest = orderItems.find(o => o.id === selectedOrder.id);
+            if (latest && JSON.stringify(latest) !== JSON.stringify(selectedOrder)) {
+                setSelectedOrder(latest);
+            }
+        }
+    }, [orderItems, selectedOrder?.id]);
 
     useEffect(() => {
         if (!user) return;
@@ -691,7 +741,19 @@ export default function Profile() {
                             </span>
                         </div>
 
-                        {/* Item Mapping — TAREA 3 */}
+                        {/* Negotiation Banner */}
+                        {selectedOrder.adminPrice && selectedOrder.status !== 'venta_finalizada' && selectedOrder.status !== 'completed' && (
+                            <NegotiationBanner
+                                adminPrice={selectedOrder.adminPrice}
+                                currency={selectedOrder.adminCurrency || selectedOrder.currency || 'ARS'}
+                                onAccept={handleAcceptOffer}
+                                onReject={handleRejectOffer}
+                                isSubmitting={isLoading}
+                                className="mb-8"
+                            />
+                        )}
+
+                        {/* Items List */}
                         <div className="space-y-0 mb-8">
                             <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500 italic mb-4">Detalle del Lote</h4>
 
