@@ -25,7 +25,8 @@ import {
     Globe,
     PieChart,
     Handshake,
-    CheckCircle2
+    CheckCircle2,
+    X
 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { formatDate, getReadableDate } from "@/utils/date";
@@ -642,16 +643,40 @@ export default function Profile() {
                 }
             >
                 {selectedOrder && (
-                    <div className="px-4 py-8">
+                    <div className="px-4 py-8 relative">
+                        {/* TAREA 1: Botón de Cierre (X) */}
+                        <button
+                            onClick={() => setSelectedOrder(null)}
+                            style={{
+                                position: 'absolute',
+                                top: '1rem',
+                                right: '1rem',
+                                width: '32px',
+                                height: '32px',
+                                background: '#000',
+                                color: '#fff',
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                zIndex: 50,
+                                cursor: 'pointer'
+                            }}
+                            className="shadow-xl active:scale-95 transition-transform"
+                        >
+                            <X className="h-4 w-4" />
+                        </button>
                         {/* Header — TAREA 2 & 4 */}
                         <div className="flex flex-col gap-1 mb-8">
                             <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">ID: {selectedOrder.id}</p>
                             <p className="text-sm text-gray-400 font-bold uppercase">
-                                Fecha: {selectedOrder?.createdAt?.seconds
-                                    ? new Date(selectedOrder.createdAt.seconds * 1000).toLocaleString('es-AR')
-                                    : (selectedOrder?.timestamp?.seconds
-                                        ? new Date(selectedOrder.timestamp.seconds * 1000).toLocaleString('es-AR')
-                                        : "Cargando...")}
+                                Fecha: <span className="text-gray-200">
+                                    {selectedOrder?.createdAt?.seconds
+                                        ? new Date(selectedOrder.createdAt.seconds * 1000).toLocaleString()
+                                        : (selectedOrder?.timestamp?.seconds
+                                            ? new Date(selectedOrder.timestamp.seconds * 1000).toLocaleString()
+                                            : "Sincronizando...")}
+                                </span>
                             </p>
                             <div className="flex items-center gap-2 mt-1">
                                 <span className="bg-primary/10 text-primary border border-primary/20 px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest">
@@ -672,30 +697,49 @@ export default function Profile() {
 
                             {selectedOrder.items && selectedOrder.items.length > 0 ? (
                                 selectedOrder.items.map((item: any, idx: number) => (
-                                    <div key={idx} className="border-b border-white/10 py-5 flex flex-col gap-2">
-                                        <div className="space-y-1">
-                                            <h4 className="font-bold text-white uppercase text-base leading-tight">{item.title}</h4>
-                                            <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">{item.artist}</p>
+                                    <div key={idx} className="border-b border-white/10 py-5 flex items-start gap-4">
+                                        {/* TAREA 2: Imagen de ítem */}
+                                        <div className="w-16 h-16 rounded overflow-hidden flex-shrink-0 bg-white/5 border border-white/10">
+                                            <img
+                                                src={item.cover_image || item.thumb}
+                                                alt={item.title}
+                                                className="w-full h-full object-cover"
+                                            />
                                         </div>
-                                        <div className="flex flex-wrap gap-2 mt-1">
-                                            <span className="bg-gray-800 text-gray-300 px-2 py-1 text-[9px] font-black uppercase rounded">{item.format}</span>
-                                            <span className="bg-blue-900/30 text-blue-400 px-2 py-1 text-[9px] font-black uppercase rounded border border-blue-500/20">{item.condition}</span>
+                                        <div className="flex-1 min-w-0 space-y-2">
+                                            <div className="space-y-1">
+                                                <h4 className="font-bold text-white uppercase text-base leading-tight truncate">{item.title}</h4>
+                                                <p className="text-gray-500 text-xs font-bold uppercase tracking-widest truncate">{item.artist}</p>
+                                            </div>
+                                            <div className="flex flex-wrap gap-2 mt-1">
+                                                <span className="bg-gray-800 text-gray-300 px-2 py-1 text-[9px] font-black uppercase rounded">{item.format}</span>
+                                                <span className="bg-blue-900/30 text-blue-400 px-2 py-1 text-[9px] font-black uppercase rounded border border-blue-500/20">{item.condition}</span>
+                                            </div>
                                         </div>
                                     </div>
                                 ))
                             ) : !selectedOrder.isBatch ? (
-                                <div className="border-b border-white/10 py-5 flex flex-col gap-2">
-                                    <div className="space-y-1">
-                                        <h4 className="font-bold text-white uppercase text-base leading-tight">
-                                            {selectedOrder.details?.album}
-                                        </h4>
-                                        <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">
-                                            {selectedOrder.details?.artist}
-                                        </p>
+                                <div className="border-b border-white/10 py-5 flex items-start gap-4">
+                                    <div className="w-16 h-16 rounded overflow-hidden flex-shrink-0 bg-white/5 border border-white/10">
+                                        <img
+                                            src={selectedOrder.details?.cover_image || (selectedOrder.details as any)?.thumb}
+                                            alt={selectedOrder.details?.album}
+                                            className="w-full h-full object-cover"
+                                        />
                                     </div>
-                                    <div className="flex flex-wrap gap-2 mt-1">
-                                        <span className="bg-gray-800 text-gray-300 px-2 py-1 text-[9px] font-black uppercase rounded">{selectedOrder.details?.format}</span>
-                                        <span className="bg-blue-900/30 text-blue-400 px-2 py-1 text-[9px] font-black uppercase rounded border border-blue-500/20">{selectedOrder.details?.condition}</span>
+                                    <div className="flex-1 min-w-0 space-y-2">
+                                        <div className="space-y-1">
+                                            <h4 className="font-bold text-white uppercase text-base leading-tight truncate">
+                                                {selectedOrder.details?.album}
+                                            </h4>
+                                            <p className="text-gray-500 text-xs font-bold uppercase tracking-widest truncate">
+                                                {selectedOrder.details?.artist}
+                                            </p>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2 mt-1">
+                                            <span className="bg-gray-800 text-gray-300 px-2 py-1 text-[9px] font-black uppercase rounded">{selectedOrder.details?.format}</span>
+                                            <span className="bg-blue-900/30 text-blue-400 px-2 py-1 text-[9px] font-black uppercase rounded border border-blue-500/20">{selectedOrder.details?.condition}</span>
+                                        </div>
                                     </div>
                                 </div>
                             ) : (
