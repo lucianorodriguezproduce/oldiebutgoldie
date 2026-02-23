@@ -4,12 +4,12 @@ import { doc, getDoc, updateDoc, increment, arrayUnion, serverTimestamp } from "
 import { db } from "@/lib/firebase";
 import { SEO } from "@/components/SEO";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Music, Disc, Lock, Clock } from "lucide-react";
+import { ChevronLeft, Music, Disc, Lock, Clock, Eye } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useLoading } from "@/context/LoadingContext";
 import { formatDate, getReadableDate } from "@/utils/date";
 import { TEXTS } from "@/constants/texts";
-import { pushViewItemFromOrder } from "@/utils/analytics";
+import { pushViewItemFromOrder, pushHotOrderDetected } from "@/utils/analytics";
 
 export default function PublicOrderView() {
     const { id } = useParams<{ id: string }>();
@@ -42,11 +42,15 @@ export default function PublicOrderView() {
                 const docRef = doc(db, "orders", id);
                 const docSnap = await getDoc(docRef);
                 if (docSnap.exists()) {
-                    const orderData = { id: docSnap.id, ...docSnap.data() };
+                    const orderData = { id: docSnap.id, ...docSnap.data() } as any;
                     setOrder(orderData);
 
                     // GA4 Tracking
                     pushViewItemFromOrder(orderData);
+
+                    if (orderData.view_count === 4) {
+                        pushHotOrderDetected(orderData, 5);
+                    }
 
                     // Tracker de vistas
                     try {
@@ -311,9 +315,17 @@ export default function PublicOrderView() {
                                 </span>
                             </div>
 
-                            <div className="flex items-center gap-2 text-gray-700 text-[10px] font-black uppercase tracking-widest md:justify-end">
-                                <Clock className="h-3.5 w-3.5" />
-                                {getReadableDate(order.createdAt || order.timestamp)}
+                            <div className="flex flex-col items-end md:justify-end gap-2 mt-2 md:mt-0">
+                                <div className="flex items-center gap-2 text-gray-700 text-[10px] font-black uppercase tracking-widest">
+                                    <Clock className="h-3.5 w-3.5" />
+                                    {getReadableDate(order.createdAt || order.timestamp)}
+                                </div>
+                                {/* LiveVisitorCount UI */}
+                                {(order.unique_visitors?.length || 0) > 0 && (
+                                    <div className="flex items-center gap-1.5 text-gray-500/50 text-[9px] font-black uppercase tracking-widest mt-1">
+                                        <Eye className="h-3 w-3" /> Visto por {order.unique_visitors.length} persona{order.unique_visitors.length !== 1 ? 's' : ''} en las últimas 24hs
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
