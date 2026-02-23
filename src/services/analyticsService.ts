@@ -42,13 +42,15 @@ export const runReport = async (): Promise<AnalyticsDataPoint[]> => {
 
 /**
  * Perform server-side call.
- * Defaults to mock data if the Edge function isn't connected.
+ * Soporta cambio a runRealtimeReport si se requiere latencia Cero (vs 24h históricas de runReport)
  */
 const fetchFreshData = async (): Promise<AnalyticsDataPoint[]> => {
     try {
-        // En un entorno de producción real, esto apuntaría a una Función Serverless (Ej. Vercel /api/ga4)
-        // que esconde las credenciales seguras (Service Account JSON) para hablar con la API de Google Analytics Data.
-        const response = await fetch('/api/analytics/runReport', {
+        // Cambiar iterador a api/analytics/runRealtimeReport si necesitas Active Users instantáneos reales,
+        // o mantener api/analytics/runReport para históricos consolidados.
+        const endpoint = '/api/analytics/runReport';
+
+        const response = await fetch(endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -59,6 +61,8 @@ const fetchFreshData = async (): Promise<AnalyticsDataPoint[]> => {
                     { name: "averageSessionDuration" },
                     { name: "transactions" }
                 ],
+                // Si la Property ID difiere, este fetch rebotará.
+                // Verifica en Vercel Env que VITE_GA_PROPERTY_ID empate exacto con la consola GA4
                 dateRanges: [{ startDate: "7daysAgo", endDate: "today" }]
             })
         });
