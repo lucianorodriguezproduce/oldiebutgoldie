@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Activity, Terminal, Shield, LogOut, Disc, Newspaper, ShoppingBag, BarChart3 } from "lucide-react";
+import { LayoutDashboard, Activity, Terminal, Shield, LogOut, Disc, Newspaper, ShoppingBag, BarChart3, Upload } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
 
@@ -15,6 +15,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     const navItems = [
         { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
         { label: "Métricas", href: "/admin/dashboard", icon: BarChart3 },
+        { label: "Ingesta Masiva", href: "/admin/bulk-upload", icon: Upload },
         { label: "Gestión de Órdenes", href: "/admin/orders", icon: ShoppingBag },
         { label: "Comunidad", href: "/admin/community", icon: Activity },
         { label: "Editorial Hub", href: "/admin/editorial", icon: Newspaper },

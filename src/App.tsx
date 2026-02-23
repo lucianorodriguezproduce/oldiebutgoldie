@@ -24,6 +24,7 @@ import EditorialManager from "@/pages/Admin/EditorialManager";
 import CommunityManager from "@/pages/Admin/CommunityManager";
 import AdminOrders from "@/pages/AdminOrders";
 import DatabasePurge from "@/pages/Admin/DatabasePurge";
+import BulkUpload from "@/pages/Admin/BulkUpload";
 import { ProtectedRoute } from "@/components/Guard/ProtectedRoute";
 import AdminDashboard from "@/pages/AdminDashboard";
 
@@ -70,6 +71,7 @@ function AppContent() {
               <Route path="community" element={<CommunityManager />} />
               <Route path="editorial" element={<EditorialManager />} />
               <Route path="orders" element={<AdminOrders />} />
+              <Route path="bulk-upload" element={<BulkUpload />} />
               <Route path="purge" element={<DatabasePurge />} />
             </Route>
           </Route>

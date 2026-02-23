@@ -34,7 +34,7 @@ export interface DiscogsSearchResult {
 }
 
 export const discogsService = {
-    async searchReleases(query: string, page: number = 1, genre?: string, type?: string): Promise<{ results: DiscogsSearchResult[], pagination: any }> {
+    async searchReleases(query: string, page: number = 1, genre?: string, type?: string, format?: string): Promise<{ results: DiscogsSearchResult[], pagination: any }> {
         if (!query) return { results: [], pagination: {} };
         const params: Record<string, string> = {
             q: query,
@@ -47,6 +47,7 @@ export const discogsService = {
             params.type = "release,master,artist"; // Default to all meaningful types
         }
         if (genre) params.genre = genre;
+        if (format) params.format = format;
 
         const data = await fetchFromDiscogs("/database/search", params);
         return { results: data.results, pagination: data.pagination };
