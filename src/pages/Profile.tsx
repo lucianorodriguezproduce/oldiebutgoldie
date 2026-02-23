@@ -606,8 +606,8 @@ export default function Profile() {
                 footer={
                     selectedOrder && (
                         <div className="space-y-4">
-                            {/* Negotiation History Timeline (Profile Side) */}
-                            {selectedOrder.negotiationHistory && selectedOrder.negotiationHistory.length > 0 && (
+                            {/* Negotiation History Timeline (Profile Side) - Hidden on Completion */}
+                            {selectedOrder.status !== "completed" && selectedOrder.status !== "venta_finalizada" && selectedOrder.negotiationHistory && selectedOrder.negotiationHistory.length > 0 && (
                                 <div className="space-y-4 pb-6 border-b border-white/5">
                                     <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 flex items-center justify-center gap-2 mb-6">
                                         <Clock className="h-3.5 w-3.5" /> Línea de Tiempo de Negociación
@@ -650,7 +650,12 @@ export default function Profile() {
                                 </div>
                             )}
 
-                            {selectedOrder.status === "completed" || selectedOrder.status === "venta_finalizada" ? (
+                            {isNegotiating ? (
+                                <div className="space-y-4">
+                                    <div className="h-48 bg-white/5 rounded-[2rem] animate-pulse" />
+                                    <div className="h-12 bg-white/5 rounded-2xl animate-pulse" />
+                                </div>
+                            ) : (selectedOrder.status === "completed" || selectedOrder.status === "venta_finalizada") ? (
                                 <div className="space-y-6">
                                     <div id="printable-receipt" className="bg-green-500/10 border border-green-500/20 rounded-[2rem] p-8 space-y-6 relative overflow-hidden">
                                         <div className="absolute top-0 right-0 p-8 opacity-5">

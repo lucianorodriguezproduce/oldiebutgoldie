@@ -450,8 +450,8 @@ export default function AdminOrders() {
                 footer={
                     selectedOrder && (
                         <div className="space-y-4">
-                            {/* Negotiation History Timeline */}
-                            {selectedOrder.negotiationHistory && selectedOrder.negotiationHistory.length > 0 && (
+                            {/* Negotiation History Timeline - Hidden on Completion */}
+                            {selectedOrder.status !== 'completed' && selectedOrder.status !== 'venta_finalizada' && selectedOrder.negotiationHistory && selectedOrder.negotiationHistory.length > 0 && (
                                 <div className="space-y-4 pb-6 border-b border-white/5">
                                     <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 flex items-center justify-center gap-2 mb-6">
                                         <Clock className="h-3.5 w-3.5" /> Línea de Tiempo de Negociación

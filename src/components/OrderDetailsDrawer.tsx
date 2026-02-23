@@ -94,9 +94,9 @@ export default function OrderDetailsDrawer({ isOpen, onClose, title, children, f
                             {children}
                         </div>
 
-                        {/* Footer — fixed bottom */}
+                        {/* Footer — fixed bottom, but scrollable if it grows too large (mobile keyboard safe) */}
                         {footer && (
-                            <div className="flex-none px-5 sm:px-8 py-4 sm:py-5 border-t border-white/5 space-y-3 pb-safe">
+                            <div className="flex-none px-5 sm:px-8 py-4 sm:py-5 border-t border-white/5 space-y-3 pb-safe max-h-[40vh] overflow-y-auto custom-scrollbar">
                                 {footer}
                             </div>
                         )}
