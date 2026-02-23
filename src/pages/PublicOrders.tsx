@@ -40,6 +40,7 @@ export default function PublicOrders() {
         <div className="min-h-screen bg-black pt-12">
             <SEO
                 title={TEXTS.common.publicActivity.activityTitle}
+                description={TEXTS.common.publicActivity.activityDesc}
                 url="https://oldie-but-goldie.vercel.app/actividad"
                 schema={{
                     "@context": "https://schema.org",

@@ -12,7 +12,7 @@ export const TEXTS = {
     home: {
         searchPlaceholder: "Artista, Álbum o Referencia...",
         systemVersion: "OLDIE BUT GOLDIE",
-        searchTitle: "Compra o vende Vinilos/Casettes/CDs en",
+        searchTitle: "Compra  vende Vinilos/Casettes/CDs",
         resultsTitle: "RESULTADOS",
         loadingDiscogs: "Buscando en la web...",
         analyzingDB: "Analizando base de datos...",
