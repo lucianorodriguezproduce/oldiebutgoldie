@@ -99,3 +99,15 @@ export const pushHotOrderDetected = (order: any, viewCount: number) => {
         });
     }
 };
+
+export const pushBulkUploadCompleted = (itemCount: number) => {
+    if (typeof window !== 'undefined') {
+        window.dataLayer = window.dataLayer || [];
+
+        window.dataLayer.push({
+            'event': 'bulk_upload_completed',
+            'item_count': itemCount,
+            'source': 'admin_dashboard'
+        });
+    }
+};
