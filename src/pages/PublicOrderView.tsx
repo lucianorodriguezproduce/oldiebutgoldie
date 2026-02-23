@@ -145,7 +145,7 @@ export default function PublicOrderView() {
                                     ? new Date(order.createdAt.seconds * 1000).toLocaleString('es-AR')
                                     : (order?.timestamp?.seconds
                                         ? new Date(order.timestamp.seconds * 1000).toLocaleString('es-AR')
-                                        : TEXTS.common.loading)}
+                                        : TEXTS.common.loadingGeneric)}
                             </p>
                             <div className="flex items-center gap-2 mt-1">
                                 <span className="bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest">

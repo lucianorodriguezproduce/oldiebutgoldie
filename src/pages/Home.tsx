@@ -242,7 +242,7 @@ export default function Home() {
             return;
         }
 
-        showLoading(TEXTS.common.loading);
+        showLoading(TEXTS.common.loadingGeneric);
         // Force the filter visual state to 'álbumes' as we dive into entities' discographies
         setSearchFilter("álbumes");
         // Re-brand the input query text to denote the user is now browsing this entity
@@ -521,7 +521,7 @@ export default function Home() {
         if (e) e.preventDefault();
         if (!email || !password) return;
 
-        showLoading(TEXTS.common.loading);
+        showLoading(TEXTS.common.loadingGeneric);
         try {
             const loggedUser = await authenticateUser(email, password);
             if (loggedUser) {
