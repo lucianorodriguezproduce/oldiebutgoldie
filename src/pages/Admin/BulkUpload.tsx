@@ -116,7 +116,7 @@ export default function BulkUpload() {
                 originalCurrency: currency,
                 originalMedia: media,
                 originalCover: cover,
-                status: "WAITING",
+                status: "WAITING" as ProcessingStatus,
                 results: [],
                 selectedMatch: null
             };
@@ -360,9 +360,9 @@ export default function BulkUpload() {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {rows.map((row, index) => (
                             <div key={row.id} className={`p-6 rounded-3xl border ${row.published ? 'bg-green-500/5 border-green-500/30 opacity-50' :
-                                    row.status === 'MATCH_FOUND' ? 'bg-white/5 border-white/10 hover:border-white/20' :
-                                        row.status === 'AMBIGUOUS' ? 'bg-yellow-500/5 border-yellow-500/20' :
-                                            'bg-red-500/5 border-red-500/20'
+                                row.status === 'MATCH_FOUND' ? 'bg-white/5 border-white/10 hover:border-white/20' :
+                                    row.status === 'AMBIGUOUS' ? 'bg-yellow-500/5 border-yellow-500/20' :
+                                        'bg-red-500/5 border-red-500/20'
                                 } transition-colors flex flex-col group relative overflow-hidden`}>
                                 {/* Header / Original Data */}
                                 <div className="mb-4 z-10 relative">
