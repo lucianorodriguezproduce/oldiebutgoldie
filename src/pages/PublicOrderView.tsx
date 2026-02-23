@@ -19,7 +19,11 @@ export default function PublicOrderView() {
     const [loading, setLoading] = useState(true);
 
     const isOwner = user?.uid === order?.user_id;
-    const canSeePrice = isAdmin || isOwner;
+    const isAdminOrder = order?.user_id === "oldiebutgoldie" || order?.user_email === "admin@discography.ai";
+    const canSeePrice = isAdmin || isOwner || isAdminOrder;
+
+    const [offerAmount, setOfferAmount] = useState<string>("");
+    const [showOfferInput, setShowOfferInput] = useState(false);
 
     useEffect(() => {
         const fetchOrder = async () => {
@@ -82,6 +86,64 @@ export default function PublicOrderView() {
 
         fetchOrder();
     }, [id]);
+
+    const handleBuyNow = async () => {
+        if (!id) return;
+        showLoading("Confirmando compra...");
+        try {
+            await updateDoc(doc(db, "orders", id), {
+                status: "venta_finalizada",
+                purchased_by: user?.uid || "guest",
+                purchased_at: serverTimestamp()
+            });
+            setOrder((prev: any) => ({ ...prev, status: "venta_finalizada" }));
+        } catch (error) {
+            console.error("Buy error:", error);
+            alert("Hubo un error al procesar tu compra. Por favor intenta nuevamente o contáctanos por WhatsApp.");
+        } finally {
+            hideLoading();
+        }
+    };
+
+    const handleMakeOffer = async () => {
+        if (!id) return;
+        const offerVal = parseFloat(offerAmount);
+        if (isNaN(offerVal) || offerVal <= 0) return;
+
+        showLoading("Enviando oferta...");
+        try {
+            const currentCurrency = order.adminCurrency || order.currency || order.details?.currency || "ARS";
+            await updateDoc(doc(db, "orders", id), {
+                totalPrice: offerVal,
+                status: "contraoferta_usuario",
+                negotiationHistory: arrayUnion({
+                    price: offerVal,
+                    currency: currentCurrency,
+                    sender: "user",
+                    timestamp: new Date(),
+                    message: "Oferta directa del catálogo"
+                })
+            });
+            setOrder((prev: any) => ({
+                ...prev,
+                totalPrice: offerVal,
+                status: "contraoferta_usuario",
+                negotiationHistory: [...(prev.negotiationHistory || []), {
+                    price: offerVal,
+                    currency: currentCurrency,
+                    sender: "user",
+                    timestamp: new Date(),
+                    message: "Oferta directa del catálogo"
+                }]
+            }));
+            setShowOfferInput(false);
+        } catch (error) {
+            console.error("Offer error:", error);
+            alert("Hubo un error al enviar tu oferta.");
+        } finally {
+            hideLoading();
+        }
+    };
 
     if (loading) {
         return (
@@ -162,7 +224,16 @@ export default function PublicOrderView() {
                         <Link to="/actividad" className="inline-flex items-center gap-2 text-[10px] font-black uppercase text-gray-500 hover:text-white transition-colors">
                             <ChevronLeft className="w-4 h-4" /> {TEXTS.navigation.activity}
                         </Link>
-                        <h1 className="text-4xl md:text-5xl font-display font-black text-white hover:text-primary transition-colors tracking-tightest leading-none">
+
+                        {isAdminOrder && (
+                            <div className="inline-flex items-center px-4 py-1.5 rounded-full bg-gradient-to-r from-yellow-500/20 to-yellow-700/20 border border-yellow-500/50">
+                                <span className="text-yellow-500 font-black uppercase tracking-[0.2em] text-[10px] animate-pulse">
+                                    ★ Disponible Ahora
+                                </span>
+                            </div>
+                        )}
+
+                        <h1 className={`text-4xl md:text-5xl font-display font-black tracking-tightest leading-none transition-colors ${isAdminOrder ? 'bg-gradient-to-r from-yellow-200 via-yellow-500 to-yellow-700 bg-clip-text text-transparent drop-shadow-xl' : 'text-white hover:text-primary'}`}>
                             {TEXTS.common.batchDetail}
                         </h1>
 
@@ -185,9 +256,9 @@ export default function PublicOrderView() {
                     </div>
 
                     {order.thumbnailUrl && (
-                        <div className="w-24 h-24 md:w-32 md:h-32 rounded-2xl overflow-hidden bg-white/5 border border-white/10 shadow-2xl flex-shrink-0">
+                        <div className={`w-24 h-24 md:w-32 md:h-32 rounded-2xl overflow-hidden bg-white/5 border shadow-2xl flex-shrink-0 ${isAdminOrder ? 'border-yellow-500/50 shadow-yellow-500/20 scale-110 md:w-48 md:h-48' : 'border-white/10'}`}>
                             <img
-                                src={order.thumbnailUrl}
+                                src={isAdminOrder ? (order.imageUrl || order.details?.cover_image || order.thumbnailUrl) : order.thumbnailUrl}
                                 alt="Lote reference"
                                 className="w-full h-full object-cover"
                                 loading="lazy"
@@ -223,9 +294,18 @@ export default function PublicOrderView() {
                                         {item.artist && (
                                             <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">{item.artist}</p>
                                         )}
+
+                                        {isAdminOrder && item.condition && (
+                                            <div className="mt-1 flex items-center gap-2 text-[10px] font-mono text-gray-400">
+                                                <span className="text-yellow-500/70">Media: {item.condition.split('/')[0] || item.condition}</span>
+                                                {item.condition.includes('/') && <span className="text-gray-600">|</span>}
+                                                {item.condition.includes('/') && <span className="text-yellow-500/70">Cover: {item.condition.split('/')[1]}</span>}
+                                            </div>
+                                        )}
+
                                         <div className="flex flex-wrap gap-2 mt-2">
                                             <span className="bg-gray-800 text-gray-300 px-2 py-1 text-[9px] font-black uppercase rounded">{item.format}</span>
-                                            <span className="bg-blue-900/30 text-blue-400 px-2 py-1 text-[9px] font-black uppercase rounded border border-blue-500/20">{item.condition}</span>
+                                            {!isAdminOrder && <span className="bg-blue-900/30 text-blue-400 px-2 py-1 text-[9px] font-black uppercase rounded border border-blue-500/20">{item.condition}</span>}
                                         </div>
                                     </motion.div>
                                 ))}
@@ -291,6 +371,59 @@ export default function PublicOrderView() {
                             );
                         })()}
                     </div>
+
+                    {/* Transactional Action Buttons (BUY NOW / MAKE OFFER) */}
+                    {isAdminOrder && !['venta_finalizada', 'completed', 'cancelled'].includes(order.status) && (
+                        <div className="mt-8 p-6 md:p-8 bg-gradient-to-br from-yellow-500/10 to-orange-600/10 border border-yellow-500/30 rounded-[2.5rem] flex flex-col md:flex-row items-center gap-6 justify-between shadow-[0_0_30px_rgba(234,179,8,0.1)]">
+                            <div className="space-y-2 text-center md:text-left">
+                                <h4 className="text-xl font-display font-black text-white uppercase tracking-tight">Adquirir Coleccionable</h4>
+                                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Asegura esta pieza antes que otro coleccionista</p>
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row w-full md:w-auto gap-4">
+                                {showOfferInput ? (
+                                    <div className="flex items-center gap-2 bg-black/40 p-2 rounded-2xl border border-white/10 flex-1 md:flex-none">
+                                        <span className="text-gray-500 font-bold pl-3">$</span>
+                                        <input
+                                            type="number"
+                                            placeholder="Tu Oferta"
+                                            value={offerAmount}
+                                            onChange={(e) => setOfferAmount(e.target.value)}
+                                            className="bg-transparent border-none text-white font-black w-24 focus:ring-0 outline-none placeholder:text-gray-600"
+                                            autoFocus
+                                        />
+                                        <button
+                                            onClick={handleMakeOffer}
+                                            disabled={!offerAmount}
+                                            className="px-4 py-2 bg-orange-500 hover:bg-orange-400 disabled:opacity-50 text-black font-black uppercase tracking-widest text-[10px] rounded-xl transition-all"
+                                        >
+                                            Enviar
+                                        </button>
+                                        <button
+                                            onClick={() => setShowOfferInput(false)}
+                                            className="px-3 py-2 text-gray-500 hover:text-white transition-colors"
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <button
+                                        onClick={() => setShowOfferInput(true)}
+                                        className="px-6 py-4 rounded-2xl border border-yellow-500/30 text-yellow-500 font-black uppercase tracking-widest text-[10px] hover:bg-yellow-500/10 transition-all text-center flex-1 md:flex-none"
+                                    >
+                                        Hacer Oferta (Regatear)
+                                    </button>
+                                )}
+
+                                <button
+                                    onClick={handleBuyNow}
+                                    className="px-8 py-4 rounded-2xl bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-black font-black uppercase tracking-widest text-xs shadow-xl shadow-orange-500/20 hover:shadow-orange-500/40 transition-all text-center flex-1 md:flex-none transform hover:-translate-y-1"
+                                >
+                                    ¡Comprar Ahora!
+                                </button>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Metadata Footer */}
                     <div className="p-8 rounded-[2.5rem] bg-white/[0.02] border border-white/5 flex flex-col md:flex-row justify-between gap-8 items-start md:items-center">
