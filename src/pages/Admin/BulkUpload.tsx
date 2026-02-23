@@ -23,6 +23,9 @@ interface ParsedRow {
     selectedMatch: DiscogsSearchResult | null;
     manualId?: string;
     published?: boolean;
+    inBatch?: boolean;
+    page?: number;
+    hasMore?: boolean;
 }
 
 const STAGING_KEY = "stitch_bulk_upload_staging";
@@ -33,6 +36,8 @@ export default function BulkUpload() {
     const [rows, setRows] = useState<ParsedRow[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
     const [progress, setProgress] = useState(0);
+    const [showBatchModal, setShowBatchModal] = useState(false);
+    const [batchPrice, setBatchPrice] = useState<number>(0);
 
     // Initial Load from localStorage
     useEffect(() => {
@@ -122,22 +127,27 @@ export default function BulkUpload() {
             };
         }).filter(r => r.originalTitle || r.originalArtist);
 
-        setRows(initialRows);
-        await processRowsInBatches(initialRows);
+        const appendedRows = [...rows, ...initialRows];
+        setRows(appendedRows);
+        await processRowsInBatches(initialRows, appendedRows);
     };
 
-    const processRowsInBatches = async (items: ParsedRow[]) => {
+    const processRowsInBatches = async (itemsToProcess: ParsedRow[], currentTotalRows: ParsedRow[]) => {
         const CHUNK_SIZE = 5;
-        const newRows = [...items];
+        let newRows = [...currentTotalRows];
 
-        for (let i = 0; i < newRows.length; i += CHUNK_SIZE) {
-            const chunk = newRows.slice(i, i + CHUNK_SIZE);
+        for (let i = 0; i < itemsToProcess.length; i += CHUNK_SIZE) {
+            const chunk = itemsToProcess.slice(i, i + CHUNK_SIZE);
 
             await Promise.all(chunk.map(async (row) => {
                 const rowIndex = newRows.findIndex(r => r.id === row.id);
                 try {
                     const query = `${row.originalArtist} ${row.originalTitle}`.trim();
-                    const { results } = await discogsService.searchReleases(query, 1, undefined, "release", "vinyl");
+                    const response = await discogsService.searchReleases(query, 1, undefined, "release", "vinyl");
+                    const results = response.results;
+
+                    newRows[rowIndex].page = 1;
+                    newRows[rowIndex].hasMore = response.pagination?.pages > 1;
 
                     if (results && results.length > 0) {
                         if (results.length === 1 || results[0].title.toLowerCase().includes(row.originalTitle.toLowerCase())) {
@@ -157,13 +167,33 @@ export default function BulkUpload() {
             }));
 
             setRows([...newRows]);
-            setProgress(Math.round(((i + chunk.length) / newRows.length) * 100));
-            if (i + CHUNK_SIZE < newRows.length) {
+            setProgress(Math.round(((i + chunk.length) / itemsToProcess.length) * 100));
+            if (i + CHUNK_SIZE < itemsToProcess.length) {
                 await new Promise(resolve => setTimeout(resolve, 1500));
             }
         }
 
         setIsProcessing(false);
+    };
+
+    const handleLoadMoreVersions = async (rowId: string) => {
+        const rowIndex = rows.findIndex(r => r.id === rowId);
+        if (rowIndex === -1) return;
+        const row = rows[rowIndex];
+
+        try {
+            const query = `${row.originalArtist} ${row.originalTitle}`.trim();
+            const nextPage = (row.page || 1) + 1;
+            const response = await discogsService.searchReleases(query, nextPage, undefined, "release", "vinyl");
+
+            const newRows = [...rows];
+            newRows[rowIndex].results = [...newRows[rowIndex].results, ...response.results];
+            newRows[rowIndex].page = nextPage;
+            newRows[rowIndex].hasMore = response.pagination?.pages > nextPage;
+            setRows(newRows);
+        } catch (error) {
+            console.error("Error loading more versions", error);
+        }
     };
 
     const handleManualSearch = async (rowId: string, manualId: string) => {
@@ -194,56 +224,101 @@ export default function BulkUpload() {
         }
     };
 
-    const handlePublish = async () => {
-        const approved = rows.filter(r => r.status === "MATCH_FOUND" && r.selectedMatch && !r.published);
-        if (approved.length === 0) return;
+    const handlePublishStrategy = async (strategy: "INDIVIDUAL" | "BUNDLE") => {
+        const batchItems = rows.filter(r => r.inBatch && r.status === "MATCH_FOUND" && r.selectedMatch && !r.published);
+        if (batchItems.length === 0) return;
 
-        showLoading(`Publicando ${approved.length} discos...`);
+        setShowBatchModal(false);
+        showLoading(`Publicando ${batchItems.length} discos...`);
         let newRows = [...rows];
         let publishCount = 0;
 
         try {
-            for (const row of approved) {
-                const match = row.selectedMatch!;
+            if (strategy === "INDIVIDUAL") {
+                for (const row of batchItems) {
+                    const match = row.selectedMatch!;
+                    const orderData = {
+                        title: match.title,
+                        cover_image: match.cover_image,
+                        totalPrice: row.originalPrice,
+                        status: "store_offer",
+                        is_admin_offer: true,
+                        user_id: "oldiebutgoldie",
+                        user_email: "admin@discography.ai",
+                        user_name: "Stitch Admin",
+                        view_count: 0,
+                        currency: row.originalCurrency || "ARS",
+                        details: match,
+                        timestamp: serverTimestamp(),
+                        createdAt: serverTimestamp(),
+                        items: [{
+                            id: match.id.toString(),
+                            title: match.title,
+                            artist: match.title.split('-')[0]?.trim() || "Desconocido",
+                            format: match.format?.[0] || "Vinyl",
+                            condition: `${row.originalMedia} / ${row.originalCover}`,
+                            image: match.cover_image,
+                            price: row.originalPrice,
+                            timestamp: new Date()
+                        }]
+                    };
+
+                    await addDoc(collection(db, "orders"), orderData);
+                    const rIndex = newRows.findIndex(r => r.id === row.id);
+                    newRows[rIndex].published = true;
+                    newRows[rIndex].inBatch = false;
+                    publishCount++;
+                }
+            } else {
+                const finalBatchPrice = batchPrice || batchItems.reduce((acc, curr) => acc + curr.originalPrice, 0);
+                const firstMatch = batchItems[0].selectedMatch!;
                 const orderData = {
-                    title: match.title,
-                    cover_image: match.cover_image,
-                    totalPrice: row.originalPrice,
+                    title: `Lote de ${batchItems.length} Discos`,
+                    cover_image: firstMatch.cover_image,
+                    totalPrice: finalBatchPrice,
                     status: "store_offer",
                     is_admin_offer: true,
+                    is_batch: true,
                     user_id: "oldiebutgoldie",
                     user_email: "admin@discography.ai",
                     user_name: "Stitch Admin",
                     view_count: 0,
-                    currency: row.originalCurrency || "ARS",
-                    details: match,
+                    currency: "ARS",
                     timestamp: serverTimestamp(),
                     createdAt: serverTimestamp(),
-                    items: [{
-                        id: match.id.toString(),
-                        title: match.title,
-                        artist: match.title.split('-')[0]?.trim() || "Desconocido",
-                        format: match.format?.[0] || "Vinyl",
-                        condition: `${row.originalMedia} / ${row.originalCover}`,
-                        image: match.cover_image,
-                        price: row.originalPrice,
-                        timestamp: new Date()
-                    }]
+                    items: batchItems.map(row => {
+                        const match = row.selectedMatch!;
+                        return {
+                            id: match.id.toString(),
+                            title: match.title,
+                            artist: match.title.split('-')[0]?.trim() || "Desconocido",
+                            format: match.format?.[0] || "Vinyl",
+                            condition: `${row.originalMedia} / ${row.originalCover}`,
+                            image: match.cover_image,
+                            price: row.originalPrice,
+                            timestamp: new Date()
+                        };
+                    })
                 };
 
                 await addDoc(collection(db, "orders"), orderData);
-                const rIndex = newRows.findIndex(r => r.id === row.id);
-                newRows[rIndex].published = true;
-                publishCount++;
+                batchItems.forEach(row => {
+                    const rIndex = newRows.findIndex(r => r.id === row.id);
+                    newRows[rIndex].published = true;
+                    newRows[rIndex].inBatch = false;
+                    publishCount++;
+                });
             }
+
             setRows(newRows);
-            pushBulkUploadCompleted(publishCount); // GA4 Analytics Trigger
-            alert(`¡Se publicaron ${publishCount} discos exitosamente al catálogo!`);
+            pushBulkUploadCompleted(publishCount);
+            alert(`¡Se publicaron exitosamente al catálogo!`);
         } catch (error) {
             console.error("Publish error", error);
             alert("Hubo un error al publicar algunos discos.");
         } finally {
             hideLoading();
+            setBatchPrice(0);
         }
     };
 
@@ -261,10 +336,18 @@ export default function BulkUpload() {
                 <div className="flex items-center gap-4">
                     {rows.some(r => r.status === "MATCH_FOUND" && !r.published) ? (
                         <button
-                            onClick={handlePublish}
-                            className="px-8 py-4 rounded-2xl bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-black font-black uppercase tracking-widest text-xs shadow-xl shadow-green-500/20 hover:shadow-green-500/40 transition-all flex items-center justify-center gap-2 transform hover:-translate-y-1"
+                            onClick={() => {
+                                const newRows = [...rows];
+                                newRows.forEach(r => {
+                                    if (r.status === "MATCH_FOUND" && !r.published) {
+                                        r.inBatch = true;
+                                    }
+                                });
+                                setRows(newRows);
+                            }}
+                            className="px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-400 hover:to-indigo-500 text-white font-black uppercase tracking-widest text-xs shadow-xl transition-all flex items-center justify-center gap-2"
                         >
-                            <Upload className="w-4 h-4" /> Publicar Seleccionados
+                            <List className="w-4 h-4" /> Encolar Todos al Lote
                         </button>
                     ) : (
                         <button
@@ -381,22 +464,37 @@ export default function BulkUpload() {
                                             <CheckCircle2 className="w-4 h-4" /> Publicado
                                         </div>
                                     ) : row.status === 'MATCH_FOUND' && row.selectedMatch ? (
-                                        <div className="flex items-center gap-4">
-                                            <img src={row.selectedMatch.thumb} alt="Cover" className="w-16 h-16 rounded-xl object-cover shadow-lg" />
-                                            <div>
-                                                <p className="text-xs font-bold text-white line-clamp-2">{row.selectedMatch.title}</p>
-                                                <div className="flex items-center gap-2 mt-1">
-                                                    <span className="px-2 py-0.5 bg-white/10 rounded text-[9px] font-mono text-gray-300">ID: {row.selectedMatch.id}</span>
-                                                    {row.selectedMatch.year && <span className="px-2 py-0.5 bg-white/10 rounded text-[9px] font-mono text-gray-300">{row.selectedMatch.year}</span>}
+                                        <div className="flex flex-col gap-3 h-full justify-between">
+                                            <div className="flex items-center gap-4">
+                                                <img src={row.selectedMatch.thumb} alt="Cover" className="w-16 h-16 rounded-xl object-cover shadow-lg" />
+                                                <div className="flex-1">
+                                                    <p className="text-xs font-bold text-white line-clamp-2">{row.selectedMatch.title}</p>
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        <span className="px-2 py-0.5 bg-white/10 rounded text-[9px] font-mono text-gray-300">ID: {row.selectedMatch.id}</span>
+                                                        {row.selectedMatch.year && <span className="px-2 py-0.5 bg-white/10 rounded text-[9px] font-mono text-gray-300">{row.selectedMatch.year}</span>}
+                                                    </div>
                                                 </div>
                                             </div>
+                                            <button
+                                                onClick={() => {
+                                                    const newRows = [...rows];
+                                                    newRows[index].inBatch = !newRows[index].inBatch;
+                                                    setRows(newRows);
+                                                }}
+                                                className={`w-full py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${row.inBatch
+                                                    ? "bg-primary/20 text-primary border border-primary/30"
+                                                    : "bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white border border-white/10"
+                                                    }`}
+                                            >
+                                                {row.inBatch ? "✔ Encolado" : "+ Añadir a Lote"}
+                                            </button>
                                         </div>
                                     ) : row.status === 'AMBIGUOUS' ? (
-                                        <div className="space-y-3">
-                                            <p className="text-[10px] font-black uppercase text-yellow-500 tracking-widest flex items-center gap-1">
+                                        <div className="space-y-3 flex flex-col h-[220px]">
+                                            <p className="text-[10px] font-black uppercase text-yellow-500 tracking-widest flex items-center gap-1 shrink-0">
                                                 <AlertCircle className="w-3 h-3" /> Selector de Versión
                                             </p>
-                                            <div className="space-y-2">
+                                            <div className="space-y-2 overflow-y-auto pr-1 flex-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
                                                 {row.results.map(res => (
                                                     <button
                                                         key={`ambig-${res.id}`}
@@ -406,7 +504,7 @@ export default function BulkUpload() {
                                                             newRows[index].status = 'MATCH_FOUND';
                                                             setRows(newRows);
                                                         }}
-                                                        className="w-full text-left p-2 rounded-xl bg-black/40 hover:bg-black/60 border border-white/5 flex items-center gap-3 transition-colors group/btn"
+                                                        className="w-full text-left p-2 rounded-xl bg-black/40 backdrop-blur-md hover:bg-white/10 border border-white/5 flex items-center gap-3 transition-colors group/btn"
                                                     >
                                                         <img src={res.thumb} className="w-8 h-8 rounded-lg object-cover" />
                                                         <div className="flex-1 truncate">
@@ -414,6 +512,14 @@ export default function BulkUpload() {
                                                         </div>
                                                     </button>
                                                 ))}
+                                                {row.hasMore && (
+                                                    <button
+                                                        onClick={() => handleLoadMoreVersions(row.id)}
+                                                        className="w-full py-2 text-[10px] font-bold text-yellow-500/70 hover:text-yellow-500 uppercase tracking-widest bg-yellow-500/5 hover:bg-yellow-500/10 rounded-xl transition-colors mt-2 border border-yellow-500/10"
+                                                    >
+                                                        Cargar más +
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                     ) : (
@@ -442,6 +548,96 @@ export default function BulkUpload() {
                                 </div>
                             </div>
                         ))}
+                    </div>
+                </div>
+            )}
+
+            {/* The Batch Tray */}
+            {rows.some(r => r.inBatch) && (
+                <div className="fixed bottom-0 left-0 right-0 bg-black/80 backdrop-blur-xl border-t border-white/10 p-4 md:p-6 z-50 animate-in slide-in-from-bottom">
+                    <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-primary/20 rounded-xl flex items-center justify-center border border-primary/30 text-primary">
+                                <List className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <h4 className="text-white font-black uppercase tracking-tight">The Batch Tray</h4>
+                                <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">{rows.filter(r => r.inBatch).length} Ítems seleccionados</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-4 w-full md:w-auto">
+                            <button
+                                onClick={() => {
+                                    const newRows = [...rows];
+                                    newRows.forEach(r => r.inBatch = false);
+                                    setRows(newRows);
+                                }}
+                                className="px-4 py-3 rounded-xl border border-white/10 text-white text-xs font-bold uppercase hover:bg-white/5 transition-colors"
+                            >
+                                Limpiar Lote
+                            </button>
+                            <button
+                                onClick={() => setShowBatchModal(true)}
+                                className="flex-1 md:flex-none px-8 py-3 rounded-xl bg-primary text-black font-black uppercase text-xs tracking-widest hover:brightness-110 hover:scale-[1.02] transition-all shadow-xl shadow-primary/20"
+                            >
+                                Configurar Salida
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Publish Strategy Modal */}
+            {showBatchModal && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in">
+                    <div className="w-full max-w-lg bg-gray-900 border border-white/10 rounded-3xl p-8 space-y-8 relative shadow-2xl">
+                        <button onClick={() => setShowBatchModal(false)} className="absolute top-6 right-6 text-gray-400 hover:text-white">
+                            <span className="text-2xl font-black">&times;</span>
+                        </button>
+
+                        <div>
+                            <h3 className="text-2xl font-black text-white uppercase flex items-center gap-3 tracking-tight">
+                                Estrategia de Salida
+                            </h3>
+                            <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-2">{rows.filter(r => r.inBatch).length} discos en el lote</p>
+                        </div>
+
+                        <div className="space-y-4">
+                            <button
+                                onClick={() => handlePublishStrategy("INDIVIDUAL")}
+                                className="w-full text-left p-6 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 transition-all group"
+                            >
+                                <h4 className="flex items-center gap-2 text-white font-black uppercase tracking-tight group-hover:text-primary transition-colors">
+                                    Modo Individual
+                                </h4>
+                                <p className="text-xs text-gray-500 font-bold mt-2">Crear una orden de venta independiente para cada disco seleccionado en la base de datos.</p>
+                            </button>
+
+                            <div className="w-full text-left p-6 rounded-2xl border border-primary/30 bg-primary/5 transition-all space-y-4">
+                                <div>
+                                    <h4 className="text-primary font-black uppercase tracking-tight">Modo Lote Especial</h4>
+                                    <p className="text-xs text-primary/70 font-bold mt-1 max-w-[90%]">Generar una única orden agrupando todos los discos. ¡Ideal para lotes DJ!</p>
+                                </div>
+                                <div className="space-y-2 pt-2 border-t border-primary/20">
+                                    <label className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Ajuste de Precio Total</label>
+                                    <div className="flex items-center gap-2 bg-black/50 border border-white/10 rounded-xl px-4 py-2 focus-within:border-primary transition-colors">
+                                        <span className="text-white font-mono">$</span>
+                                        <input
+                                            type="number"
+                                            value={batchPrice || rows.filter(r => r.inBatch).reduce((acc, curr) => acc + curr.originalPrice, 0)}
+                                            onChange={(e) => setBatchPrice(parseFloat(e.target.value))}
+                                            className="flex-1 bg-transparent text-white font-mono outline-none w-full"
+                                        />
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => handlePublishStrategy("BUNDLE")}
+                                    className="w-full mt-4 py-4 rounded-xl bg-primary text-black font-black uppercase text-xs tracking-widest transition-all hover:bg-white shadow-xl shadow-primary/20"
+                                >
+                                    Publicar Lote ({rows.filter(r => r.inBatch).length})
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}
