@@ -3,7 +3,8 @@ import { db } from "@/lib/firebase";
 import { collection, query, orderBy, limit, getDocs, Timestamp, where } from "firebase/firestore";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Activity, Globe, Search, ShoppingBag, PieChart, DollarSign, TrendingUp, BadgeDollarSign } from "lucide-react";
+import { MapPin, Activity, Globe, Search, ShoppingBag, PieChart, DollarSign, TrendingUp, BadgeDollarSign, UploadCloud } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useLoading } from "@/context/LoadingContext";
 
 interface InteractionEvent {
@@ -135,11 +136,23 @@ export default function AnalyticsDashboard() {
 
     return (
         <div className="space-y-12">
-            <header>
-                <h1 className="text-6xl font-display font-black text-white tracking-tightest leading-none">
-                    Global <span className="text-primary">Intelligence</span>
-                </h1>
-                <p className="text-gray-500 mt-4 text-lg font-medium">Real-time telemetry and user interaction signals.</p>
+            <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div>
+                    <h1 className="text-6xl font-display font-black text-white tracking-tightest leading-none">
+                        Global <span className="text-primary">Intelligence</span>
+                    </h1>
+                    <p className="text-gray-500 mt-4 text-lg font-bold uppercase tracking-widest">Real-time telemetry and user interaction signals.</p>
+                </div>
+
+                <Link to="/admin/bulk-upload" className="flex items-center gap-4 bg-gradient-to-r from-green-500 to-emerald-600 p-6 rounded-[2rem] hover:from-green-400 hover:to-emerald-500 hover:scale-105 transition-all shadow-2xl shadow-green-500/20 group">
+                    <div className="bg-black/20 p-4 rounded-2xl group-hover:rotate-12 transition-transform">
+                        <UploadCloud className="w-8 h-8 text-black" />
+                    </div>
+                    <div>
+                        <h3 className="text-black font-black text-2xl leading-none uppercase tracking-tight">Subir Stock Masivo</h3>
+                        <p className="text-black/70 font-bold text-[10px] mt-1 uppercase tracking-widest">Carga tus 300 vinilos usando el motor Stitch</p>
+                    </div>
+                </Link>
             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
