@@ -85,3 +85,17 @@ export const pushWhatsAppContactFromOrder = (order: any) => {
         });
     }
 };
+
+export const pushHotOrderDetected = (order: any, viewCount: number) => {
+    if (typeof window !== 'undefined') {
+        window.dataLayer = window.dataLayer || [];
+
+        window.dataLayer.push({
+            'event': 'hot_order_detected',
+            'item_id': order.item_id?.toString() || order.id || 'N/A',
+            'item_name': order.details?.album || order.title || 'Unknown',
+            'view_count': viewCount,
+            'status': order.status
+        });
+    }
+};

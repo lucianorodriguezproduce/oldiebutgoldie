@@ -85,6 +85,7 @@ interface OrderDoc {
 }
 
 type StatusFilter = "all" | "pending" | "negotiating" | "completed" | "cancelled" | "quoted";
+type SortOption = "default" | "popularity";
 
 const STATUS_OPTIONS = [
     { value: "pending", label: "Pendiente", icon: Clock, color: "text-yellow-500", bg: "bg-yellow-500/10 border-yellow-500/20" },
@@ -107,6 +108,7 @@ export default function AdminOrders() {
     const [orders, setOrders] = useState<OrderDoc[]>([]);
     const [loading, setLoading] = useState(true);
     const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+    const [sortBy, setSortBy] = useState<SortOption>("default");
 
     // Drawer state
     const [selectedOrder, setSelectedOrder] = useState<OrderDoc | null>(null);
@@ -336,6 +338,12 @@ export default function AdminOrders() {
         : orders.filter(o => o.status === statusFilter);
 
     const sortedOrders = [...filteredOrders].sort((a, b) => {
+        if (sortBy === "popularity") {
+            const aViews = a.view_count || 0;
+            const bViews = b.view_count || 0;
+            if (aViews !== bViews) return bViews - aViews;
+        }
+
         const aLast = a.negotiationHistory?.[a.negotiationHistory.length - 1];
         const bLast = b.negotiationHistory?.[b.negotiationHistory.length - 1];
         const aRequiresAction = aLast?.sender === 'user' ? 1 : 0;
