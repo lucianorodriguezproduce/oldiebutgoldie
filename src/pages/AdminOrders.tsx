@@ -79,6 +79,9 @@ interface OrderDoc {
     isBatch?: boolean;
     items?: any[];
     type?: 'buy' | 'sell';
+    view_count?: number;
+    last_viewed_at?: any;
+    unique_visitors?: string[];
 }
 
 type StatusFilter = "all" | "pending" | "negotiating" | "completed" | "cancelled" | "quoted";

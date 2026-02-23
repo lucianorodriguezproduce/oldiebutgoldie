@@ -17,7 +17,9 @@ import {
     Trash2,
     Disc,
     ChevronRight,
-    MessageCircle
+    MessageCircle,
+    Eye,
+    Flame
 } from 'lucide-react';
 import { TEXTS } from '@/constants/texts';
 import { useAuth } from '@/context/AuthContext';
@@ -205,6 +207,13 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
         );
     };
 
+    const isHot = context === 'admin' && (order.view_count || 0) > 5 &&
+        (order.last_viewed_at?.seconds
+            ? (Date.now() - order.last_viewed_at.seconds * 1000) < 86400000
+            : (order.createdAt?.seconds
+                ? (Date.now() - order.createdAt.seconds * 1000) < 86400000
+                : false));
+
     return (
         <motion.article
             initial={{ opacity: 0, y: 15 }}
@@ -214,7 +223,7 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
             className={`
                 group relative bg-white/[0.02] border rounded-[1.5rem] overflow-hidden transition-all duration-300
                 ${context !== 'public' ? 'cursor-pointer hover:border-primary/30' : 'hover:border-white/10'}
-                ${order.admin_offer_price ? "border-purple-500/20" : "border-white/5"}
+                ${isHot ? "border-orange-500/50 shadow-[0_0_15px_rgba(249,115,22,0.15)]" : (order.admin_offer_price ? "border-purple-500/20" : "border-white/5")}
             `}
         >
             {/* Context Badge Corner */}
@@ -255,11 +264,19 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
 
                 {/* Details Section */}
                 <div className="flex-1 min-w-0 space-y-3 w-full">
-                    {order.order_number && (
-                        <span className="inline-flex items-center gap-1.5 text-[9px] font-mono font-bold text-gray-500 uppercase tracking-wider">
-                            <Hash className="h-3 w-3" /> {order.order_number}
-                        </span>
-                    )}
+                    <div className="flex items-center gap-3">
+                        {order.order_number && (
+                            <span className="inline-flex items-center gap-1.5 text-[9px] font-mono font-bold text-gray-500 uppercase tracking-wider">
+                                <Hash className="h-3 w-3" /> {order.order_number}
+                            </span>
+                        )}
+                        {context === 'admin' && (order.view_count !== undefined) && order.view_count > 0 && (
+                            <span className={`inline-flex items-center gap-1 text-[9px] font-mono font-bold uppercase tracking-wider ${isHot ? 'text-orange-400' : 'text-gray-500'}`} title={`Vistas: ${order.view_count}`}>
+                                <Eye className="h-3 w-3" /> {order.view_count}
+                                {isHot && <Flame className="h-3 w-3 ml-0.5" />}
+                            </span>
+                        )}
+                    </div>
 
                     <h4 className={`text-lg md:text-xl font-display font-black text-white uppercase tracking-tight truncate ${context !== 'public' ? 'group-hover:text-primary transition-colors' : ''}`}>
                         {artist} — <span className="text-gray-400">{title}</span>

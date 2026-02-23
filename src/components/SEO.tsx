@@ -8,6 +8,7 @@ interface SEOProps {
     url?: string;
     type?: string;
     schema?: Record<string, any>;
+    status?: string;
 }
 
 export function SEO({
@@ -21,7 +22,13 @@ export function SEO({
     const currentUrl = url || (typeof window !== 'undefined' ? window.location.href : 'https://oldiebutgoldie.com.ar');
 
     // Make sure image is an absolute HTTPS URL if it isn't already
-    const ogImage = image.startsWith('http') ? image : `https://oldiebutgoldie.com.ar${image.startsWith('/') ? '' : '/'}${image}`;
+    let ogImage = image.startsWith('http') ? image : `https://oldiebutgoldie.com.ar${image.startsWith('/') ? '' : '/'}${image}`;
+
+    // SocialPreviewManager Logic
+    if (status && ['pending', 'quoted'].includes(status.toLowerCase())) {
+        const encodedImageUrl = encodeURIComponent(ogImage);
+        ogImage = `https://res.cloudinary.com/demo/image/fetch/w_800,h_800,c_fill,e_brightness:-20/l_text:Arial_50_bold_center:%C2%A1Negociaci%C3%B3n%20Abierta!,co_white,g_south,y_40/${encodedImageUrl}`;
+    }
 
     const defaultSchema = {
         "@context": "https://schema.org",

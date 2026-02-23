@@ -59,6 +59,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         image = image.replace('http://', 'https://');
                     }
 
+                    const status = fields.status?.stringValue || 'PENDIENTE';
+                    const intent = fields.details?.mapValue?.fields?.intent?.stringValue || 'CONSULTAR';
+                    const intentStr = intent.toUpperCase() === 'VENDER' ? 'En Venta' : 'En Compra';
+
+                    // SocialPreviewManager Logic
+                    const isNegotiating = ['pending', 'quoted'].includes(status.toLowerCase());
+                    let finalImage = image;
+                    if (isNegotiating) {
+                        const encodedImageUrl = encodeURIComponent(image);
+                        finalImage = `https://res.cloudinary.com/demo/image/fetch/w_800,h_800,c_fill,e_brightness:-20/l_text:Arial_50_bold_center:%C2%A1Negociaci%C3%B3n%20Abierta!,co_white,g_south,y_40/${encodedImageUrl}`;
+                    }
+
                     const artist = fields.details?.mapValue?.fields?.artist?.stringValue || '';
                     const album = fields.details?.mapValue?.fields?.album?.stringValue || 'Unknown Title';
                     const itemsCount = fields.items?.arrayValue?.values?.length || 0;
@@ -70,13 +82,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         title = artist ? `${artist} - ${album} | Oldie but Goldie` : `${album} | Oldie but Goldie`;
                     }
 
-                    const status = fields.status?.stringValue || 'PENDIENTE';
-                    const intent = fields.details?.mapValue?.fields?.intent?.stringValue || 'CONSULTAR';
-                    const intentStr = intent.toUpperCase() === 'VENDER' ? 'En Venta' : 'En Compra';
+                    const description = `Orden de ${intentStr}: estado ${status.toUpperCase()}. ${isNegotiating ? "¡Participa en la negociación abierta!" : ""}`;
 
-                    const description = `Orden de ${intentStr}: estado ${status.toUpperCase()}.`;
-
-                    return serveFallback(res, title, description, image, url);
+                    return serveFallback(res, title, description, finalImage, url);
                 }
             } catch (e) {
                 console.error("Firebase prerender orden fetch failed: ", e);

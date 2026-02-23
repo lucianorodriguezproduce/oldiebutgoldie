@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, increment, arrayUnion, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { SEO } from "@/components/SEO";
 import { motion, AnimatePresence } from "framer-motion";
@@ -9,6 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useLoading } from "@/context/LoadingContext";
 import { formatDate, getReadableDate } from "@/utils/date";
 import { TEXTS } from "@/constants/texts";
+import { pushViewItemFromOrder } from "@/utils/analytics";
 
 export default function PublicOrderView() {
     const { id } = useParams<{ id: string }>();
@@ -41,7 +42,30 @@ export default function PublicOrderView() {
                 const docRef = doc(db, "orders", id);
                 const docSnap = await getDoc(docRef);
                 if (docSnap.exists()) {
-                    setOrder({ id: docSnap.id, ...docSnap.data() });
+                    const orderData = { id: docSnap.id, ...docSnap.data() };
+                    setOrder(orderData);
+
+                    // GA4 Tracking
+                    pushViewItemFromOrder(orderData);
+
+                    // Tracker de vistas
+                    try {
+                        const visitorId = user?.uid || (() => {
+                            let stored = localStorage.getItem('visitor_id');
+                            if (!stored) {
+                                stored = 'anon_' + Math.random().toString(36).substring(2, 9);
+                                localStorage.setItem('visitor_id', stored);
+                            }
+                            return stored;
+                        })();
+                        await updateDoc(docRef, {
+                            view_count: increment(1),
+                            unique_visitors: arrayUnion(visitorId),
+                            last_viewed_at: serverTimestamp()
+                        });
+                    } catch (e) {
+                        console.error("Tracker error:", e);
+                    }
                 }
             } catch (error) {
                 console.error("Error fetching order:", error);
@@ -125,6 +149,7 @@ export default function PublicOrderView() {
                 image={order.thumbnailUrl}
                 url={`https://oldiebutgoldie.com.ar/orden/${id}`}
                 schema={schemaMarkup}
+                status={order.status}
             />
 
             <div className="max-w-4xl mx-auto px-4 py-8 md:py-16 space-y-12">

@@ -3,6 +3,21 @@ declare global {
         dataLayer: any[];
     }
 }
+export const getSourceChannel = (): string => {
+    if (typeof window === 'undefined') return 'direct';
+    const params = new URLSearchParams(window.location.search);
+    const utmSource = params.get('utm_source')?.toLowerCase();
+
+    if (utmSource) return utmSource;
+
+    const ref = document.referrer.toLowerCase();
+    if (ref.includes('whatsapp.com')) return 'whatsapp';
+    if (ref.includes('facebook.com') || ref.includes('instagram.com')) return 'social_media';
+    if (ref.includes('google.')) return 'google_search';
+    if (ref) return 'referral';
+
+    return 'direct';
+};
 
 export const pushViewItem = (item: any, intent: string) => {
     if (typeof window !== 'undefined') {
@@ -48,7 +63,8 @@ export const pushViewItemFromOrder = (order: any) => {
                         'name': order.details?.album || 'Unknown',
                         'brand': order.details?.artist || 'Unknown',
                         'category': 'N/A', // Genre logic usually not stored statically in orders
-                        'variant': order.details?.intent || 'OBSERVANDO'
+                        'variant': order.details?.intent || 'OBSERVANDO',
+                        'Source_Channel': getSourceChannel()
                     }]
                 }
             }
@@ -64,7 +80,8 @@ export const pushWhatsAppContactFromOrder = (order: any) => {
             'event': 'whatsapp_contact',
             'item_id': order.item_id?.toString() || 'N/A',
             'item_name': order.details?.album || 'Unknown',
-            'intent': order.details?.intent || 'UNKNOWN'
+            'intent': order.details?.intent || 'UNKNOWN',
+            'Source_Channel': getSourceChannel()
         });
     }
 };

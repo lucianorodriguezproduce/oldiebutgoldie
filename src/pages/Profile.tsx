@@ -86,6 +86,9 @@ interface OrderItem {
     totalPrice?: number;
     currency?: string;
     type?: 'buy' | 'sell';
+    view_count?: number;
+    last_viewed_at?: any;
+    unique_visitors?: string[];
 }
 
 export default function Profile() {
