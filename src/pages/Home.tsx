@@ -635,9 +635,9 @@ export default function Home() {
                                             <div className="h-2 w-2 bg-primary animate-pulse rounded-full" />
                                             <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60">{TEXTS.home.systemVersion}</span>
                                         </div>
-                                        <h1 className="text-4xl md:text-7xl font-display font-black text-white uppercase tracking-tightest leading-[0.85]">
-                                            {TEXTS.home.searchTitle.split(' ')[0]} <br />
-                                            <span className="text-primary text-5xl md:text-8xl">{TEXTS.home.searchTitle.split(' ')[1]}</span>
+                                        <h1 className="text-4xl md:text-7xl font-display font-black text-white uppercase tracking-tightest leading-[0.85] px-4">
+                                            {TEXTS.home.searchTitle.split(' ').slice(0, 2).join(' ')} <br />
+                                            <span className="text-primary text-4xl md:text-6xl block mt-2">{TEXTS.home.searchTitle.split(' ').slice(2).join(' ')}</span>
                                         </h1>
                                     </motion.header>
                                 ) : (

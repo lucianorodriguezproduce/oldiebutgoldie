@@ -124,7 +124,7 @@ export default function EditorialManager() {
             <header className="flex items-end justify-between">
                 <div>
                     <h1 className="text-6xl font-display font-black text-white tracking-tightest leading-none">
-                        {TEXTS.admin.editorial.title.split(' ')[0]} <span className="text-primary">{TEXTS.admin.editorial.title.split(' ')[1]}</span>
+                        {TEXTS.admin.editorial.title.split(' ').slice(0, -1).join(' ')} <span className="text-primary">{TEXTS.admin.editorial.title.split(' ').slice(-1)}</span>
                     </h1>
                     <p className="text-gray-500 mt-4 text-lg font-medium max-w-2xl">{TEXTS.admin.editorial.description}</p>
                 </div>

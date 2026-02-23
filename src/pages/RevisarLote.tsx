@@ -240,7 +240,7 @@ export default function RevisarLote() {
                     <ChevronLeft className="h-5 w-5" />
                 </button>
                 <h1 className="text-4xl md:text-5xl font-display font-black text-white uppercase tracking-tighter">
-                    {TEXTS.common.batchReview.reviewBatch.split(' ')[0]} <span className="text-primary">{TEXTS.common.batchReview.reviewBatch.split(' ')[1]}</span>
+                    {TEXTS.common.batchReview.reviewBatch.split(' ').slice(0, -1).join(' ')} <span className="text-primary">{TEXTS.common.batchReview.reviewBatch.split(' ').slice(-1)}</span>
                 </h1>
             </header>
 

@@ -249,7 +249,11 @@ export default function Editorial() {
                     <div className="relative z-10 max-w-2xl space-y-6 md:space-y-8 text-center md:text-left">
                         <Badge className="bg-black text-white font-black uppercase tracking-widest px-4 md:px-6 py-1.5 md:py-2 rounded-full text-[8px] md:text-[10px] inline-block">{TEXTS.common.newsDesk}</Badge>
                         <h2 className="text-5xl md:text-[8rem] font-display font-black text-black tracking-tighter leading-[0.9] md:leading-[0.85] uppercase">
-                            {TEXTS.common.joinProtocol.split(' ')[0]} <br />{TEXTS.common.joinProtocol.split(' ')[1]} <br />{TEXTS.common.joinProtocol.split(' ')[2]}
+                            {TEXTS.common.joinProtocol.split(' ').map((word, i, arr) => (
+                                <span key={i}>
+                                    {word}{i < arr.length - 1 && <br />}
+                                </span>
+                            ))}
                         </h2>
                         <p className="text-black/70 text-lg md:text-2xl font-bold leading-relaxed max-w-lg mx-auto md:mx-0">{TEXTS.common.highFidelityDespatches}</p>
                     </div>

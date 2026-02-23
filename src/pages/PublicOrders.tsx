@@ -40,7 +40,6 @@ export default function PublicOrders() {
         <div className="min-h-screen bg-black pt-12">
             <SEO
                 title={TEXTS.common.publicActivity.activityTitle}
-                description={TEXTS.common.publicActivity.activityDesc}
                 url="https://oldie-but-goldie.vercel.app/actividad"
                 schema={{
                     "@context": "https://schema.org",
@@ -68,7 +67,7 @@ export default function PublicOrders() {
                         transition={{ delay: 0.1 }}
                         className="text-4xl md:text-5xl font-black font-display tracking-tightest leading-tight"
                     >
-                        {TEXTS.common.publicActivity.recentActivity.split(' ')[0]} <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-white/40">{TEXTS.common.publicActivity.recentActivity.split(' ')[1]}</span>
+                        {TEXTS.common.publicActivity.recentActivity.split(' ').slice(0, -1).join(' ')} <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-white/40">{TEXTS.common.publicActivity.recentActivity.split(' ').slice(-1)}</span>
                     </motion.h1>
 
                     <motion.p

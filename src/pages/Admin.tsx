@@ -35,7 +35,7 @@ export default function Admin() {
         <div className="space-y-10 p-6">
             <header>
                 <h1 className="text-5xl font-display font-black text-white tracking-tightest">
-                    {TEXTS.common.adminDashboard.title.split(' ')[0]} {TEXTS.common.adminDashboard.title.split(' ')[1]} <span className="text-primary">{TEXTS.common.adminDashboard.title.split(' ')[2]}</span>
+                    {TEXTS.common.adminDashboard.title.split(' ').slice(0, -1).join(' ')} <span className="text-primary">{TEXTS.common.adminDashboard.title.split(' ').slice(-1)}</span>
                 </h1>
                 <p className="text-gray-500 mt-2 font-medium">{TEXTS.common.adminDashboard.description}</p>
             </header>
