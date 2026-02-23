@@ -209,37 +209,57 @@ export default function PublicOrderView() {
                     <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 italic">Resumen de Negociación</h3>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Initial Offer */}
-                        {(order.totalPrice || order.details?.price) && (
-                            <div className="p-8 rounded-[2.5rem] bg-orange-500/5 border border-orange-500/10 flex flex-col justify-between group hover:bg-orange-500/10 transition-all">
-                                <p className="text-[10px] uppercase tracking-[0.2em] font-black text-orange-400/70 mb-4">Oferta Inicial del Usuario</p>
-                                <div className="flex items-baseline gap-2">
-                                    <span className="text-4xl font-display font-black text-white">
-                                        {canSeePrice ? (
-                                            `${order.currency || (order.details?.currency === "USD" ? "US$" : "$")} ${(order.totalPrice || order.details?.price).toLocaleString()}`
-                                        ) : (
-                                            <span className="text-gray-700 flex items-center gap-2 italic opacity-40"><Lock className="h-4 w-4" /> Privado</span>
-                                        )}
-                                    </span>
+                        {/* Initial Offer / Latest User Offer */}
+                        {(() => {
+                            const historyUserOffer = order.negotiationHistory?.filter((h: any) => h.sender === 'user').pop();
+                            const userPrice = historyUserOffer?.price || order.totalPrice || order.details?.price;
+                            const userCurrency = historyUserOffer?.currency || order.currency || order.details?.currency || "ARS";
+
+                            if (!userPrice) return null;
+
+                            return (
+                                <div className="p-8 rounded-[2.5rem] bg-orange-500/5 border border-orange-500/10 flex flex-col justify-between group hover:bg-orange-500/10 transition-all">
+                                    <p className="text-[10px] uppercase tracking-[0.2em] font-black text-orange-400/70 mb-4">
+                                        {historyUserOffer ? "Última Propuesta del Usuario" : "Oferta Inicial del Usuario"}
+                                    </p>
+                                    <div className="flex items-baseline gap-2">
+                                        <span className="text-4xl font-display font-black text-white">
+                                            {canSeePrice ? (
+                                                `${userCurrency === "USD" ? "US$" : "$"} ${userPrice.toLocaleString()}`
+                                            ) : (
+                                                <span className="text-gray-700 flex items-center gap-2 italic opacity-40"><Lock className="h-4 w-4" /> Privado</span>
+                                            )}
+                                        </span>
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            );
+                        })()}
 
                         {/* Admin Counter-Offer */}
-                        {order.adminPrice && (
-                            <div className="p-8 rounded-[2.5rem] bg-primary/10 border border-primary/20 flex flex-col justify-between shadow-2xl shadow-primary/5 group hover:bg-primary/20 transition-all">
-                                <p className="text-[10px] uppercase tracking-[0.2em] font-black text-primary mb-4">Propuesta de Oldie but Goldie</p>
-                                <div className="flex items-baseline gap-2">
-                                    <span className="text-4xl font-display font-black text-white">
-                                        {canSeePrice ? (
-                                            `${order.adminCurrency === "USD" ? "US$" : "$"} ${order.adminPrice.toLocaleString()}`
-                                        ) : (
-                                            <span className="text-gray-700 flex items-center gap-2 italic opacity-40"><Lock className="h-4 w-4" /> Privado</span>
-                                        )}
-                                    </span>
+                        {(() => {
+                            const historyAdminOffer = order.negotiationHistory?.filter((h: any) => h.sender === 'admin').pop();
+                            const adminPrice = historyAdminOffer?.price || order.adminPrice;
+                            const adminCurrency = historyAdminOffer?.currency || order.adminCurrency || "ARS";
+
+                            if (!adminPrice) return null;
+
+                            return (
+                                <div className="p-8 rounded-[2.5rem] bg-primary/10 border border-primary/20 flex flex-col justify-between shadow-2xl shadow-primary/5 group hover:bg-primary/20 transition-all">
+                                    <p className="text-[10px] uppercase tracking-[0.2em] font-black text-primary mb-4">
+                                        {historyAdminOffer ? "Última Propuesta de OBG" : "Propuesta de Oldie but Goldie"}
+                                    </p>
+                                    <div className="flex items-baseline gap-2">
+                                        <span className="text-4xl font-display font-black text-white">
+                                            {canSeePrice ? (
+                                                `${adminCurrency === "USD" ? "US$" : "$"} ${adminPrice.toLocaleString()}`
+                                            ) : (
+                                                <span className="text-gray-700 flex items-center gap-2 italic opacity-40"><Lock className="h-4 w-4" /> Privado</span>
+                                            )}
+                                        </span>
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            );
+                        })()}
                     </div>
 
                     {/* Metadata Footer */}

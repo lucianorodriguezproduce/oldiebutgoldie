@@ -100,25 +100,34 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
 
         // 2. CONTRAOFERTA (From Admin)
         // This is the new adminPrice field for negotiation.
-        const adminPrice = order.adminPrice;
-        const adminCurrency = order.adminCurrency || "ARS";
+        const historyAdminOffer = order.negotiationHistory?.filter((h: any) => h.sender === 'admin').pop();
+        const adminPrice = historyAdminOffer?.price || order.adminPrice;
+        const adminCurrency = historyAdminOffer?.currency || order.adminCurrency || "ARS";
+
+        const historyUserOffer = order.negotiationHistory?.filter((h: any) => h.sender === 'user').pop();
+        const latestUserPrice = historyUserOffer?.price || userPrice;
+        const latestUserCurrency = historyUserOffer?.currency || userCurrency;
 
         if (!canSeePrice) return null;
 
         return (
             <div className="flex flex-col gap-2 w-full mt-4">
-                {isSellOrder && userPrice && (
+                {(isSellOrder && latestUserPrice) && (
                     <div className={`bg-orange-500/10 border border-orange-500/20 px-3 py-2 rounded-xl flex flex-col items-end shadow-sm shadow-orange-500/5 ${context === 'admin' ? "mr-4" : ""}`}>
-                        <span className="text-[9px] font-black uppercase tracking-widest text-orange-400">Oferta del Vendedor</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-orange-400">
+                            {historyUserOffer ? "Última Contraoferta Cliente" : "Oferta del Vendedor"}
+                        </span>
                         <span className="text-sm font-black text-white">
-                            {userCurrency === "USD" ? "US$" : "$"} {userPrice.toLocaleString()}
+                            {latestUserCurrency === "USD" ? "US$" : "$"} {latestUserPrice.toLocaleString()}
                         </span>
                     </div>
                 )}
 
                 {adminPrice && (
                     <div className={`bg-primary/10 border border-primary/20 px-3 py-2 rounded-xl flex flex-col items-end shadow-sm shadow-primary/5 ${context === 'admin' ? "mr-4" : ""}`}>
-                        <span className="text-[9px] font-black uppercase tracking-widest text-primary">Contraoferta de OBG</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-primary">
+                            {historyAdminOffer ? "Última Contraoferta OBG" : "Contraoferta de OBG"}
+                        </span>
                         <span className="text-sm font-black text-white">
                             {adminCurrency === "USD" ? "US$" : "$"} {adminPrice.toLocaleString()}
                         </span>

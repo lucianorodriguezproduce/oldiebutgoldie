@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { formatDate, getReadableDate } from "@/utils/date";
-import { collection, onSnapshot, query, orderBy, where, doc, deleteDoc, updateDoc, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, onSnapshot, query, orderBy, where, doc, deleteDoc, updateDoc, addDoc, serverTimestamp, arrayUnion } from "firebase/firestore";
 import { useState, useEffect } from "react";
 import { AlbumCardSkeleton } from "@/components/ui/Skeleton";
 import { Link, useSearchParams } from "react-router-dom";
@@ -64,6 +64,13 @@ interface OrderItem {
     admin_offer_currency?: string;
     adminPrice?: number;
     adminCurrency?: string;
+    negotiationHistory?: {
+        price: number;
+        currency: string;
+        sender: 'admin' | 'user';
+        timestamp: any;
+        message?: string;
+    }[];
     details: {
         format: string;
         condition: string;
@@ -262,7 +269,13 @@ export default function Profile() {
         try {
             await updateDoc(doc(db, "orders", order.id), {
                 totalPrice: priceVal,
-                status: "contraoferta_usuario"
+                status: "contraoferta_usuario",
+                negotiationHistory: arrayUnion({
+                    price: priceVal,
+                    currency: order.currency || order.details?.currency || "ARS",
+                    sender: 'user',
+                    timestamp: new Date()
+                })
             });
 
             // Notify Admin
@@ -593,6 +606,38 @@ export default function Profile() {
                 footer={
                     selectedOrder && (
                         <div className="space-y-4">
+                            {/* Negotiation History Visualization (User Side) */}
+                            {selectedOrder.negotiationHistory && selectedOrder.negotiationHistory.length > 0 && (
+                                <div className="space-y-3 pb-4 border-b border-white/5">
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-gray-500 flex items-center gap-1.5">
+                                        <Clock className="h-3 w-3" /> Historial de Negociación
+                                    </span>
+                                    <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                                        {selectedOrder.negotiationHistory.map((h, i) => (
+                                            <div key={i} className={`p-2.5 rounded-xl border flex items-center justify-between ${h.sender === 'user'
+                                                    ? "bg-orange-500/5 border-orange-500/20"
+                                                    : "bg-primary/5 border-primary/20"
+                                                }`}>
+                                                <div className="flex flex-col">
+                                                    <span className={`text-[8px] font-black uppercase tracking-tighter ${h.sender === 'user' ? "text-orange-400" : "text-primary"
+                                                        }`}>
+                                                        {h.sender === 'user' ? "Tú (Cliente)" : "Oldie but Goldie"}
+                                                    </span>
+                                                    <span className="text-xs font-black text-white">
+                                                        {h.currency === "USD" ? "US$" : "$"} {h.price.toLocaleString()}
+                                                    </span>
+                                                </div>
+                                                <span className="text-[8px] text-gray-600 font-mono">
+                                                    {h.timestamp?.seconds
+                                                        ? new Date(h.timestamp.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                                        : "Reciente"}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                             {selectedOrder.status === "venta_finalizada" ? (
                                 <div className="space-y-6">
                                     <div id="printable-receipt" className="bg-green-500/10 border border-green-500/20 rounded-[2rem] p-8 space-y-6 relative overflow-hidden">

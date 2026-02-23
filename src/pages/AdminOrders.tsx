@@ -10,7 +10,8 @@ import {
     doc,
     updateDoc,
     addDoc,
-    serverTimestamp
+    serverTimestamp,
+    arrayUnion
 } from "firebase/firestore";
 import {
     ShoppingBag,
@@ -48,6 +49,13 @@ interface OrderDoc {
     status: string;
     timestamp: any;
     createdAt?: any;
+    negotiationHistory?: {
+        price: number;
+        currency: string;
+        sender: 'admin' | 'user';
+        timestamp: any;
+        message?: string;
+    }[];
     market_reference?: number | null;
     admin_offer_price?: number;
     admin_offer_currency?: string;
@@ -184,7 +192,13 @@ export default function AdminOrders() {
             await updateDoc(doc(db, "orders", order.id), {
                 adminPrice: priceVal,
                 adminCurrency: currencyVal,
-                status: "counteroffered"
+                status: "counteroffered",
+                negotiationHistory: arrayUnion({
+                    price: priceVal,
+                    currency: currencyVal,
+                    sender: 'admin',
+                    timestamp: new Date()
+                })
             });
 
             const currSymbol = currencyVal === "USD" ? "US$" : "$";
@@ -224,7 +238,13 @@ export default function AdminOrders() {
             await updateDoc(doc(db, "orders", order.id), {
                 admin_offer_price: priceVal,
                 admin_offer_currency: currencyVal,
-                status: "quoted"
+                status: "quoted",
+                negotiationHistory: arrayUnion({
+                    price: priceVal,
+                    currency: currencyVal,
+                    sender: 'admin',
+                    timestamp: new Date()
+                })
             });
 
             const currSymbol = currencyVal === "USD" ? "US$" : "$";
@@ -412,6 +432,38 @@ export default function AdminOrders() {
                 footer={
                     selectedOrder && (
                         <div className="space-y-4">
+                            {/* Negotiation History Visualization */}
+                            {selectedOrder.negotiationHistory && selectedOrder.negotiationHistory.length > 0 && (
+                                <div className="space-y-3 pb-4 border-b border-white/5">
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-gray-500 flex items-center gap-1.5">
+                                        <Clock className="h-3 w-3" /> Historial de Negociación
+                                    </span>
+                                    <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                                        {selectedOrder.negotiationHistory.map((h, i) => (
+                                            <div key={i} className={`p-2.5 rounded-xl border flex items-center justify-between ${h.sender === 'admin'
+                                                    ? "bg-primary/5 border-primary/20"
+                                                    : "bg-orange-500/5 border-orange-500/20"
+                                                }`}>
+                                                <div className="flex flex-col">
+                                                    <span className={`text-[8px] font-black uppercase tracking-tighter ${h.sender === 'admin' ? "text-primary" : "text-orange-400"
+                                                        }`}>
+                                                        {h.sender === 'admin' ? "OBG (Admin)" : "Cliente"}
+                                                    </span>
+                                                    <span className="text-xs font-black text-white">
+                                                        {h.currency === "USD" ? "US$" : "$"} {h.price.toLocaleString()}
+                                                    </span>
+                                                </div>
+                                                <span className="text-[8px] text-gray-600 font-mono">
+                                                    {h.timestamp?.seconds
+                                                        ? new Date(h.timestamp.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                                        : "Reciente"}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Status Changer */}
                             <div className="relative">
                                 <button
