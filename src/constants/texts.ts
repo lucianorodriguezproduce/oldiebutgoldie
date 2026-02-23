@@ -2,7 +2,7 @@ export const TEXTS = {
     navigation: {
         home: "Descubrir",
         activity: "Actividad",
-        editorial: "Editorial",
+        editorial: "Comunidad",
         profile: "Ver Perfil",
         logout: "Cerrar Sesión",
         sync: "Conectar",
