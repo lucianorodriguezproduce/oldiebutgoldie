@@ -84,7 +84,7 @@ export default function AdminDashboard() {
                         <TrendingUp className="w-5 h-5" />
                         <span className="text-xs font-black uppercase tracking-widest">{TEXTS.admin.dashboard.metrics.ctr}</span>
                     </div>
-                    <div className="text-3xl font-bold text-white">{isLoading ? '-' : \`\${summary?.averageCTR}%\`}</div>
+                    <div className="text-3xl font-bold text-white">{isLoading ? '-' : `${summary?.averageCTR}%`}</div>
                 </motion.div>
 
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="bg-white/5 border border-white/10 p-6 rounded-2xl">
