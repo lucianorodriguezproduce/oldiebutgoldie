@@ -77,6 +77,7 @@ const STATUS_OPTIONS = [
     { value: "negotiating", label: "En Negociación", icon: Handshake, color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/20" },
     { value: "counteroffered", label: "Precio Definido", icon: Send, color: "text-orange-400", bg: "bg-orange-500/10 border-orange-500/20" },
     { value: "pending_acceptance", label: "Esperando Cliente", icon: Clock, color: "text-orange-400", bg: "bg-orange-400/10 border-orange-400/20" },
+    { value: "offer_sent", label: "Oferta Enviada", icon: Send, color: "text-primary", bg: "bg-primary/10 border-primary/20" },
     { value: "venta_finalizada", label: "Venta Finalizada", icon: CheckCircle2, color: "text-primary", bg: "bg-primary/10 border-primary/20" },
     { value: "completed", label: "Completado", icon: CheckCircle2, color: "text-green-500", bg: "bg-green-500/10 border-green-500/20" },
     { value: "cancelled", label: "Cancelado", icon: XCircle, color: "text-red-500", bg: "bg-red-500/10 border-red-500/20" },
@@ -643,7 +644,12 @@ export default function AdminOrders() {
                         <div className="flex items-center gap-4 bg-white/[0.03] border border-white/5 rounded-xl p-4 mb-4">
                             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center overflow-hidden flex-shrink-0">
                                 {selectedOrder.user_photo ? (
-                                    <img src={selectedOrder.user_photo} alt="" className="w-full h-full object-cover" />
+                                    <img
+                                        src={selectedOrder.user_photo}
+                                        alt=""
+                                        className="w-full h-full object-cover"
+                                        loading="lazy"
+                                    />
                                 ) : (
                                     <UserIcon className="h-5 w-5 text-primary" />
                                 )}

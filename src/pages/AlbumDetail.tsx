@@ -87,6 +87,7 @@ export default function AlbumDetail() {
                             src={album.images?.[0]?.uri || album.thumb}
                             alt={album.title}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000 ease-out"
+                            loading="lazy"
                             onError={(e) => {
                                 (e.target as HTMLImageElement).src = "https://placehold.co/800x800/121212/FFFFFF?text=No+Cover";
                             }}

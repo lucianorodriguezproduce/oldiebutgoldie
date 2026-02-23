@@ -164,6 +164,7 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                             src={coverImage}
                             alt={title}
                             className="w-full h-full object-cover grayscale-[0.3] group-hover:grayscale-0 transition-all duration-500"
+                            loading="lazy"
                         />
                     ) : (
                         <div className="w-full h-full flex items-center justify-center">
@@ -271,7 +272,13 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                                         <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-black/40 border border-white/5">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-8 h-8 rounded-lg overflow-hidden bg-white/5">
-                                                    {item.cover_image && <img src={item.cover_image} className="w-full h-full object-cover" />}
+                                                    {item.cover_image && (
+                                                        <img
+                                                            src={item.cover_image}
+                                                            className="w-full h-full object-cover"
+                                                            loading="lazy"
+                                                        />
+                                                    )}
                                                 </div>
                                                 <div>
                                                     <p className="text-xs font-bold text-white truncate max-w-[150px] md:max-w-xs">{item.artist || 'Unknown'} - {item.album || 'Unknown'}</p>

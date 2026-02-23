@@ -4,11 +4,14 @@ import { useAuth } from "@/context/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import NotificationBell from "@/components/NotificationBell";
+import { collection, query, where, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 export const Navbar = () => {
     const location = useLocation();
     const { user, logout } = useAuth();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [hasActiveOffer, setHasActiveOffer] = useState(false);
 
     const navItems = [
         { path: "/", label: "Descubrir", icon: Search },
@@ -32,6 +35,28 @@ export const Navbar = () => {
             document.body.style.overflow = 'unset';
         };
     }, [isMenuOpen]);
+
+    // Profile Notification Dot Logic
+    useEffect(() => {
+        if (!user) {
+            setHasActiveOffer(false);
+            return;
+        }
+
+        const q = query(
+            collection(db, "orders"),
+            where("user_id", "==", user.uid),
+            where("status", "==", "offer_sent")
+        );
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            setHasActiveOffer(!snapshot.empty);
+        }, (error) => {
+            console.error("Navbar order listener error:", error);
+        });
+
+        return () => unsubscribe();
+    }, [user]);
 
     return (
         <nav className="fixed w-full z-[9999] top-0 left-0 border-b border-white/[0.08] bg-black transition-all duration-500">
@@ -71,7 +96,7 @@ export const Navbar = () => {
                         <div className="hidden md:flex items-center gap-4">
                             {user ? (
                                 <div className="flex items-center gap-4">
-                                    <Link to="/profile" className="flex items-center gap-3 bg-white/5 pl-2 pr-4 py-1.5 rounded-full border border-white/5 hover:bg-white/10 transition-all group">
+                                    <Link to="/profile" className="flex items-center gap-3 bg-white/5 pl-2 pr-4 py-1.5 rounded-full border border-white/5 hover:bg-white/10 transition-all group relative">
                                         <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-black font-black text-xs overflow-hidden group-hover:scale-110 transition-transform">
                                             {user.photoURL ? (
                                                 <img src={user.photoURL} alt={user.displayName || "User"} />
@@ -82,6 +107,15 @@ export const Navbar = () => {
                                         <span className="text-[10px] font-black text-gray-400 truncate max-w-[100px] uppercase tracking-widest group-hover:text-white transition-colors">
                                             {user.displayName || user.email?.split("@")[0]}
                                         </span>
+
+                                        {/* Notification Indicator Dot */}
+                                        {hasActiveOffer && (
+                                            <motion.span
+                                                initial={{ scale: 0 }}
+                                                animate={{ scale: 1 }}
+                                                className="absolute -top-1 -right-1 w-3 h-3 bg-[#CCFF00] rounded-full border-2 border-black shadow-[0_0_10px_rgba(204,255,0,0.8)] z-10"
+                                            />
+                                        )}
                                     </Link>
                                     <button
                                         onClick={() => logout()}
@@ -136,7 +170,7 @@ export const Navbar = () => {
                         <div className="mt-auto pt-8 border-t border-white/10 flex flex-col gap-4 pb-12">
                             {user ? (
                                 <>
-                                    <Link to="/profile" className="flex items-center gap-4 p-5 rounded-[2rem] bg-[#0A0A0A] text-white border border-white/10">
+                                    <Link to="/profile" className="flex items-center gap-4 p-5 rounded-[2rem] bg-[#0A0A0A] text-white border border-white/10 relative">
                                         <div className="h-12 w-12 rounded-full bg-primary flex items-center justify-center text-black font-black overflow-hidden ring-2 ring-white/10">
                                             {user.photoURL ? <img src={user.photoURL} alt="User" /> : user.email?.charAt(0).toUpperCase()}
                                         </div>
@@ -144,6 +178,15 @@ export const Navbar = () => {
                                             <span className="uppercase tracking-[0.2em] font-black text-xs">{user.displayName || user.email?.split("@")[0]}</span>
                                             <span className="text-[9px] text-gray-500 font-bold tracking-widest uppercase">Ver Perfil</span>
                                         </div>
+
+                                        {/* Mobile Notification Indicator Dot */}
+                                        {hasActiveOffer && (
+                                            <motion.span
+                                                initial={{ scale: 0 }}
+                                                animate={{ scale: 1 }}
+                                                className="absolute top-4 right-6 w-4 h-4 bg-[#CCFF00] rounded-full border-2 border-[#0A0A0A] shadow-[0_0_15px_rgba(204,255,0,0.8)] z-10"
+                                            />
+                                        )}
                                     </Link>
                                     <button
                                         onClick={() => logout()}

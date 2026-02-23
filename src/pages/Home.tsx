@@ -743,7 +743,12 @@ export default function Home() {
                                                     <div className="absolute left-0 top-0 bottom-0 w-2 bg-transparent group-hover:bg-primary transition-colors" />
                                                     <div className="p-4 md:p-6 flex items-center gap-4 md:gap-6 ml-1">
                                                         <div className="w-16 md:w-20 h-16 md:h-20 rounded-xl md:rounded-2xl overflow-hidden bg-black flex-shrink-0 border border-white/10 shadow-lg">
-                                                            <img src={result.thumb || result.cover_image} alt="" className="w-full h-full object-cover grayscale-[0.3] group-hover:grayscale-0 transition-all duration-500" />
+                                                            <img
+                                                                src={result.thumb || result.cover_image}
+                                                                alt=""
+                                                                className="w-full h-full object-cover grayscale-[0.3] group-hover:grayscale-0 transition-all duration-500"
+                                                                loading="lazy"
+                                                            />
                                                         </div>
                                                         <div className="flex-1 min-w-0 flex flex-col items-start gap-1 text-left">
                                                             <h4 className="text-xl md:text-2xl font-bold font-display italic text-white truncate w-full group-hover:text-primary transition-colors">

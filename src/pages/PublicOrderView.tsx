@@ -156,7 +156,12 @@ export default function PublicOrderView() {
 
                     {order.thumbnailUrl && (
                         <div className="w-24 h-24 md:w-32 md:h-32 rounded-2xl overflow-hidden bg-white/5 border border-white/10 shadow-2xl flex-shrink-0">
-                            <img src={order.thumbnailUrl} alt="Lote reference" className="w-full h-full object-cover" />
+                            <img
+                                src={order.thumbnailUrl}
+                                alt="Lote reference"
+                                className="w-full h-full object-cover"
+                                loading="lazy"
+                            />
                         </div>
                     )}
                 </header>

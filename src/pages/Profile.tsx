@@ -26,7 +26,9 @@ import {
     PieChart,
     Handshake,
     CheckCircle2,
-    X
+    X,
+    FileText,
+    Download
 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { formatDate, getReadableDate } from "@/utils/date";
@@ -285,6 +287,34 @@ export default function Profile() {
         }
     };
 
+    const downloadReceipt = (order: OrderItem) => {
+        const content = `
+          OLDIE BUT GOLDIE - COMPROBANTE DE TRATO
+          =======================================
+          ORDEN ID: ${order.order_number || order.id}
+          FECHA: ${formatDate(order.createdAt || order.timestamp)}
+          CLIENTE: ${user?.displayName || user?.email}
+          
+          ITEMS:
+          ${order.items?.map(i => `- ${i.title} (${i.format})`).join('\n          ')}
+          
+          PRECIO FINAL: ${order.currency === 'USD' ? 'US$' : '$'} ${(order.totalPrice || order.adminPrice || 0).toLocaleString()}
+          ESTADO: VENTA FINALIZADA
+          =======================================
+          Gracias por confiar en Oldie but Goldie.
+        `.trim();
+
+        const blob = new Blob([content], { type: "text/plain" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `Comprobante_${order.order_number || order.id}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
     if (!user && !isAdmin) return null;
 
     const displayName = user?.displayName || (isAdmin ? "Master Admin" : "Sonic Collector");
@@ -532,7 +562,7 @@ export default function Profile() {
                                         >
                                             <Link to={`/album/${item.id}`} className="block">
                                                 <div className="aspect-square rounded-[2rem] overflow-hidden mb-4 relative ring-1 ring-white/10 group-hover:ring-primary/40 transition-all duration-700 shadow-2xl">
-                                                    <img src={item.cover_image} alt={item.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000 grayscale-[0.3] group-hover:grayscale-0" />
+                                                    <img src={item.cover_image} alt={item.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000 grayscale-[0.3] group-hover:grayscale-0" loading="lazy" />
                                                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-6">
                                                         <span className="text-[9px] font-black text-primary uppercase tracking-widest mb-auto">ID: {item.id}</span>
                                                     </div>
@@ -563,25 +593,60 @@ export default function Profile() {
                     selectedOrder && (
                         <div className="space-y-4">
                             {selectedOrder.status === "venta_finalizada" ? (
-                                <div className="bg-green-500/10 border border-green-500/20 rounded-2xl p-6 space-y-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-green-500/20 rounded-full">
-                                            <CheckCircle2 className="h-5 w-5 text-green-500" />
+                                <div className="space-y-6">
+                                    <div className="bg-green-500/10 border border-green-500/20 rounded-[2rem] p-8 space-y-6 relative overflow-hidden">
+                                        <div className="absolute top-0 right-0 p-8 opacity-5">
+                                            <FileText size={120} />
                                         </div>
-                                        <p className="text-lg font-black text-white uppercase tracking-tighter">¡Trato Cerrado!</p>
+
+                                        <div className="space-y-2">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2 bg-green-500/20 rounded-full">
+                                                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                                                </div>
+                                                <h3 className="text-xl font-display font-black text-white uppercase tracking-tighter">Trato Confirmado</h3>
+                                            </div>
+                                            <p className="text-xs text-gray-500 font-medium">Este documento certifica el acuerdo mutuo de precio y condiciones.</p>
+                                        </div>
+
+                                        <div className="border-t border-white/5 pt-6 space-y-4">
+                                            <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+                                                <span className="text-gray-500">Precio Acordado</span>
+                                                <span className="text-primary text-base">
+                                                    {selectedOrder.currency === 'USD' ? 'US$' : '$'} {(selectedOrder.totalPrice || selectedOrder.adminPrice || 0).toLocaleString()}
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-gray-500">
+                                                <span>Items Aceptados</span>
+                                                <span className="text-white">{selectedOrder.items?.length || 0}</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex flex-col sm:flex-row gap-3">
+                                            <button
+                                                onClick={() => {
+                                                    pushWhatsAppContactFromOrder(selectedOrder);
+                                                    const msg = encodeURIComponent(`Hola! Acepté el trato por el lote ${selectedOrder.order_number || selectedOrder.id}. Coordinemos el pago y el envío.`);
+                                                    window.open(`https://wa.me/5491140411796?text=${msg}`, "_blank");
+                                                }}
+                                                className="flex-1 flex items-center justify-center gap-3 px-6 py-4 bg-green-600 hover:bg-green-500 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-green-500/20"
+                                            >
+                                                <MessageCircle className="h-4 w-4" />
+                                                Coordinar por WhatsApp
+                                            </button>
+                                            <button
+                                                onClick={() => downloadReceipt(selectedOrder)}
+                                                className="flex-none flex items-center justify-center gap-3 px-6 py-4 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                                            >
+                                                <Download className="h-4 w-4" />
+                                                Descargar
+                                            </button>
+                                        </div>
                                     </div>
-                                    <p className="text-xs text-gray-400 font-medium">Coordina el pago y el envío directamente con nuestro equipo aquí:</p>
-                                    <button
-                                        onClick={() => {
-                                            pushWhatsAppContactFromOrder(selectedOrder);
-                                            const msg = encodeURIComponent(`Hola! Acepté el trato por el lote ${selectedOrder.order_number || selectedOrder.id}. Coordinemos el pago y el envío.`);
-                                            window.open(`https://wa.me/5491140411796?text=${msg}`, "_blank");
-                                        }}
-                                        className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-green-600 hover:bg-green-500 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-green-500/20"
-                                    >
-                                        <MessageCircle className="h-4 w-4" />
-                                        Coordinar Pago y Envío
-                                    </button>
+
+                                    <div className="bg-[#0A0A0A] border border-white/5 rounded-2xl p-6 text-center">
+                                        <p className="text-[9px] text-gray-700 font-black uppercase tracking-[0.3em]">Registro de Transacción: {selectedOrder.id}</p>
+                                    </div>
                                 </div>
                             ) : (
                                 <>

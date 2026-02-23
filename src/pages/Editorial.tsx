@@ -125,6 +125,7 @@ export default function Editorial() {
                             src={featured.image}
                             alt={featured.title}
                             className="absolute inset-0 w-full h-full object-cover grayscale-[0.4] group-hover:grayscale-0 group-hover:scale-105 transition-all duration-[2s]"
+                            loading="lazy"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
 
@@ -207,6 +208,7 @@ export default function Editorial() {
                                         src={article.image}
                                         alt={article.title}
                                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000 grayscale-[0.2] group-hover:grayscale-0"
+                                        loading="lazy"
                                     />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent opacity-60 group-hover:opacity-100 transition-opacity" />
                                     <div className="absolute top-6 md:top-8 left-6 md:left-8">
