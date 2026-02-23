@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { doc, getDoc, updateDoc, increment, arrayUnion, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+import { db, auth } from "@/lib/firebase";
 import { SEO } from "@/components/SEO";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, Music, Disc, Lock, Clock, Eye } from "lucide-react";
@@ -24,6 +25,7 @@ export default function PublicOrderView() {
 
     const [offerAmount, setOfferAmount] = useState<string>("");
     const [showOfferInput, setShowOfferInput] = useState(false);
+    const [showLoginDrawer, setShowLoginDrawer] = useState(false);
 
     useEffect(() => {
         const fetchOrder = async () => {
@@ -88,13 +90,27 @@ export default function PublicOrderView() {
     }, [id]);
 
     const handleBuyNow = async () => {
+        if (!user) {
+            setShowLoginDrawer(true);
+            return;
+        }
         if (!id) return;
         showLoading("Confirmando compra...");
         try {
             await updateDoc(doc(db, "orders", id), {
                 status: "venta_finalizada",
-                purchased_by: user?.uid || "guest",
-                purchased_at: serverTimestamp()
+                purchased_by: user.uid,
+                buyer_uid: user.uid,
+                buyer_email: user.email,
+                buyer_name: user.displayName || "Usuario",
+                confirmedAt: serverTimestamp(),
+                negotiationHistory: arrayUnion({
+                    price: order.adminPrice || order.totalPrice || order.details?.price || 0,
+                    currency: order.adminCurrency || order.currency || order.details?.currency || "ARS",
+                    sender: "user",
+                    timestamp: new Date(),
+                    message: `Orden aceptada por ${user.displayName || user.email}`
+                })
             });
             setOrder((prev: any) => ({ ...prev, status: "venta_finalizada" }));
         } catch (error) {
@@ -106,6 +122,10 @@ export default function PublicOrderView() {
     };
 
     const handleMakeOffer = async () => {
+        if (!user) {
+            setShowLoginDrawer(true);
+            return;
+        }
         if (!id) return;
         const offerVal = parseFloat(offerAmount);
         if (isNaN(offerVal) || offerVal <= 0) return;
@@ -116,12 +136,16 @@ export default function PublicOrderView() {
             await updateDoc(doc(db, "orders", id), {
                 totalPrice: offerVal,
                 status: "contraoferta_usuario",
+                buyer_uid: user.uid,
+                buyer_email: user.email,
+                buyer_name: user.displayName || "Usuario",
+                confirmedAt: serverTimestamp(),
                 negotiationHistory: arrayUnion({
                     price: offerVal,
                     currency: currentCurrency,
                     sender: "user",
                     timestamp: new Date(),
-                    message: "Oferta directa del catálogo"
+                    message: `Contraoferta de ${user.displayName || user.email}`
                 })
             });
             setOrder((prev: any) => ({
@@ -133,7 +157,7 @@ export default function PublicOrderView() {
                     currency: currentCurrency,
                     sender: "user",
                     timestamp: new Date(),
-                    message: "Oferta directa del catálogo"
+                    message: `Contraoferta de ${user.displayName || user.email}`
                 }]
             }));
             setShowOfferInput(false);
@@ -372,58 +396,82 @@ export default function PublicOrderView() {
                         })()}
                     </div>
 
-                    {/* Transactional Action Buttons (BUY NOW / MAKE OFFER) */}
-                    {isAdminOrder && !['venta_finalizada', 'completed', 'cancelled'].includes(order.status) && (
-                        <div className="mt-8 p-6 md:p-8 bg-gradient-to-br from-yellow-500/10 to-orange-600/10 border border-yellow-500/30 rounded-[2.5rem] flex flex-col md:flex-row items-center gap-6 justify-between shadow-[0_0_30px_rgba(234,179,8,0.1)]">
-                            <div className="space-y-2 text-center md:text-left">
-                                <h4 className="text-xl font-display font-black text-white uppercase tracking-tight">Adquirir Coleccionable</h4>
-                                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Asegura esta pieza antes que otro coleccionista</p>
-                            </div>
+                    {/* Transactional Action Buttons & Ownership Shields */}
+                    {isAdminOrder && (() => {
+                        const isSold = ['venta_finalizada', 'completed'].includes(order.status);
+                        const isNegotiating = ['contraoferta_usuario', 'negotiating', 'quoted'].includes(order.status);
 
-                            <div className="flex flex-col sm:flex-row w-full md:w-auto gap-4">
-                                {showOfferInput ? (
-                                    <div className="flex items-center gap-2 bg-black/40 p-2 rounded-2xl border border-white/10 flex-1 md:flex-none">
-                                        <span className="text-gray-500 font-bold pl-3">$</span>
-                                        <input
-                                            type="number"
-                                            placeholder="Tu Oferta"
-                                            value={offerAmount}
-                                            onChange={(e) => setOfferAmount(e.target.value)}
-                                            className="bg-transparent border-none text-white font-black w-24 focus:ring-0 outline-none placeholder:text-gray-600"
-                                            autoFocus
-                                        />
+                        if (isSold) {
+                            return (
+                                <div className="mt-8 p-6 md:p-8 bg-red-500/10 border border-red-500/30 rounded-[2.5rem] flex items-center justify-center shadow-inner">
+                                    <h4 className="text-2xl md:text-3xl font-display font-black text-red-500 uppercase tracking-tightest">Vendido</h4>
+                                </div>
+                            );
+                        }
+
+                        if (isNegotiating && !isOwner && !isAdmin) {
+                            return (
+                                <div className="mt-8 p-6 md:p-8 bg-blue-500/10 border border-blue-500/30 rounded-[2.5rem] flex items-center justify-center shadow-inner">
+                                    <h4 className="text-2xl md:text-3xl font-display font-black text-blue-500 uppercase tracking-tightest">En Negociación</h4>
+                                </div>
+                            );
+                        }
+
+                        if (!['cancelled'].includes(order.status)) {
+                            return (
+                                <div className="mt-8 p-6 md:p-8 bg-gradient-to-br from-yellow-500/10 to-orange-600/10 border border-yellow-500/30 rounded-[2.5rem] flex flex-col md:flex-row items-center gap-6 justify-between shadow-[0_0_30px_rgba(234,179,8,0.1)]">
+                                    <div className="space-y-2 text-center md:text-left">
+                                        <h4 className="text-xl font-display font-black text-white uppercase tracking-tight">Adquirir Coleccionable</h4>
+                                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Asegura esta pieza antes que otro coleccionista</p>
+                                    </div>
+
+                                    <div className="flex flex-col sm:flex-row w-full md:w-auto gap-4">
+                                        {showOfferInput ? (
+                                            <div className="flex items-center gap-2 bg-black/40 p-2 rounded-2xl border border-white/10 flex-1 md:flex-none">
+                                                <span className="text-gray-500 font-bold pl-3">$</span>
+                                                <input
+                                                    type="number"
+                                                    placeholder="Tu Oferta"
+                                                    value={offerAmount}
+                                                    onChange={(e) => setOfferAmount(e.target.value)}
+                                                    className="bg-transparent border-none text-white font-black w-24 focus:ring-0 outline-none placeholder:text-gray-600"
+                                                    autoFocus
+                                                />
+                                                <button
+                                                    onClick={handleMakeOffer}
+                                                    disabled={!offerAmount}
+                                                    className="px-4 py-2 bg-orange-500 hover:bg-orange-400 disabled:opacity-50 text-black font-black uppercase tracking-widest text-[10px] rounded-xl transition-all"
+                                                >
+                                                    Enviar
+                                                </button>
+                                                <button
+                                                    onClick={() => setShowOfferInput(false)}
+                                                    className="px-3 py-2 text-gray-500 hover:text-white transition-colors"
+                                                >
+                                                    ✕
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <button
+                                                onClick={() => setShowOfferInput(true)}
+                                                className="px-6 py-4 rounded-2xl border border-yellow-500/30 text-yellow-500 font-black uppercase tracking-widest text-[10px] hover:bg-yellow-500/10 transition-all text-center flex-1 md:flex-none"
+                                            >
+                                                Hacer Oferta (Regatear)
+                                            </button>
+                                        )}
+
                                         <button
-                                            onClick={handleMakeOffer}
-                                            disabled={!offerAmount}
-                                            className="px-4 py-2 bg-orange-500 hover:bg-orange-400 disabled:opacity-50 text-black font-black uppercase tracking-widest text-[10px] rounded-xl transition-all"
+                                            onClick={handleBuyNow}
+                                            className="px-8 py-4 rounded-2xl bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-black font-black uppercase tracking-widest text-xs shadow-xl shadow-orange-500/20 hover:shadow-orange-500/40 transition-all text-center flex-1 md:flex-none transform hover:-translate-y-1"
                                         >
-                                            Enviar
-                                        </button>
-                                        <button
-                                            onClick={() => setShowOfferInput(false)}
-                                            className="px-3 py-2 text-gray-500 hover:text-white transition-colors"
-                                        >
-                                            ✕
+                                            ¡Comprar Ahora!
                                         </button>
                                     </div>
-                                ) : (
-                                    <button
-                                        onClick={() => setShowOfferInput(true)}
-                                        className="px-6 py-4 rounded-2xl border border-yellow-500/30 text-yellow-500 font-black uppercase tracking-widest text-[10px] hover:bg-yellow-500/10 transition-all text-center flex-1 md:flex-none"
-                                    >
-                                        Hacer Oferta (Regatear)
-                                    </button>
-                                )}
-
-                                <button
-                                    onClick={handleBuyNow}
-                                    className="px-8 py-4 rounded-2xl bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-black font-black uppercase tracking-widest text-xs shadow-xl shadow-orange-500/20 hover:shadow-orange-500/40 transition-all text-center flex-1 md:flex-none transform hover:-translate-y-1"
-                                >
-                                    ¡Comprar Ahora!
-                                </button>
-                            </div>
-                        </div>
-                    )}
+                                </div>
+                            );
+                        }
+                        return null;
+                    })()}
 
                     {/* Metadata Footer */}
                     <div className="p-8 rounded-[2.5rem] bg-white/[0.02] border border-white/5 flex flex-col md:flex-row justify-between gap-8 items-start md:items-center">
@@ -464,6 +512,50 @@ export default function PublicOrderView() {
                     </div>
                 </div>
             </div>
+
+            {/* Auth Drawer */}
+            <AnimatePresence>
+                {showLoginDrawer && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-[999] bg-black/80 backdrop-blur-sm"
+                            onClick={() => setShowLoginDrawer(false)}
+                        />
+                        <motion.div
+                            initial={{ y: "100%" }}
+                            animate={{ y: 0 }}
+                            exit={{ y: "100%" }}
+                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                            className="fixed bottom-0 left-0 right-0 z-[1000] bg-zinc-950 rounded-t-[2.5rem] p-8 border-t border-white/10 shadow-[0_-20px_50px_rgba(0,0,0,0.5)]"
+                        >
+                            <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto mb-8" />
+                            <h3 className="text-3xl font-display font-black text-white text-center mb-3 tracking-tight">Acceso Requerido</h3>
+                            <p className="text-gray-400 text-xs font-bold uppercase tracking-widest text-center mb-8 max-w-sm mx-auto">Debes identificarte de forma segura para adquirir este disco y validar la transacción.</p>
+
+                            <button
+                                onClick={async () => {
+                                    showLoading("Sincronizando identidad...");
+                                    try {
+                                        const provider = new GoogleAuthProvider();
+                                        await signInWithPopup(auth, provider);
+                                        setShowLoginDrawer(false);
+                                    } catch (e) {
+                                        console.error(e);
+                                    } finally {
+                                        hideLoading();
+                                    }
+                                }}
+                                className="w-full h-16 bg-white hover:bg-gray-200 text-black font-black uppercase tracking-widest text-xs rounded-2xl transition-all flex items-center justify-center gap-3 shadow-xl shadow-white/10"
+                            >
+                                Identificarse con Google
+                            </button>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
