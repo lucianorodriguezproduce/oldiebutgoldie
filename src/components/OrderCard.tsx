@@ -167,7 +167,7 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                             {historyUserOffer ? "Última Contraoferta Cliente" : "Oferta del Vendedor"}
                         </span>
                         <span className="text-sm font-black text-white">
-                            {latestUserCurrency === "USD" ? "US$" : "$"} {latestUserPrice.toLocaleString()}
+                            {latestUserCurrency === "USD" ? "US$" : "$"} {(latestUserPrice || 0).toLocaleString()}
                         </span>
                     </div>
                 )}
@@ -178,7 +178,7 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                             {historyAdminOffer ? "Última Contraoferta OBG" : "Contraoferta de OBG"}
                         </span>
                         <span className="text-sm font-black text-white">
-                            {adminCurrency === "USD" ? "US$" : "$"} {adminPrice.toLocaleString()}
+                            {adminCurrency === "USD" ? "US$" : "$"} {(adminPrice || 0).toLocaleString()}
                         </span>
                     </div>
                 )}
@@ -188,7 +188,7 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                     <div className={`bg-purple-500/10 border border-purple-500/20 px-3 py-2 rounded-xl flex flex-col items-end shadow-sm shadow-purple-500/5 ${context === 'admin' ? "mr-4" : ""}`}>
                         <span className="text-[9px] font-black uppercase tracking-widest text-purple-400">Nuestra Oferta</span>
                         <span className="text-sm font-black text-white">
-                            {order.admin_offer_currency === "USD" ? "US$" : "$"} {order.admin_offer_price.toLocaleString()}
+                            {order.admin_offer_currency === "USD" ? "US$" : "$"} {(order.admin_offer_price || 0).toLocaleString()}
                         </span>
                     </div>
                 )}
@@ -272,7 +272,7 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                             <span className="flex items-center gap-1 text-primary text-xs md:text-sm font-black">
                                 <DollarSign className="h-3.5 w-3.5" />
                                 {canSeePrice ? (
-                                    `${order.details.currency === "USD" ? "US$" : "$"} ${order.details.price.toLocaleString()}`
+                                    `${order.details.currency === "USD" ? "US$" : "$"} ${(order.details.price || 0).toLocaleString()}`
                                 ) : (
                                     <span className="text-gray-600 italic opacity-50">Privado</span>
                                 )}

@@ -635,7 +635,7 @@ export default function Profile() {
                                                             {h.sender === 'admin' ? "Oldie but Goldie" : "Tú (Cliente)"}
                                                         </span>
                                                         <span className="text-sm font-black text-white">
-                                                            {h.currency === "USD" ? "US$" : "$"} {h.price.toLocaleString()}
+                                                            {h.currency === "USD" ? "US$" : "$"} {(h.price || 0).toLocaleString()}
                                                         </span>
                                                         <span className="text-[8px] text-gray-600 font-mono mt-1">
                                                             {h.timestamp?.seconds

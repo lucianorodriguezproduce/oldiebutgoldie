@@ -263,7 +263,7 @@ export default function AnalyticsDashboard() {
                                         'bg-gray-500'
                                     }`} />
                                 <div>
-                                    <p className="text-sm font-bold text-white uppercase tracking-wider mb-1">{event.action.replace('_', ' ')}</p>
+                                    <p className="text-sm font-bold text-white uppercase tracking-wider mb-1">{(event.action || "unknown").replace('_', ' ')}</p>
                                     <p className="text-xs text-gray-500 font-mono mb-2">
                                         {event.location?.city}, {event.location?.country}
                                     </p>
