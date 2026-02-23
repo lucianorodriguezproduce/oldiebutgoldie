@@ -56,6 +56,50 @@
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+  }
+}
+ 
+/* Print Styles for Deal Receipt */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printable-receipt, #printable-receipt * {
+    visibility: visible;
+  }
+  #printable-receipt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: white !important;
+    color: black !important;
+    padding: 2cm !important;
+    margin: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+  #printable-receipt .bg-white\/5,
+  #printable-receipt .bg-green-500\/10,
+  #printable-receipt .bg-black {
+    background: #f8f8f8 !important;
+    border: 1px solid #ddd !important;
+  }
+  #printable-receipt h3, 
+  #printable-receipt h4, 
+  #printable-receipt p, 
+  #printable-receipt span {
+    color: black !important;
+  }
+  #printable-receipt .text-primary {
+    color: #000 !important;
+    font-weight: bold;
+  }
+  #printable-receipt button, 
+  #printable-receipt .lucide-download,
+  #printable-receipt .lucide-message-circle {
+    display: none !important;
   }
 }
  

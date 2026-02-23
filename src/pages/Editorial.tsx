@@ -6,6 +6,7 @@ import { collection, onSnapshot, query, where, orderBy, addDoc, serverTimestamp 
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useLoading } from "@/context/LoadingContext";
+import { LazyImage } from "@/components/ui/LazyImage";
 
 interface Article {
     id: string;
@@ -121,11 +122,10 @@ export default function Editorial() {
                         animate={{ opacity: 1, scale: 1 }}
                         className="relative rounded-[2.5rem] md:rounded-[4rem] overflow-hidden aspect-[4/5] md:aspect-[21/9] min-h-[500px] md:min-h-[600px] border border-white/5 group ring-1 ring-white/10"
                     >
-                        <img
+                        <LazyImage
                             src={featured.image}
                             alt={featured.title}
                             className="absolute inset-0 w-full h-full object-cover grayscale-[0.4] group-hover:grayscale-0 group-hover:scale-105 transition-all duration-[2s]"
-                            loading="lazy"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
 
@@ -204,11 +204,10 @@ export default function Editorial() {
                         >
                             <Link to={`/editorial/${article.id}`} className="block">
                                 <div className="aspect-[16/11] rounded-[2.5rem] md:rounded-[3.5rem] overflow-hidden mb-8 md:mb-10 relative border border-white/5 ring-1 ring-white/10 group-hover:ring-primary/40 transition-all duration-700 shadow-2xl">
-                                    <img
+                                    <LazyImage
                                         src={article.image}
                                         alt={article.title}
                                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000 grayscale-[0.2] group-hover:grayscale-0"
-                                        loading="lazy"
                                     />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent opacity-60 group-hover:opacity-100 transition-opacity" />
                                     <div className="absolute top-6 md:top-8 left-6 md:left-8">

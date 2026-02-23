@@ -6,7 +6,8 @@ import { useLote } from "@/context/LoteContext";
 import { useAuth } from "@/context/AuthContext";
 import { useLoading } from "@/context/LoadingContext";
 import { authenticateUser, signInWithGoogle } from "@/lib/auth";
-import { db } from "@/lib/firebase";
+import { db, auth } from "@/lib/firebase";
+import { LazyImage } from "@/components/ui/LazyImage";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { pushWhatsAppContactFromOrder } from "@/utils/analytics";
 import { generateWhatsAppLink } from "@/utils/whatsapp";
@@ -259,11 +260,10 @@ export default function RevisarLote() {
                                 className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 flex items-center gap-4 relative pr-12 group"
                             >
                                 <div className="w-16 h-16 rounded-xl overflow-hidden bg-black flex-shrink-0">
-                                    <img
+                                    <LazyImage
                                         src={item.cover_image}
                                         alt=""
                                         className="w-full h-full object-cover"
-                                        loading="lazy"
                                     />
                                 </div>
                                 <div className="flex-1 min-w-0">

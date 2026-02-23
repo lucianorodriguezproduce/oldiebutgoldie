@@ -42,6 +42,7 @@ import type { OrderData } from '@/utils/whatsapp';
 import OrderCard from '@/components/OrderCard';
 import { pushWhatsAppContactFromOrder } from "@/utils/analytics";
 import NegotiationBanner from "@/components/NegotiationBanner";
+import { LazyImage } from "@/components/ui/LazyImage";
 
 interface ProfileItem {
     id: string;
@@ -594,7 +595,7 @@ export default function Profile() {
                         <div className="space-y-4">
                             {selectedOrder.status === "venta_finalizada" ? (
                                 <div className="space-y-6">
-                                    <div className="bg-green-500/10 border border-green-500/20 rounded-[2rem] p-8 space-y-6 relative overflow-hidden">
+                                    <div id="printable-receipt" className="bg-green-500/10 border border-green-500/20 rounded-[2rem] p-8 space-y-6 relative overflow-hidden">
                                         <div className="absolute top-0 right-0 p-8 opacity-5">
                                             <FileText size={120} />
                                         </div>
@@ -635,11 +636,11 @@ export default function Profile() {
                                                 Coordinar por WhatsApp
                                             </button>
                                             <button
-                                                onClick={() => downloadReceipt(selectedOrder)}
+                                                onClick={() => window.print()}
                                                 className="flex-none flex items-center justify-center gap-3 px-6 py-4 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
                                             >
                                                 <Download className="h-4 w-4" />
-                                                Descargar
+                                                Imprimir / PDF
                                             </button>
                                         </div>
                                     </div>
@@ -827,7 +828,7 @@ export default function Profile() {
                                     <div key={idx} className="border-b border-white/10 py-5 flex items-start gap-4">
                                         {/* TAREA 2: Imagen de ítem */}
                                         <div className="w-16 h-16 rounded overflow-hidden flex-shrink-0 bg-white/5 border border-white/10">
-                                            <img
+                                            <LazyImage
                                                 src={item.cover_image || item.thumb}
                                                 alt={item.title}
                                                 className="w-full h-full object-cover"
@@ -848,7 +849,7 @@ export default function Profile() {
                             ) : !selectedOrder.isBatch ? (
                                 <div className="border-b border-white/10 py-5 flex items-start gap-4">
                                     <div className="w-16 h-16 rounded overflow-hidden flex-shrink-0 bg-white/5 border border-white/10">
-                                        <img
+                                        <LazyImage
                                             src={selectedOrder.details?.cover_image || (selectedOrder.details as any)?.thumb}
                                             alt={selectedOrder.details?.album}
                                             className="w-full h-full object-cover"

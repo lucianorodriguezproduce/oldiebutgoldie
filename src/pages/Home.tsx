@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { LazyImage } from "@/components/ui/LazyImage";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, ChevronRight, CheckCircle2, Mail, Layers, DollarSign, TrendingUp, MessageCircle, X, Share } from "lucide-react";
 import { db, auth } from "@/lib/firebase";
@@ -743,11 +744,10 @@ export default function Home() {
                                                     <div className="absolute left-0 top-0 bottom-0 w-2 bg-transparent group-hover:bg-primary transition-colors" />
                                                     <div className="p-4 md:p-6 flex items-center gap-4 md:gap-6 ml-1">
                                                         <div className="w-16 md:w-20 h-16 md:h-20 rounded-xl md:rounded-2xl overflow-hidden bg-black flex-shrink-0 border border-white/10 shadow-lg">
-                                                            <img
+                                                            <LazyImage
                                                                 src={result.thumb || result.cover_image}
                                                                 alt=""
                                                                 className="w-full h-full object-cover grayscale-[0.3] group-hover:grayscale-0 transition-all duration-500"
-                                                                loading="lazy"
                                                             />
                                                         </div>
                                                         <div className="flex-1 min-w-0 flex flex-col items-start gap-1 text-left">

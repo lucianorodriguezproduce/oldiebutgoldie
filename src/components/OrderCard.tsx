@@ -18,6 +18,7 @@ import {
 import { useAuth } from '@/context/AuthContext';
 import type { OrderData } from '@/utils/whatsapp';
 import { formatDate, getReadableDate } from '@/utils/date';
+import { LazyImage } from '@/components/ui/LazyImage';
 
 interface OrderCardProps {
     order: any; // Using any or an extended OrderData to catch legacy fields without crashing
@@ -160,11 +161,10 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                 {/* Image Section */}
                 <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl overflow-hidden bg-black/50 flex-shrink-0 border border-white/10 group-hover:border-primary/20 transition-all relative">
                     {coverImage ? (
-                        <img
+                        <LazyImage
                             src={coverImage}
                             alt={title}
                             className="w-full h-full object-cover grayscale-[0.3] group-hover:grayscale-0 transition-all duration-500"
-                            loading="lazy"
                         />
                     ) : (
                         <div className="w-full h-full flex items-center justify-center">
@@ -273,10 +273,10 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                                             <div className="flex items-center gap-3">
                                                 <div className="w-8 h-8 rounded-lg overflow-hidden bg-white/5">
                                                     {item.cover_image && (
-                                                        <img
+                                                        <LazyImage
                                                             src={item.cover_image}
+                                                            alt=""
                                                             className="w-full h-full object-cover"
-                                                            loading="lazy"
                                                         />
                                                     )}
                                                 </div>

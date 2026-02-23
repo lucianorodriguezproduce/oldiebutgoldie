@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { db } from "@/lib/firebase";
+import { LazyImage } from "@/components/ui/LazyImage";
 import {
     collection,
     onSnapshot,
@@ -644,12 +645,13 @@ export default function AdminOrders() {
                         <div className="flex items-center gap-4 bg-white/[0.03] border border-white/5 rounded-xl p-4 mb-4">
                             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center overflow-hidden flex-shrink-0">
                                 {selectedOrder.user_photo ? (
-                                    <img
-                                        src={selectedOrder.user_photo}
-                                        alt=""
-                                        className="w-full h-full object-cover"
-                                        loading="lazy"
-                                    />
+                                    <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-white/5 border border-white/10">
+                                        <LazyImage
+                                            src={selectedOrder.user_photo}
+                                            alt=""
+                                            className="w-full h-full object-cover"
+                                        />
+                                    </div>
                                 ) : (
                                     <UserIcon className="h-5 w-5 text-primary" />
                                 )}

@@ -4,14 +4,14 @@ import { useAuth } from "@/context/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import NotificationBell from "@/components/NotificationBell";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { useOrderNotifications } from "@/hooks/useOrderNotifications";
 
 export const Navbar = () => {
     const location = useLocation();
     const { user, logout } = useAuth();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [hasActiveOffer, setHasActiveOffer] = useState(false);
+    const { hasActiveOffer } = useOrderNotifications();
 
     const navItems = [
         { path: "/", label: "Descubrir", icon: Search },
@@ -36,27 +36,6 @@ export const Navbar = () => {
         };
     }, [isMenuOpen]);
 
-    // Profile Notification Dot Logic
-    useEffect(() => {
-        if (!user) {
-            setHasActiveOffer(false);
-            return;
-        }
-
-        const q = query(
-            collection(db, "orders"),
-            where("user_id", "==", user.uid),
-            where("status", "==", "offer_sent")
-        );
-
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            setHasActiveOffer(!snapshot.empty);
-        }, (error) => {
-            console.error("Navbar order listener error:", error);
-        });
-
-        return () => unsubscribe();
-    }, [user]);
 
     return (
         <nav className="fixed w-full z-[9999] top-0 left-0 border-b border-white/[0.08] bg-black transition-all duration-500">
@@ -110,11 +89,25 @@ export const Navbar = () => {
 
                                         {/* Notification Indicator Dot */}
                                         {hasActiveOffer && (
-                                            <motion.span
-                                                initial={{ scale: 0 }}
-                                                animate={{ scale: 1 }}
-                                                className="absolute -top-1 -right-1 w-3 h-3 bg-[#CCFF00] rounded-full border-2 border-black shadow-[0_0_10px_rgba(204,255,0,0.8)] z-10"
-                                            />
+                                            <div className="absolute -top-1 -right-1 z-10">
+                                                <motion.span
+                                                    animate={{
+                                                        scale: [1, 1.5, 1],
+                                                        opacity: [0.8, 0, 0.8]
+                                                    }}
+                                                    transition={{
+                                                        duration: 2,
+                                                        repeat: Infinity,
+                                                        ease: "easeInOut"
+                                                    }}
+                                                    className="absolute inset-0 w-3 h-3 bg-[#CCFF00] rounded-full blur-[2px]"
+                                                />
+                                                <motion.span
+                                                    initial={{ scale: 0 }}
+                                                    animate={{ scale: 1 }}
+                                                    className="relative block w-3 h-3 bg-[#CCFF00] rounded-full border-2 border-black shadow-[0_0_10px_rgba(204,255,0,0.8)]"
+                                                />
+                                            </div>
                                         )}
                                     </Link>
                                     <button
@@ -181,11 +174,25 @@ export const Navbar = () => {
 
                                         {/* Mobile Notification Indicator Dot */}
                                         {hasActiveOffer && (
-                                            <motion.span
-                                                initial={{ scale: 0 }}
-                                                animate={{ scale: 1 }}
-                                                className="absolute top-4 right-6 w-4 h-4 bg-[#CCFF00] rounded-full border-2 border-[#0A0A0A] shadow-[0_0_15px_rgba(204,255,0,0.8)] z-10"
-                                            />
+                                            <div className="absolute top-4 right-6 z-10">
+                                                <motion.span
+                                                    animate={{
+                                                        scale: [1, 2, 1],
+                                                        opacity: [0.6, 0, 0.6]
+                                                    }}
+                                                    transition={{
+                                                        duration: 2,
+                                                        repeat: Infinity,
+                                                        ease: "easeInOut"
+                                                    }}
+                                                    className="absolute inset-0 w-4 h-4 bg-[#CCFF00] rounded-full blur-[4px]"
+                                                />
+                                                <motion.span
+                                                    initial={{ scale: 0 }}
+                                                    animate={{ scale: 1 }}
+                                                    className="relative block w-4 h-4 bg-[#CCFF00] rounded-full border-2 border-[#0A0A0A] shadow-[0_0_15px_rgba(204,255,0,0.8)]"
+                                                />
+                                            </div>
                                         )}
                                     </Link>
                                     <button

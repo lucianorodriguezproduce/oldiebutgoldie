@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useLoading } from "@/context/LoadingContext";
 import { useEffect } from "react";
+import { LazyImage } from "@/components/ui/LazyImage";
 
 interface Article {
     category: string;
@@ -112,11 +113,10 @@ export default function ArticleDetail() {
             </header>
 
             <div className="aspect-[21/9] rounded-[2rem] md:rounded-[4rem] overflow-hidden mb-16 md:mb-24 border border-white/5 ring-1 ring-white/10">
-                <img
+                <LazyImage
                     src={article.image}
                     alt={article.title}
                     className="w-full h-full object-cover"
-                    loading="lazy"
                 />
             </div>
 

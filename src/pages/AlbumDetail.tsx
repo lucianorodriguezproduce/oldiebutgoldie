@@ -12,6 +12,7 @@ import { useUserCollection } from "@/hooks/useUserCollection";
 import { useTelemetry } from "@/context/TelemetryContext";
 import { useEffect } from "react";
 import { useLoading } from "@/context/LoadingContext";
+import { LazyImage } from "@/components/ui/LazyImage";
 
 export default function AlbumDetail() {
     const { id } = useParams<{ id: string }>();
@@ -83,11 +84,10 @@ export default function AlbumDetail() {
                         transition={{ type: "spring", damping: 12, stiffness: 100 }}
                         className="relative group aspect-square rounded-[3rem] overflow-hidden border border-white/10 bg-black shadow-[0_80px_150px_-30px_rgba(0,0,0,0.8)] perspective-1000"
                     >
-                        <img
+                        <LazyImage
                             src={album.images?.[0]?.uri || album.thumb}
                             alt={album.title}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000 ease-out"
-                            loading="lazy"
                             onError={(e) => {
                                 (e.target as HTMLImageElement).src = "https://placehold.co/800x800/121212/FFFFFF?text=No+Cover";
                             }}
