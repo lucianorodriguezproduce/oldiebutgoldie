@@ -6,6 +6,7 @@ import { LoteProvider } from "@/context/LoteContext";
 import { LoadingProvider } from "@/context/LoadingContext";
 import { FloatingCartCounter } from "@/components/FloatingCartCounter";
 import { LoadingOverlay } from "@/components/ui/LoadingOverlay";
+import { AnalyticsProvider } from "@/components/AnalyticsProvider";
 import Layout from "@/components/Layout/Layout";
 import Login from "@/pages/Login";
 import Home from "@/pages/Home";
@@ -39,39 +40,41 @@ const queryClient = new QueryClient({
 function AppContent() {
   return (
     <BrowserRouter>
-      <LoadingOverlay />
-      <FloatingCartCounter />
-      <Routes>
-        <Route element={<Layout />}>
-          <Route path="/" element={<Home />} />
-          <Route path="/actividad" element={<PublicOrders />} />
-          <Route path="/orden/:id" element={<PublicOrderView />} />
-          <Route path="/revisar-lote" element={<RevisarLote />} />
-          <Route path="/item/:type/:id" element={<Home />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/album/:id" element={<AlbumDetail />} />
-          <Route path="/editorial" element={<Editorial />} />
-          <Route path="/editorial/:id" element={<ArticleDetail />} />
-          <Route path="/eventos" element={<Eventos />} />
+      <AnalyticsProvider>
+        <LoadingOverlay />
+        <FloatingCartCounter />
+        <Routes>
+          <Route element={<Layout />}>
+            <Route path="/" element={<Home />} />
+            <Route path="/actividad" element={<PublicOrders />} />
+            <Route path="/orden/:id" element={<PublicOrderView />} />
+            <Route path="/revisar-lote" element={<RevisarLote />} />
+            <Route path="/item/:type/:id" element={<Home />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/album/:id" element={<AlbumDetail />} />
+            <Route path="/editorial" element={<Editorial />} />
+            <Route path="/editorial/:id" element={<ArticleDetail />} />
+            <Route path="/eventos" element={<Eventos />} />
 
-          <Route element={<ProtectedRoute />}>
-            <Route path="/profile" element={<Profile />} />
+            <Route element={<ProtectedRoute />}>
+              <Route path="/profile" element={<Profile />} />
+            </Route>
           </Route>
-        </Route>
 
-        {/* Nested Admin Routes */}
-        <Route element={<ProtectedRoute adminOnly={true} />}>
-          <Route path="/admin" element={<AdminLayout><Outlet /></AdminLayout>}>
-            <Route index element={<AnalyticsDashboard />} />
-            <Route path="analytics" element={<AnalyticsDashboard />} />
-            <Route path="dashboard" element={<AdminDashboard />} />
-            <Route path="community" element={<CommunityManager />} />
-            <Route path="editorial" element={<EditorialManager />} />
-            <Route path="orders" element={<AdminOrders />} />
-            <Route path="purge" element={<DatabasePurge />} />
+          {/* Nested Admin Routes */}
+          <Route element={<ProtectedRoute adminOnly={true} />}>
+            <Route path="/admin" element={<AdminLayout><Outlet /></AdminLayout>}>
+              <Route index element={<AnalyticsDashboard />} />
+              <Route path="analytics" element={<AnalyticsDashboard />} />
+              <Route path="dashboard" element={<AdminDashboard />} />
+              <Route path="community" element={<CommunityManager />} />
+              <Route path="editorial" element={<EditorialManager />} />
+              <Route path="orders" element={<AdminOrders />} />
+              <Route path="purge" element={<DatabasePurge />} />
+            </Route>
           </Route>
-        </Route>
-      </Routes>
+        </Routes>
+      </AnalyticsProvider>
     </BrowserRouter>
   );
 }

@@ -38,6 +38,8 @@ import { SEO } from '@/components/SEO';
 import OrderCard from '@/components/OrderCard';
 import OrderDetailsDrawer from "@/components/OrderDetailsDrawer";
 import { useLoading } from "@/context/LoadingContext";
+import { useAuth } from "@/context/AuthContext";
+import { trackEvent } from "@/components/AnalyticsProvider";
 
 interface OrderDoc {
     id: string;
@@ -191,6 +193,11 @@ export default function AdminOrders() {
 
         const confirm = window.confirm(TEXTS.admin.confirmSetPrice(priceVal, currencyVal));
         if (confirm) {
+            trackEvent('send_counter_offer', {
+                order_id: order.id,
+                price: priceVal,
+                currency: currencyVal
+            });
             showLoading(TEXTS.admin.settingPrice);
             setQuotingId(order.id);
             try {

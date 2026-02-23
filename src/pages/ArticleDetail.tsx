@@ -11,6 +11,7 @@ import { useEffect } from "react";
 import { LazyImage } from "@/components/ui/LazyImage";
 import { TEXTS } from "@/constants/texts";
 import { SEO } from "@/components/SEO";
+import { trackEvent } from "@/components/AnalyticsProvider";
 
 interface Article {
     id?: string;
@@ -61,6 +62,21 @@ export default function ArticleDetail() {
             navigate(article._redirectUrl, { replace: true });
         }
     }, [article, navigate]);
+
+    // GA4 Sensor: Editorial Read Tracking (>30s dwell time)
+    useEffect(() => {
+        if (!article || !article.id) return;
+
+        const timer = setTimeout(() => {
+            trackEvent('editorial_read', {
+                article_id: article.id,
+                article_title: article.title,
+                article_category: article.category
+            });
+        }, 30000); // Trigger after 30 seconds
+
+        return () => clearTimeout(timer);
+    }, [article]);
 
     useEffect(() => {
         if (isLoading) {
