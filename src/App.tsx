@@ -24,6 +24,7 @@ import CommunityManager from "@/pages/Admin/CommunityManager";
 import AdminOrders from "@/pages/AdminOrders";
 import DatabasePurge from "@/pages/Admin/DatabasePurge";
 import { ProtectedRoute } from "@/components/Guard/ProtectedRoute";
+import AdminDashboard from "@/pages/AdminDashboard";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -63,6 +64,7 @@ function AppContent() {
           <Route path="/admin" element={<AdminLayout><Outlet /></AdminLayout>}>
             <Route index element={<AnalyticsDashboard />} />
             <Route path="analytics" element={<AnalyticsDashboard />} />
+            <Route path="dashboard" element={<AdminDashboard />} />
             <Route path="community" element={<CommunityManager />} />
             <Route path="editorial" element={<EditorialManager />} />
             <Route path="orders" element={<AdminOrders />} />

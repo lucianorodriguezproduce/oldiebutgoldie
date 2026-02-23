@@ -11,7 +11,6 @@ const BASE_URL = 'https://oldie-but-goldie.vercel.app';
 const PROJECT_ID = process.env.VITE_FIREBASE_PROJECT_ID || 'vinilos-app-e1d2c';
 
 async function fetchEditorialSlugs() {
-    console.log("Fetching editorial slugs from Firestore REST API...");
     try {
         const response = await fetch(`https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/editorial`);
 
@@ -66,7 +65,6 @@ ${allRoutes.map(route => `    <url>
     }
 
     fs.writeFileSync(path.join(publicPath, 'sitemap.xml'), sitemapContent);
-    console.log(`sitemap.xml generated successfully traversing ${allRoutes.length} specific routes.`);
 }
 
-generateSitemap().catch(console.error);
+generateSitemap().catch();

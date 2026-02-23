@@ -43,7 +43,7 @@ export default function AdminDashboard() {
                     { query: "cotizador de discos de vinilo", clicks: 180, impressions: 1200, ctr: 15.0, position: 4.5 }
                 ]);
             } catch (error) {
-                console.error("Error fetching analytics:", error);
+                // Production: Silent fail or logging service
             } finally {
                 setIsLoading(false);
             }
