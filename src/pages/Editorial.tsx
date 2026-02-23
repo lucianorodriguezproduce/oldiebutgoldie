@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useLoading } from "@/context/LoadingContext";
 import { LazyImage } from "@/components/ui/LazyImage";
+import { TEXTS } from "@/constants/texts";
 
 interface Article {
     id: string;
@@ -29,7 +30,7 @@ export default function Editorial() {
     const [isSubscribing, setIsSubscribing] = useState(false);
 
     useEffect(() => {
-        showLoading("Sincronizando Grilla Editorial...");
+        showLoading(TEXTS.common.syncingEditorial);
         const q = query(
             collection(db, "editorial"),
             where("status", "==", "published"),
@@ -56,11 +57,11 @@ export default function Editorial() {
                 email,
                 subscribedAt: serverTimestamp()
             });
-            alert("Protocolo de transmisión establecido. Bienvenido al Protocolo Sónico.");
+            alert(TEXTS.common.transmissionProtocolEstablished);
             setEmail("");
         } catch (error) {
             console.error("Error subscribing:", error);
-            alert("Error de conexión. Reinicializando.");
+            alert(TEXTS.common.connectionError);
         } finally {
             setIsSubscribing(false);
             hideLoading();
@@ -99,8 +100,8 @@ export default function Editorial() {
             <div className="py-20 md:py-40 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[3rem] space-y-6 text-center px-4">
                 <Search className="h-12 w-12 text-gray-700" />
                 <div className="space-y-2">
-                    <p className="text-xl font-display font-medium text-gray-500">El archivo cultural está actualmente vacío.</p>
-                    <p className="text-gray-600 text-sm">Vuelve durante el próximo ciclo de sincronización.</p>
+                    <p className="text-xl font-display font-medium text-gray-500">{TEXTS.common.culturalArchiveEmpty}</p>
+                    <p className="text-gray-600 text-sm">{TEXTS.common.nextSyncCycle}</p>
                 </div>
                 <button
                     onClick={handleSeed}
@@ -137,7 +138,7 @@ export default function Editorial() {
                                 className="max-w-3xl space-y-6 md:space-y-8"
                             >
                                 <Badge className="bg-primary text-black font-black uppercase tracking-widest px-4 md:px-6 py-1.5 md:py-2 rounded-full text-[10px] md:text-xs shadow-xl shadow-primary/20 self-start">
-                                    {featured.featured ? "Destacado" : "Novedad"}
+                                    {featured.featured ? TEXTS.common.featured : TEXTS.common.novelty}
                                 </Badge>
                                 <h1 className="text-3xl md:text-[6rem] font-display font-black text-white tracking-tightest leading-[1] md:leading-[1.1] uppercase">
                                     {featured.title}
@@ -151,7 +152,7 @@ export default function Editorial() {
                                             <User className="h-4 w-4 md:h-6 md:w-6 text-primary" />
                                         </div>
                                         <div>
-                                            <p className="text-[8px] md:text-[10px] font-black text-gray-500 uppercase tracking-widest mb-0.5 md:mb-1">Analista</p>
+                                            <p className="text-[8px] md:text-[10px] font-black text-gray-500 uppercase tracking-widest mb-0.5 md:mb-1">{TEXTS.common.analyst}</p>
                                             <span className="text-xs md:text-sm font-bold text-white uppercase tracking-widest">{featured.author}</span>
                                         </div>
                                     </div>
@@ -160,13 +161,13 @@ export default function Editorial() {
                                             <Clock className="h-4 w-4 md:h-6 md:w-6 text-primary" />
                                         </div>
                                         <div>
-                                            <p className="text-[8px] md:text-[10px] font-black text-gray-500 uppercase tracking-widest mb-0.5 md:mb-1">Lectura</p>
+                                            <p className="text-[8px] md:text-[10px] font-black text-gray-500 uppercase tracking-widest mb-0.5 md:mb-1">{TEXTS.common.readingTime}</p>
                                             <span className="text-xs md:text-sm font-bold text-white uppercase tracking-widest">{featured.readTime}</span>
                                         </div>
                                     </div>
                                     <Link to={`/editorial/${featured.id}`} className="w-full md:w-auto mt-4 md:mt-0">
                                         <button className="w-full md:ml-auto bg-white text-black px-8 md:px-12 py-4 md:py-5 rounded-2xl md:rounded-[2rem] font-black uppercase text-[10px] md:text-xs tracking-[0.2em] hover:bg-primary transition-all flex items-center justify-center gap-4 group/btn">
-                                            Leer Artículo <ArrowRight className="h-4 w-4 md:h-5 md:w-5 group-hover/btn:translate-x-2 transition-transform" />
+                                            {TEXTS.common.readArticle} <ArrowRight className="h-4 w-4 md:h-5 md:w-5 group-hover/btn:translate-x-2 transition-transform" />
                                         </button>
                                     </Link>
                                 </div>
@@ -180,11 +181,11 @@ export default function Editorial() {
             <section className="space-y-12 md:space-y-16 px-4 md:px-0">
                 <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-white/5 pb-8 md:pb-12 gap-6">
                     <div>
-                        <h2 className="text-4xl md:text-5xl font-display font-black text-white tracking-tightest leading-none uppercase">Intel <span className="text-primary">Despachos</span></h2>
-                        <p className="text-gray-500 mt-2 md:mt-4 text-lg md:text-xl font-medium">Metadatos mensuales de nuestra red global.</p>
+                        <h2 className="text-4xl md:text-5xl font-display font-black text-white tracking-tightest leading-none uppercase">{TEXTS.common.intelDispatches.split(' ')[0]} <span className="text-primary">{TEXTS.common.intelDispatches.split(' ')[1]}</span></h2>
+                        <p className="text-gray-500 mt-2 md:mt-4 text-lg md:text-xl font-medium">{TEXTS.common.monthlyMetadata}</p>
                     </div>
                     <div className="flex flex-wrap gap-2 md:gap-4">
-                        {['Todos', 'Entrevistas', 'Cultura', 'Equipos'].map((tag) => (
+                        {[TEXTS.common.all, TEXTS.common.interviews, TEXTS.common.culture, TEXTS.common.equipment].map((tag) => (
                             <button key={tag} className="px-4 md:px-6 py-1.5 md:py-2 rounded-lg md:rounded-xl bg-white/5 text-[8px] md:text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white hover:bg-white/10 transition-all border border-white/5">
                                 {tag}
                             </button>
@@ -230,7 +231,7 @@ export default function Editorial() {
                                         {article.excerpt}
                                     </p>
                                     <button className="flex items-center gap-2 md:gap-3 text-primary font-black uppercase text-[10px] md:text-[11px] tracking-[0.3em] pt-6 md:pt-8 group-hover:gap-6 transition-all">
-                                        Ver Nota <ArrowRight className="h-4 w-4 md:h-5 md:w-5" />
+                                        {TEXTS.common.seeNote} <ArrowRight className="h-4 w-4 md:h-5 md:w-5" />
                                     </button>
                                 </div>
                             </Link>
@@ -246,9 +247,11 @@ export default function Editorial() {
                     <div className="absolute bottom-0 left-0 translate-y-1/2 -translate-x-1/4 w-[300px] md:w-[600px] h-[300px] md:h-[600px] bg-white/10 blur-[60px] md:blur-[100px] rounded-full pointer-events-none" />
 
                     <div className="relative z-10 max-w-2xl space-y-6 md:space-y-8 text-center md:text-left">
-                        <Badge className="bg-black text-white font-black uppercase tracking-widest px-4 md:px-6 py-1.5 md:py-2 rounded-full text-[8px] md:text-[10px] inline-block">Mesa de Noticas</Badge>
-                        <h2 className="text-5xl md:text-[8rem] font-display font-black text-black tracking-tighter leading-[0.9] md:leading-[0.85] uppercase">Súmate <br />al <br />Protocolo</h2>
-                        <p className="text-black/70 text-lg md:text-2xl font-bold leading-relaxed max-w-lg mx-auto md:mx-0">Recibe despachos de alta fidelidad e inteligencia de estudio directo a tu terminal.</p>
+                        <Badge className="bg-black text-white font-black uppercase tracking-widest px-4 md:px-6 py-1.5 md:py-2 rounded-full text-[8px] md:text-[10px] inline-block">{TEXTS.common.newsDesk}</Badge>
+                        <h2 className="text-5xl md:text-[8rem] font-display font-black text-black tracking-tighter leading-[0.9] md:leading-[0.85] uppercase">
+                            {TEXTS.common.joinProtocol.split(' ')[0]} <br />{TEXTS.common.joinProtocol.split(' ')[1]} <br />{TEXTS.common.joinProtocol.split(' ')[2]}
+                        </h2>
+                        <p className="text-black/70 text-lg md:text-2xl font-bold leading-relaxed max-w-lg mx-auto md:mx-0">{TEXTS.common.highFidelityDespatches}</p>
                     </div>
 
                     <div className="relative z-10 w-full md:w-[500px]">
@@ -258,7 +261,7 @@ export default function Editorial() {
                                     type="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    placeholder="ID de Terminal (Email)"
+                                    placeholder={TEXTS.common.terminalID}
                                     className="bg-transparent border-0 focus:ring-0 text-white placeholder:text-white/30 font-black uppercase tracking-widest text-xs md:text-sm px-6 md:px-8 py-4 md:py-0 w-full outline-none"
                                     required
                                 />
@@ -267,10 +270,10 @@ export default function Editorial() {
                                     disabled={isSubscribing}
                                     className="bg-primary text-black px-8 md:px-12 py-4 md:py-6 rounded-xl md:rounded-[2rem] font-black uppercase tracking-widest text-[10px] md:text-xs hover:scale-105 active:scale-95 transition-all shadow-xl shadow-black/40 disabled:opacity-50"
                                 >
-                                    {isSubscribing ? "Vinculando..." : "Inicializar"}
+                                    {isSubscribing ? TEXTS.common.linking : TEXTS.common.initialize}
                                 </button>
                             </div>
-                            <p className="text-[8px] md:text-[10px] font-black text-black/40 uppercase tracking-widest text-center">Encriptado vía Protocolo SonicVault 3.0</p>
+                            <p className="text-[8px] md:text-[10px] font-black text-black/40 uppercase tracking-widest text-center">{TEXTS.common.encryptedVia}</p>
                         </form>
                     </div>
                 </div>

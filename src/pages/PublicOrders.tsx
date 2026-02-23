@@ -5,6 +5,7 @@ import { Clock, ShoppingBag, Music, ShieldCheck, BadgeDollarSign, Disc } from 'l
 import { db } from '@/lib/firebase';
 import { SEO } from '@/components/SEO';
 import { motion, AnimatePresence } from 'framer-motion';
+import { TEXTS } from '@/constants/texts';
 
 import OrderCard from '@/components/OrderCard';
 
@@ -38,14 +39,14 @@ export default function PublicOrders() {
     return (
         <div className="min-h-screen bg-black pt-12">
             <SEO
-                title="Actividad Reciente | Oldie but Goldie"
-                description="Últimas adquisiciones, cotizaciones y ventas de vinilos de colección en tiempo real."
+                title={TEXTS.common.publicActivity.activityTitle}
+                description={TEXTS.common.publicActivity.activityDesc}
                 url="https://oldie-but-goldie.vercel.app/actividad"
                 schema={{
                     "@context": "https://schema.org",
                     "@type": "CollectionPage",
-                    "name": "Feed de Actividad de Vinilos",
-                    "description": "Monitoreo en tiempo real del catálogo rotativo de Oldie but Goldie"
+                    "name": TEXTS.common.publicActivity.activityName,
+                    "description": TEXTS.common.publicActivity.activityFeedDesc
                 }}
             />
 
@@ -58,7 +59,7 @@ export default function PublicOrders() {
                         className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10"
                     >
                         <ShieldCheck className="w-4 h-4 text-primary" />
-                        <span className="text-xs font-mono text-gray-300 uppercase tracking-wider">Feed Público Verificado</span>
+                        <span className="text-xs font-mono text-gray-300 uppercase tracking-wider">{TEXTS.common.publicActivity.verifiedFeed}</span>
                     </motion.div>
 
                     <motion.h1
@@ -67,7 +68,7 @@ export default function PublicOrders() {
                         transition={{ delay: 0.1 }}
                         className="text-4xl md:text-5xl font-black font-display tracking-tightest leading-tight"
                     >
-                        Actividad <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-white/40">Reciente</span>
+                        {TEXTS.common.publicActivity.recentActivity.split(' ')[0]} <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-white/40">{TEXTS.common.publicActivity.recentActivity.split(' ')[1]}</span>
                     </motion.h1>
 
                     <motion.p
@@ -76,7 +77,7 @@ export default function PublicOrders() {
                         transition={{ delay: 0.2 }}
                         className="text-gray-400 max-w-xl text-sm leading-relaxed"
                     >
-                        Explora los discos que están en movimiento ahora mismo. Cada transacción es una pieza de historia física preservada.
+                        {TEXTS.common.publicActivity.exploreDiscs}
                     </motion.p>
                 </div>
 
@@ -107,8 +108,8 @@ export default function PublicOrders() {
                         ) : (
                             <div className="py-20 flex flex-col items-center justify-center text-center">
                                 <Disc className="w-16 h-16 text-white/10 mb-4 animate-[spin_10s_linear_infinite]" />
-                                <h3 className="text-xl font-display font-black text-white uppercase tracking-widest mb-2">Sin Actividad</h3>
-                                <p className="text-gray-500 font-medium">No hay órdenes públicas registradas aún.</p>
+                                <h3 className="text-xl font-display font-black text-white uppercase tracking-widest mb-2">{TEXTS.common.publicActivity.noActivity}</h3>
+                                <p className="text-gray-500 font-medium">{TEXTS.common.publicActivity.noPublicOrders}</p>
                             </div>
                         )}
                     </motion.div>

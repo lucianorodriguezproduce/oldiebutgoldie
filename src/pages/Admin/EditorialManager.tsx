@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { DriveUpload } from "@/components/Admin/DriveUpload";
+import { TEXTS } from "@/constants/texts";
 
 interface Article {
     id: string;
@@ -107,7 +108,7 @@ export default function EditorialManager() {
     };
 
     const handleDelete = async (id: string) => {
-        if (confirm("Are you sure you want to delete this dispatch?")) {
+        if (confirm(TEXTS.admin.editorial.deleteDispatchConfirm)) {
             await deleteDoc(doc(db, "editorial", id));
         }
     };
@@ -122,22 +123,24 @@ export default function EditorialManager() {
         <div className="space-y-10">
             <header className="flex items-end justify-between">
                 <div>
-                    <h1 className="text-6xl font-display font-black text-white tracking-tightest leading-none">Editorial <span className="text-primary">Console</span></h1>
-                    <p className="text-gray-500 mt-4 text-lg font-medium max-w-2xl">Manage long-form content, interviews, and sonic dispatches.</p>
+                    <h1 className="text-6xl font-display font-black text-white tracking-tightest leading-none">
+                        {TEXTS.admin.editorial.title.split(' ')[0]} <span className="text-primary">{TEXTS.admin.editorial.title.split(' ')[1]}</span>
+                    </h1>
+                    <p className="text-gray-500 mt-4 text-lg font-medium max-w-2xl">{TEXTS.admin.editorial.description}</p>
                 </div>
                 <Button
                     onClick={() => { setCurrentArticle({}); setIsEditing(true); }}
                     className="bg-primary text-black font-black uppercase tracking-widest px-8 py-6 rounded-2xl hover:scale-105 transition-all shadow-xl shadow-primary/20"
                 >
-                    <Plus className="mr-2 h-5 w-5" /> New Dispatch
+                    <Plus className="mr-2 h-5 w-5" /> {TEXTS.admin.editorial.newDispatch}
                 </Button>
             </header>
 
             {/* Navigation Tabs */}
             <div className="flex border-b border-white/5 space-x-12">
                 {[
-                    { id: "articles", label: "Intel Dispatches", icon: FileText },
-                    { id: "subscribers", label: "Protocol Subscribers", icon: Users },
+                    { id: "articles", label: TEXTS.admin.editorial.intelDispatches, icon: FileText },
+                    { id: "subscribers", label: TEXTS.admin.editorial.protocolSubscribers, icon: Users },
                 ].map((tab) => (
                     <button
                         key={tab.id}
@@ -165,11 +168,11 @@ export default function EditorialManager() {
                     {activeSubTab === "articles" ? (
                         <div className="grid grid-cols-1 gap-6">
                             {loading ? (
-                                <div className="py-20 text-center text-gray-500 font-black uppercase tracking-widest">Initialising Data Streams...</div>
+                                <div className="py-20 text-center text-gray-500 font-black uppercase tracking-widest">{TEXTS.admin.syncing}</div>
                             ) : articles.length === 0 ? (
                                 <div className="py-40 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[3rem] space-y-6 text-center">
                                     <FileText className="h-12 w-12 text-gray-700" />
-                                    <p className="text-xl font-display font-medium text-gray-500">No dispatches found in the database.</p>
+                                    <p className="text-xl font-display font-medium text-gray-500">{TEXTS.admin.editorial.noDispatches}</p>
                                 </div>
                             ) : (
                                 articles.map((article) => (
@@ -244,13 +247,13 @@ export default function EditorialManager() {
                                             <th className="px-10 py-8 text-[10px] font-black text-gray-500 uppercase tracking-widest">Subscriber ID</th>
                                             <th className="px-10 py-8 text-[10px] font-black text-gray-500 uppercase tracking-widest">Connection Node</th>
                                             <th className="px-10 py-8 text-[10px] font-black text-gray-500 uppercase tracking-widest">Protocol Date</th>
-                                            <th className="px-10 py-8 text-[10px] font-black text-gray-500 uppercase tracking-widest text-right">Actions</th>
+                                            <th className="px-10 py-8 text-[10px] font-black text-gray-500 uppercase tracking-widest text-right">{TEXTS.admin.filterAll}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {subscribers.length === 0 ? (
                                             <tr>
-                                                <td colSpan={4} className="px-10 py-20 text-center text-gray-500 font-bold">No active subscriptions detected.</td>
+                                                <td colSpan={4} className="px-10 py-20 text-center text-gray-500 font-bold">{TEXTS.admin.editorial.noSubscribers}</td>
                                             </tr>
                                         ) : (
                                             subscribers.map((sub) => (
@@ -270,7 +273,7 @@ export default function EditorialManager() {
                                                             variant="ghost"
                                                             size="icon"
                                                             onClick={async () => {
-                                                                if (confirm("Terminate subscription protocol?")) {
+                                                                if (confirm(TEXTS.admin.editorial.terminateSubConfirm)) {
                                                                     await deleteDoc(doc(db, "subscribers", sub.id));
                                                                 }
                                                             }}
@@ -309,7 +312,7 @@ export default function EditorialManager() {
                         >
                             <div className="p-10 border-b border-white/5 flex items-center justify-between">
                                 <h2 className="text-3xl font-black text-white uppercase tracking-tightest">
-                                    {currentArticle?.id ? "Modify Dispatch" : "Initialise Dispatch"}
+                                    {currentArticle?.id ? TEXTS.admin.editorial.modifyDispatch : TEXTS.admin.editorial.initialiseDispatch}
                                 </h2>
                                 <Button variant="ghost" size="icon" onClick={() => setIsEditing(false)} className="text-gray-500 hover:text-white">
                                     <X className="h-8 w-8" />
@@ -319,19 +322,19 @@ export default function EditorialManager() {
                             <form onSubmit={handleSave} className="p-10 space-y-8 max-h-[70vh] overflow-y-auto custom-scrollbar">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     <div className="space-y-2">
-                                        <label htmlFor="article-title" className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-4">Dispatch Title</label>
+                                        <label htmlFor="article-title" className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-4">{TEXTS.admin.editorial.dispatchTitle}</label>
                                         <input
                                             id="article-title"
                                             name="title"
                                             value={currentArticle?.title || ""}
                                             onChange={e => setCurrentArticle({ ...currentArticle, title: e.target.value })}
                                             className="w-full bg-white/5 border-white/5 rounded-2xl px-6 py-4 text-white focus:border-primary transition-all outline-none"
-                                            placeholder="Enter title..."
+                                            placeholder="..."
                                             required
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <label htmlFor="article-category" className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-4">Intel Category</label>
+                                        <label htmlFor="article-category" className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-4">{TEXTS.admin.editorial.intelCategory}</label>
                                         <select
                                             id="article-category"
                                             name="category"
@@ -351,54 +354,54 @@ export default function EditorialManager() {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <label htmlFor="article-excerpt" className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-4">Brief Excerpt</label>
+                                    <label htmlFor="article-excerpt" className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-4">{TEXTS.admin.editorial.briefExcerpt}</label>
                                     <textarea
                                         id="article-excerpt"
                                         name="excerpt"
                                         value={currentArticle?.excerpt || ""}
                                         onChange={e => setCurrentArticle({ ...currentArticle, excerpt: e.target.value })}
                                         className="w-full bg-white/5 border-white/5 rounded-2xl px-6 py-4 text-white focus:border-primary transition-all outline-none h-24 resize-none"
-                                        placeholder="Enter short summary..."
+                                        placeholder="..."
                                         required
                                     />
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                                     <div className="space-y-2">
-                                        <label htmlFor="article-author" className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-4">Author Name</label>
+                                        <label htmlFor="article-author" className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-4">{TEXTS.admin.editorial.authorName}</label>
                                         <input
                                             id="article-author"
                                             name="author"
                                             value={currentArticle?.author || ""}
                                             onChange={e => setCurrentArticle({ ...currentArticle, author: e.target.value })}
                                             className="w-full bg-white/5 border-white/5 rounded-2xl px-6 py-4 text-white focus:border-primary transition-all outline-none"
-                                            placeholder="System Pilot..."
+                                            placeholder="..."
                                             required
                                         />
                                     </div>
                                     <div className="space-y-4 md:col-span-3">
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                             <div className="space-y-2">
-                                                <label htmlFor="article-image" className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-4">Image Source (URL)</label>
+                                                <label htmlFor="article-image" className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-4">{TEXTS.admin.editorial.imageSource}</label>
                                                 <input
                                                     id="article-image"
                                                     name="image"
                                                     value={currentArticle?.image || ""}
                                                     onChange={e => setCurrentArticle({ ...currentArticle, image: e.target.value })}
                                                     className="w-full bg-white/5 border-white/5 rounded-2xl px-6 py-4 text-white focus:border-primary transition-all outline-none"
-                                                    placeholder="Unsplash / Direct link..."
+                                                    placeholder="..."
                                                     required
                                                 />
                                             </div>
                                             <div className="space-y-2">
-                                                <label htmlFor="article-readTime" className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-4">Read Duration</label>
+                                                <label htmlFor="article-readTime" className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-4">{TEXTS.admin.editorial.readDuration}</label>
                                                 <input
                                                     id="article-readTime"
                                                     name="readTime"
                                                     value={currentArticle?.readTime || ""}
                                                     onChange={e => setCurrentArticle({ ...currentArticle, readTime: e.target.value })}
                                                     className="w-full bg-white/5 border-white/5 rounded-2xl px-6 py-4 text-white focus:border-primary transition-all outline-none"
-                                                    placeholder="e.g. 15 min read"
+                                                    placeholder="..."
                                                     required
                                                 />
                                             </div>
@@ -413,7 +416,7 @@ export default function EditorialManager() {
 
                                 <div className="flex items-center gap-12 pt-4">
                                     <div className="flex items-center gap-4">
-                                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Protocol Status:</label>
+                                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{TEXTS.admin.editorial.protocolStatus}:</label>
                                         <div className="flex bg-white/5 p-1 rounded-xl">
                                             {['draft', 'published'].map((s) => (
                                                 <button
@@ -431,10 +434,10 @@ export default function EditorialManager() {
 
                                 <div className="p-10 border-t border-white/5 bg-black/40 -mx-10 -mb-10 flex justify-end gap-4">
                                     <Button type="button" variant="ghost" onClick={() => setIsEditing(false)} className="text-gray-500 hover:text-white font-bold h-14 px-8 rounded-2xl">
-                                        Esc Abort
+                                        {TEXTS.admin.editorial.escAbort}
                                     </Button>
                                     <Button type="submit" className="bg-primary text-black font-black uppercase tracking-widest h-14 px-12 rounded-2xl hover:scale-105 transition-all shadow-xl shadow-primary/20">
-                                        <Save className="mr-2 h-5 w-5" /> Commit Dispatch
+                                        <Save className="mr-2 h-5 w-5" /> {TEXTS.admin.editorial.commitDispatch}
                                     </Button>
                                 </div>
                             </form>

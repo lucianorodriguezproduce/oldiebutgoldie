@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Trash2, Mic, Activity } from 'lucide-react';
 import { getEventosChatSession } from '@/lib/gemini';
+import { TEXTS } from '@/constants/texts';
 
 interface Message {
     id: string;
@@ -29,7 +30,7 @@ export default function Eventos() {
                     {
                         id: 'welcome',
                         role: 'model',
-                        text: 'Conexión establecida. Radar musical de Argentina activo. ¿Qué banda, género o fecha buscas en el circuito?'
+                        text: TEXTS.common.events.welcome
                     }
                 ]);
             } else if (!session && messages.length === 0) {
@@ -37,7 +38,7 @@ export default function Eventos() {
                     {
                         id: 'error',
                         role: 'model',
-                        text: 'Error de conexión. Sistema inoperativo [API Key Required].'
+                        text: TEXTS.common.events.connectionError
                     }
                 ]);
             }
@@ -79,7 +80,7 @@ export default function Eventos() {
             const errorMsg: Message = {
                 id: (Date.now() + 1).toString(),
                 role: 'model',
-                text: 'El radar está experimentando interferencias. Reintentando conexión...'
+                text: TEXTS.common.events.interference
             };
             setMessages(prev => [...prev, errorMsg]);
         } finally {
@@ -92,7 +93,7 @@ export default function Eventos() {
     };
 
     const handleClearChat = () => {
-        if (!window.confirm("¿Seguro que deseas purgar el historial del radar?")) return;
+        if (!window.confirm(TEXTS.common.events.purgeConfirm)) return;
 
         const newSession = getEventosChatSession();
         setChatSession(newSession);
@@ -100,7 +101,7 @@ export default function Eventos() {
             {
                 id: Date.now().toString(),
                 role: 'model',
-                text: 'Radar reiniciado. Coordenadas musicales limpias.'
+                text: TEXTS.common.events.reset
             }
         ]);
         setInput('');
@@ -128,15 +129,15 @@ export default function Eventos() {
                         <Activity className="w-4 h-4 text-primary relative z-10" />
                     </div>
                     <div>
-                        <h1 className="text-lg md:text-xl font-display font-black text-white uppercase tracking-tighter leading-none">Eventos AI</h1>
-                        <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest leading-none mt-1">Radar de Escena Argentina</p>
+                        <h1 className="text-lg md:text-xl font-display font-black text-white uppercase tracking-tighter leading-none">{TEXTS.common.events.title}</h1>
+                        <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest leading-none mt-1">{TEXTS.common.events.subtitle}</p>
                     </div>
                 </div>
 
                 <button
                     onClick={handleClearChat}
                     className="h-10 w-10 flex items-center justify-center rounded-full text-gray-500 hover:text-red-500 hover:bg-white/5 transition-colors active:scale-90"
-                    title="Limpiar Conversación"
+                    title={TEXTS.common.events.clearChat}
                 >
                     <Trash2 className="w-4 h-4" />
                 </button>
@@ -200,7 +201,7 @@ export default function Eventos() {
                             type="text"
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
-                            placeholder="Consultar ciclo, fecha o banda..."
+                            placeholder={TEXTS.common.events.inputPlaceholder}
                             className="flex-1 bg-transparent py-5 px-4 text-white text-sm md:text-base focus:outline-none font-mono placeholder:font-sans placeholder:text-gray-600"
                             disabled={isLoading}
                         />

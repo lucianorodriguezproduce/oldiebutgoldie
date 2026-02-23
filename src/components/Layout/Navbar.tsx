@@ -1,4 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
+import { TEXTS } from "@/constants/texts";
 import { Disc, Search, User as UserIcon, LogOut, BookOpen, Clock, Menu, X } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -14,9 +15,9 @@ export const Navbar = () => {
     const { hasActiveOffer } = useOrderNotifications();
 
     const navItems = [
-        { path: "/", label: "Descubrir", icon: Search },
-        { path: "/actividad", label: "Actividad", icon: Clock },
-        { path: "/editorial", label: "Editorial", icon: BookOpen },
+        { path: "/", label: TEXTS.navigation.home, icon: Search },
+        { path: "/actividad", label: TEXTS.navigation.activity, icon: Clock },
+        { path: "/editorial", label: TEXTS.navigation.editorial, icon: BookOpen },
     ];
 
     // Close menu when route changes
@@ -43,7 +44,7 @@ export const Navbar = () => {
                 <div className="flex items-center justify-between h-20">
                     <Link to="/" className="flex items-center gap-3 group">
                         <Disc className="h-8 w-8 text-primary group-hover:rotate-180 transition-transform duration-700" />
-                        <span className="text-xl font-display font-bold text-white tracking-tightest group-hover:text-primary transition-colors">Oldie but Goldie</span>
+                        <span className="text-xl font-display font-bold text-white tracking-tightest group-hover:text-primary transition-colors">{TEXTS.navigation.brand}</span>
                     </Link>
 
                     {/* Desktop Navigation */}
@@ -113,7 +114,7 @@ export const Navbar = () => {
                                     <button
                                         onClick={() => logout()}
                                         className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-all"
-                                        title="Terminar Sesión"
+                                        title={TEXTS.navigation.logout || "Terminar Sesión"}
                                     >
                                         <LogOut className="h-5 w-5" />
                                     </button>
@@ -122,7 +123,7 @@ export const Navbar = () => {
                                 <Link to="/login">
                                     <button className="flex items-center gap-2 bg-primary text-black px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-white transition-all transform active:scale-95 shadow-lg shadow-primary/10">
                                         <UserIcon className="h-4 w-4" />
-                                        Sincronizar
+                                        {TEXTS.navigation.sync}
                                     </button>
                                 </Link>
                             )}
@@ -169,7 +170,7 @@ export const Navbar = () => {
                                         </div>
                                         <div className="flex flex-col">
                                             <span className="uppercase tracking-[0.2em] font-black text-xs">{user.displayName || user.email?.split("@")[0]}</span>
-                                            <span className="text-[9px] text-gray-500 font-bold tracking-widest uppercase">Ver Perfil</span>
+                                            <span className="text-[9px] text-gray-500 font-bold tracking-widest uppercase">{TEXTS.navigation.profile}</span>
                                         </div>
 
                                         {/* Mobile Notification Indicator Dot */}
@@ -200,13 +201,13 @@ export const Navbar = () => {
                                         className="flex items-center gap-4 p-6 rounded-[2rem] bg-red-500/10 text-red-500 uppercase tracking-widest font-black border border-red-500/10"
                                     >
                                         <LogOut className="h-6 w-6" />
-                                        Cerrar Sesión
+                                        {TEXTS.navigation.logout}
                                     </button>
                                 </>
                             ) : (
                                 <Link to="/login" className="flex items-center justify-center gap-4 p-7 rounded-[2rem] bg-primary text-black font-black uppercase tracking-widest shadow-xl shadow-primary/10">
                                     <UserIcon className="h-6 w-6" />
-                                    Sincronizar
+                                    {TEXTS.navigation.sync}
                                 </Link>
                             )}
                         </div>

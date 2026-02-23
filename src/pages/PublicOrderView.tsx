@@ -8,6 +8,7 @@ import { ChevronLeft, Music, Disc, Lock, Clock } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useLoading } from "@/context/LoadingContext";
 import { formatDate, getReadableDate } from "@/utils/date";
+import { TEXTS } from "@/constants/texts";
 
 export default function PublicOrderView() {
     const { id } = useParams<{ id: string }>();
@@ -35,7 +36,7 @@ export default function PublicOrderView() {
                 }
             }, 3000);
 
-            showLoading("Localizando Lote...");
+            showLoading(TEXTS.common.locatingBatch);
             try {
                 const docRef = doc(db, "orders", id);
                 const docSnap = await getDoc(docRef);
@@ -57,7 +58,7 @@ export default function PublicOrderView() {
     if (loading) {
         return (
             <div className="min-h-screen bg-black flex items-center justify-center">
-                <p className="text-primary font-black uppercase tracking-widest animate-pulse">Cargando datos...</p>
+                <p className="text-primary font-black uppercase tracking-widest animate-pulse">{TEXTS.common.loadingData}</p>
             </div>
         );
     }
@@ -66,10 +67,10 @@ export default function PublicOrderView() {
         return (
             <div className="min-h-screen bg-black flex flex-col items-center justify-center space-y-4 px-4 text-center">
                 <Disc className="w-16 h-16 text-white/20" />
-                <h2 className="text-3xl font-display font-black text-white uppercase tracking-tighter">Lote No Encontrado</h2>
-                <p className="text-gray-500 max-w-sm">El acceso a este lote no está disponible o la referencia ha expirado.</p>
+                <h2 className="text-3xl font-display font-black text-white uppercase tracking-tighter">{TEXTS.common.batchNotFound}</h2>
+                <p className="text-gray-500 max-w-sm">{TEXTS.common.batchAccessDenied}</p>
                 <Link to="/" className="mt-4 px-6 py-3 bg-white/10 hover:bg-white/20 rounded-xl text-white font-black uppercase tracking-widest text-xs transition-colors">
-                    Volver al Catálogo
+                    {TEXTS.common.backToCatalog}
                 </Link>
             </div>
         );
@@ -88,9 +89,9 @@ export default function PublicOrderView() {
     ];
 
     const generateDescription = () => {
-        if (!items || items.length === 0) return "Lote de vinilos en Oldie but Goldie";
+        if (!items || items.length === 0) return TEXTS.common.batchDescription;
         const artists = Array.from(new Set(items.map((i: any) => i.artist || "Varios"))).slice(0, 3);
-        const prefix = order.isBatch ? `Lote de ${items.length} ítems.` : "Pieza de colección.";
+        const prefix = order.isBatch ? `Lote de ${items.length} ítems.` : TEXTS.common.pieceDescription;
         return `${prefix} Incluye: ${artists.join(", ")}${artists.length < items.length ? " y más" : ""}.`;
     };
 
@@ -130,25 +131,25 @@ export default function PublicOrderView() {
                 <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div className="space-y-4">
                         <Link to="/actividad" className="inline-flex items-center gap-2 text-[10px] font-black uppercase text-gray-500 hover:text-white transition-colors">
-                            <ChevronLeft className="w-4 h-4" /> Feed de Actividad
+                            <ChevronLeft className="w-4 h-4" /> {TEXTS.navigation.activity}
                         </Link>
                         <h1 className="text-4xl md:text-5xl font-display font-black text-white hover:text-primary transition-colors tracking-tightest leading-none">
-                            Detalle del Lote
+                            {TEXTS.common.batchDetail}
                         </h1>
 
                         {/* Header — TAREA 2 & 4 */}
                         <div className="flex flex-col gap-1 mt-6">
                             <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">ID: {order.id}</p>
                             <p className="text-sm text-gray-400 font-bold uppercase">
-                                Fecha: {order?.createdAt?.seconds
+                                {TEXTS.profile.date}: {order?.createdAt?.seconds
                                     ? new Date(order.createdAt.seconds * 1000).toLocaleString('es-AR')
                                     : (order?.timestamp?.seconds
                                         ? new Date(order.timestamp.seconds * 1000).toLocaleString('es-AR')
-                                        : "Cargando...")}
+                                        : TEXTS.common.loading)}
                             </p>
                             <div className="flex items-center gap-2 mt-1">
                                 <span className="bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest">
-                                    {order.status}
+                                    {TEXTS.admin.statusOptions[order.status as keyof typeof TEXTS.admin.statusOptions] || order.status}
                                 </span>
                             </div>
                         </div>
@@ -168,13 +169,13 @@ export default function PublicOrderView() {
 
                 <div className="space-y-0">
                     <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 italic mb-4">
-                        Ítems Involucrados ({items.length})
+                        {TEXTS.common.itemsInvolved} ({items.length})
                     </h3>
 
                     {!items || !Array.isArray(items) || items.length === 0 ? (
                         <div className="bg-white/5 border border-dashed border-white/10 rounded-2xl p-12 text-center">
                             <Music className="w-12 h-12 text-white/10 mx-auto mb-4" />
-                            <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">No hay discos en este lote</p>
+                            <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">{TEXTS.common.noDiscsInBatch}</p>
                         </div>
                     ) : (
                         <div className="space-y-0">
@@ -206,7 +207,7 @@ export default function PublicOrderView() {
 
                 {/* Price & Negotiation Visibility (TAREA 4) */}
                 <div className="space-y-6 pt-6 border-t border-white/5">
-                    <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 italic">Resumen de Negociación</h3>
+                    <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 italic">{TEXTS.common.negotiationSummary}</h3>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* Initial Offer / Latest User Offer */}
@@ -220,14 +221,14 @@ export default function PublicOrderView() {
                             return (
                                 <div className="p-8 rounded-[2.5rem] bg-orange-500/5 border border-orange-500/10 flex flex-col justify-between group hover:bg-orange-500/10 transition-all">
                                     <p className="text-[10px] uppercase tracking-[0.2em] font-black text-orange-400/70 mb-4">
-                                        {historyUserOffer ? "Última Propuesta del Usuario" : "Oferta Inicial del Usuario"}
+                                        {historyUserOffer ? TEXTS.common.latestUserOffer : TEXTS.common.initialUserOffer}
                                     </p>
                                     <div className="flex items-baseline gap-2">
                                         <span className="text-4xl font-display font-black text-white">
                                             {canSeePrice ? (
                                                 `${userCurrency === "USD" ? "US$" : "$"} ${userPrice.toLocaleString()}`
                                             ) : (
-                                                <span className="text-gray-700 flex items-center gap-2 italic opacity-40"><Lock className="h-4 w-4" /> Privado</span>
+                                                <span className="text-gray-700 flex items-center gap-2 italic opacity-40"><Lock className="h-4 w-4" /> {TEXTS.common.private}</span>
                                             )}
                                         </span>
                                     </div>
@@ -246,14 +247,14 @@ export default function PublicOrderView() {
                             return (
                                 <div className="p-8 rounded-[2.5rem] bg-primary/10 border border-primary/20 flex flex-col justify-between shadow-2xl shadow-primary/5 group hover:bg-primary/20 transition-all">
                                     <p className="text-[10px] uppercase tracking-[0.2em] font-black text-primary mb-4">
-                                        {historyAdminOffer ? "Última Propuesta de OBG" : "Propuesta de Oldie but Goldie"}
+                                        {historyAdminOffer ? TEXTS.common.latestObgOffer : TEXTS.common.obgOffer}
                                     </p>
                                     <div className="flex items-baseline gap-2">
                                         <span className="text-4xl font-display font-black text-white">
                                             {canSeePrice ? (
                                                 `${adminCurrency === "USD" ? "US$" : "$"} ${adminPrice.toLocaleString()}`
                                             ) : (
-                                                <span className="text-gray-700 flex items-center gap-2 italic opacity-40"><Lock className="h-4 w-4" /> Privado</span>
+                                                <span className="text-gray-700 flex items-center gap-2 italic opacity-40"><Lock className="h-4 w-4" /> {TEXTS.common.private}</span>
                                             )}
                                         </span>
                                     </div>
@@ -269,19 +270,19 @@ export default function PublicOrderView() {
                                 <span className="text-xl text-primary font-black uppercase">{(order.user_name || "C").charAt(0)}</span>
                             </div>
                             <div>
-                                <p className="text-[10px] text-gray-600 font-black uppercase tracking-widest mb-1">Iniciado por</p>
-                                <p className="text-white text-lg font-black tracking-tight">{order.user_name || "Coleccionista Registrado"}</p>
+                                <p className="text-[10px] text-gray-600 font-black uppercase tracking-widest mb-1">{TEXTS.common.initiatedBy}</p>
+                                <p className="text-white text-lg font-black tracking-tight">{order.user_name || TEXTS.common.registeredCollector}</p>
                             </div>
                         </div>
 
                         <div className="space-y-4 w-full md:w-auto">
                             <div className="flex flex-col md:items-end">
-                                <p className="text-[10px] uppercase tracking-widest font-black text-gray-600 mb-2">Estado de la Orden</p>
+                                <p className="text-[10px] uppercase tracking-widest font-black text-gray-600 mb-2">{TEXTS.common.orderStatus}</p>
                                 <span className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] border transition-all ${order.status === 'pending_acceptance'
                                     ? 'bg-orange-500/10 border-orange-500/20 text-orange-400'
                                     : 'bg-white/5 border-white/10 text-white'
                                     }`}>
-                                    {order.status === 'pending_acceptance' ? 'Esperando Aceptación' : order.status}
+                                    {order.status === 'pending_acceptance' ? TEXTS.common.waitingAcceptance : (TEXTS.admin.statusOptions[order.status as keyof typeof TEXTS.admin.statusOptions] || order.status)}
                                 </span>
                             </div>
 

@@ -2,6 +2,7 @@ import { Disc } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useLote } from "@/context/LoteContext";
 import { motion, AnimatePresence } from "framer-motion";
+import { TEXTS } from "@/constants/texts";
 
 export function FloatingCartCounter() {
     const { totalCount } = useLote();
@@ -45,7 +46,7 @@ export function FloatingCartCounter() {
 
                         {/* Tooltip hint on hover (Desktop) */}
                         <span className="absolute right-20 bg-black/90 border border-white/10 text-white text-[10px] font-black uppercase tracking-widest px-3 py-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none backdrop-blur-sm shadow-2xl">
-                            Revisar Lote
+                            {TEXTS.common.batchReview.reviewBatch}
                         </span>
                     </Link>
                 </motion.div>

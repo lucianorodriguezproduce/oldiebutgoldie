@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Disc } from "lucide-react";
 import { useLoading } from "@/context/LoadingContext";
+import { TEXTS } from "@/constants/texts";
 
 export function LoadingOverlay() {
     const { isLoading, message } = useLoading();
@@ -53,7 +54,7 @@ export function LoadingOverlay() {
                                 />
                             </div>
                             <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em] leading-relaxed max-w-[200px]">
-                                Por favor no cierres la aplicación, estamos procesando los datos de forma segura.
+                                {TEXTS.common.loading.safetyInstruction}
                             </p>
                         </div>
                     </div>

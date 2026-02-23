@@ -34,6 +34,7 @@ import { db } from "@/lib/firebase";
 import { formatDate, getReadableDate } from "@/utils/date";
 import { collection, onSnapshot, query, orderBy, where, doc, deleteDoc, updateDoc, addDoc, serverTimestamp, arrayUnion } from "firebase/firestore";
 import { useState, useEffect } from "react";
+import { TEXTS } from "@/constants/texts";
 import { AlbumCardSkeleton } from "@/components/ui/Skeleton";
 import { Link, useSearchParams } from "react-router-dom";
 import OrderDetailsDrawer from "@/components/OrderDetailsDrawer";
@@ -96,6 +97,7 @@ export default function Profile() {
     // Firestore Data State
     const [collectionItems, setCollectionItems] = useState<ProfileItem[]>([]);
     const [wantlistItems, setWantlistItems] = useState<ProfileItem[]>([]);
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [ordersLoading, setOrdersLoading] = useState(true);
@@ -109,21 +111,23 @@ export default function Profile() {
 
     const handleAcceptOffer = async () => {
         if (!selectedOrder || isLoading) return;
-        showLoading("Aceptando propuesta...");
-        try {
-            const orderRef = doc(db, "orders", selectedOrder.id);
-            await updateDoc(orderRef, {
-                status: "completed",
-                acceptedAt: serverTimestamp()
-            });
-            // Update local state to reflect change immediately
-            setSelectedOrder({ ...selectedOrder, status: "venta_finalizada" });
-            alert("¡Propuesta aceptada! La venta se ha finalizado.");
-        } catch (error) {
-            console.error("Error accepting offer:", error);
-            alert("Hubo un error al aceptar la propuesta.");
-        } finally {
-            hideLoading();
+        if (confirm(TEXTS.profile.confirmAcceptProposal)) {
+            showLoading(TEXTS.profile.acceptingProposal);
+            try {
+                const orderRef = doc(db, "orders", selectedOrder.id);
+                await updateDoc(orderRef, {
+                    status: "completed",
+                    acceptedAt: serverTimestamp()
+                });
+                // Update local state to reflect change immediately
+                setSelectedOrder({ ...selectedOrder, status: "venta_finalizada" });
+                setSuccessMessage(TEXTS.profile.proposalAccepted);
+            } catch (error) {
+                console.error("Error accepting proposal:", error);
+                alert(TEXTS.profile.acceptError);
+            } finally {
+                hideLoading();
+            }
         }
     };
 
@@ -264,7 +268,7 @@ export default function Profile() {
         const priceVal = parseFloat(counterOfferPrice);
         if (isNaN(priceVal) || priceVal <= 0) return;
 
-        showLoading("Enviando contraoferta...");
+        showLoading(TEXTS.profile.sendingCounterOffer);
         setIsNegotiating(true);
         try {
             await updateDoc(doc(db, "orders", order.id), {
@@ -274,7 +278,8 @@ export default function Profile() {
                     price: priceVal,
                     currency: order.currency || order.details?.currency || "ARS",
                     sender: 'user',
-                    timestamp: new Date()
+                    timestamp: new Date(),
+                    message: TEXTS.profile.userCounterOffer,
                 })
             });
 
@@ -291,10 +296,10 @@ export default function Profile() {
             setSelectedOrder(prev => prev ? { ...prev, totalPrice: priceVal, status: "contraoferta_usuario" } : null);
             setCounterOfferPrice("");
             setShowCounterInput(false);
-            alert("Has enviado una contraoferta. Espera la respuesta de Oldie but Goldie.");
+            setSuccessMessage(TEXTS.profile.counterOfferSent);
         } catch (error) {
             console.error("Error sending counter-offer:", error);
-            alert("Hubo un error al enviar la contraoferta.");
+            alert(TEXTS.profile.genericError);
         } finally {
             setIsNegotiating(false);
             hideLoading();
@@ -409,24 +414,23 @@ export default function Profile() {
 
             {/* Navigation Tabs */}
             <div className="flex items-center justify-center md:justify-start gap-12 border-b border-white/5 pb-0">
-                {[
-                    { id: "overview", label: "General", icon: Zap },
-                    { id: "orders", label: "Pedidos", icon: ShoppingBag },
-                    { id: "wantlist", label: "Deseados", icon: Heart },
-                ].map((tab) => (
-                    <button
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id as any)}
-                        className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest pb-6 transition-all relative ${activeTab === tab.id ? "text-primary" : "text-gray-500 hover:text-white"
-                            }`}
-                    >
-                        <tab.icon className="h-4 w-4" />
-                        {tab.label}
-                        {activeTab === tab.id && (
-                            <motion.div layoutId="tab-underline" className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
-                        )}
-                    </button>
-                ))}
+                <div className="flex gap-1 bg-white/5 p-1.5 rounded-[1.5rem] backdrop-blur-sm border border-white/5">
+                    {[
+                        { id: "overview", label: TEXTS.profile.tabs.overview, icon: Zap },
+                        { id: "orders", label: TEXTS.profile.tabs.orders, icon: ShoppingBag },
+                        { id: "wantlist", label: TEXTS.profile.tabs.wantlist, icon: Heart },
+                    ].map((tab) => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id as any)}
+                            className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest px-6 py-3 rounded-2xl transition-all relative ${activeTab === tab.id ? "bg-primary text-black" : "text-gray-500 hover:text-white"
+                                }`}
+                        >
+                            <tab.icon className="h-4 w-4" />
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
             </div>
 
             {/* Content Area */}
@@ -662,21 +666,23 @@ export default function Profile() {
                                             <FileText size={120} />
                                         </div>
 
-                                        <div className="space-y-2">
-                                            <div className="flex items-center gap-3">
-                                                <div className="p-2 bg-green-500/20 rounded-full">
-                                                    <CheckCircle2 className="h-5 w-5 text-green-500" />
-                                                </div>
-                                                <h3 className="text-xl font-display font-black text-white uppercase tracking-tighter">Trato Confirmado</h3>
+                                        <div className="flex flex-col items-center justify-center p-8 text-center space-y-6">
+                                            <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center shadow-lg shadow-primary/20">
+                                                <CheckCircle2 className="w-8 h-8 text-black" />
                                             </div>
-                                            <p className="text-xs text-gray-500 font-medium">Este documento certifica el acuerdo mutuo de precio y condiciones.</p>
+                                            <div className="space-y-2">
+                                                <h3 className="text-2xl font-display font-black text-white uppercase tracking-tighter">{TEXTS.profile.saleFinished}</h3>
+                                                <p className="text-gray-400 text-sm font-medium leading-relaxed">
+                                                    {TEXTS.profile.saleSuccess}
+                                                </p>
+                                            </div>
                                         </div>
 
                                         <div className="border-t border-white/5 pt-6 space-y-4">
                                             <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
                                                 <span className="text-gray-500">Precio Acordado</span>
                                                 <span className="text-primary text-base">
-                                                    {selectedOrder.currency === 'USD' ? 'US$' : '$'} {(selectedOrder.totalPrice || selectedOrder.adminPrice || 0).toLocaleString()}
+                                                    {selectedOrder.currency === 'USD' ? 'US$' : '$'} ${(selectedOrder.totalPrice || selectedOrder.adminPrice || 0).toLocaleString()}
                                                 </span>
                                             </div>
                                             <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-gray-500">
@@ -692,10 +698,10 @@ export default function Profile() {
                                                     const msg = encodeURIComponent(`Hola! Acepté el trato por el lote ${selectedOrder.order_number || selectedOrder.id}. Coordinemos el pago y el envío.`);
                                                     window.open(`https://wa.me/5491140411796?text=${msg}`, "_blank");
                                                 }}
-                                                className="flex-1 flex items-center justify-center gap-3 px-6 py-4 bg-green-600 hover:bg-green-500 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-green-500/20"
+                                                className="w-full flex items-center justify-center gap-3 bg-green-600 hover:bg-green-500 text-white px-8 py-4 rounded-2xl font-black uppercase text-xs tracking-widest transition-all shadow-lg shadow-green-500/20"
                                             >
-                                                <MessageCircle className="h-4 w-4" />
-                                                Coordinar por WhatsApp
+                                                <MessageCircle className="h-5 w-5" />
+                                                {TEXTS.success.contactWhatsApp}
                                             </button>
                                             <button
                                                 onClick={() => window.print()}
@@ -845,28 +851,33 @@ export default function Profile() {
                             <X className="h-4 w-4" />
                         </button>
                         {/* Header — TAREA 2 & 4 */}
-                        <div className="flex flex-col gap-1 mb-8">
-                            <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">ID: {selectedOrder.id}</p>
-                            <p className="text-sm text-gray-400 font-bold uppercase">
-                                Fecha: <span className="text-gray-200">
-                                    {selectedOrder?.createdAt?.seconds
-                                        ? new Date(selectedOrder.createdAt.seconds * 1000).toLocaleString()
-                                        : (selectedOrder?.timestamp?.seconds
-                                            ? new Date(selectedOrder.timestamp.seconds * 1000).toLocaleString()
-                                            : "Sincronizando...")}
-                                </span>
-                            </p>
-                            <div className="flex items-center gap-2 mt-1">
-                                <span className="bg-primary/10 text-primary border border-primary/20 px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest">
-                                    {selectedOrder.status}
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+                            <div className="space-y-1">
+                                <h4 className="text-xl md:text-3xl font-display font-black text-white uppercase tracking-tighter">{TEXTS.profile.recentOrders}</h4>
+                            </div>
+                            <div className="flex items-center gap-6 text-[10px] font-black uppercase tracking-widest text-gray-500 overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
+                                <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">ID: {selectedOrder.id}</p>
+                                <p className="text-sm text-gray-400 font-bold uppercase">
+                                    Fecha: <span className="text-gray-200">
+                                        {selectedOrder?.createdAt?.seconds
+                                            ? new Date(selectedOrder.createdAt.seconds * 1000).toLocaleString()
+                                            : (selectedOrder?.timestamp?.seconds
+                                                ? new Date(selectedOrder.timestamp.seconds * 1000).toLocaleString()
+                                                : "Sincronizando...")}
+                                    </span>
+                                </p>
+                                <div className="flex items-center gap-2 mt-1">
+                                    <span className="bg-primary/10 text-primary border border-primary/20 px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest">
+                                        {selectedOrder.status}
+                                    </span>
+                                </div>
+
+                                <span className="text-[10px] text-gray-600 uppercase tracking-widest font-bold mt-2">
+                                    Operación: <span className={selectedOrder.type === 'buy' ? 'text-green-400' : 'text-orange-400'}>
+                                        {selectedOrder.type === 'buy' ? 'Compra' : 'Venta'}
+                                    </span>
                                 </span>
                             </div>
-
-                            <span className="text-[10px] text-gray-600 uppercase tracking-widest font-bold mt-2">
-                                Operación: <span className={selectedOrder.type === 'buy' ? 'text-green-400' : 'text-orange-400'}>
-                                    {selectedOrder.type === 'buy' ? 'Compra' : 'Venta'}
-                                </span>
-                            </span>
                         </div>
 
                         {/* Negotiation Banner */}

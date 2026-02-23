@@ -13,8 +13,13 @@ import {
     Search,
     Tag,
     DollarSign,
-    Hash
+    Hash,
+    Trash2,
+    Disc,
+    ChevronRight,
+    MessageCircle
 } from 'lucide-react';
+import { TEXTS } from '@/constants/texts';
 import { useAuth } from '@/context/AuthContext';
 import type { OrderData } from '@/utils/whatsapp';
 import { formatDate, getReadableDate } from '@/utils/date';
@@ -45,7 +50,7 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
         if (isNaN(priceVal) || priceVal <= 0 || isSubmitting) return;
 
         setIsSubmitting(true);
-        showLoading("Enviando oferta rápida...");
+        showLoading(TEXTS.admin.updatingStatus);
         try {
             const currency = order.adminCurrency || order.currency || order.details?.currency || "ARS";
             await updateDoc(doc(db, "orders", order.id), {
@@ -63,8 +68,8 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
             const currSymbol = currency === "USD" ? "US$" : "$";
             await addDoc(collection(db, "notifications"), {
                 user_id: order.user_id,
-                title: "Nueva Contraoferta",
-                message: `OBG propone ${currSymbol} ${priceVal.toLocaleString()} para tu pedido.`,
+                title: TEXTS.admin.counterOfferReceived,
+                message: `Oldie but Goldie propone ${currSymbol} ${priceVal.toLocaleString()} para tu pedido.`,
                 read: false,
                 timestamp: serverTimestamp(),
                 order_id: order.id
@@ -85,27 +90,31 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
 
 
     const getStatusBadge = (status: string) => {
+        const statusLabel = TEXTS.admin.statusOptions[status as keyof typeof TEXTS.admin.statusOptions] || status;
         switch (status) {
             case 'sold':
             case 'completed':
+            case 'venta_finalizada':
                 return (
                     <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20 backdrop-blur-md">
                         <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
-                        <span className="text-[10px] uppercase tracking-widest font-black text-green-500">Completado</span>
+                        <span className="text-[10px] uppercase tracking-widest font-black text-green-500">{statusLabel}</span>
                     </div>
                 );
             case 'quoted':
+            case 'counteroffered':
                 return (
                     <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/20 backdrop-blur-md">
                         <BadgeDollarSign className="w-3.5 h-3.5 text-purple-400" />
-                        <span className="text-[10px] uppercase tracking-widest font-black text-purple-400">Cotizado</span>
+                        <span className="text-[10px] uppercase tracking-widest font-black text-purple-400">{statusLabel}</span>
                     </div>
                 );
             case 'negotiating':
+            case 'contraoferta_usuario':
                 return (
                     <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 backdrop-blur-md">
                         <Handshake className="w-3.5 h-3.5 text-blue-400" />
-                        <span className="text-[10px] uppercase tracking-widest font-black text-blue-400">En Negociación</span>
+                        <span className="text-[10px] uppercase tracking-widest font-black text-blue-400">{statusLabel}</span>
                     </div>
                 );
             case 'cancelled':
@@ -113,7 +122,7 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                 return (
                     <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/20 backdrop-blur-md">
                         <XCircle className="w-3.5 h-3.5 text-red-500" />
-                        <span className="text-[10px] uppercase tracking-widest font-black text-red-500">Cancelado</span>
+                        <span className="text-[10px] uppercase tracking-widest font-black text-red-500">{statusLabel}</span>
                     </div>
                 );
             case 'pending':
@@ -121,7 +130,7 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                 return (
                     <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-yellow-500/10 border border-yellow-500/20 backdrop-blur-md">
                         <Clock className="w-3.5 h-3.5 text-yellow-500" />
-                        <span className="text-[10px] uppercase tracking-widest font-black text-yellow-500">Pendiente</span>
+                        <span className="text-[10px] uppercase tracking-widest font-black text-yellow-500">{statusLabel}</span>
                     </div>
                 );
         }
@@ -186,7 +195,7 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                 {/* Legacy admin_offer_price for backward compatibility */}
                 {!adminPrice && order.admin_offer_price && (
                     <div className={`bg-purple-500/10 border border-purple-500/20 px-3 py-2 rounded-xl flex flex-col items-end shadow-sm shadow-purple-500/5 ${context === 'admin' ? "mr-4" : ""}`}>
-                        <span className="text-[9px] font-black uppercase tracking-widest text-purple-400">Nuestra Oferta</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-purple-400">{TEXTS.admin.ourOffer}</span>
                         <span className="text-sm font-black text-white">
                             {order.admin_offer_currency === "USD" ? "US$" : "$"} {(order.admin_offer_price || 0).toLocaleString()}
                         </span>
@@ -274,7 +283,7 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                                 {canSeePrice ? (
                                     `${order.details.currency === "USD" ? "US$" : "$"} ${(order.details.price || 0).toLocaleString()}`
                                 ) : (
-                                    <span className="text-gray-600 italic opacity-50">Privado</span>
+                                    <span className="text-gray-600 italic opacity-50">{TEXTS.common.private}</span>
                                 )}
                             </span>
                         )}

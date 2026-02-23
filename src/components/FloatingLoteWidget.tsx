@@ -2,6 +2,7 @@ import { ShoppingBag } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useLote } from "@/context/LoteContext";
 import { motion, AnimatePresence } from "framer-motion";
+import { TEXTS } from "@/constants/texts";
 
 export function FloatingLoteWidget() {
     const { totalCount } = useLote();
@@ -39,7 +40,7 @@ export function FloatingLoteWidget() {
                         {/* Expandable text for desktop */}
                         <div className="hidden md:flex flex-col items-start ml-3 max-w-0 group-hover:max-w-xs overflow-hidden transition-all duration-300 ease-in-out">
                             <span className="text-xs font-black uppercase tracking-widest leading-tight whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity delay-100">
-                                Revisar Lote
+                                {TEXTS.common.batchReview.reviewBatch}
                             </span>
                         </div>
                     </Link>

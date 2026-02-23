@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { useLoading } from "@/context/LoadingContext";
 import { useEffect } from "react";
 import { LazyImage } from "@/components/ui/LazyImage";
+import { TEXTS } from "@/constants/texts";
 
 interface Article {
     category: string;
@@ -40,7 +41,7 @@ export default function ArticleDetail() {
 
     useEffect(() => {
         if (isLoading) {
-            showLoading("Cargando Artículo...");
+            showLoading(TEXTS.common.loadingArticle);
         } else {
             hideLoading();
         }
@@ -54,9 +55,9 @@ export default function ArticleDetail() {
     if (!article) {
         return (
             <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-6">
-                <h1 className="text-4xl font-display font-bold text-white">Artículo no encontrado</h1>
+                <h1 className="text-4xl font-display font-bold text-white">{TEXTS.common.articleNotFound}</h1>
                 <Link to="/editorial">
-                    <button className="text-primary uppercase font-black tracking-widest hover:underline">Volver a Editorial</button>
+                    <button className="text-primary uppercase font-black tracking-widest hover:underline">{TEXTS.common.backToEditorial}</button>
                 </Link>
             </div>
         );
@@ -70,7 +71,7 @@ export default function ArticleDetail() {
         >
             <Link to="/editorial" className="inline-flex items-center gap-2 text-gray-500 hover:text-primary transition-colors mb-12 group">
                 <ChevronLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" />
-                <span className="text-[10px] font-black uppercase tracking-widest">Volver a Editorial</span>
+                <span className="text-[10px] font-black uppercase tracking-widest">{TEXTS.common.backToEditorial}</span>
             </Link>
 
             <header className="space-y-8 md:space-y-12 mb-12 md:mb-16">
@@ -92,7 +93,7 @@ export default function ArticleDetail() {
                             <User className="h-5 w-5 text-primary" />
                         </div>
                         <div>
-                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Autor</p>
+                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">{TEXTS.common.author}</p>
                             <span className="text-sm font-bold text-white uppercase tracking-widest">{article.author}</span>
                         </div>
                     </div>
@@ -101,13 +102,13 @@ export default function ArticleDetail() {
                             <Clock className="h-5 w-5 text-primary" />
                         </div>
                         <div>
-                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Lectura</p>
+                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">{TEXTS.common.readingTime}</p>
                             <span className="text-sm font-bold text-white uppercase tracking-widest">{article.readTime}</span>
                         </div>
                     </div>
                     <button className="ml-auto flex items-center gap-3 text-gray-500 hover:text-white transition-colors">
                         <Share2 className="h-5 w-5" />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Compartir</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest">{TEXTS.common.share}</span>
                     </button>
                 </div>
             </header>
@@ -130,11 +131,11 @@ export default function ArticleDetail() {
             <Separator className="bg-white/5 my-24 md:my-32" />
 
             <footer className="text-center space-y-8 pb-24 md:pb-32">
-                <h3 className="text-2xl md:text-3xl font-display font-bold text-white uppercase tracking-widest">Fin del despacho</h3>
-                <p className="text-gray-500 font-medium">Gracias por leer. Mantente sintonizado para más inteligencia sónica.</p>
+                <h3 className="text-2xl md:text-3xl font-display font-bold text-white uppercase tracking-widest">{TEXTS.common.endOfDispatch}</h3>
+                <p className="text-gray-500 font-medium">{TEXTS.common.stayTuned}</p>
                 <Link to="/editorial">
                     <button className="mt-8 bg-white text-black px-10 py-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-primary transition-all">
-                        Explorar Otros Artículos
+                        {TEXTS.common.exploreOtherArticles}
                     </button>
                 </Link>
             </footer>

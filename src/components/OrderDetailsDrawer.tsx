@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
+import { TEXTS } from "@/constants/texts";
 
 interface OrderDetailsDrawerProps {
     isOpen: boolean;
@@ -82,7 +83,7 @@ export default function OrderDetailsDrawer({ isOpen, onClose, title, children, f
                         {/* Header */}
                         <div className="flex-none flex items-center justify-between px-5 sm:px-8 py-4 sm:py-5 border-b border-white/5 safe-area-top">
                             <span className="text-sm font-mono font-bold text-gray-400 uppercase tracking-widest truncate">
-                                {title || "Detalle de Pedido"}
+                                {title || TEXTS.profile.orderDetail}
                             </span>
                         </div>
 

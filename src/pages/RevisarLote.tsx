@@ -11,6 +11,7 @@ import { LazyImage } from "@/components/ui/LazyImage";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { pushWhatsAppContactFromOrder } from "@/utils/analytics";
 import { generateWhatsAppLink } from "@/utils/whatsapp";
+import { TEXTS } from "@/constants/texts";
 
 export default function RevisarLote() {
     const { loteItems, toggleItem, clearLote, totalCount } = useLote();
@@ -67,9 +68,8 @@ export default function RevisarLote() {
         };
 
         // Clean payload to prevent undefined errors in Firestore
-        // Also enforcing that type is not undefined
         if (!payload.type) {
-            alert("Error del Sistema: No se pudo determinar el tipo de transacción.");
+            alert(TEXTS.common.batchReview.systemError);
             return;
         }
 
@@ -102,38 +102,37 @@ export default function RevisarLote() {
         if (isSubmitting) return; // Prevent double clicks
 
         if (!batchIntent) {
-            alert("Debes seleccionar la intención del lote (Comprar o Vender).");
+            alert(TEXTS.common.batchReview.confirmIntent);
             return;
         }
         if (batchIntent === 'VENDER' && (!totalPrice || Number(totalPrice) <= 0)) {
-            alert("Debes ingresar un precio pretendido válido para vender el lote.");
+            alert(TEXTS.common.batchReview.validPriceRequired);
             return;
         }
         if (user) {
-            showLoading("Procesando tu Pedido...");
+            showLoading(TEXTS.common.batchReview.processingOrder);
             try {
                 await performSubmission(user.uid);
                 setIsSuccess(true);
             } catch (error) {
                 console.error("Submission error:", error);
-                alert("Error al procesar el lote.");
+                alert(TEXTS.common.batchReview.submissionError);
             } finally {
                 hideLoading();
             }
         }
-        // If not user, UI naturally drops down to Auth form
     };
 
     const handleGoogleSignIn = async () => {
         if (!batchIntent) {
-            alert("Debes seleccionar la intención del lote antes de continuar.");
+            alert(TEXTS.common.batchReview.confirmIntent);
             return;
         }
         if (batchIntent === 'VENDER' && (!totalPrice || Number(totalPrice) <= 0)) {
-            alert("Debes ingresar un precio pretendido válido para vender el lote.");
+            alert(TEXTS.common.batchReview.validPriceRequired);
             return;
         }
-        showLoading("Sincronizando con Google...");
+        showLoading(TEXTS.common.batchReview.syncingGoogle);
         try {
             const googleUser = await signInWithGoogle();
             if (googleUser) {
@@ -142,7 +141,7 @@ export default function RevisarLote() {
             }
         } catch (error) {
             console.error("Google Auth error:", error);
-            alert("Error al vincular con Google.");
+            alert(TEXTS.common.batchReview.googleLinkError);
         } finally {
             hideLoading();
         }
@@ -152,15 +151,15 @@ export default function RevisarLote() {
         if (e) e.preventDefault();
         if (!email || !password) return;
         if (!batchIntent) {
-            alert("Debes seleccionar la intención del lote antes de continuar.");
+            alert(TEXTS.common.batchReview.confirmIntent);
             return;
         }
         if (batchIntent === 'VENDER' && (!totalPrice || Number(totalPrice) <= 0)) {
-            alert("Debes ingresar un precio pretendido válido para vender el lote.");
+            alert(TEXTS.common.batchReview.validPriceRequired);
             return;
         }
 
-        showLoading("Autenticando usuario...");
+        showLoading(TEXTS.common.batchReview.authenticatingUser);
         try {
             const loggedUser = await authenticateUser(email, password);
             if (loggedUser) {
@@ -169,7 +168,7 @@ export default function RevisarLote() {
             }
         } catch (error) {
             console.error("Manual Auth error:", error);
-            alert("Error en autenticación. Verifique sus credenciales.");
+            alert(TEXTS.common.batchReview.authError);
         } finally {
             hideLoading();
         }
@@ -186,9 +185,9 @@ export default function RevisarLote() {
                     <CheckCircle2 className="h-12 w-12 text-black" />
                 </motion.div>
                 <div className="space-y-4">
-                    <h2 className="text-4xl md:text-6xl font-display font-black text-white uppercase tracking-tighter">Lote Registrado</h2>
+                    <h2 className="text-4xl md:text-6xl font-display font-black text-white uppercase tracking-tighter">{TEXTS.common.batchReview.batchRegistered}</h2>
                     <p className="text-gray-500 text-lg md:text-xl max-w-md mx-auto font-medium">
-                        Tus intenciones han sido registradas. Contacta a <span className="text-primary">Oldie but Goldie</span> para procesar tu pedido.
+                        {TEXTS.common.batchReview.intentionsRegistered.split('Oldie but Goldie')[0]}<span className="text-primary">Oldie but Goldie</span>{TEXTS.common.batchReview.intentionsRegistered.split('Oldie but Goldie')[1]}
                     </p>
                 </div>
                 <div className="flex flex-col items-center gap-4 w-full max-w-sm mx-auto">
@@ -201,14 +200,14 @@ export default function RevisarLote() {
                             className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-500 text-white px-8 py-4 rounded-2xl font-black uppercase text-xs tracking-widest transition-all shadow-lg shadow-green-500/20"
                         >
                             <MessageCircle className="h-5 w-5" />
-                            Contactar por WhatsApp
+                            {TEXTS.common.batchReview.contactWhatsApp}
                         </button>
                     )}
                     <button
                         onClick={() => navigate('/')}
                         className="w-full bg-white/5 border border-white/10 text-white px-8 py-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-white/10 transition-all"
                     >
-                        Volver al Inicio
+                        {TEXTS.common.batchReview.backToStart}
                     </button>
                 </div>
             </div>
@@ -219,12 +218,12 @@ export default function RevisarLote() {
         return (
             <div className="min-h-[60vh] flex flex-col items-center justify-center text-center px-4">
                 <ShoppingBag className="h-20 w-20 text-white/10 mb-6" />
-                <h2 className="text-3xl font-display font-black text-white uppercase tracking-tighter mb-4">Tu Lote está vacío</h2>
+                <h2 className="text-3xl font-display font-black text-white uppercase tracking-tighter mb-4">{TEXTS.common.batchReview.batchEmpty}</h2>
                 <button
                     onClick={() => navigate('/')}
                     className="bg-primary text-black px-8 py-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:scale-105 transition-all"
                 >
-                    Explorar Catálogo
+                    {TEXTS.common.batchReview.exploreCatalog}
                 </button>
             </div>
         );
@@ -241,14 +240,14 @@ export default function RevisarLote() {
                     <ChevronLeft className="h-5 w-5" />
                 </button>
                 <h1 className="text-4xl md:text-5xl font-display font-black text-white uppercase tracking-tighter">
-                    Revisar <span className="text-primary">Lote</span>
+                    {TEXTS.common.batchReview.reviewBatch.split(' ')[0]} <span className="text-primary">{TEXTS.common.batchReview.reviewBatch.split(' ')[1]}</span>
                 </h1>
             </header>
 
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
                 {/* List Items Column */}
                 <div className="lg:col-span-3 space-y-4">
-                    <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 italic">Discos Seleccionados ({totalCount})</h3>
+                    <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 italic">{TEXTS.common.batchReview.selectedDiscs} ({totalCount})</h3>
                     <AnimatePresence>
                         {loteItems.map((item) => (
                             <motion.div
@@ -280,7 +279,7 @@ export default function RevisarLote() {
                                 <button
                                     onClick={() => toggleItem(item)}
                                     className="absolute right-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all opacity-0 group-hover:opacity-100"
-                                    title="Quitar"
+                                    title={TEXTS.common.close}
                                 >
                                     <X className="h-4 w-4" />
                                 </button>
@@ -293,14 +292,14 @@ export default function RevisarLote() {
                 <div className="lg:col-span-2">
                     <div className="bg-[#0A0A0A] border-2 border-primary/40 rounded-[2rem] p-6 md:p-8 space-y-6 sticky top-24 shadow-2xl">
                         <div className="space-y-2">
-                            <h3 className="text-2xl font-display font-black text-white uppercase tracking-tighter">Procesar Pedido</h3>
+                            <h3 className="text-2xl font-display font-black text-white uppercase tracking-tighter">{TEXTS.common.batchReview.processOrder}</h3>
                             <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest leading-relaxed">
-                                Se enviará el lote al administrador para iniciar las gestiones unificadas.
+                                {TEXTS.common.batchReview.processDescription}
                             </p>
                         </div>
 
                         <div className="bg-white/[0.02] border border-white/5 p-5 rounded-2xl space-y-4">
-                            <h4 className="text-white font-black uppercase text-[10px] tracking-widest text-center">Intención del Lote</h4>
+                            <h4 className="text-white font-black uppercase text-[10px] tracking-widest text-center">{TEXTS.common.batchReview.batchIntent}</h4>
                             <div className="flex bg-black/50 p-1.5 rounded-xl">
                                 <button
                                     onClick={() => setBatchIntent('COMPRAR')}
@@ -309,7 +308,7 @@ export default function RevisarLote() {
                                         : 'text-gray-500 hover:text-white hover:bg-white/5'
                                         }`}
                                 >
-                                    Quiero Comprar
+                                    {TEXTS.common.batchReview.iWantToBuy}
                                 </button>
                                 <button
                                     onClick={() => setBatchIntent('VENDER')}
@@ -318,7 +317,7 @@ export default function RevisarLote() {
                                         : 'text-gray-500 hover:text-white hover:bg-white/5'
                                         }`}
                                 >
-                                    Quiero Vender
+                                    {TEXTS.common.batchReview.iWantToSell}
                                 </button>
                             </div>
 
@@ -328,7 +327,7 @@ export default function RevisarLote() {
                                     animate={{ opacity: 1, height: 'auto' }}
                                     className="pt-4 space-y-2 border-t border-white/5"
                                 >
-                                    <h4 className="text-white font-black uppercase text-[10px] tracking-widest text-center">Precio pretendido por el lote</h4>
+                                    <h4 className="text-white font-black uppercase text-[10px] tracking-widest text-center">{TEXTS.common.batchReview.intendedPrice}</h4>
                                     <div className="flex flex-col md:flex-row bg-black/50 p-1.5 rounded-xl gap-2 w-full">
                                         <select
                                             value={currency}
@@ -360,7 +359,7 @@ export default function RevisarLote() {
                                 {isSubmitting ? (
                                     <div className="h-4 w-4 border-2 border-black/40 border-t-black rounded-full animate-spin" />
                                 ) : (
-                                    <> <ShoppingBag className="w-4 h-4" /> CONFIRMAR Y ENVIAR </>
+                                    <> <ShoppingBag className="w-4 h-4" /> {TEXTS.common.batchReview.confirmAndSend} </>
                                 )}
                             </button>
                         ) : (
@@ -371,12 +370,12 @@ export default function RevisarLote() {
                                     className="w-full bg-white text-black py-4 rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-3 hover:bg-primary transition-all shadow-lg disabled:opacity-50"
                                 >
                                     <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="" className="w-4 h-4" />
-                                    Vincular con Google
+                                    {TEXTS.common.batchReview.linkGoogle}
                                 </button>
 
                                 <div className="relative flex items-center gap-4 py-2">
                                     <div className="flex-1 h-px bg-white/10" />
-                                    <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">O Manual</span>
+                                    <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">{TEXTS.common.batchReview.manualAuth}</span>
                                     <div className="flex-1 h-px bg-white/10" />
                                 </div>
 
@@ -387,7 +386,7 @@ export default function RevisarLote() {
                                             type="email"
                                             value={email}
                                             onChange={e => setEmail(e.target.value)}
-                                            placeholder="Email..."
+                                            placeholder={`${TEXTS.common.auth.emailPlaceholder}...`}
                                             className="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-sm text-white focus:border-primary/40 focus:outline-none transition-all"
                                         />
                                     </div>
@@ -406,7 +405,7 @@ export default function RevisarLote() {
                                         disabled={isSubmitting || !batchIntent || (batchIntent === 'VENDER' && (!totalPrice || Number(totalPrice) <= 0))}
                                         className="w-full bg-primary text-black py-4 rounded-xl font-black uppercase text-[10px] tracking-widest hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
                                     >
-                                        {isSubmitting ? "CONECTANDO..." : "REGISTRARSE Y ENVIAR"}
+                                        {isSubmitting ? TEXTS.common.batchReview.connecting : TEXTS.common.batchReview.registerAndSend}
                                     </button>
                                 </form>
                             </div>

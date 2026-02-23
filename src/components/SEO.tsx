@@ -1,4 +1,5 @@
 import { Helmet } from 'react-helmet-async';
+import { TEXTS } from '@/constants/texts';
 
 interface SEOProps {
     title?: string;
@@ -10,8 +11,8 @@ interface SEOProps {
 }
 
 export function SEO({
-    title = 'Oldie but Goldie - Archivos de Audio y Vinilos',
-    description = 'El sistema definitivo para el coleccionismo físico. Explora nuestro archivo, cotiza en tiempo real, compra o vende reliquias con nosotros.',
+    title = TEXTS.common.seo.defaultTitle,
+    description = TEXTS.common.seo.defaultDescription,
     image = 'https://oldie-but-goldie.vercel.app/og-image.jpg', // URL genérica para OpenGraph
     url,
     type = 'website',

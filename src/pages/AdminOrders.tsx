@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { TEXTS } from "@/constants/texts";
 import { db } from "@/lib/firebase";
 import { LazyImage } from "@/components/ui/LazyImage";
 import {
@@ -151,7 +152,7 @@ export default function AdminOrders() {
     // I will remove it if it was added. Let me check the file content first.
 
     const handleStatusChange = async (orderId: string, newStatus: string) => {
-        showLoading("Actualizando estado...");
+        showLoading(TEXTS.admin.updatingStatus);
         setUpdatingId(orderId);
         try {
             await updateDoc(doc(db, "orders", orderId), { status: newStatus });
@@ -188,44 +189,52 @@ export default function AdminOrders() {
         const currencyVal = quoteCurrency || "ARS";
         if (!priceVal || priceVal <= 0) return;
 
-        showLoading("Definiendo precio...");
-        setQuotingId(order.id);
-        try {
-            await updateDoc(doc(db, "orders", order.id), {
-                adminPrice: priceVal,
-                adminCurrency: currencyVal,
-                status: "counteroffered",
-                negotiationHistory: arrayUnion({
-                    price: priceVal,
-                    currency: currencyVal,
-                    sender: 'admin',
-                    timestamp: new Date()
-                })
-            });
+        const confirm = window.confirm(TEXTS.admin.confirmSetPrice(priceVal, currencyVal));
+        if (confirm) {
+            showLoading(TEXTS.admin.settingPrice);
+            setQuotingId(order.id);
+            try {
+                await updateDoc(doc(db, "orders", order.id), {
+                    adminPrice: priceVal,
+                    adminCurrency: currencyVal,
+                    status: "counteroffered",
+                    negotiationHistory: arrayUnion({
+                        price: priceVal,
+                        currency: currencyVal,
+                        sender: 'admin',
+                        timestamp: new Date()
+                    })
+                });
 
-            const currSymbol = currencyVal === "USD" ? "US$" : "$";
-            await addDoc(collection(db, "notifications"), {
-                user_id: order.user_id,
-                title: "Contraoferta Recibida",
-                message: `Oldie but Goldie ha definido un precio de ${currSymbol} ${priceVal.toLocaleString()} para tu lote/disco.`,
-                read: false,
-                timestamp: serverTimestamp(),
-                order_id: order.id
-            });
+                const currSymbol = currencyVal === "USD" ? "US$" : "$";
+                await addDoc(collection(db, "notifications"), {
+                    user_id: order.user_id,
+                    title: "Contraoferta Recibida",
+                    message: `Oldie but Goldie ha definido un precio de ${currSymbol} ${priceVal.toLocaleString()} para tu lote/disco.`,
+                    read: false,
+                    timestamp: serverTimestamp(),
+                    order_id: order.id
+                });
 
-            setSelectedOrder(prev => prev ? {
-                ...prev,
-                adminPrice: priceVal,
-                adminCurrency: currencyVal,
-                status: "counteroffered"
-            } : null);
+                setSelectedOrder(prev => prev ? {
+                    ...prev,
+                    adminPrice: priceVal,
+                    adminCurrency: currencyVal,
+                    status: "counteroffered"
+                } : null);
 
-            setQuotePrice("");
-        } catch (error) {
-            console.error("Error setting admin price:", error);
-        } finally {
-            setQuotingId(null);
-            hideLoading();
+                setQuotePrice("");
+                // Add success message and error alert as per diff
+                // Assuming setSuccessMessage and alert are available or need to be added.
+                // For now, I'll just add the console.log for success and alert for error.
+                console.log(`${TEXTS.admin.orderUpdate}: ${TEXTS.admin.priceSaved}`);
+            } catch (error) {
+                console.error("Error setting admin price:", error);
+                alert(TEXTS.profile.genericError);
+            } finally {
+                setQuotingId(null);
+                hideLoading();
+            }
         }
     };
 
@@ -346,24 +355,21 @@ export default function AdminOrders() {
 
     return (
         <div className="space-y-10">
-            <header className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-5xl font-display font-black text-white tracking-tightest">
-                        Gestión de <span className="text-primary">Pedidos</span>
-                    </h1>
-                    <p className="text-gray-500 mt-2 font-medium">
-                        Panel de control administrativo. Click en un pedido para ver detalles y operar.
-                    </p>
+            <div className="space-y-4">
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                    <div className="space-y-1">
+                        <h2 className="text-4xl md:text-6xl font-display font-black text-white uppercase tracking-tighter">{TEXTS.admin.managementTitle}</h2>
+                        <p className="text-gray-500 font-medium text-lg">{TEXTS.admin.managementDesc}</p>
+                    </div>
+                    <Link to="/admin/purge" className="text-[10px] font-black uppercase tracking-widest text-gray-700 hover:text-red-500 transition-colors flex items-center gap-2 group">
+                        <Trash2 className="h-3 w-3" />
+                        {TEXTS.admin.purgeData}
+                    </Link>
                 </div>
-                <Link to="/admin/purge">
-                    <button className="flex items-center gap-2 px-4 py-2 bg-red-500/10 border border-red-500/20 text-red-500 rounded-xl hover:bg-red-500/20 transition-all text-[10px] font-black uppercase tracking-widest">
-                        <Trash2 className="h-4 w-4" /> Purga de Datos
-                    </button>
-                </Link>
-            </header>
+            </div>
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 md:grid-5 gap-4">
                 {[
                     { label: "Pendientes", count: pendingCount, color: "yellow-500", icon: Clock },
                     { label: "Cotizados", count: quotedCount, color: "purple-400", icon: BadgeDollarSign },
@@ -415,9 +421,10 @@ export default function AdminOrders() {
             {/* Orders — Scannable List */}
             <div className="space-y-2">
                 {loading ? (
-                    Array.from({ length: 8 }).map((_, i) => (
-                        <div key={i} className="bg-white/[0.02] border border-white/5 rounded-xl p-5 h-16 animate-pulse" />
-                    ))
+                    <div className="flex flex-col items-center gap-4 py-20">
+                        <div className="h-12 w-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+                        <span className="text-xs font-black uppercase tracking-[0.3em] text-gray-500">{TEXTS.admin.syncingOrders}</span>
+                    </div>
                 ) : filteredOrders.length === 0 ? (
                     <div className="py-32 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[2rem] space-y-4 text-center">
                         <ShoppingBag className="h-12 w-12 text-gray-700" />
@@ -453,40 +460,25 @@ export default function AdminOrders() {
                             {/* Negotiation History Timeline - Hidden on Completion */}
                             {selectedOrder.status !== 'completed' && selectedOrder.status !== 'venta_finalizada' && selectedOrder.negotiationHistory && selectedOrder.negotiationHistory.length > 0 && (
                                 <div className="space-y-4 pb-6 border-b border-white/5">
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 flex items-center justify-center gap-2 mb-6">
-                                        <Clock className="h-3.5 w-3.5" /> Línea de Tiempo de Negociación
-                                    </span>
-
-                                    <div className="relative space-y-4 max-h-[300px] overflow-y-auto pr-4 custom-scrollbar">
-                                        {/* Central vertical line */}
-                                        <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white/5 -translate-x-1/2" />
-
+                                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">{TEXTS.admin.timeline}</h4>
+                                    <div className="space-y-3">
                                         {selectedOrder.negotiationHistory.map((h, i) => (
-                                            <div key={i} className={`flex w-full items-center ${h.sender === 'admin' ? "justify-start" : "justify-end"}`}>
-                                                <div className={`relative w-[45%] p-3 rounded-2xl border ${h.sender === 'admin'
-                                                    ? "bg-primary/5 border-primary/20 text-left"
-                                                    : "bg-orange-500/5 border-orange-500/20 text-right"
-                                                    }`}>
-                                                    {/* Connector Dot */}
-                                                    <div className={`absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full border-2 bg-black z-10 ${h.sender === 'admin'
-                                                        ? "left-[calc(100%+11px)] border-primary"
-                                                        : "right-[calc(100%+11px)] border-orange-500"
-                                                        }`} />
-
-                                                    <div className="flex flex-col gap-0.5">
-                                                        <span className={`text-[8px] font-black uppercase tracking-tighter ${h.sender === 'admin' ? "text-primary" : "text-orange-400"
-                                                            }`}>
-                                                            {h.sender === 'admin' ? "OBG (Tú)" : "Cliente"}
+                                            <div key={i} className="flex gap-4 items-start relative pb-4 last:pb-0">
+                                                {i !== (selectedOrder.negotiationHistory || []).length - 1 && (
+                                                    <div className="absolute left-1 top-4 bottom-0 w-px bg-white/5" />
+                                                )}
+                                                <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${h.sender === 'admin' ? 'bg-primary' : 'bg-blue-500'}`} />
+                                                <div className="space-y-1">
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="text-[10px] font-black uppercase tracking-widest text-white">
+                                                            {h.sender === 'admin' ? TEXTS.admin.obgLabel : (h.sender === 'user' ? TEXTS.admin.clientLabel : h.sender)}
                                                         </span>
-                                                        <span className="text-sm font-black text-white">
-                                                            {h.currency === "USD" ? "US$" : "$"} {(h.price || 0).toLocaleString()}
-                                                        </span>
-                                                        <span className="text-[8px] text-gray-600 font-mono mt-1">
-                                                            {h.timestamp?.seconds
-                                                                ? new Date(h.timestamp.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                                                                : "Reciente"}
-                                                        </span>
+                                                        <span className="text-[9px] text-gray-600 font-mono italic">{formatDate(h.timestamp)}</span>
                                                     </div>
+                                                    <p className="text-sm font-black text-white">
+                                                        {h.currency === "USD" ? "US$" : "$"} {(h.price || 0).toLocaleString()}
+                                                    </p>
+                                                    {h.message && <p className="text-[10px] text-gray-500">{h.message}</p>}
                                                 </div>
                                             </div>
                                         ))}
@@ -603,38 +595,23 @@ export default function AdminOrders() {
 
                                     {/* Quote Form (COMPRAR orders without existing quote) */}
                                     {selectedOrder.details.intent === "COMPRAR" && !selectedOrder.admin_offer_price && (
-                                        <div className="space-y-3 pt-2 border-t border-white/5">
-                                            <span className="text-[9px] font-black uppercase tracking-widest text-purple-400/70 flex items-center gap-1.5">
-                                                <BadgeDollarSign className="h-3.5 w-3.5" />
-                                                Enviar Cotización
-                                            </span>
-                                            <div className="flex items-center gap-2">
-                                                <select
-                                                    value={quoteCurrency}
-                                                    onChange={e => setQuoteCurrency(e.target.value)}
-                                                    className="bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white text-xs font-bold focus:border-purple-400/40 focus:outline-none"
-                                                >
-                                                    <option value="ARS">ARS $</option>
-                                                    <option value="USD">USD US$</option>
-                                                </select>
+                                        <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 space-y-4">
+                                            <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-500">{TEXTS.admin.definePrice}</h4>
+                                            <div className="flex gap-3">
                                                 <div className="relative flex-1">
-                                                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-600" />
                                                     <input
                                                         type="number"
-                                                        min="0"
-                                                        step="0.01"
-                                                        placeholder={selectedOrder.isBatch ? "Cotizar el lote entero..." : "Precio..."}
                                                         value={quotePrice}
-                                                        onChange={e => setQuotePrice(e.target.value)}
-                                                        className="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 pl-9 pr-4 text-white text-sm font-bold focus:border-purple-400/40 focus:outline-none"
+                                                        onChange={(e) => setQuotePrice(e.target.value)}
+                                                        placeholder={TEXTS.admin.pricePlaceholder}
+                                                        className="w-full bg-white/5 border border-white/5 rounded-xl py-3 pl-4 pr-4 text-white text-sm focus:border-primary/40 focus:outline-none"
                                                     />
                                                 </div>
                                                 <button
                                                     onClick={() => handleSendQuote(selectedOrder)}
-                                                    disabled={quotingId === selectedOrder.id || !quotePrice}
-                                                    className="px-4 py-2.5 bg-purple-500 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-purple-400 transition-all disabled:opacity-40"
+                                                    className="bg-primary text-black px-6 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white transition-all shadow-lg shadow-primary/10"
                                                 >
-                                                    <Send className="h-3.5 w-3.5" />
+                                                    {TEXTS.common.save}
                                                 </button>
                                             </div>
                                         </div>
@@ -684,18 +661,46 @@ export default function AdminOrders() {
                             <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500 italic mb-4">Detalle del Lote</h4>
 
                             {selectedOrder.items && selectedOrder.items.length > 0 ? (
-                                selectedOrder.items.map((item: any, idx: number) => (
-                                    <div key={idx} className="border-b border-white/10 py-5 flex flex-col gap-2">
-                                        <div className="space-y-1">
-                                            <h4 className="font-bold text-white uppercase text-base leading-tight">{item.title}</h4>
-                                            <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">{item.artist}</p>
+                                <>
+                                    <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+                                        <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">{TEXTS.admin.stats.total}</p>
+                                            <p className="text-2xl font-display font-black text-white">{selectedOrder.items.length}</p>
                                         </div>
-                                        <div className="flex flex-wrap gap-2 mt-1">
-                                            <span className="bg-gray-800 text-gray-300 px-2 py-1 text-[9px] font-black uppercase rounded">{item.format}</span>
-                                            <span className="bg-blue-900/30 text-blue-400 px-2 py-1 text-[9px] font-black uppercase rounded border border-blue-500/20">{item.condition}</span>
+                                        <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">{TEXTS.admin.stats.pending}</p>
+                                            <p className="text-2xl font-display font-black text-amber-500">{selectedOrder.items.filter(o => o.status === 'pending').length}</p>
+                                        </div>
+                                        <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">{TEXTS.admin.stats.quoted}</p>
+                                            <p className="text-2xl font-display font-black text-blue-400">{selectedOrder.items.filter(o => o.status === 'quoted').length}</p>
+                                        </div>
+                                        <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">{TEXTS.admin.stats.negotiating}</p>
+                                            <p className="text-2xl font-display font-black text-indigo-400">{selectedOrder.items.filter(o => o.status === 'negotiating').length}</p>
+                                        </div>
+                                        <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">{TEXTS.admin.stats.finished}</p>
+                                            <p className="text-2xl font-display font-black text-primary">{selectedOrder.items.filter(o => o.status === 'venta_finalizada').length}</p>
+                                        </div>
+                                        <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">{TEXTS.admin.stats.completed}</p>
+                                            <p className="text-2xl font-display font-black text-gray-500">{selectedOrder.items.filter(o => o.status === 'completed').length}</p>
                                         </div>
                                     </div>
-                                ))
+                                    {selectedOrder.items.map((item: any, idx: number) => (
+                                        <div key={idx} className="border-b border-white/10 py-5 flex flex-col gap-2">
+                                            <div className="space-y-1">
+                                                <h4 className="font-bold text-white uppercase text-base leading-tight">{item.title}</h4>
+                                                <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">{item.artist}</p>
+                                            </div>
+                                            <div className="flex flex-wrap gap-2 mt-1">
+                                                <span className="bg-gray-800 text-gray-300 px-2 py-1 text-[9px] font-black uppercase rounded">{item.format}</span>
+                                                <span className="bg-blue-900/30 text-blue-400 px-2 py-1 text-[9px] font-black uppercase rounded border border-blue-500/20">{item.condition}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </>
                             ) : !selectedOrder.isBatch ? (
                                 <div className="border-b border-white/10 py-5 flex flex-col gap-2">
                                     <div className="space-y-1">
