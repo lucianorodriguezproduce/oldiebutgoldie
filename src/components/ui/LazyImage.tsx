@@ -7,13 +7,17 @@ interface LazyImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
     alt: string;
     className?: string;
     containerClassName?: string;
+    aspectRatio?: string;
 }
 
-export function LazyImage({ src, alt, className, containerClassName, ...props }: LazyImageProps) {
+export function LazyImage({ src, alt, className, containerClassName, aspectRatio = '1/1', ...props }: LazyImageProps) {
     const [loaded, setLoaded] = useState(false);
 
     return (
-        <div className={cn("relative overflow-hidden", containerClassName)}>
+        <div
+            className={cn("relative overflow-hidden", containerClassName)}
+            style={aspectRatio ? { aspectRatio } : undefined}
+        >
             {!loaded && (
                 <Skeleton className="absolute inset-0 w-full h-full rounded-inherit" />
             )}

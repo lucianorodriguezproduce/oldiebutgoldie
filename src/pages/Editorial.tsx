@@ -8,6 +8,8 @@ import { Link } from "react-router-dom";
 import { useLoading } from "@/context/LoadingContext";
 import { LazyImage } from "@/components/ui/LazyImage";
 import { TEXTS } from "@/constants/texts";
+import { generateSlug } from "@/utils/slug";
+import { SEO } from "@/components/SEO";
 
 interface Article {
     id: string;
@@ -80,6 +82,7 @@ export default function Editorial() {
         try {
             await addDoc(collection(db, "editorial"), {
                 title: "El Renacimiento del Vinilo",
+                slug: generateSlug("El Renacimiento del Vinilo"),
                 excerpt: "Después de décadas de dominio digital, la calidez analógica del vinilo ha recapturado la conciencia global. Desde las escenas de crate-digging en Buenos Aires hasta los legendarios jazz kissaten de Tokio, el formato de 12 pulgadas está experimentando su mayor resurgimiento cultural.",
                 category: "Cultura",
                 author: "Oldie but Goldie Editorial",
@@ -115,6 +118,19 @@ export default function Editorial() {
 
     return (
         <div className="space-y-16 md:space-y-24 py-6 md:py-12">
+            <SEO
+                title={TEXTS.common.seo.editorial.title}
+                description={TEXTS.common.seo.editorial.desc}
+                image={TEXTS.common.seo.editorial.ogImage}
+                url="https://oldie-but-goldie.vercel.app/editorial"
+                schema={{
+                    "@context": "https://schema.org",
+                    "@type": "Blog",
+                    "name": TEXTS.common.seo.editorial.title,
+                    "description": TEXTS.common.seo.editorial.desc,
+                    "keywords": TEXTS.common.seo.editorial.keys
+                }}
+            />
             {/* Hero Section */}
             {featured && (
                 <section>
@@ -165,7 +181,7 @@ export default function Editorial() {
                                             <span className="text-xs md:text-sm font-bold text-white uppercase tracking-widest">{featured.readTime}</span>
                                         </div>
                                     </div>
-                                    <Link to={`/editorial/${featured.id}`} className="w-full md:w-auto mt-4 md:mt-0">
+                                    <Link to={`/editorial/${generateSlug(featured.title)}`} className="w-full md:w-auto mt-4 md:mt-0">
                                         <button className="w-full md:ml-auto bg-white text-black px-8 md:px-12 py-4 md:py-5 rounded-2xl md:rounded-[2rem] font-black uppercase text-[10px] md:text-xs tracking-[0.2em] hover:bg-primary transition-all flex items-center justify-center gap-4 group/btn">
                                             {TEXTS.common.readArticle} <ArrowRight className="h-4 w-4 md:h-5 md:w-5 group-hover/btn:translate-x-2 transition-transform" />
                                         </button>
@@ -203,7 +219,7 @@ export default function Editorial() {
                             transition={{ delay: i * 0.1 }}
                             className="group flex flex-col"
                         >
-                            <Link to={`/editorial/${article.id}`} className="block">
+                            <Link to={`/editorial/${generateSlug(article.title)}`} className="block">
                                 <div className="aspect-[16/11] rounded-[2.5rem] md:rounded-[3.5rem] overflow-hidden mb-8 md:mb-10 relative border border-white/5 ring-1 ring-white/10 group-hover:ring-primary/40 transition-all duration-700 shadow-2xl">
                                     <LazyImage
                                         src={article.image}

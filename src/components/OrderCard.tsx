@@ -206,10 +206,11 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
     };
 
     return (
-        <motion.div
+        <motion.article
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             onClick={context !== 'public' ? onClick : undefined}
+            aria-label={`${intent}: ${artist} - ${title}`}
             className={`
                 group relative bg-white/[0.02] border rounded-[1.5rem] overflow-hidden transition-all duration-300
                 ${context !== 'public' ? 'cursor-pointer hover:border-primary/30' : 'hover:border-white/10'}
@@ -291,9 +292,12 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
 
                     {/* Time & Public Link Line */}
                     <div className="flex items-center justify-between pt-2">
-                        <span className="text-[10px] text-gray-600 font-bold flex items-center gap-1.5 uppercase font-mono">
+                        <time
+                            dateTime={new Date(order.createdAt?.seconds * 1000 || order.timestamp?.seconds * 1000 || Date.now()).toISOString()}
+                            className="text-[10px] text-gray-600 font-bold flex items-center gap-1.5 uppercase font-mono"
+                        >
                             <Clock className="w-3.5 h-3.5" /> {getReadableDate(order.createdAt || order.timestamp)}
-                        </span>
+                        </time>
                         <Link
                             to={`/orden/${order.id}`}
                             onClick={(e) => e.stopPropagation()}
@@ -392,6 +396,6 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                     </AnimatePresence>
                 </div>
             )}
-        </motion.div>
+        </motion.article>
     );
 }

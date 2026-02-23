@@ -39,20 +39,22 @@ export default function PublicOrders() {
     return (
         <div className="min-h-screen bg-black pt-12">
             <SEO
-                title={TEXTS.common.publicActivity.activityTitle}
-                description={TEXTS.common.publicActivity.activityDesc}
+                title={TEXTS.common.seo.activity.title}
+                description={TEXTS.common.seo.activity.desc}
+                image={TEXTS.common.seo.activity.ogImage}
                 url="https://oldie-but-goldie.vercel.app/actividad"
                 schema={{
                     "@context": "https://schema.org",
                     "@type": "CollectionPage",
                     "name": TEXTS.common.publicActivity.activityName,
-                    "description": TEXTS.common.publicActivity.activityFeedDesc
+                    "description": TEXTS.common.publicActivity.activityFeedDesc,
+                    "keywords": TEXTS.common.seo.activity.keys
                 }}
             />
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
                 {/* Header Sequence */}
-                <div className="space-y-4 max-w-2xl">
+                <header className="space-y-4 max-w-2xl">
                     <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -79,7 +81,7 @@ export default function PublicOrders() {
                     >
                         {TEXTS.common.publicActivity.exploreDiscs}
                     </motion.p>
-                </div>
+                </header>
 
                 {/* Grid */}
                 {loading ? (
@@ -89,7 +91,7 @@ export default function PublicOrders() {
                         ))}
                     </div>
                 ) : (
-                    <motion.div
+                    <motion.section
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ duration: 0.5, delay: 0.3 }}
@@ -112,7 +114,7 @@ export default function PublicOrders() {
                                 <p className="text-gray-500 font-medium">{TEXTS.common.publicActivity.noPublicOrders}</p>
                             </div>
                         )}
-                    </motion.div>
+                    </motion.section>
                 )}
             </div>
         </div>

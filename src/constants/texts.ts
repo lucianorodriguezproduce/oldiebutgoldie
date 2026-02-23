@@ -176,6 +176,17 @@ export const TEXTS = {
             cancelled: "Cancelado"
         },
         confirmSetPrice: (price: number, currency: string) => `¿Confirmas definir un precio de ${currency === "USD" ? "US$" : "$"} ${price.toLocaleString()} para este pedido?`,
+        dashboard: {
+            title: "Métricas de Tráfico",
+            subtitle: "Rendimiento SEO y Search Console en tiempo real",
+            dominantKeywords: "Palabras Clave Dominantes",
+            metrics: {
+                clicks: "Clics Totales",
+                impressions: "Impresiones",
+                ctr: "CTR Promedio",
+                position: "Posición Media"
+            }
+        },
         editorial: {
             title: "Consola Editorial",
             description: "Gestiona contenido, entrevistas y despachos sónicos.",
@@ -238,7 +249,25 @@ export const TEXTS = {
         },
         seo: {
             defaultTitle: "Oldie but Goldie - Archivos de Audio y Vinilos",
-            defaultDescription: "El sistema definitivo para el coleccionismo físico. Explora nuestro archivo, cotiza en tiempo real, compra o vende reliquias con nosotros."
+            defaultDescription: "El sistema definitivo para el coleccionismo físico. Explora nuestro archivo, cotiza en tiempo real, compra o vende reliquias con nosotros.",
+            home: {
+                title: "Oldie but Goldie | Compra y Venta de Vinilos en Argentina",
+                desc: "Encontrá tus próximos vinilos, CDs y cassettes. Sistema de cotización en tiempo real y archivo cultural sonoro.",
+                keys: "vinilos, discos, coleccionismo, música analógica, compra venta vinilos argentina",
+                ogImage: "https://firebasestorage.googleapis.com/v0/b/vinilos-app-e1d2c.appspot.com/o/brand%2Flogo_og.png?alt=media"
+            },
+            activity: {
+                title: "Actividad en Tiempo Real | Marketplace de Vinilos",
+                desc: "Monitoreo en vivo de transacciones de discos de colección. Transparencia y fluidez en el mercado sónico.",
+                keys: "actividad vinilos, mercado discos, transacciones música, coleccionismo vivo",
+                ogImage: "https://firebasestorage.googleapis.com/v0/b/vinilos-app-e1d2c.appspot.com/o/brand%2Factivity_og.png?alt=media"
+            },
+            editorial: {
+                title: "Comunidad y Editorial Sónica | Oldie but Goldie",
+                desc: "Despachos de inteligencia musical, entrevistas y cultura del vinilo.",
+                keys: "editorial música, cultura vinilo, entrevistas artistas, noticias coleccionismo",
+                ogImage: "https://firebasestorage.googleapis.com/v0/b/vinilos-app-e1d2c.appspot.com/o/brand%2Feditorial_og.png?alt=media"
+            }
         },
         negotiation: {
             obgOffer: "Oferta de OBG",

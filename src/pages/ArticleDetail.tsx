@@ -1,7 +1,7 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { collection, query, where, getDocs, limit, doc, getDoc } from "firebase/firestore";
 import { motion } from "framer-motion";
 import { ChevronLeft, Clock, User, Share2, BookOpen } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -10,8 +10,10 @@ import { useLoading } from "@/context/LoadingContext";
 import { useEffect } from "react";
 import { LazyImage } from "@/components/ui/LazyImage";
 import { TEXTS } from "@/constants/texts";
+import { SEO } from "@/components/SEO";
 
 interface Article {
+    id?: string;
     category: string;
     title: string;
     excerpt: string;
@@ -20,9 +22,12 @@ interface Article {
     readTime: string;
     image: string;
     createdAt: any;
+    slug?: string;
+    _redirectUrl?: string;
 }
 
 export default function ArticleDetail() {
+    const navigate = useNavigate();
     const { id } = useParams();
     const { showLoading, hideLoading } = useLoading();
 
@@ -30,14 +35,32 @@ export default function ArticleDetail() {
         queryKey: ['article', id],
         queryFn: async () => {
             if (!id) return null;
+            const articlesRef = collection(db, "editorial");
+            const q = query(articlesRef, where("slug", "==", id), limit(1));
+            const querySnapshot = await getDocs(q);
+
+            if (!querySnapshot.empty) {
+                return { ...querySnapshot.docs[0].data(), id: querySnapshot.docs[0].id } as Article;
+            }
+
             const docRef = doc(db, "editorial", id);
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
-                return docSnap.data() as Article;
+                const docData = docSnap.data() as Article;
+                if (docData.slug) {
+                    return { ...docData, id: docSnap.id, _redirectUrl: `/editorial/${docData.slug}` };
+                }
+                return { ...docData, id: docSnap.id };
             }
             return null;
         }
     });
+
+    useEffect(() => {
+        if (article?._redirectUrl) {
+            navigate(article._redirectUrl, { replace: true });
+        }
+    }, [article, navigate]);
 
     useEffect(() => {
         if (isLoading) {
@@ -48,7 +71,7 @@ export default function ArticleDetail() {
         return () => hideLoading();
     }, [isLoading]);
 
-    if (isLoading) {
+    if (isLoading || article?._redirectUrl) {
         return null;
     }
 
@@ -69,6 +92,11 @@ export default function ArticleDetail() {
             animate={{ opacity: 1 }}
             className="max-w-4xl mx-auto py-8 md:py-16 px-4 md:px-0"
         >
+            <SEO
+                title={`${article.title} | Editorial Oldie but Goldie`}
+                description={article.excerpt}
+                image={article.image}
+            />
             <Link to="/editorial" className="inline-flex items-center gap-2 text-gray-500 hover:text-primary transition-colors mb-12 group">
                 <ChevronLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" />
                 <span className="text-[10px] font-black uppercase tracking-widest">{TEXTS.common.backToEditorial}</span>
