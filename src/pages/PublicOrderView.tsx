@@ -123,7 +123,7 @@ export default function PublicOrderView() {
                 title={titleStr}
                 description={generateDescription()}
                 image={order.thumbnailUrl}
-                url={`https://oldie-but-goldie.vercel.app/orden/${id}`}
+                url={`https://oldiebutgoldie.com.ar/orden/${id}`}
                 schema={schemaMarkup}
             />
 

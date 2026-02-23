@@ -13,15 +13,15 @@ interface SEOProps {
 export function SEO({
     title = TEXTS.common.seo.defaultTitle,
     description = TEXTS.common.seo.defaultDescription,
-    image = 'https://oldie-but-goldie.vercel.app/og-image.jpg', // URL genérica para OpenGraph
+    image = 'https://oldiebutgoldie.com.ar/og-image.jpg', // URL genérica para OpenGraph
     url,
     type = 'website',
     schema
 }: SEOProps) {
-    const currentUrl = url || (typeof window !== 'undefined' ? window.location.href : 'https://oldie-but-goldie.vercel.app');
+    const currentUrl = url || (typeof window !== 'undefined' ? window.location.href : 'https://oldiebutgoldie.com.ar');
 
     // Make sure image is an absolute HTTPS URL if it isn't already
-    const ogImage = image.startsWith('http') ? image : `https://oldie-but-goldie.vercel.app${image.startsWith('/') ? '' : '/'}${image}`;
+    const ogImage = image.startsWith('http') ? image : `https://oldiebutgoldie.com.ar${image.startsWith('/') ? '' : '/'}${image}`;
 
     const defaultSchema = {
         "@context": "https://schema.org",

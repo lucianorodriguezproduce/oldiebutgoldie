@@ -592,7 +592,7 @@ export default function Home() {
                             : `Compra, vende o cotiza ${selectedItem.title} de forma instantánea.`
                     }
                     image={selectedItem.cover_image || selectedItem.thumb}
-                    url={`https://oldie-but-goldie.vercel.app/item/${selectedItem.type}/${selectedItem.id}`}
+                    url={`https://oldiebutgoldie.com.ar/item/${selectedItem.type}/${selectedItem.id}`}
                     type="product"
                     schema={{
                         "@context": "https://schema.org",
@@ -615,7 +615,7 @@ export default function Home() {
                     title={TEXTS.common.seo.home.title}
                     description={TEXTS.common.seo.home.desc}
                     image={TEXTS.common.seo.home.ogImage}
-                    url="https://oldie-but-goldie.vercel.app"
+                    url="https://oldiebutgoldie.com.ar"
                     schema={{
                         "@context": "https://schema.org",
                         "@type": "WebSite",

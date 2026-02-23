@@ -122,7 +122,7 @@ export default function Editorial() {
                 title={TEXTS.common.seo.editorial.title}
                 description={TEXTS.common.seo.editorial.desc}
                 image={TEXTS.common.seo.editorial.ogImage}
-                url="https://oldie-but-goldie.vercel.app/editorial"
+                url="https://oldiebutgoldie.com.ar/editorial"
                 schema={{
                     "@context": "https://schema.org",
                     "@type": "Blog",

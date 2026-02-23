@@ -5,10 +5,10 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const BASE_URL = 'https://oldie-but-goldie.vercel.app';
+const BASE_URL = 'https://oldiebutgoldie.com.ar';
 // The project ID for oldie-but-goldie / vinilos-app
 // If you use a .env file locally for the script, it should load VITE_FIREBASE_PROJECT_ID
-const PROJECT_ID = process.env.VITE_FIREBASE_PROJECT_ID || 'vinilos-app-e1d2c';
+const PROJECT_ID = process.env.VITE_FIREBASE_PROJECT_ID || 'buscador-discogs-11425';
 
 async function fetchEditorialSlugs() {
     try {
