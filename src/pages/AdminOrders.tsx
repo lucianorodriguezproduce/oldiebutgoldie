@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { db } from "@/lib/firebase";
 import { LazyImage } from "@/components/ui/LazyImage";
@@ -104,6 +104,8 @@ export default function AdminOrders() {
 
     // Drawer state
     const [selectedOrder, setSelectedOrder] = useState<OrderDoc | null>(null);
+    const [showCelebration, setShowCelebration] = useState(false);
+    const prevOrdersRef = useRef<OrderDoc[]>([]);
     const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
     const [updatingId, setUpdatingId] = useState<string | null>(null);
 
@@ -314,6 +316,22 @@ export default function AdminOrders() {
         ? orders
         : orders.filter(o => o.status === statusFilter);
 
+    const sortedOrders = [...filteredOrders].sort((a, b) => {
+        const aLast = a.negotiationHistory?.[a.negotiationHistory.length - 1];
+        const bLast = b.negotiationHistory?.[b.negotiationHistory.length - 1];
+        const aRequiresAction = aLast?.sender === 'user' ? 1 : 0;
+        const bRequiresAction = bLast?.sender === 'user' ? 1 : 0;
+
+        if (aRequiresAction !== bRequiresAction) {
+            return bRequiresAction - aRequiresAction; // User sender first
+        }
+
+        // Secondary sort by timestamp if available
+        const aTime = a.timestamp?.seconds || 0;
+        const bTime = b.timestamp?.seconds || 0;
+        return bTime - aTime;
+    });
+
     const pendingCount = orders.filter(o => o.status === "pending").length;
     const negotiatingCount = orders.filter(o => o.status === "negotiating").length;
     const completedCount = orders.filter(o => o.status === "completed").length;
@@ -409,7 +427,7 @@ export default function AdminOrders() {
                     </div>
                 ) : (
                     <AnimatePresence>
-                        {filteredOrders.map(order => (
+                        {sortedOrders.map(order => (
                             <OrderCard
                                 key={order.id}
                                 order={order}
@@ -432,184 +450,206 @@ export default function AdminOrders() {
                 footer={
                     selectedOrder && (
                         <div className="space-y-4">
-                            {/* Negotiation History Visualization */}
+                            {/* Negotiation History Timeline */}
                             {selectedOrder.negotiationHistory && selectedOrder.negotiationHistory.length > 0 && (
-                                <div className="space-y-3 pb-4 border-b border-white/5">
-                                    <span className="text-[9px] font-black uppercase tracking-widest text-gray-500 flex items-center gap-1.5">
-                                        <Clock className="h-3 w-3" /> Historial de Negociación
+                                <div className="space-y-4 pb-6 border-b border-white/5">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 flex items-center justify-center gap-2 mb-6">
+                                        <Clock className="h-3.5 w-3.5" /> Línea de Tiempo de Negociación
                                     </span>
-                                    <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+
+                                    <div className="relative space-y-4 max-h-[300px] overflow-y-auto pr-4 custom-scrollbar">
+                                        {/* Central vertical line */}
+                                        <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white/5 -translate-x-1/2" />
+
                                         {selectedOrder.negotiationHistory.map((h, i) => (
-                                            <div key={i} className={`p-2.5 rounded-xl border flex items-center justify-between ${h.sender === 'admin'
-                                                    ? "bg-primary/5 border-primary/20"
-                                                    : "bg-orange-500/5 border-orange-500/20"
-                                                }`}>
-                                                <div className="flex flex-col">
-                                                    <span className={`text-[8px] font-black uppercase tracking-tighter ${h.sender === 'admin' ? "text-primary" : "text-orange-400"
-                                                        }`}>
-                                                        {h.sender === 'admin' ? "OBG (Admin)" : "Cliente"}
-                                                    </span>
-                                                    <span className="text-xs font-black text-white">
-                                                        {h.currency === "USD" ? "US$" : "$"} {h.price.toLocaleString()}
-                                                    </span>
+                                            <div key={i} className={`flex w-full items-center ${h.sender === 'admin' ? "justify-start" : "justify-end"}`}>
+                                                <div className={`relative w-[45%] p-3 rounded-2xl border ${h.sender === 'admin'
+                                                    ? "bg-primary/5 border-primary/20 text-left"
+                                                    : "bg-orange-500/5 border-orange-500/20 text-right"
+                                                    }`}>
+                                                    {/* Connector Dot */}
+                                                    <div className={`absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full border-2 bg-black z-10 ${h.sender === 'admin'
+                                                        ? "left-[calc(100%+11px)] border-primary"
+                                                        : "right-[calc(100%+11px)] border-orange-500"
+                                                        }`} />
+
+                                                    <div className="flex flex-col gap-0.5">
+                                                        <span className={`text-[8px] font-black uppercase tracking-tighter ${h.sender === 'admin' ? "text-primary" : "text-orange-400"
+                                                            }`}>
+                                                            {h.sender === 'admin' ? "OBG (Tú)" : "Cliente"}
+                                                        </span>
+                                                        <span className="text-sm font-black text-white">
+                                                            {h.currency === "USD" ? "US$" : "$"} {h.price.toLocaleString()}
+                                                        </span>
+                                                        <span className="text-[8px] text-gray-600 font-mono mt-1">
+                                                            {h.timestamp?.seconds
+                                                                ? new Date(h.timestamp.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                                                : "Reciente"}
+                                                        </span>
+                                                    </div>
                                                 </div>
-                                                <span className="text-[8px] text-gray-600 font-mono">
-                                                    {h.timestamp?.seconds
-                                                        ? new Date(h.timestamp.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                                                        : "Reciente"}
-                                                </span>
                                             </div>
                                         ))}
                                     </div>
                                 </div>
                             )}
 
-                            {/* Status Changer */}
-                            <div className="relative">
-                                <button
-                                    onClick={() => setActiveDropdown(activeDropdown ? null : selectedOrder.id)}
-                                    disabled={updatingId === selectedOrder.id || selectedOrder.status === "venta_finalizada"}
-                                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${getStatusConfig(selectedOrder.status).bg
-                                        } ${getStatusConfig(selectedOrder.status).color} ${updatingId === selectedOrder.id ? "opacity-50" : ""} ${selectedOrder.status === "venta_finalizada" ? "cursor-not-allowed" : ""
-                                        }`}
-                                >
-                                    <span className="flex items-center gap-2">
-                                        {(() => { const Icon = getStatusConfig(selectedOrder.status).icon; return <Icon className="h-3.5 w-3.5" />; })()}
-                                        {updatingId === selectedOrder.id ? "Actualizando..." : getStatusConfig(selectedOrder.status).label}
-                                    </span>
-                                    {selectedOrder.status !== "venta_finalizada" && <ChevronDown className={`h-3.5 w-3.5 transition-transform ${activeDropdown ? "rotate-180" : ""}`} />}
-                                </button>
-
-                                <AnimatePresence>
-                                    {activeDropdown && (
-                                        <motion.div
-                                            initial={{ opacity: 0, y: 5 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, y: 5 }}
-                                            className="absolute bottom-full mb-2 left-0 right-0 bg-neutral-900 border border-white/10 rounded-xl overflow-hidden z-50 shadow-2xl"
-                                        >
-                                            {STATUS_OPTIONS.map(option => {
-                                                const OptionIcon = option.icon;
-                                                return (
-                                                    <button
-                                                        key={option.value}
-                                                        onClick={() => handleStatusChange(selectedOrder.id, option.value)}
-                                                        className={`w-full flex items-center gap-3 px-5 py-3 transition-all text-left ${selectedOrder.status === option.value ? "bg-white/5" : "hover:bg-white/5"
-                                                            }`}
-                                                    >
-                                                        <OptionIcon className={`h-4 w-4 ${option.color}`} />
-                                                        <span className={`text-xs font-bold ${selectedOrder.status === option.value ? option.color : "text-gray-400"}`}>
-                                                            {option.label}
-                                                        </span>
-                                                        {selectedOrder.status === option.value && (
-                                                            <CheckCircle2 className="h-3 w-3 text-primary ml-auto" />
-                                                        )}
-                                                    </button>
-                                                );
-                                            })}
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
-                            </div>
-
-                            {/* Counter-offer Form (VENDER orders) */}
-                            {selectedOrder.details.intent === "VENDER" && selectedOrder.status !== "venta_finalizada" && (
-                                <div className="space-y-3 pt-2 border-t border-white/5">
-                                    <span className="text-[9px] font-black uppercase tracking-widest text-orange-400/70 flex items-center gap-1.5">
-                                        <BadgeDollarSign className="h-3.5 w-3.5" />
-                                        Definir Precio de Venta/Lote
-                                    </span>
-                                    <div className="flex items-center gap-2">
-                                        <select
-                                            value={quoteCurrency}
-                                            onChange={e => setQuoteCurrency(e.target.value)}
-                                            className="bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white text-xs font-bold focus:border-orange-400/40 focus:outline-none"
-                                        >
-                                            <option value="ARS">ARS $</option>
-                                            <option value="USD">USD US$</option>
-                                        </select>
-                                        <div className="relative flex-1">
-                                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-600" />
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                step="0.01"
-                                                placeholder="Precio contraoferta..."
-                                                value={quotePrice}
-                                                onChange={e => setQuotePrice(e.target.value)}
-                                                className="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 pl-9 pr-4 text-white text-sm font-bold focus:border-orange-400/40 focus:outline-none"
-                                            />
-                                        </div>
+                            {selectedOrder.status === 'completed' || selectedOrder.status === 'venta_finalizada' ? (
+                                <div className="p-6 bg-primary/10 border border-primary/20 rounded-3xl text-center space-y-2">
+                                    <CheckCircle2 className="h-8 w-8 text-primary mx-auto" />
+                                    <h5 className="font-black text-white uppercase tracking-tighter text-lg">Trato Cerrado</h5>
+                                    <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">La negociación ha concluido con éxito.</p>
+                                </div>
+                            ) : (
+                                <>
+                                    {/* Status Changer */}
+                                    <div className="relative">
                                         <button
-                                            onClick={() => handleSetAdminPrice(selectedOrder)}
-                                            disabled={quotingId === selectedOrder.id || !quotePrice || selectedOrder.adminPrice === parseFloat(quotePrice)}
-                                            className={`px-4 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-40 ${selectedOrder.adminPrice && selectedOrder.adminPrice === parseFloat(quotePrice)
-                                                ? "bg-green-600 text-white"
-                                                : "bg-orange-600 text-white hover:bg-orange-500"
+                                            onClick={() => setActiveDropdown(activeDropdown ? null : selectedOrder.id)}
+                                            disabled={updatingId === selectedOrder.id || selectedOrder.status === "venta_finalizada"}
+                                            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${getStatusConfig(selectedOrder.status).bg
+                                                } ${getStatusConfig(selectedOrder.status).color} ${updatingId === selectedOrder.id ? "opacity-50" : ""} ${selectedOrder.status === "venta_finalizada" ? "cursor-not-allowed" : ""
                                                 }`}
                                         >
-                                            {selectedOrder.adminPrice && selectedOrder.adminPrice === parseFloat(quotePrice) ? (
-                                                <CheckCircle2 className="h-3.5 w-3.5" />
-                                            ) : (
-                                                <Send className="h-3.5 w-3.5" />
-                                            )}
-                                        </button>
-                                        {selectedOrder.adminPrice && selectedOrder.adminPrice === parseFloat(quotePrice) && (
-                                            <span className="absolute -top-6 right-0 text-[8px] font-black text-green-500 uppercase tracking-widest animate-pulse">
-                                                Precio Guardado ✓
+                                            <span className="flex items-center gap-2">
+                                                {(() => { const Icon = getStatusConfig(selectedOrder.status).icon; return <Icon className="h-3.5 w-3.5" />; })()}
+                                                {updatingId === selectedOrder.id ? "Actualizando..." : getStatusConfig(selectedOrder.status).label}
                                             </span>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Quote Form (COMPRAR orders without existing quote) */}
-                            {selectedOrder.details.intent === "COMPRAR" && !selectedOrder.admin_offer_price && (
-                                <div className="space-y-3 pt-2 border-t border-white/5">
-                                    <span className="text-[9px] font-black uppercase tracking-widest text-purple-400/70 flex items-center gap-1.5">
-                                        <BadgeDollarSign className="h-3.5 w-3.5" />
-                                        Enviar Cotización
-                                    </span>
-                                    <div className="flex items-center gap-2">
-                                        <select
-                                            value={quoteCurrency}
-                                            onChange={e => setQuoteCurrency(e.target.value)}
-                                            className="bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white text-xs font-bold focus:border-purple-400/40 focus:outline-none"
-                                        >
-                                            <option value="ARS">ARS $</option>
-                                            <option value="USD">USD US$</option>
-                                        </select>
-                                        <div className="relative flex-1">
-                                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-600" />
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                step="0.01"
-                                                placeholder={selectedOrder.isBatch ? "Cotizar el lote entero..." : "Precio..."}
-                                                value={quotePrice}
-                                                onChange={e => setQuotePrice(e.target.value)}
-                                                className="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 pl-9 pr-4 text-white text-sm font-bold focus:border-purple-400/40 focus:outline-none"
-                                            />
-                                        </div>
-                                        <button
-                                            onClick={() => handleSendQuote(selectedOrder)}
-                                            disabled={quotingId === selectedOrder.id || !quotePrice}
-                                            className="px-4 py-2.5 bg-purple-500 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-purple-400 transition-all disabled:opacity-40"
-                                        >
-                                            <Send className="h-3.5 w-3.5" />
+                                            {selectedOrder.status !== "venta_finalizada" && <ChevronDown className={`h-3.5 w-3.5 transition-transform ${activeDropdown ? "rotate-180" : ""}`} />}
                                         </button>
-                                    </div>
-                                </div>
-                            )}
 
-                            {/* WhatsApp */}
-                            <button
-                                onClick={() => handleWhatsAppContact(selectedOrder)}
-                                className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-green-500/10 border border-green-500/20 text-green-400 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-green-500 hover:text-white transition-all"
-                            >
-                                <MessageCircle className="h-4 w-4" />
-                                Contactar por WhatsApp
-                            </button>
+                                        <AnimatePresence>
+                                            {activeDropdown && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, y: 5 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0, y: 5 }}
+                                                    className="absolute bottom-full mb-2 left-0 right-0 bg-neutral-900 border border-white/10 rounded-xl overflow-hidden z-50 shadow-2xl"
+                                                >
+                                                    {STATUS_OPTIONS.map(option => {
+                                                        const OptionIcon = option.icon;
+                                                        return (
+                                                            <button
+                                                                key={option.value}
+                                                                onClick={() => handleStatusChange(selectedOrder.id, option.value)}
+                                                                className={`w-full flex items-center gap-3 px-5 py-3 transition-all text-left ${selectedOrder.status === option.value ? "bg-white/5" : "hover:bg-white/5"
+                                                                    }`}
+                                                            >
+                                                                <OptionIcon className={`h-4 w-4 ${option.color}`} />
+                                                                <span className={`text-xs font-bold ${selectedOrder.status === option.value ? option.color : "text-gray-400"}`}>
+                                                                    {option.label}
+                                                                </span>
+                                                                {selectedOrder.status === option.value && (
+                                                                    <CheckCircle2 className="h-3 w-3 text-primary ml-auto" />
+                                                                )}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
+
+                                    {/* Counter-offer Form (VENDER orders) */}
+                                    {selectedOrder.details.intent === "VENDER" && selectedOrder.status !== "venta_finalizada" && (
+                                        <div className="space-y-3 pt-2 border-t border-white/5">
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-orange-400/70 flex items-center gap-1.5">
+                                                <BadgeDollarSign className="h-3.5 w-3.5" />
+                                                Definir Precio de Venta/Lote
+                                            </span>
+                                            <div className="flex items-center gap-2">
+                                                <select
+                                                    value={quoteCurrency}
+                                                    onChange={e => setQuoteCurrency(e.target.value)}
+                                                    className="bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white text-xs font-bold focus:border-orange-400/40 focus:outline-none"
+                                                >
+                                                    <option value="ARS">ARS $</option>
+                                                    <option value="USD">USD US$</option>
+                                                </select>
+                                                <div className="relative flex-1">
+                                                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-600" />
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        step="0.01"
+                                                        placeholder="Precio contraoferta..."
+                                                        value={quotePrice}
+                                                        onChange={e => setQuotePrice(e.target.value)}
+                                                        className="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 pl-9 pr-4 text-white text-sm font-bold focus:border-orange-400/40 focus:outline-none"
+                                                    />
+                                                </div>
+                                                <button
+                                                    onClick={() => handleSetAdminPrice(selectedOrder)}
+                                                    disabled={quotingId === selectedOrder.id || !quotePrice || selectedOrder.adminPrice === parseFloat(quotePrice)}
+                                                    className={`px-4 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-40 ${selectedOrder.adminPrice && selectedOrder.adminPrice === parseFloat(quotePrice)
+                                                        ? "bg-green-600 text-white"
+                                                        : "bg-orange-600 text-white hover:bg-orange-500"
+                                                        }`}
+                                                >
+                                                    {selectedOrder.adminPrice && selectedOrder.adminPrice === parseFloat(quotePrice) ? (
+                                                        <CheckCircle2 className="h-3.5 w-3.5" />
+                                                    ) : (
+                                                        <Send className="h-3.5 w-3.5" />
+                                                    )}
+                                                </button>
+                                                {selectedOrder.adminPrice && selectedOrder.adminPrice === parseFloat(quotePrice) && (
+                                                    <span className="absolute -top-6 right-0 text-[8px] font-black text-green-500 uppercase tracking-widest animate-pulse">
+                                                        Precio Guardado ✓
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Quote Form (COMPRAR orders without existing quote) */}
+                                    {selectedOrder.details.intent === "COMPRAR" && !selectedOrder.admin_offer_price && (
+                                        <div className="space-y-3 pt-2 border-t border-white/5">
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-purple-400/70 flex items-center gap-1.5">
+                                                <BadgeDollarSign className="h-3.5 w-3.5" />
+                                                Enviar Cotización
+                                            </span>
+                                            <div className="flex items-center gap-2">
+                                                <select
+                                                    value={quoteCurrency}
+                                                    onChange={e => setQuoteCurrency(e.target.value)}
+                                                    className="bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white text-xs font-bold focus:border-purple-400/40 focus:outline-none"
+                                                >
+                                                    <option value="ARS">ARS $</option>
+                                                    <option value="USD">USD US$</option>
+                                                </select>
+                                                <div className="relative flex-1">
+                                                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-600" />
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        step="0.01"
+                                                        placeholder={selectedOrder.isBatch ? "Cotizar el lote entero..." : "Precio..."}
+                                                        value={quotePrice}
+                                                        onChange={e => setQuotePrice(e.target.value)}
+                                                        className="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 pl-9 pr-4 text-white text-sm font-bold focus:border-purple-400/40 focus:outline-none"
+                                                    />
+                                                </div>
+                                                <button
+                                                    onClick={() => handleSendQuote(selectedOrder)}
+                                                    disabled={quotingId === selectedOrder.id || !quotePrice}
+                                                    className="px-4 py-2.5 bg-purple-500 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-purple-400 transition-all disabled:opacity-40"
+                                                >
+                                                    <Send className="h-3.5 w-3.5" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* WhatsApp */}
+                                    <button
+                                        onClick={() => handleWhatsAppContact(selectedOrder)}
+                                        className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-green-500/10 border border-green-500/20 text-green-400 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-green-500 hover:text-white transition-all"
+                                    >
+                                        <MessageCircle className="h-4 w-4" />
+                                        Contactar por WhatsApp
+                                    </button>
+                                </>
+                            )}
                         </div>
                     )
                 }
@@ -716,6 +756,55 @@ export default function AdminOrders() {
                     </div>
                 )}
             </OrderDetailsDrawer>
+
+            {/* Deal Closure Celebration Overlay */}
+            <AnimatePresence>
+                {showCelebration && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[2000] flex items-center justify-center pointer-events-none"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.5, rotate: -20, y: 50 }}
+                            animate={{ scale: 1.2, rotate: 0, y: 0 }}
+                            exit={{ scale: 0.8, opacity: 0 }}
+                            className="bg-black/80 backdrop-blur-xl border-4 border-primary p-12 rounded-[3rem] shadow-[0_0_100px_rgba(255,215,0,0.3)] flex flex-col items-center gap-6"
+                        >
+                            <motion.div
+                                animate={{
+                                    scale: [1, 1.2, 1],
+                                    rotate: [0, 10, -10, 0]
+                                }}
+                                transition={{ repeat: Infinity, duration: 2 }}
+                                className="w-24 h-24 bg-primary rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(255,215,0,0.5)]"
+                            >
+                                <CheckCircle2 className="h-16 w-16 text-black stroke-[3]" />
+                            </motion.div>
+                            <div className="text-center">
+                                <h2 className="text-3xl font-display font-black text-white uppercase tracking-tighter">¡Trato Cerrado!</h2>
+                                <p className="text-primary font-black uppercase tracking-widest text-xs mt-2">Venta confirmada por el cliente</p>
+                            </div>
+
+                            {/* Visual Sparkles */}
+                            {[...Array(8)].map((_, i) => (
+                                <motion.div
+                                    key={i}
+                                    className="absolute w-2 h-2 bg-primary rounded-full"
+                                    animate={{
+                                        x: [0, (i % 2 ? 100 : -100) * Math.random()],
+                                        y: [0, (i < 4 ? 100 : -100) * Math.random()],
+                                        opacity: [1, 0],
+                                        scale: [1, 0]
+                                    }}
+                                    transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.1 }}
+                                />
+                            ))}
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

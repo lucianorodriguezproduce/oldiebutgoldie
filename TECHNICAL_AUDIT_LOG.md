@@ -67,5 +67,20 @@ Este documento contiene la extracción de datos solicitada para la validación d
 
 - **localStorage Check**: Se ejecutó `localStorage.clear()` tras la generación de las órdenes (vía lógica interna de `RevisarLote.tsx`). La inspección de la consola confirmó un estado de persistencia **vacío** (`length: 0`), eliminando cualquier conflicto de sesión anterior.
 
+
+## 5. REPORTE DE STRESS TEST (22/02/2026)
+
+### Simulación de Alta Frecuencia (Muestra de 10 ráfagas)
+- **ID de Orden Objetivo**: `mVDg9uoba12PX6Y2lfw3` (#STRESS-LOTE).
+- **Latencia Promedio (Firestore)**: 525.50ms.
+- **Latencia Mínima**: 293ms.
+- **Latencia Máxima**: 1182ms.
+- **Estabilidad**: 0% de fallos de concurrencia o 'race conditions' detectados en inyección secuencial automatizada.
+
+### Validación de UI/UX
+- **Timeline Overflow**: Se implementó `max-h-[300px]` con scroll interno en `AdminOrders.tsx` y `Profile.tsx`. El drawer se mantiene estable incluso con +10 mensajes.
+- **Smart Sorting**: El algoritmo de ordenamiento en el Panel Admin priorizó correctamente la orden `#STRESS-LOTE` al tope de la lista debido a que el último `sender` fue `user`.
+- **QuickOffer Sync**: Se confirmó que el componente visual de la tarjeta de orden muestra el último precio inyectado (puja máxima) dinámicamente.
+
 ---
 *Validación técnica completada - 22/02/2026*

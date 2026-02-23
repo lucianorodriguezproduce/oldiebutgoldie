@@ -1,37 +1,47 @@
-# Guía de Negociación y Ecosistema OBG
+# NEGOTIATION_GUIDE.md
 
-Esta guía documenta el flujo de trabajo bidireccional entre la administración y los coleccionistas, así como los mecanismos técnicos de soporte.
+## Sistema de Negociación Bidireccional (Loop de Stitch)
 
-## 1. Flujo de Estados de Negociación
+Este documento describe la arquitectura y el flujo de trabajo del sistema de negociación implementado para gestionar las ofertas entre **Oldie but Goldie (OBG)** y sus clientes.
 
-El sistema utiliza Firestore como bus de eventos en tiempo real para coordinar el trato:
+### 1. Esquema de Datos (Firestore)
 
-1.  **Lote Enviado (`pending`)**: El usuario envía una solicitud de compra o venta.
-2.  **Cotización Admin (`quoted`)**: El administrador asigna un precio sugerido (`adminPrice`).
-3.  **Oferta Enviada (`offer_sent`)**: El administrador activa la fase de negociación.
-    -   *Activador Técnico*: El hook `useOrderNotifications` detecta este estado y enciende el **Pulse Dot** en el Navbar del usuario.
-4.  **Aceptación Usuario (`venta_finalizada`)**: El usuario acepta la oferta.
-    -   *Acciones Automáticas*: Se genera el **Comprobante de Trato**. El botón de WhatsApp cambia a "Coordinar Entrega".
-5.  **Rechazo/Cancelación (`rejected`/`cancelled`)**: La orden se archiva.
+Utilizamos un enfoque de **Historial de Negociación** (Opción A) en lugar de sobrescribir campos estáticos. Esto permite trazabilidad, auditoría y una mejor experiencia de resolución de disputas.
 
-## 2. Arquitectura de Notificaciones
+- **Campo**: `negotiationHistory` (Array de Objetos)
+- **Operación**: `arrayUnion` (Garantiza inmutabilidad de registros previos)
 
-### `useOrderNotifications.ts`
-Este hook centraliza la escucha de Firestore para evitar múltiples conexiones.
-- **Filtros**: `user_id == current_uid` && `status == offer_sent`.
-- **UI**: Inyecta el estado `hasActiveOffer` en el `Navbar`.
+```typescript
+interface NegotiationEntry {
+  price: number;
+  currency: "ARS" | "USD";
+  sender: "admin" | "user"; // Identifica quién realizó la propuesta
+  timestamp: ServerTimestamp | Date;
+  message?: string; // (Opcional) Para futuras notas
+}
+```
 
-## 3. Sistema de Recibos e Impresión
+### 2. Ciclo de Negociación (Loop)
 
-Para garantizar la formalidad del trato, el sistema de impresión se basa en aislamiento por CSS:
+1. **Propuesta Inicial (User)**: Se registra en `totalPrice`.
+2. **Contraoferta Admin**: Se añade entrada con `sender: admin` al historial.
+3. **Contraoferta Usuario**: Se añade entrada con `sender: user` al historial.
+4. **Cierre (Accept)**: El estado cambia a `completed` y se genera el recibo final.
 
-- **Efecto Print**: Se utiliza `@media print` para ocultar el Layout web y el Drawer, dejando visible únicamente el contenedor `#printable-receipt`.
-- **Optimización**: Se fuerzan fondos blancos y textos negros para ahorro de tinta y legibilidad profesional.
+### 3. Manejo de Contraofertas "Infinitas"
 
-## 4. Gestión de Activos (Performance)
+Para evitar que el estado global se rompa o que la interfaz sea inmanejable:
+- **Priorización UI**: Las órdenes se ordenan dinámicamente. Si el último `sender` es `user`, la orden sube al tope del Panel Admin (`[ACCIÓN REQUERIDA]`).
+- **Timeline UI**: Las propuestas se visualizan en un eje central. Admin a la izquierda, Usuario a la derecha. Esto facilita la lectura del histórico sin importar cuántas ofertas se hayan cruzado.
+- **Validaciones**: Se impide el envío de ofertas vacías, negativas o iguales a 0 en ambos lados.
 
-- **Lazy Loading**: Aplicado vía `loading="lazy"` en todos los assets de baja prioridad.
-- **Intersección (Skeleton)**: El componente `LazyImage` utiliza Skeletons de `shadcn-ui` como placeholder absoluta hasta que el evento `onLoad` de la imagen se dispara, eliminando el Cumulative Layout Shift (CLS).
+### 4. Componentes Clave
 
----
-*Mantenido por el equipo Oldie but Goldie - 2026*
+- `AdminOrders.tsx`: Gestión centralizada y visualización Timeline (Admin).
+- `Profile.tsx`: Respuesta del cliente y visualización Timeline (Usuario).
+- `OrderCard.tsx`: Resumen visual y componente `QuickOffer` para respuestas rápidas del Admin.
+
+### 5. Mejores Prácticas
+- Siempre usar `arrayUnion` para añadir entradas.
+- No delegar el cálculo del precio final al cliente; el Admin debe validar el cierre.
+- Utilizar `framer-motion` para el feedback visual (`Celebration`) al momento del cierre.

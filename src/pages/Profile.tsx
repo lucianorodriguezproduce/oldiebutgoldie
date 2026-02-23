@@ -113,7 +113,7 @@ export default function Profile() {
         try {
             const orderRef = doc(db, "orders", selectedOrder.id);
             await updateDoc(orderRef, {
-                status: "venta_finalizada",
+                status: "completed",
                 acceptedAt: serverTimestamp()
             });
             // Update local state to reflect change immediately
@@ -606,39 +606,51 @@ export default function Profile() {
                 footer={
                     selectedOrder && (
                         <div className="space-y-4">
-                            {/* Negotiation History Visualization (User Side) */}
+                            {/* Negotiation History Timeline (Profile Side) */}
                             {selectedOrder.negotiationHistory && selectedOrder.negotiationHistory.length > 0 && (
-                                <div className="space-y-3 pb-4 border-b border-white/5">
-                                    <span className="text-[9px] font-black uppercase tracking-widest text-gray-500 flex items-center gap-1.5">
-                                        <Clock className="h-3 w-3" /> Historial de Negociación
+                                <div className="space-y-4 pb-6 border-b border-white/5">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 flex items-center justify-center gap-2 mb-6">
+                                        <Clock className="h-3.5 w-3.5" /> Línea de Tiempo de Negociación
                                     </span>
-                                    <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+
+                                    <div className="relative space-y-4 max-h-[300px] overflow-y-auto pr-4 custom-scrollbar">
+                                        {/* Central vertical line */}
+                                        <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white/5 -translate-x-1/2" />
+
                                         {selectedOrder.negotiationHistory.map((h, i) => (
-                                            <div key={i} className={`p-2.5 rounded-xl border flex items-center justify-between ${h.sender === 'user'
-                                                    ? "bg-orange-500/5 border-orange-500/20"
-                                                    : "bg-primary/5 border-primary/20"
-                                                }`}>
-                                                <div className="flex flex-col">
-                                                    <span className={`text-[8px] font-black uppercase tracking-tighter ${h.sender === 'user' ? "text-orange-400" : "text-primary"
-                                                        }`}>
-                                                        {h.sender === 'user' ? "Tú (Cliente)" : "Oldie but Goldie"}
-                                                    </span>
-                                                    <span className="text-xs font-black text-white">
-                                                        {h.currency === "USD" ? "US$" : "$"} {h.price.toLocaleString()}
-                                                    </span>
+                                            <div key={i} className={`flex w-full items-center ${h.sender === 'admin' ? "justify-start" : "justify-end"}`}>
+                                                <div className={`relative w-[45%] p-3 rounded-2xl border ${h.sender === 'admin'
+                                                    ? "bg-primary/5 border-primary/20 text-left"
+                                                    : "bg-orange-500/5 border-orange-500/20 text-right"
+                                                    }`}>
+                                                    {/* Connector Dot */}
+                                                    <div className={`absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full border-2 bg-black z-10 ${h.sender === 'admin'
+                                                        ? "left-[calc(100%+11px)] border-primary"
+                                                        : "right-[calc(100%+11px)] border-orange-500"
+                                                        }`} />
+
+                                                    <div className="flex flex-col gap-0.5">
+                                                        <span className={`text-[8px] font-black uppercase tracking-tighter ${h.sender === 'admin' ? "text-primary" : "text-orange-400"
+                                                            }`}>
+                                                            {h.sender === 'admin' ? "Oldie but Goldie" : "Tú (Cliente)"}
+                                                        </span>
+                                                        <span className="text-sm font-black text-white">
+                                                            {h.currency === "USD" ? "US$" : "$"} {h.price.toLocaleString()}
+                                                        </span>
+                                                        <span className="text-[8px] text-gray-600 font-mono mt-1">
+                                                            {h.timestamp?.seconds
+                                                                ? new Date(h.timestamp.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                                                : "Reciente"}
+                                                        </span>
+                                                    </div>
                                                 </div>
-                                                <span className="text-[8px] text-gray-600 font-mono">
-                                                    {h.timestamp?.seconds
-                                                        ? new Date(h.timestamp.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                                                        : "Reciente"}
-                                                </span>
                                             </div>
                                         ))}
                                     </div>
                                 </div>
                             )}
 
-                            {selectedOrder.status === "venta_finalizada" ? (
+                            {selectedOrder.status === "completed" || selectedOrder.status === "venta_finalizada" ? (
                                 <div className="space-y-6">
                                     <div id="printable-receipt" className="bg-green-500/10 border border-green-500/20 rounded-[2rem] p-8 space-y-6 relative overflow-hidden">
                                         <div className="absolute top-0 right-0 p-8 opacity-5">

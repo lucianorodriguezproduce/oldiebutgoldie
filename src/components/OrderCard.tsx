@@ -19,6 +19,9 @@ import { useAuth } from '@/context/AuthContext';
 import type { OrderData } from '@/utils/whatsapp';
 import { formatDate, getReadableDate } from '@/utils/date';
 import { LazyImage } from '@/components/ui/LazyImage';
+import { db } from '@/lib/firebase';
+import { doc, updateDoc, arrayUnion, addDoc, serverTimestamp, collection } from 'firebase/firestore';
+import { useLoading } from '@/context/LoadingContext';
 
 interface OrderCardProps {
     order: any; // Using any or an extended OrderData to catch legacy fields without crashing
@@ -28,7 +31,53 @@ interface OrderCardProps {
 
 export default function OrderCard({ order, context, onClick }: OrderCardProps) {
     const { user, isAdmin } = useAuth();
+    const { showLoading, hideLoading } = useLoading();
     const [isExpanded, setIsExpanded] = useState(false);
+    const [quickOffer, setQuickOffer] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const lastNegotiation = order.negotiationHistory?.[order.negotiationHistory.length - 1];
+    const requiresAction = context === 'admin' && lastNegotiation?.sender === 'user';
+
+    const handleQuickOffer = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        const priceVal = parseFloat(quickOffer);
+        if (isNaN(priceVal) || priceVal <= 0 || isSubmitting) return;
+
+        setIsSubmitting(true);
+        showLoading("Enviando oferta rápida...");
+        try {
+            const currency = order.adminCurrency || order.currency || order.details?.currency || "ARS";
+            await updateDoc(doc(db, "orders", order.id), {
+                adminPrice: priceVal,
+                adminCurrency: currency,
+                status: "counteroffered",
+                negotiationHistory: arrayUnion({
+                    price: priceVal,
+                    currency: currency,
+                    sender: 'admin',
+                    timestamp: new Date()
+                })
+            });
+
+            const currSymbol = currency === "USD" ? "US$" : "$";
+            await addDoc(collection(db, "notifications"), {
+                user_id: order.user_id,
+                title: "Nueva Contraoferta",
+                message: `OBG propone ${currSymbol} ${priceVal.toLocaleString()} para tu pedido.`,
+                read: false,
+                timestamp: serverTimestamp(),
+                order_id: order.id
+            });
+
+            setQuickOffer("");
+        } catch (error) {
+            console.error("Quick offer error:", error);
+        } finally {
+            setIsSubmitting(false);
+            hideLoading();
+        }
+    };
 
     // Ownership check for privacy
     const isOwner = user?.uid === order.user_id;
@@ -160,8 +209,15 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
         >
             {/* Context Badge Corner */}
             {context === 'admin' && order.user_email && (
-                <div className="absolute top-0 right-0 px-3 py-1 bg-white/5 rounded-bl-xl border-b border-l border-white/10 text-[9px] text-gray-500 font-mono hidden md:block">
-                    {order.user_email}
+                <div className="absolute top-0 right-0 flex items-center">
+                    {requiresAction && (
+                        <div className="px-3 py-1 bg-red-500 text-white text-[8px] font-black uppercase tracking-widest rounded-bl-xl animate-pulse ring-4 ring-red-500/20">
+                            Acción Requerida
+                        </div>
+                    )}
+                    <div className="px-3 py-1 bg-white/5 rounded-bl-xl border-b border-l border-white/10 text-[9px] text-gray-500 font-mono hidden md:block">
+                        {order.user_email}
+                    </div>
                 </div>
             )}
 
@@ -246,6 +302,31 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                     <div className="flex flex-col items-end gap-3">
                         {getStatusBadge(status)}
                     </div>
+
+                    {/* QuickOffer Component for Admins - Minimalist & Validated */}
+                    {context === 'admin' && status !== 'completed' && status !== 'venta_finalizada' && (
+                        <div className="flex items-center gap-1.5 mt-auto group/quick" onClick={(e) => e.stopPropagation()}>
+                            <div className="relative">
+                                <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-primary/50 group-focus-within/quick:text-primary transition-colors" />
+                                <input
+                                    type="number"
+                                    placeholder="Cotizar"
+                                    value={quickOffer}
+                                    onChange={(e) => setQuickOffer(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleQuickOffer(e as any)}
+                                    className="bg-white/5 border border-white/10 rounded-lg pl-6 pr-2 py-1.5 text-[10px] font-black text-white w-20 focus:w-28 focus:border-primary/50 focus:bg-white/[0.08] focus:outline-none transition-all placeholder:text-gray-700 placeholder:font-bold"
+                                />
+                            </div>
+                            <button
+                                onClick={handleQuickOffer}
+                                disabled={!quickOffer || parseFloat(quickOffer) <= 0 || isSubmitting}
+                                className="p-2 bg-primary/10 text-primary border border-primary/20 rounded-lg hover:bg-primary hover:text-black transition-all disabled:opacity-10 active:scale-95 shadow-lg shadow-primary/5"
+                                title="Enviar Contraoferta Rápida"
+                            >
+                                <CheckCircle2 className="h-3.5 w-3.5" />
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
 
