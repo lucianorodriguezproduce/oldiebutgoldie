@@ -179,7 +179,8 @@ export const TEXTS = {
         dashboard: {
             title: "Métricas de Tráfico",
             subtitle: "Rendimiento SEO y Search Console en tiempo real",
-            dominantKeywords: "Palabras Clave Dominantes",
+            dominantKeywords: "Análisis de Demanda (Top 100)",
+            searchPlaceholder: "Filtrar palabras clave...",
             metrics: {
                 clicks: "Clics Totales",
                 impressions: "Impresiones",

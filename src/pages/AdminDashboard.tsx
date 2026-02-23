@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { TEXTS } from '@/constants/texts';
-import { LineChart, Activity, MousePointerClick, TrendingUp } from 'lucide-react';
+import { LineChart, Activity, MousePointerClick, TrendingUp, Search } from 'lucide-react';
 
 export interface SearchConsoleData {
     query: string;
@@ -21,6 +21,7 @@ export interface AnalyticsSummary {
 export default function AdminDashboard() {
     const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
     const [keywords, setKeywords] = useState<SearchConsoleData[]>([]);
+    const [searchTerm, setSearchTerm] = useState('');
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
@@ -37,11 +38,23 @@ export default function AdminDashboard() {
                     averagePosition: 12.4
                 });
 
-                setKeywords([
-                    { query: "comprar vinilos de rock", clicks: 340, impressions: 2100, ctr: 16.1, position: 3.2 },
-                    { query: "oldie but goldie discos", clicks: 215, impressions: 450, ctr: 47.7, position: 1.1 },
-                    { query: "cotizador de discos de vinilo", clicks: 180, impressions: 1200, ctr: 15.0, position: 4.5 }
-                ]);
+                const mockKeywords: SearchConsoleData[] = Array.from({ length: 100 }, (_, i) => ({
+                    query: `vinilos de rock vol ${i + 1}`,
+                    clicks: Math.floor(Math.random() * 500) + 10,
+                    impressions: Math.floor(Math.random() * 5000) + 100,
+                    ctr: Number((Math.random() * 20 + 1).toFixed(1)),
+                    position: Number((Math.random() * 50 + 1).toFixed(1))
+                }));
+
+                // Override top 3 for realistic visuals
+                mockKeywords[0] = { query: "comprar vinilos de rock", clicks: 340, impressions: 2100, ctr: 16.1, position: 3.2 };
+                mockKeywords[1] = { query: "oldie but goldie discos", clicks: 215, impressions: 450, ctr: 47.7, position: 1.1 };
+                mockKeywords[2] = { query: "cotizador de discos de vinilo", clicks: 180, impressions: 1200, ctr: 15.0, position: 4.5 };
+
+                // Sort by clicks descending
+                mockKeywords.sort((a, b) => b.clicks - a.clicks);
+
+                setKeywords(mockKeywords);
             } catch (error) {
                 // Production: Silent fail or logging service
             } finally {
@@ -52,8 +65,14 @@ export default function AdminDashboard() {
         fetchAnalytics();
     }, []);
 
+    const filteredKeywords = useMemo(() => {
+        return keywords.filter(kw =>
+            kw.query.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }, [keywords, searchTerm]);
+
     return (
-        <div className="space-y-8 animate-in fade-in duration-500">
+        <div className="space-y-8 animate-in fade-in duration-500 pb-12">
             <header className="mb-8">
                 <h1 className="text-3xl font-display font-black text-white italic uppercase tracking-tighter">
                     {TEXTS.admin.dashboard.title}
@@ -97,18 +116,29 @@ export default function AdminDashboard() {
             </div>
 
             {/* Keyword Tracking Table */}
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden mt-8">
-                <div className="p-6 border-b border-white/10 bg-black/40">
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden mt-8 flex flex-col">
+                <div className="p-6 border-b border-white/10 bg-black/40 flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <h2 className="text-xl font-bold text-white flex items-center gap-2">
                         <LineChart className="w-5 h-5 text-primary" />
                         {TEXTS.admin.dashboard.dominantKeywords}
                     </h2>
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                        <input
+                            type="text"
+                            placeholder={TEXTS.admin.dashboard.searchPlaceholder}
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="bg-black/50 border border-white/10 rounded-lg pl-9 pr-4 py-2 text-sm text-white focus:outline-none focus:border-primary/50 w-full md:w-64 transition-colors"
+                        />
+                    </div>
                 </div>
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto overflow-y-auto max-h-[600px] scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
                     <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-black/20 text-xs font-black uppercase tracking-widest text-gray-500 border-b border-white/5">
-                                <th className="p-4 pl-6">Query</th>
+                        <thead className="sticky top-0 z-10 bg-[#0a0a0a]/95 backdrop-blur shadow-sm border-b border-white/5">
+                            <tr className="text-xs font-black uppercase tracking-widest text-gray-500">
+                                <th className="p-4 pl-6 w-16">#</th>
+                                <th className="p-4">Query</th>
                                 <th className="p-4">Clicks</th>
                                 <th className="p-4">Impressions</th>
                                 <th className="p-4">CTR</th>
@@ -117,10 +147,13 @@ export default function AdminDashboard() {
                         </thead>
                         <tbody className="divide-y divide-white/5 text-sm text-gray-300">
                             {isLoading ? (
-                                <tr><td colSpan={5} className="p-8 text-center text-gray-500">Cargando métricas...</td></tr>
-                            ) : keywords.map((kw, i) => (
-                                <tr key={i} className="hover:bg-white/5 transition-colors">
-                                    <td className="p-4 pl-6 font-medium text-white">{kw.query}</td>
+                                <tr><td colSpan={6} className="p-8 text-center text-gray-500">Cargando métricas...</td></tr>
+                            ) : filteredKeywords.length === 0 ? (
+                                <tr><td colSpan={6} className="p-8 text-center text-gray-500">No se encontraron resultados para "{searchTerm}"</td></tr>
+                            ) : filteredKeywords.map((kw, i) => (
+                                <tr key={i} className="hover:bg-white/5 transition-colors group">
+                                    <td className="p-4 pl-6 text-gray-600 font-mono text-xs">{i + 1}</td>
+                                    <td className="p-4 font-medium text-white group-hover:text-primary transition-colors">{kw.query}</td>
                                     <td className="p-4 text-primary">{kw.clicks}</td>
                                     <td className="p-4 text-blue-400">{kw.impressions}</td>
                                     <td className="p-4 text-green-400">{kw.ctr}%</td>
