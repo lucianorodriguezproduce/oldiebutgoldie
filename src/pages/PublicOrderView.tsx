@@ -11,6 +11,7 @@ import { useLoading } from "@/context/LoadingContext";
 import { formatDate, getReadableDate } from "@/utils/date";
 import { TEXTS } from "@/constants/texts";
 import { pushViewItemFromOrder, pushHotOrderDetected } from "@/utils/analytics";
+import { getCleanOrderMetadata } from "@/utils/orderMetadata";
 
 export default function PublicOrderView() {
     const { id } = useParams<{ id: string }>();
@@ -222,24 +223,14 @@ export default function PublicOrderView() {
         );
     }
 
-    const isBatch = (order.items && order.items.length > 1);
-
-    // [STRICT-EXTRACT] Algoritmo de extracción y anti-duplicación sincronizado
-    const rawArtist = (order.items?.[0]?.artist || order.details?.artist || order.artist || order.title?.split(' - ')[0] || "Artista Desconocido");
-    const rawAlbum = (order.details?.album || order.items?.[0]?.title || order.title?.split(' - ')[1] || order.title || "Detalle del Disco");
-
-    // NUNCA usar order.user_name para la identidad del disco
-    const displayArtist = (!isBatch && rawArtist.toLowerCase() === rawAlbum.toLowerCase())
-        ? "Varios Artistas"
-        : rawArtist;
-    const displayAlbum = rawAlbum;
+    const { artist: displayArtist, album: displayAlbum, image: coverImage, isBatch, itemsCount } = getCleanOrderMetadata(order);
 
     const items = isBatch ? (order.items || []) : [
         {
             title: order.details?.artist ? `${order.details.artist} - ${order.details.album} ` : (order.title || "Unknown Title"),
-            artist: order.details?.artist || order.artist || "Unknown Artist",
-            album: order.details?.album || order.title || "Unknown Album",
-            cover_image: order.details?.cover_image || order.thumbnailUrl || "https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png",
+            artist: displayArtist,
+            album: displayAlbum,
+            cover_image: coverImage,
             format: order.details?.format || "N/A",
             condition: order.details?.condition || "N/A",
             intent: order.details?.intent || order.intent || (order.adminPrice || order.admin_offer_price ? "VENDER" : "COMPRAR"),
@@ -316,11 +307,11 @@ export default function PublicOrderView() {
                         <div className="flex items-center gap-4 flex-wrap">
                             <div className="flex flex-col gap-1 items-start">
                                 <h1 className={`text-4xl md:text-5xl font-display font-black tracking-tightest leading-none transition-colors ${isAdminOrder ? 'bg-gradient-to-r from-yellow-200 via-yellow-500 to-yellow-700 bg-clip-text text-transparent drop-shadow-xl' : 'text-white hover:text-primary'}`}>
-                                    {isBatch ? TEXTS.common.batchDetail : displayArtist}
+                                    {displayArtist}
                                 </h1>
-                                {!isBatch && displayAlbum && (
-                                    <h2 className="text-xl md:text-2xl font-bold text-gray-400 uppercase tracking-widest leading-tight">
-                                        {displayAlbum}
+                                {displayAlbum && (
+                                    <h2 className="text-xl md:text-2xl font-bold text-gray-400 uppercase tracking-widest leading-tight opacity-80">
+                                        {isBatch ? `LOTE DE ${itemsCount} DISCOS` : displayAlbum}
                                     </h2>
                                 )}
                             </div>

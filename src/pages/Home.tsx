@@ -384,7 +384,7 @@ export default function Home() {
                 format,
                 condition,
                 intent: resolvedIntent,
-                artist: selectedItem.title.includes(' - ') ? selectedItem.title.split(' - ')[0] : "Varios Artistas",
+                artist: selectedItem.title.includes(' - ') ? selectedItem.title.split(' - ')[0] : "Pendiente",
                 album: selectedItem.title.includes(' - ') ? (selectedItem.title.split(' - ')[1] || selectedItem.title) : selectedItem.title,
                 cover_image: selectedItem.cover_image || selectedItem.thumb || '',
             },

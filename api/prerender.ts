@@ -46,13 +46,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
                 if (fbResponse.ok) {
                     const fbData = await fbResponse.json();
-                    const fields = fbData.fields || {};
+                    // [STRICT-EXTRACT-EDGE] Sync with getCleanOrderMetadata logic
+                    const itemsArray = fields.items?.arrayValue?.values || [];
+                    const isBatch = fields.isBatch?.booleanValue || itemsArray.length > 1;
 
-                    const isBatch = fields.isBatch?.booleanValue || false;
+                    const cleanStr = (s: string | undefined | null) => s ? s.replace(/UNKNOWN ARTIST\s*[-—–]*\s*/gi, '').trim() : '';
+
+                    const rawArtist = cleanStr(
+                        itemsArray[0]?.mapValue?.fields?.artist?.stringValue ||
+                        fields.details?.mapValue?.fields?.artist?.stringValue ||
+                        fields.artist?.stringValue || ""
+                    );
+
+                    const rawAlbum = cleanStr(
+                        fields.details?.mapValue?.fields?.album?.stringValue ||
+                        itemsArray[0]?.mapValue?.fields?.title?.stringValue ||
+                        itemsArray[0]?.mapValue?.fields?.album?.stringValue ||
+                        fields.title?.stringValue || "Detalle del Disco"
+                    );
+
+                    let displayArtist = rawArtist;
+                    let displayAlbum = rawAlbum;
+
+                    if (!isBatch && displayArtist.toLowerCase() === displayAlbum.toLowerCase()) {
+                        displayArtist = (!displayArtist || displayArtist.toLowerCase() === "unknown artist") ? "Artista No Definido" : "Pendiente";
+                    }
+
+                    if (!displayArtist) displayArtist = isBatch ? "Varios Artistas" : "Artista No Definido";
+
                     const thumbUrl = fields.thumbnailUrl?.stringValue;
                     const coverImage = fields.details?.mapValue?.fields?.cover_image?.stringValue || fields.details?.mapValue?.fields?.thumb?.stringValue;
-
-                    const firstItemCover = fields.items?.arrayValue?.values?.[0]?.mapValue?.fields?.details?.mapValue?.fields?.cover_image?.stringValue || fields.items?.arrayValue?.values?.[0]?.mapValue?.fields?.cover_image?.stringValue;
+                    const firstItemCover = itemsArray[0]?.mapValue?.fields?.cover_image?.stringValue || itemsArray[0]?.mapValue?.fields?.thumb?.stringValue;
 
                     let image = thumbUrl || coverImage || firstItemCover || defaultImage;
                     if (image.startsWith('http://')) {
@@ -63,24 +87,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     const intent = fields.details?.mapValue?.fields?.intent?.stringValue || 'CONSULTAR';
                     const intentStr = intent.toUpperCase() === 'VENDER' ? 'En Venta' : 'En Compra';
 
-                    // SocialPreviewManager Logic
-                    const isNegotiating = ['pending', 'quoted'].includes(status.toLowerCase());
-                    let finalImage = image;
-                    if (isNegotiating) {
-                        const encodedImageUrl = encodeURIComponent(image);
-                        finalImage = `https://res.cloudinary.com/demo/image/fetch/w_800,h_800,c_fill,e_brightness:-20/l_text:Arial_50_bold_center:%C2%A1Negociaci%C3%B3n%20Abierta!,co_white,g_south,y_40/${encodedImageUrl}`;
-                    }
-
-                    const artist = fields.details?.mapValue?.fields?.artist?.stringValue || '';
-                    const album = fields.details?.mapValue?.fields?.album?.stringValue || 'Unknown Title';
-                    const itemsCount = fields.items?.arrayValue?.values?.length || 0;
-
-                    let title = defaultTitle;
-                    if (isBatch) {
-                        title = `Lote de ${itemsCount > 0 ? itemsCount : 'varios'} discos | Oldie but Goldie`;
-                    } else {
-                        title = artist ? `${artist} - ${album} | Oldie but Goldie` : `${album} | Oldie but Goldie`;
-                    }
+                    const title = isBatch
+                        ? `Lote de ${itemsArray.length > 0 ? itemsArray.length : 'varios'} discos | Oldie but Goldie`
+                        : `${displayArtist} - ${displayAlbum} | Oldie but Goldie`;
 
                     const description = `Orden de ${intentStr}: estado ${status.toUpperCase()}. ${isNegotiating ? "¡Participa en la negociación abierta!" : ""}`;
 

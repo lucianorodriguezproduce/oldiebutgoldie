@@ -54,8 +54,8 @@ export default function RevisarLote() {
             items: loteItems.map(item => ({
                 id: item.id || Math.floor(Math.random() * 1000000),
                 title: item.title || "Sin Título",
-                artist: item.title?.split(' - ')[0] || "No especificado",
-                album: item.title?.split(' - ')[1] || item.title || "No especificado",
+                artist: item.title?.includes(' - ') ? item.title.split(' - ')[0] : "Pendiente",
+                album: item.title?.includes(' - ') ? (item.title.split(' - ')[1] || item.title) : (item.title || "No especificado"),
                 cover_image: item.cover_image || "https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png",
                 format: item.format || "No especificado",
                 condition: item.condition || "No especificado",

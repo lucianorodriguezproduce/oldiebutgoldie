@@ -29,6 +29,7 @@ import { formatDate, getReadableDate } from '@/utils/date';
 import { LazyImage } from '@/components/ui/LazyImage';
 import { db } from '@/lib/firebase';
 import { doc, updateDoc, arrayUnion, addDoc, serverTimestamp, collection } from 'firebase/firestore';
+import { getCleanOrderMetadata } from '@/utils/orderMetadata';
 import { useLoading } from '@/context/LoadingContext';
 
 interface OrderCardProps {
@@ -146,40 +147,18 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
         }
     };
 
-    const isBatch = order.isBatch === true || order.is_batch === true;
+    // [STRICT-EXTRACT] Uso del helper centralizado para integridad de datos
+    const { artist, album, image, isBatch, itemsCount: itemsFromHelper } = getCleanOrderMetadata(order);
     const items = Array.isArray(order.items) ? order.items : [];
 
-    // Frontend Shield: Limpieza en tiempo de renderizado
-    const cleanString = (str: string | undefined | null) => {
-        if (!str) return '';
-        // Reemplaza UNKNOWN ARTIST - o — o directamente UNKNOWN ARTIST
-        return str.replace(/UNKNOWN ARTIST\s*[-—–]*\s*/gi, '').trim();
-    };
-
-    // Si es un lote (más de 1 item)
-    const itemsCount = items.length;
-    const isBatchDetected = itemsCount > 1;
-
-    const firstItemImage = items.length > 0 ? (items[0].cover_image || items[0].thumb || items[0].image || items[0].cover || items[0].thumbnailUrl) : null;
-    const coverImage = (isBatchDetected && firstItemImage)
-        ? firstItemImage
-        : (order.cover_image || order.thumb || order.image || order.cover || order.thumbnailUrl || order.details?.cover_image || order.imageUrl || "https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png");
-
-    // [STRICT-EXTRACT] Algoritmo de extracción y anti-duplicación
-    const rawArtist = cleanString(items[0]?.artist || order.details?.artist || order.artist || 'Unknown Artist');
-    const rawAlbum = cleanString(order.details?.album || items[0]?.title || items[0]?.album || order.title || 'Disco Registrado');
-
-    // Anti-duplicación: Si artista y álbum son idénticos, usamos fallback visual genérico (NUNCA el username)
-    const artist = (!isBatchDetected && rawArtist.toLowerCase() === rawAlbum.toLowerCase())
-        ? "Varios Artistas"
-        : rawArtist;
-    const title = isBatchDetected ? `LOTE DE ${itemsCount} DISCOS` : rawAlbum;
+    const coverImage = image;
+    const title = isBatch ? `LOTE DE ${itemsFromHelper} DISCOS` : album;
 
     // Fallback intent for legacy admin orders
     const isSellerOfferLegacy = order.admin_offer_price || order.adminPrice;
-    const intent = isBatchDetected ? (orderType === 'buy' ? TEXTS.badges.buying : TEXTS.badges.forSale) : (orderIntent || (isSellerOfferLegacy ? 'VENDER' : 'COMPRAR'));
-    const format = isBatchDetected ? 'Varios Formatos' : (order.details?.format || 'N/A');
-    const condition = isBatchDetected ? 'Varias Condiciones' : (order.details?.condition || 'N/A');
+    const intent = isBatch ? (orderType === 'buy' ? TEXTS.badges.buying : TEXTS.badges.forSale) : (orderIntent || (isSellerOfferLegacy ? 'VENDER' : 'COMPRAR'));
+    const format = isBatch ? 'Varios Formatos' : (order.details?.format || 'N/A');
+    const condition = isBatch ? 'Varias Condiciones' : (order.details?.condition || 'N/A');
     const status = orderStatus;
 
     const renderPriceOffer = () => {
@@ -344,11 +323,11 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
 
                     <div className="flex flex-col">
                         <h3 className={`text-xl md:text-2xl font-display font-black text-white uppercase tracking-tight truncate ${context !== 'public' ? 'group-hover:text-primary transition-colors' : ''}`}>
-                            {isBatchDetected ? title : artist}
+                            {artist}
                         </h3>
-                        {!isBatchDetected && title && (
-                            <h4 className="text-sm font-bold text-gray-400 uppercase tracking-widest truncate mt-0.5">
-                                {title}
+                        {album && (
+                            <h4 className="text-sm font-bold text-gray-400 uppercase tracking-widest truncate mt-0.5 opacity-80">
+                                {isBatch ? `LOTE DE ${itemsFromHelper} DISCOS` : album}
                             </h4>
                         )}
                     </div>
