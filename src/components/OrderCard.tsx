@@ -245,8 +245,20 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                 ${isHot ? "border-orange-500/50 shadow-[0_0_15px_rgba(249,115,22,0.15)]" : (order.admin_offer_price ? "border-purple-500/20" : "border-white/5")}
             `}
         >
-            {/* Context Badge Corner */}
-            <div className="absolute top-0 right-0 flex items-center z-10">
+            {/* Context Badge Corner - Floating Island to prevent overlaps */}
+            <div className="absolute top-2 right-2 md:top-4 md:right-4 flex items-center z-20 bg-black/40 backdrop-blur-md rounded-[1.25rem] border border-white/10 shadow-lg">
+                {context === 'admin' && order.user_email && (
+                    <>
+                        {requiresAction && (
+                            <div className="px-3 py-1.5 bg-red-500/80 text-white text-[8px] font-black uppercase tracking-widest rounded-l-[1.25rem] animate-pulse">
+                                Acción
+                            </div>
+                        )}
+                        <div className="px-3 py-1.5 text-[9px] text-gray-300 font-mono hidden md:block border-r border-white/10">
+                            {order.user_email}
+                        </div>
+                    </>
+                )}
                 <button
                     onClick={(e) => {
                         e.stopPropagation();
@@ -262,26 +274,14 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                             alert('Enlace copiado al portapapeles');
                         }
                     }}
-                    className="p-3 text-gray-500 hover:text-white transition-colors bg-black/20 hover:bg-black/40 rounded-bl-[1.5rem] backdrop-blur-md"
+                    className={`p-2.5 text-gray-400 hover:text-white transition-colors ${context === 'admin' && order.user_email ? 'rounded-r-[1.25rem]' : 'rounded-[1.25rem]'}`}
                     title="Compartir"
                 >
                     <Share2 className="w-4 h-4" />
                 </button>
-                {context === 'admin' && order.user_email && (
-                    <>
-                        {requiresAction && (
-                            <div className="px-3 py-1 bg-red-500 text-white text-[8px] font-black uppercase tracking-widest rounded-bl-xl animate-pulse ring-4 ring-red-500/20">
-                                Acción Requerida
-                            </div>
-                        )}
-                        <div className="px-3 py-1 bg-white/5 rounded-bl-xl border-b border-l border-white/10 text-[9px] text-gray-500 font-mono hidden md:block">
-                            {order.user_email}
-                        </div>
-                    </>
-                )}
             </div>
 
-            <div className="p-4 md:p-6 lg:p-8 flex flex-col lg:flex-row items-start lg:items-center gap-6">
+            <div className="p-4 pt-12 md:p-6 lg:p-8 flex flex-col lg:flex-row items-start lg:items-center gap-6">
 
                 {/* Image Section */}
                 <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl overflow-hidden bg-black/50 flex-shrink-0 border border-white/10 group-hover:border-primary/20 transition-all relative shadow-md shadow-black/50">
@@ -383,8 +383,8 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                 </div>
 
                 {/* Right Status Panel */}
-                <div className="flex flex-row lg:flex-col items-center lg:items-end justify-between lg:justify-start w-full lg:w-auto mt-4 lg:mt-0 gap-4 flex-shrink-0 border-t border-white/5 lg:border-t-0 pt-4 lg:pt-0">
-                    <div className="flex flex-col items-end gap-3 w-full md:w-auto">
+                <div className="flex flex-col w-full lg:w-auto mt-4 lg:mt-0 gap-3 md:gap-4 flex-shrink-0 border-t border-white/5 lg:border-t-0 pt-4 lg:pt-0">
+                    <div className="flex w-full justify-start lg:justify-end">
                         {getStatusBadge(status)}
                     </div>
 
@@ -393,7 +393,7 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                         <Link
                             to={`/orden/${order.id}?action=buy`}
                             onClick={(e) => e.stopPropagation()}
-                            className="w-full md:w-auto px-6 py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-black font-black uppercase tracking-widest text-[10px] md:text-xs rounded-xl shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 hover:-translate-y-0.5 transition-all text-center mt-auto md:ml-0 ml-auto"
+                            className="w-full px-6 py-4 bg-gradient-to-r from-yellow-500 to-orange-500 text-black font-black uppercase tracking-widest text-[11px] md:text-sm rounded-xl shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 hover:-translate-y-0.5 transition-all text-center lg:mt-auto"
                         >
                             ¡COMPRAR!
                         </Link>

@@ -588,7 +588,7 @@ export default function Home() {
     }
 
     return (
-        <div className="min-h-screen bg-[#050505] font-sans selection:bg-primary/30 text-white overflow-x-hidden flex flex-col relative w-full">
+        <div className={`bg-[#050505] font-sans selection:bg-primary/30 text-white overflow-x-hidden flex flex-col relative w-full transition-all ${isSearchActive ? 'h-[100dvh] overflow-hidden' : 'min-h-screen'}`}>
             {selectedItem ? (
                 <SEO
                     title={`${selectedItem.title} - Oldie but Goldie`}
@@ -750,8 +750,7 @@ export default function Home() {
                                             initial={{ opacity: 0 }}
                                             animate={{ opacity: 1 }}
                                             exit={{ opacity: 0 }}
-                                            // Removed massive margins/padding as flex-1 container handles scrolling now
-                                            className="space-y-3 md:space-y-4 text-left"
+                                            className="space-y-3 md:space-y-4 text-left touch-pan-y"
                                         >
                                             {(searchResults || []).map((result, i) => (
                                                 <motion.button
