@@ -288,8 +288,8 @@ export default function PublicOrderView() {
                         </Link>
 
                         {isAdminOrder && (
-                            <div className="inline-flex items-center px-4 py-1.5 rounded-full bg-gradient-to-r from-yellow-500/20 to-yellow-700/20 border border-yellow-500/50">
-                                <span className="text-yellow-500 font-black uppercase tracking-[0.2em] text-[10px] animate-pulse">
+                            <div className="inline-flex items-center px-3 py-1 rounded-full bg-gradient-to-r from-yellow-500/20 to-yellow-700/20 border border-yellow-500/50 w-fit">
+                                <span className="text-yellow-500 font-black uppercase tracking-widest text-[9px] animate-pulse">
                                     ★ Disponible Ahora
                                 </span>
                             </div>
