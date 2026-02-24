@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useSearchParams } from "react-router-dom";
 import { doc, getDoc, updateDoc, increment, arrayUnion, serverTimestamp, addDoc, collection } from "firebase/firestore";
 import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { db, auth } from "@/lib/firebase";
 import { SEO } from "@/components/SEO";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Music, Disc, Lock, Clock, Eye, ChevronDown } from "lucide-react";
+import { ChevronLeft, Music, Disc, Lock, Clock, Eye, ChevronDown, Share2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useLoading } from "@/context/LoadingContext";
 import { formatDate, getReadableDate } from "@/utils/date";
@@ -14,6 +14,7 @@ import { pushViewItemFromOrder, pushHotOrderDetected } from "@/utils/analytics";
 
 export default function PublicOrderView() {
     const { id } = useParams<{ id: string }>();
+    const [searchParams] = useSearchParams();
     const { user, isAdmin } = useAuth();
     const { showLoading, hideLoading } = useLoading();
     const [order, setOrder] = useState<any>(null);
@@ -89,6 +90,17 @@ export default function PublicOrderView() {
 
         fetchOrder();
     }, [id]);
+
+    // Handle incoming buy intents via URL params
+    useEffect(() => {
+        if (!loading && order && searchParams.get('action') === 'buy') {
+            if (!user) {
+                setShowLoginDrawer(true);
+            } else if (order.status !== 'venta_finalizada') {
+                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+            }
+        }
+    }, [loading, order, searchParams, user]);
 
     const handleBuyNow = async () => {
         if (!user) {
@@ -283,9 +295,29 @@ export default function PublicOrderView() {
                             </div>
                         )}
 
-                        <h1 className={`text-4xl md:text-5xl font-display font-black tracking-tightest leading-none transition-colors ${isAdminOrder ? 'bg-gradient-to-r from-yellow-200 via-yellow-500 to-yellow-700 bg-clip-text text-transparent drop-shadow-xl' : 'text-white hover:text-primary'}`}>
-                            {TEXTS.common.batchDetail}
-                        </h1>
+                        <div className="flex items-center gap-4 flex-wrap">
+                            <h1 className={`text-4xl md:text-5xl font-display font-black tracking-tightest leading-none transition-colors ${isAdminOrder ? 'bg-gradient-to-r from-yellow-200 via-yellow-500 to-yellow-700 bg-clip-text text-transparent drop-shadow-xl' : 'text-white hover:text-primary'}`}>
+                                {TEXTS.common.batchDetail}
+                            </h1>
+                            <button
+                                onClick={() => {
+                                    if (navigator.share) {
+                                        navigator.share({
+                                            title: titleStr,
+                                            text: '¡Mira esta joya que encontré en Oldie But Goldie!',
+                                            url: `https://oldiebutgoldie.com.ar/orden/${id}`
+                                        }).catch(console.error);
+                                    } else {
+                                        navigator.clipboard.writeText(`https://oldiebutgoldie.com.ar/orden/${id}`);
+                                        alert('Enlace copiado al portapapeles');
+                                    }
+                                }}
+                                className="p-3 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-full transition-all flex-shrink-0 border border-white/5"
+                                title="Compartir Lote"
+                            >
+                                <Share2 className="w-5 h-5 md:w-6 md:h-6" />
+                            </button>
+                        </div>
 
                         {/* Header — TAREA 2 & 4 */}
                         <div className="flex flex-col gap-1 mt-6">
@@ -485,48 +517,63 @@ export default function PublicOrderView() {
                                         <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Asegura esta pieza antes que otro coleccionista</p>
                                     </div>
 
-                                    <div className="flex flex-row w-full md:w-auto gap-2 md:gap-4">
-                                        {showOfferInput ? (
-                                            <div className="flex items-center gap-2 bg-black/40 p-2 rounded-2xl border border-white/10 flex-1 md:flex-none">
-                                                <span className="text-gray-500 font-bold pl-2 md:pl-3">$</span>
-                                                <input
-                                                    type="number"
-                                                    placeholder="Oferta"
-                                                    value={offerAmount}
-                                                    onChange={(e) => setOfferAmount(e.target.value)}
-                                                    className="bg-transparent border-none text-white font-black w-20 md:w-24 focus:ring-0 outline-none placeholder:text-gray-600 text-xs md:text-sm"
-                                                    autoFocus
-                                                />
+                                    {user ? (
+                                        <div className="flex flex-row w-full md:w-auto gap-2 md:gap-4">
+                                            {showOfferInput ? (
+                                                <div className="flex items-center gap-2 bg-black/40 p-2 rounded-2xl border border-white/10 flex-1 md:flex-none">
+                                                    <span className="text-gray-500 font-bold pl-2 md:pl-3">$</span>
+                                                    <input
+                                                        type="number"
+                                                        placeholder="Oferta"
+                                                        value={offerAmount}
+                                                        onChange={(e) => setOfferAmount(e.target.value)}
+                                                        className="bg-transparent border-none text-white font-black w-20 md:w-24 focus:ring-0 outline-none placeholder:text-gray-600 text-xs md:text-sm"
+                                                        autoFocus
+                                                    />
+                                                    <button
+                                                        onClick={handleMakeOffer}
+                                                        disabled={!offerAmount}
+                                                        className="px-3 md:px-4 py-2 bg-orange-500 hover:bg-orange-400 disabled:opacity-50 text-black font-black uppercase tracking-widest text-[9px] md:text-[10px] rounded-xl transition-all"
+                                                    >
+                                                        Enviar
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setShowOfferInput(false)}
+                                                        className="px-2 md:px-3 py-2 text-gray-500 hover:text-white transition-colors"
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                </div>
+                                            ) : (
                                                 <button
-                                                    onClick={handleMakeOffer}
-                                                    disabled={!offerAmount}
-                                                    className="px-3 md:px-4 py-2 bg-orange-500 hover:bg-orange-400 disabled:opacity-50 text-black font-black uppercase tracking-widest text-[9px] md:text-[10px] rounded-xl transition-all"
+                                                    onClick={() => setShowOfferInput(true)}
+                                                    className="px-4 md:px-6 py-3 md:py-4 rounded-2xl border border-yellow-500/30 text-yellow-500 font-black uppercase tracking-widest text-[9px] md:text-[10px] hover:bg-yellow-500/10 transition-all text-center flex-1 md:flex-none whitespace-nowrap"
                                                 >
-                                                    Enviar
+                                                    Regatear
                                                 </button>
-                                                <button
-                                                    onClick={() => setShowOfferInput(false)}
-                                                    className="px-2 md:px-3 py-2 text-gray-500 hover:text-white transition-colors"
-                                                >
-                                                    ✕
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <button
-                                                onClick={() => setShowOfferInput(true)}
-                                                className="px-4 md:px-6 py-3 md:py-4 rounded-2xl border border-yellow-500/30 text-yellow-500 font-black uppercase tracking-widest text-[9px] md:text-[10px] hover:bg-yellow-500/10 transition-all text-center flex-1 md:flex-none whitespace-nowrap"
-                                            >
-                                                Regatear
-                                            </button>
-                                        )}
+                                            )}
 
-                                        <button
-                                            onClick={handleBuyNow}
-                                            className="px-4 md:px-8 py-3 md:py-4 rounded-2xl bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-black font-black uppercase tracking-widest text-[10px] md:text-xs shadow-xl shadow-orange-500/20 hover:shadow-orange-500/40 transition-all text-center flex-1 md:flex-none transform hover:-translate-y-1 whitespace-nowrap"
-                                        >
-                                            ¡Comprar Ahora!
-                                        </button>
-                                    </div>
+                                            <button
+                                                onClick={handleBuyNow}
+                                                className="px-4 md:px-8 py-3 md:py-4 rounded-2xl bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-black font-black uppercase tracking-widest text-[10px] md:text-xs shadow-xl shadow-orange-500/20 hover:shadow-orange-500/40 transition-all text-center flex-1 md:flex-none transform hover:-translate-y-1 whitespace-nowrap"
+                                            >
+                                                ¡Comprar Ahora!
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="flex flex-col md:flex-row w-full md:w-auto gap-3 items-center">
+                                            <div className="w-full md:w-auto text-center px-4 py-3 md:py-4 bg-white/5 border border-white/10 rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-wider text-gray-400">
+                                                Inicia sesión para negociar o proponer precio
+                                            </div>
+
+                                            <button
+                                                onClick={() => setShowLoginDrawer(true)}
+                                                className="w-full md:w-auto px-4 md:px-8 py-3 md:py-4 rounded-2xl bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-black font-black uppercase tracking-widest text-[10px] md:text-xs shadow-xl shadow-orange-500/20 hover:shadow-orange-500/40 transition-all text-center flex-1 md:flex-none transform hover:-translate-y-1 whitespace-nowrap"
+                                            >
+                                                ¡Comprar Ahora!
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             );
                         }
