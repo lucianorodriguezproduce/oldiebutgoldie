@@ -1,7 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
- 
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -30,7 +30,7 @@
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
   }
- 
+
   .dark {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
@@ -59,15 +59,18 @@
     box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
   }
 }
- 
+
 /* Print Styles for Deal Receipt */
 @media print {
   body * {
     visibility: hidden;
   }
-  #printable-receipt, #printable-receipt * {
+
+  #printable-receipt,
+  #printable-receipt * {
     visibility: visible;
   }
+
   #printable-receipt {
     position: absolute;
     left: 0;
@@ -80,33 +83,49 @@
     border: none !important;
     box-shadow: none !important;
   }
+
   #printable-receipt .bg-white\/5,
   #printable-receipt .bg-green-500\/10,
   #printable-receipt .bg-black {
     background: #f8f8f8 !important;
     border: 1px solid #ddd !important;
   }
-  #printable-receipt h3, 
-  #printable-receipt h4, 
-  #printable-receipt p, 
+
+  #printable-receipt h3,
+  #printable-receipt h4,
+  #printable-receipt p,
   #printable-receipt span {
     color: black !important;
   }
+
   #printable-receipt .text-primary {
     color: #000 !important;
     font-weight: bold;
   }
-  #printable-receipt button, 
+
+  #printable-receipt button,
   #printable-receipt .lucide-download,
   #printable-receipt .lucide-message-circle {
     display: none !important;
   }
 }
- 
+
+@layer utilities {
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
 @layer base {
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
   }

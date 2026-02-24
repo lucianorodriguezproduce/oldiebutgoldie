@@ -94,6 +94,12 @@ export const TEXTS = {
         storeObg: "★ Tienda OBG",
         user_label: "👤 USUARIO"
     },
+    showcase: {
+        title: "Boutique de Vinilos",
+        subtitle: "Joyas de la Corona",
+        viewMore: "Ver más",
+        officialStore: "Colección Oficial"
+    },
     details: {
         technicalSheet: "Ficha Técnica",
         label: "Sello",

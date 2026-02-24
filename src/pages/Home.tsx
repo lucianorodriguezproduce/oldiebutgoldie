@@ -17,6 +17,7 @@ import type { OrderData } from "@/utils/whatsapp";
 import { pushViewItem, pushViewItemFromOrder, pushWhatsAppContactFromOrder } from "@/utils/analytics";
 import { SEO } from "@/components/SEO";
 import { useLote } from "@/context/LoteContext";
+import { PremiumShowcase } from "@/components/PremiumShowcase";
 
 type Intent = "COMPRAR" | "VENDER";
 type Format = "CD" | "VINILO" | "CASSETTE" | "OTROS";
@@ -642,6 +643,7 @@ export default function Home() {
                         className={`w-full flex flex-col items-center ${isSearchActive ? 'h-full flex-1 justify-start' : 'justify-center gap-12 md:gap-16 text-center'}`}
                     >
                         {/* BLOQUE SUPERIOR (Header Fijo) */}
+                        {!isSearchActive && <PremiumShowcase />}
                         <div className={`w-full transition-all flex flex-col items-center ${isSearchActive ? 'flex-none shrink-0 z-10 bg-neutral-950 pt-[env(safe-area-inset-top,1rem)] md:pt-8 pb-4 px-4 border-b border-white/5 shadow-2xl' : ''}`}>
                             <AnimatePresence mode="wait">
                                 {!isSearchActive ? (
