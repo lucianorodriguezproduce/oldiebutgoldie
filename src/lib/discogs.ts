@@ -87,6 +87,28 @@ export const discogsService = {
         return { results: mappedResults, pagination: data.pagination };
     },
 
+    async searchArtistReleases(artistId: string, query: string, page: number = 1): Promise<{ results: DiscogsSearchResult[], pagination: any }> {
+        const params: Record<string, string> = {
+            q: query,
+            type: "master",
+            per_page: "10",
+            page: page.toString(),
+        };
+        const data = await fetchFromDiscogs(`/artists/${artistId}/releases`, params);
+        const mappedResults = (data.releases || []).map((r: any) => ({
+            id: r.id,
+            title: `${r.artist || r.role} - ${r.title}`,
+            cover_image: r.thumb,
+            thumb: r.thumb,
+            year: r.year?.toString() || "",
+            type: r.type || "release",
+            uri: r.resource_url,
+            resource_url: r.resource_url
+        }));
+
+        return { results: mappedResults, pagination: data.pagination };
+    },
+
     async getLabelReleases(labelId: string, page: number = 1): Promise<{ results: DiscogsSearchResult[], pagination: any }> {
         const params: Record<string, string> = {
             sort: "year",

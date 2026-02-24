@@ -58,6 +58,26 @@ const CompactSearchCard = memo(({ result, idx, onClick }: { result: DiscogsSearc
     );
 });
 
+const SearchChip = ({ name, onRemove }: { name: string, onRemove: () => void }) => (
+    <motion.div
+        initial={{ opacity: 0, scale: 0.9, y: -10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.9, y: -10 }}
+        className="flex items-center gap-2 px-3 py-1.5 bg-white/10 border border-white/10 rounded-full backdrop-blur-md transition-all group hover:bg-white/15"
+    >
+        <span className="text-[10px] font-black uppercase tracking-widest text-primary/80 group-hover:text-primary transition-colors">{name}</span>
+        <button
+            onClick={(e) => {
+                e.stopPropagation();
+                onRemove();
+            }}
+            className="p-1 hover:bg-white/10 rounded-full transition-colors"
+        >
+            <X className="h-3 w-3 text-white/40 hover:text-white" />
+        </button>
+    </motion.div>
+);
+
 CompactSearchCard.displayName = "CompactSearchCard";
 
 type Intent = "COMPRAR" | "VENDER";
@@ -102,6 +122,7 @@ export default function Home() {
     const [password, setPassword] = useState("");
     const observerTarget = useRef<HTMLDivElement>(null);
     const [searchHistory, setSearchHistory] = useState<any[]>([]); // To allow "Go Back" in drill-downs
+    const [selectedArtist, setSelectedArtist] = useState<{ id: number, name: string } | null>(null);
 
     // Start of the block to be replaced/modified
     // Local Auth UI states (only for the manual form)
@@ -263,13 +284,26 @@ export default function Home() {
             if (debouncedQuery.trim().length >= 3 && !selectedItem) {
                 showLoading(TEXTS.home.loadingDiscogs);
                 try {
-                    let typeParam = "release,master,artist";
-                    if (searchFilter === "artistas") typeParam = "artist";
-                    if (searchFilter === "álbumes") typeParam = "release,master";
+                    let results, pagination;
 
-                    const { results, pagination } = await discogsService.searchReleases(debouncedQuery, 1, undefined, typeParam);
+                    if (selectedArtist) {
+                        // CONTEXTUAL SEARCH: Filter within selected artist
+                        const response = await discogsService.searchArtistReleases(selectedArtist.id.toString(), debouncedQuery, 1);
+                        results = response.results;
+                        pagination = response.pagination;
+                    } else {
+                        // GLOBAL SEARCH
+                        let typeParam = "release,master,artist";
+                        if (searchFilter === "artistas") typeParam = "artist";
+                        if (searchFilter === "álbumes") typeParam = "release,master";
+
+                        const response = await discogsService.searchReleases(debouncedQuery, 1, undefined, typeParam);
+                        results = response.results;
+                        pagination = response.pagination;
+                    }
+
                     setSearchResults(results);
-                    setHasMore(pagination.pages > 1);
+                    setHasMore(pagination.page < pagination.pages);
                     setCurrentPage(1);
                 } catch (error) {
                     console.error("Search error:", error);
@@ -277,23 +311,38 @@ export default function Home() {
                     hideLoading();
                 }
             } else if (!selectedItem) {
-                setSearchResults([]);
-                setHasMore(false);
+                // If query is small but we have a selectedArtist, we might want to show their top releases
+                // or just clear depending on preference. The directive says "If writing... is reactive"
+                if (debouncedQuery.trim().length < 3 && !selectedArtist) {
+                    setSearchResults([]);
+                    setHasMore(false);
+                }
             }
         };
         performSearch();
-    }, [debouncedQuery, selectedItem, searchFilter]);
+    }, [debouncedQuery, selectedItem, searchFilter, selectedArtist]);
 
     const handleLoadMore = async () => {
         if (isLoadingSearch || !hasMore) return;
         setIsLoadingSearch(true);
         try {
             const nextPage = currentPage + 1;
-            let typeParam = "release,master,artist";
-            if (searchFilter === "artistas") typeParam = "artist";
-            if (searchFilter === "álbumes") typeParam = "release,master";
+            let results, pagination;
 
-            const { results, pagination } = await discogsService.searchReleases(debouncedQuery, nextPage, undefined, typeParam);
+            if (selectedArtist) {
+                const response = await discogsService.searchArtistReleases(selectedArtist.id.toString(), debouncedQuery, nextPage);
+                results = response.results;
+                pagination = response.pagination;
+            } else {
+                let typeParam = "release,master,artist";
+                if (searchFilter === "artistas") typeParam = "artist";
+                if (searchFilter === "álbumes") typeParam = "release,master";
+
+                const response = await discogsService.searchReleases(debouncedQuery, nextPage, undefined, typeParam);
+                results = response.results;
+                pagination = response.pagination;
+            }
+
             setSearchResults(prev => [...prev, ...results]);
             setCurrentPage(nextPage);
             setHasMore(pagination.page < pagination.pages);
@@ -329,7 +378,8 @@ export default function Home() {
             hasMore,
             currentPage,
             filter: searchFilter,
-            querySnapshot: query
+            querySnapshot: query,
+            selectedArtistSnapshot: selectedArtist
         }]);
 
         if (result.type === "release" || result.type === "master") {
@@ -343,12 +393,14 @@ export default function Home() {
         setSearchFilter("álbumes");
         // Re-brand the input query text to denote the user is now browsing this entity
         setQuery(result.title);
-
+        setIsLoadingSearch(true);
         try {
             let drillDownData;
             if (result.type === "artist") {
                 // MASTER-FIRST STRATEGY: Sort by 'have' (popularity) and filter by 'master'
                 drillDownData = await discogsService.getArtistReleases(result.id.toString(), 1, { sort: "have", type: "master" });
+                // CONTEXTUAL FILTER: Set selected artist for subsequent searches
+                setSelectedArtist({ id: result.id, name: result.title });
             } else if (result.type === "label") {
                 drillDownData = await discogsService.getLabelReleases(result.id.toString(), 1);
             } else if (result.type === "master") {
@@ -376,6 +428,7 @@ export default function Home() {
         setCurrentPage(lastState.currentPage);
         setSearchFilter(lastState.filter);
         setQuery(lastState.querySnapshot); // Restore the query as well
+        setSelectedArtist(lastState.selectedArtistSnapshot); // Restore the artist filter
         setSearchHistory(prev => prev.slice(0, -1));
         if (resultsContainerRef.current) resultsContainerRef.current.scrollTop = 0;
     };
@@ -801,6 +854,20 @@ export default function Home() {
 
                             <motion.div layout className={`relative group w-full flex items-center justify-center ${isSearchActive ? 'max-w-4xl mx-auto' : ''}`}>
                                 <AnimatePresence>
+                                    {selectedArtist && (
+                                        <div className="absolute top-full left-0 right-0 mt-3 flex justify-center pointer-events-none">
+                                            <div className="pointer-events-auto">
+                                                <SearchChip
+                                                    name={selectedArtist.name}
+                                                    onRemove={() => {
+                                                        setSelectedArtist(null);
+                                                        setSearchResults([]); // Clear results to trigger global search re-fetch or reset
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {isSearchActive && searchHistory.length > 0 && (
                                         <motion.button
                                             initial={{ opacity: 0, x: -10 }}
