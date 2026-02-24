@@ -72,9 +72,11 @@ export function PremiumShowcase() {
                 {orders.map((order) => {
                     const price = order.adminPrice || order.totalPrice;
                     const currency = order.adminCurrency || order.currency || "ARS";
-                    const isBatch = order.isBatch || order.is_batch;
-                    const count = isBatch ? (order.items?.length || 1) : 1;
-                    const title = `LOTE DE ${count} DISCOS`;
+                    const itemsCount = order.items?.length || 1;
+                    const isBatchActual = itemsCount > 1 || order.isBatch;
+                    const title = isBatchActual
+                        ? `LOTE DE ${itemsCount} DISCOS`
+                        : (order.items?.[0]?.title || order.details?.album || "Disco Registrado");
 
                     // Image Recovery: Prioritize direct item image, then order level images, then nested details
                     const cover = order.items?.[0]?.image ||

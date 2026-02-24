@@ -156,18 +156,26 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
         return str.replace(/UNKNOWN ARTIST\s*[-—–]*\s*/gi, '').trim();
     };
 
+    // Si es un lote (más de 1 item) o si explícitamente es un lote (para compatibilidad)
+    const itemsCount = items.length;
+    const isBatchDetected = itemsCount > 1 || order.isBatch === true || order.is_batch === true;
+
     const firstItemImage = items.length > 0 ? (items[0].cover_image || items[0].thumb || items[0].image || items[0].cover || items[0].thumbnailUrl) : null;
-    const coverImage = (isBatch && firstItemImage)
+    const coverImage = (isBatchDetected && firstItemImage)
         ? firstItemImage
         : (order.cover_image || order.thumb || order.image || order.cover || order.thumbnailUrl || order.details?.cover_image || order.imageUrl || "https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png");
 
-    const title = isBatch ? `Lote de ${items.length} discos` : cleanString(order.details?.album || order.title || items[0]?.title || 'Unknown Title');
-    const artist = isBatch ? '' : cleanString(order.details?.artist || order.artist || items[0]?.artist || 'Unknown Artist');
+    // Tarea Singular-Logic-Only: Título dinámico
+    const title = isBatchDetected
+        ? `LOTE DE ${itemsCount} DISCOS`
+        : cleanString(order.details?.album || order.title || items[0]?.title || 'Disco Registrado');
+    const artist = isBatchDetected ? '' : cleanString(order.details?.artist || order.artist || items[0]?.artist || 'Unknown Artist');
+
     // Fallback intent for legacy admin orders
     const isSellerOfferLegacy = order.admin_offer_price || order.adminPrice;
-    const intent = isBatch ? (orderType === 'buy' ? TEXTS.badges.buying : TEXTS.badges.forSale) : (orderIntent || (isSellerOfferLegacy ? 'VENDER' : 'COMPRAR'));
-    const format = isBatch ? 'Varios Formatos' : (order.details?.format || 'N/A');
-    const condition = isBatch ? 'Varias Condiciones' : (order.details?.condition || 'N/A');
+    const intent = isBatchDetected ? (orderType === 'buy' ? TEXTS.badges.buying : TEXTS.badges.forSale) : (orderIntent || (isSellerOfferLegacy ? 'VENDER' : 'COMPRAR'));
+    const format = isBatchDetected ? 'Varios Formatos' : (order.details?.format || 'N/A');
+    const condition = isBatchDetected ? 'Varias Condiciones' : (order.details?.condition || 'N/A');
     const status = orderStatus;
 
     const renderPriceOffer = () => {

@@ -12,7 +12,7 @@ export const TEXTS = {
     home: {
         searchPlaceholder: "Artista, Álbum o Referencia...",
         systemVersion: "OLDIE BUT GOLDIE",
-        searchTitle: "Descubrí tu próximo álbum musical",
+        searchTitle: "Compramos o vendemos tu álbum musical",
         resultsTitle: "RESULTADOS",
         loadingDiscogs: "Buscando en la web...",
         analyzingDB: "Analizando base de datos...",

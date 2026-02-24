@@ -502,10 +502,14 @@ export default function AdminOrders() {
             {/* Debugging (TAREA 1 - DIRECTIVA 7) */}
             {selectedOrder && (console.log("DEBUG_ORDER:", selectedOrder), null)}
 
-            < OrderDetailsDrawer
+            <OrderDetailsDrawer
                 isOpen={!!selectedOrder}
                 onClose={() => { setSelectedOrder(null); setActiveDropdown(null); }}
-                title={selectedOrder?.order_number || "Detalle de Pedido"}
+                title={selectedOrder ? (
+                    (selectedOrder.items && selectedOrder.items.length > 1)
+                        ? `LOTE DE ${selectedOrder.items.length} DISCOS`
+                        : (selectedOrder.items?.[0]?.title || selectedOrder.details?.album || selectedOrder.order_number || "Detalle de Pedido")
+                ) : "Detalle de Pedido"}
                 footer={
                     selectedOrder && (
                         <div className="space-y-4">
