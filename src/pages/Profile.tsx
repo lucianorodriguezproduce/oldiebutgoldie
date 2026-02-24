@@ -27,7 +27,8 @@ import {
     CheckCircle2,
     X,
     FileText,
-    Download
+    Download,
+    ChevronDown
 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { formatDate, getReadableDate } from "@/utils/date";
@@ -433,196 +434,62 @@ export default function Profile() {
                 footer={
                     selectedOrder && (
                         <div className="space-y-4">
-                            {/* Negotiation History Timeline (Profile Side) - Hidden on Completion */}
-                            {selectedOrder.status !== "completed" && selectedOrder.status !== "venta_finalizada" && selectedOrder.negotiationHistory && selectedOrder.negotiationHistory.length > 0 && (
-                                <div className="space-y-4 pb-6 border-b border-white/5">
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 flex items-center justify-center gap-2 mb-6">
-                                        <Clock className="h-3.5 w-3.5" /> Línea de Tiempo de Negociación
-                                    </span>
-
-                                    <div className="relative space-y-4 max-h-[300px] overflow-y-auto pr-4 custom-scrollbar">
-                                        {/* Central vertical line */}
-                                        <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white/5 -translate-x-1/2" />
-
-                                        {selectedOrder.negotiationHistory.map((h, i) => (
-                                            <div key={i} className={`flex w-full items-center ${h.sender === 'admin' ? "justify-start" : "justify-end"}`}>
-                                                <div className={`relative w-[45%] p-3 rounded-2xl border ${h.sender === 'admin'
-                                                    ? "bg-primary/5 border-primary/20 text-left"
-                                                    : "bg-orange-500/5 border-orange-500/20 text-right"
-                                                    }`}>
-                                                    {/* Connector Dot */}
-                                                    <div className={`absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full border-2 bg-black z-10 ${h.sender === 'admin'
-                                                        ? "left-[calc(100%+11px)] border-primary"
-                                                        : "right-[calc(100%+11px)] border-orange-500"
-                                                        }`} />
-
-                                                    <div className="flex flex-col gap-0.5">
-                                                        <span className={`text-[8px] font-black uppercase tracking-tighter ${h.sender === 'admin' ? "text-primary" : "text-orange-400"
-                                                            }`}>
-                                                            {h.sender === 'admin' ? "Oldie but Goldie" : "Tú (Cliente)"}
-                                                        </span>
-                                                        <span className="text-sm font-black text-white">
-                                                            {h.currency === "USD" ? "US$" : "$"} {(h.price || 0).toLocaleString()}
-                                                        </span>
-                                                        <span className="text-[8px] text-gray-600 font-mono mt-1">
-                                                            {h.timestamp?.seconds
-                                                                ? new Date(h.timestamp.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                                                                : "Reciente"}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {isNegotiating ? (
-                                <div className="space-y-4">
-                                    <div className="h-48 bg-white/5 rounded-[2rem] animate-pulse" />
-                                    <div className="h-12 bg-white/5 rounded-2xl animate-pulse" />
-                                </div>
-                            ) : (selectedOrder.status === "completed" || selectedOrder.status === "venta_finalizada") ? (
-                                <div className="space-y-6">
-                                    <div id="printable-receipt" className="bg-green-500/10 border border-green-500/20 rounded-[2rem] p-8 space-y-6 relative overflow-hidden">
-                                        <div className="absolute top-0 right-0 p-8 opacity-5">
-                                            <FileText size={120} />
-                                        </div>
-
-                                        <div className="flex flex-col items-center justify-center p-8 text-center space-y-6">
-                                            <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center shadow-lg shadow-primary/20">
-                                                <CheckCircle2 className="w-8 h-8 text-black" />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <h3 className="text-2xl font-display font-black text-white uppercase tracking-tighter">{TEXTS.profile.saleFinished}</h3>
-                                                <p className="text-gray-400 text-sm font-medium leading-relaxed">
-                                                    {TEXTS.profile.saleSuccess}
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        <div className="border-t border-white/5 pt-6 space-y-4">
-                                            <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
-                                                <span className="text-gray-500">Precio Acordado</span>
-                                                <span className="text-primary text-base">
-                                                    {selectedOrder.currency === 'USD' ? 'US$' : '$'} ${(selectedOrder.totalPrice || selectedOrder.adminPrice || 0).toLocaleString()}
-                                                </span>
-                                            </div>
-                                            <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-gray-500">
-                                                <span>Items Aceptados</span>
-                                                <span className="text-white">{selectedOrder.items?.length || 0}</span>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex flex-col sm:flex-row gap-3">
-                                            <button
-                                                onClick={() => {
-                                                    pushWhatsAppContactFromOrder(selectedOrder);
-                                                    const msg = encodeURIComponent(`Hola! Acepté el trato por el lote ${selectedOrder.order_number || selectedOrder.id}. Coordinemos el pago y el envío.`);
-                                                    window.open(`https://wa.me/5491140411796?text=${msg}`, "_blank");
-                                                }}
-                                                className="w-full flex items-center justify-center gap-3 bg-green-600 hover:bg-green-500 text-white px-8 py-4 rounded-2xl font-black uppercase text-xs tracking-widest transition-all shadow-lg shadow-green-500/20"
-                                            >
-                                                <MessageCircle className="h-5 w-5" />
-                                                {TEXTS.success.contactWhatsApp}
-                                            </button>
-                                            <button
-                                                onClick={() => window.print()}
-                                                className="flex-none flex items-center justify-center gap-3 px-6 py-4 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
-                                            >
-                                                <Download className="h-4 w-4" />
-                                                Imprimir / PDF
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-[#0A0A0A] border border-white/5 rounded-2xl p-6 text-center">
-                                        <p className="text-[9px] text-gray-700 font-black uppercase tracking-[0.3em]">Registro de Transacción: {selectedOrder.id}</p>
-                                    </div>
-                                </div>
-                            ) : (
+                            {/* Negotiation Actions Footer */}
+                            {!isNegotiating && selectedOrder.status !== "completed" && selectedOrder.status !== "venta_finalizada" && (
                                 <>
-                                    {(selectedOrder.adminPrice || selectedOrder.admin_offer_price) && (
-                                        <div className="flex flex-col gap-4">
-                                            {/* User's Current Offer / Value */}
-                                            <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <DollarSign className="h-3.5 w-3.5 text-gray-500" />
-                                                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Tu oferta actual</span>
+                                    {/* Negotiation Buttons (if there's an offer to respond to) */}
+                                    {(selectedOrder.adminPrice || selectedOrder.admin_offer_price) && selectedOrder.status !== "contraoferta_usuario" && (
+                                        <div className="space-y-3">
+                                            {!showCounterInput ? (
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <button
+                                                        onClick={() => handleAcceptProposal(selectedOrder)}
+                                                        disabled={isNegotiating}
+                                                        className="flex items-center justify-center gap-2 px-4 py-4 bg-primary text-black rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white transition-all disabled:opacity-50"
+                                                    >
+                                                        <CheckCircle2 className="h-4 w-4" /> Aceptar
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setShowCounterInput(true)}
+                                                        disabled={isNegotiating}
+                                                        className="flex items-center justify-center gap-2 px-4 py-4 bg-white/5 border border-white/10 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all disabled:opacity-50"
+                                                    >
+                                                        <Handshake className="h-4 w-4" /> Contraoferta
+                                                    </button>
                                                 </div>
-                                                <p className="text-xl font-bold text-gray-400">
-                                                    {selectedOrder.currency === "USD" ? "US$" : "$"} {(selectedOrder.totalPrice || selectedOrder.details.price || 0).toLocaleString()}
-                                                </p>
-                                            </div>
-
-                                            {/* Admin Counter-Offer */}
-                                            {(selectedOrder.adminPrice || selectedOrder.admin_offer_price) && (
-                                                <div className="bg-primary/5 rounded-xl p-4 border border-primary/20">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <BadgeDollarSign className="h-4 w-4 text-primary" />
-                                                        <span className="text-[10px] font-black uppercase tracking-widest text-primary">Oldie but Goldie te ofrece</span>
-                                                    </div>
-                                                    <p className="text-3xl font-display font-black text-white tracking-tight">
-                                                        {(selectedOrder.adminCurrency || selectedOrder.admin_offer_currency) === "USD" ? "US$" : "$"} {(selectedOrder.adminPrice || selectedOrder.admin_offer_price || 0).toLocaleString()}
-                                                    </p>
-                                                </div>
-                                            )}
-
-                                            {/* Negotiation Buttons (if there's an offer to respond to) */}
-                                            {(selectedOrder.adminPrice || selectedOrder.admin_offer_price) && selectedOrder.status !== "contraoferta_usuario" && (
-                                                <div className="space-y-3">
-                                                    {!showCounterInput ? (
-                                                        <div className="grid grid-cols-2 gap-3">
-                                                            <button
-                                                                onClick={() => handleAcceptProposal(selectedOrder)}
-                                                                disabled={isNegotiating}
-                                                                className="flex items-center justify-center gap-2 px-4 py-4 bg-primary text-black rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white transition-all disabled:opacity-50"
-                                                            >
-                                                                <CheckCircle2 className="h-4 w-4" /> Aceptar
-                                                            </button>
-                                                            <button
-                                                                onClick={() => setShowCounterInput(true)}
-                                                                disabled={isNegotiating}
-                                                                className="flex items-center justify-center gap-2 px-4 py-4 bg-white/5 border border-white/10 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all disabled:opacity-50"
-                                                            >
-                                                                <Handshake className="h-4 w-4" /> Contraoferta
-                                                            </button>
+                                            ) : (
+                                                <motion.div
+                                                    initial={{ opacity: 0, y: 10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    className="bg-neutral-900 border border-white/10 p-4 rounded-2xl space-y-3 shadow-2xl"
+                                                >
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">¿Cuánto pides por el lote?</p>
+                                                    <div className="flex gap-2">
+                                                        <div className="relative flex-1">
+                                                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-600" />
+                                                            <input
+                                                                type="number"
+                                                                value={counterOfferPrice}
+                                                                onChange={e => setCounterOfferPrice(e.target.value)}
+                                                                placeholder="Ej: 50000"
+                                                                className="w-full bg-white/5 border border-white/10 rounded-xl px-9 py-3 text-white font-bold text-sm focus:border-primary focus:outline-none transition-all"
+                                                            />
                                                         </div>
-                                                    ) : (
-                                                        <motion.div
-                                                            initial={{ opacity: 0, y: 10 }}
-                                                            animate={{ opacity: 1, y: 0 }}
-                                                            className="bg-neutral-900 border border-white/10 p-4 rounded-2xl space-y-3 shadow-2xl"
+                                                        <button
+                                                            onClick={() => handleCounterOffer(selectedOrder)}
+                                                            disabled={!counterOfferPrice || isNegotiating}
+                                                            className="px-6 bg-primary text-black rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-white transition-all disabled:opacity-20"
                                                         >
-                                                            <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">¿Cuánto pides por el lote?</p>
-                                                            <div className="flex gap-2">
-                                                                <div className="relative flex-1">
-                                                                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-600" />
-                                                                    <input
-                                                                        type="number"
-                                                                        value={counterOfferPrice}
-                                                                        onChange={e => setCounterOfferPrice(e.target.value)}
-                                                                        placeholder="Ej: 50000"
-                                                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-9 py-3 text-white font-bold text-sm focus:border-primary focus:outline-none transition-all"
-                                                                    />
-                                                                </div>
-                                                                <button
-                                                                    onClick={() => handleCounterOffer(selectedOrder)}
-                                                                    disabled={!counterOfferPrice || isNegotiating}
-                                                                    className="px-6 bg-primary text-black rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-white transition-all disabled:opacity-20"
-                                                                >
-                                                                    Enviar
-                                                                </button>
-                                                            </div>
-                                                            <button
-                                                                onClick={() => setShowCounterInput(false)}
-                                                                className="w-full text-center text-[9px] font-bold text-gray-600 uppercase tracking-widest hover:text-white transition-colors"
-                                                            >
-                                                                Cancelar
-                                                            </button>
-                                                        </motion.div>
-                                                    )}
-                                                </div>
+                                                            Enviar
+                                                        </button>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => setShowCounterInput(false)}
+                                                        className="w-full text-center text-[9px] font-bold text-gray-600 uppercase tracking-widest hover:text-white transition-colors"
+                                                    >
+                                                        Cancelar
+                                                    </button>
+                                                </motion.div>
                                             )}
                                         </div>
                                     )}
@@ -770,6 +637,138 @@ export default function Profile() {
                                 <div className="p-8 text-center bg-white/[0.02] border border-dashed border-white/10 rounded-2xl">
                                     <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">Sin ítems registrados</p>
                                 </div>
+                            )}
+                        </div>
+
+                        {/* Static Blocks (Moved from Footer) */}
+                        <div className="space-y-6 mb-8 mt-2">
+                            {/* Negotiation History Timeline (Profile Side) - Hidden on Completion */}
+                            {selectedOrder.status !== "completed" && selectedOrder.status !== "venta_finalizada" && selectedOrder.negotiationHistory && selectedOrder.negotiationHistory.length > 0 && (
+                                <details className="group cursor-pointer border-b border-white/5 pb-4">
+                                    <summary className="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-colors outline-none flex items-center justify-between">
+                                        <span className="flex items-center gap-2"><Clock className="h-3.5 w-3.5" /> Ver Línea de Tiempo de Negociación</span>
+                                        <ChevronDown className="h-3.5 w-3.5 group-open:rotate-180 transition-transform" />
+                                    </summary>
+
+                                    <div className="relative space-y-4 max-h-[300px] overflow-y-auto pr-4 custom-scrollbar mt-6">
+                                        {/* Central vertical line */}
+                                        <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white/5 -translate-x-1/2" />
+
+                                        {selectedOrder.negotiationHistory.map((h: any, i: number) => (
+                                            <div key={i} className={`flex w-full items-center ${h.sender === 'admin' ? "justify-start" : "justify-end"}`}>
+                                                <div className={`relative w-[45%] p-3 rounded-xl border ${h.sender === 'admin'
+                                                    ? "bg-primary/5 border-primary/20 text-left"
+                                                    : "bg-orange-500/5 border-orange-500/20 text-right"
+                                                    }`}>
+                                                    {/* Connector Dot */}
+                                                    <div className={`absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full border-2 bg-black z-10 ${h.sender === 'admin'
+                                                        ? "left-[calc(100%+11px)] border-primary"
+                                                        : "right-[calc(100%+11px)] border-orange-500"
+                                                        }`} />
+
+                                                    <div className="flex flex-col gap-0.5">
+                                                        <span className={`text-[8px] font-black uppercase tracking-tighter ${h.sender === 'admin' ? "text-primary" : "text-orange-400"
+                                                            }`}>
+                                                            {h.sender === 'admin' ? "Oldie but Goldie" : "Tú (Cliente)"}
+                                                        </span>
+                                                        <span className="text-sm font-black text-white">
+                                                            {h.currency === "USD" ? "US$" : "$"} {(h.price || 0).toLocaleString()}
+                                                        </span>
+                                                        <span className="text-[8px] text-gray-600 font-mono mt-1">
+                                                            {h.timestamp?.seconds
+                                                                ? new Date(h.timestamp.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                                                : "Reciente"}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </details>
+                            )}
+
+                            {isNegotiating ? (
+                                <div className="space-y-4">
+                                    <div className="h-48 bg-white/5 rounded-[2rem] animate-pulse" />
+                                    <div className="h-12 bg-white/5 rounded-2xl animate-pulse" />
+                                </div>
+                            ) : (selectedOrder.status === "completed" || selectedOrder.status === "venta_finalizada") ? (
+                                <div className="space-y-6">
+                                    <div id="printable-receipt" className="bg-green-500/10 border border-green-500/20 rounded-[2rem] p-8 space-y-6 relative overflow-hidden">
+                                        <div className="absolute top-0 right-0 p-8 opacity-5">
+                                            <FileText size={120} />
+                                        </div>
+
+                                        <div className="flex flex-col items-center justify-center p-8 text-center space-y-6">
+                                            <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center shadow-lg shadow-primary/20">
+                                                <CheckCircle2 className="w-8 h-8 text-black" />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <h3 className="text-2xl font-display font-black text-white uppercase tracking-tighter">{TEXTS.profile.saleFinished}</h3>
+                                                <p className="text-gray-400 text-sm font-medium leading-relaxed">
+                                                    {TEXTS.profile.saleSuccess}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="border-t border-white/5 pt-6 space-y-4">
+                                            <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+                                                <span className="text-gray-500">Precio Acordado</span>
+                                                <span className="text-primary text-base">
+                                                    {selectedOrder.currency === 'USD' ? 'US$' : '$'} ${(selectedOrder.totalPrice || selectedOrder.adminPrice || 0).toLocaleString()}
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-gray-500">
+                                                <span>Items Aceptados</span>
+                                                <span className="text-white">{selectedOrder.items?.length || 0}</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex flex-col sm:flex-row gap-3">
+                                            <button
+                                                onClick={() => {
+                                                    pushWhatsAppContactFromOrder(selectedOrder);
+                                                    const msg = encodeURIComponent(`Hola! Acepté el trato por el lote ${selectedOrder.order_number || selectedOrder.id}. Coordinemos el pago y el envío.`);
+                                                    window.open(`https://wa.me/5491140411796?text=${msg}`, "_blank");
+                                                }}
+                                                className="w-full flex items-center justify-center gap-3 bg-green-600 hover:bg-green-500 text-white px-8 py-4 rounded-2xl font-black uppercase text-xs tracking-widest transition-all shadow-lg shadow-green-500/20"
+                                            >
+                                                <MessageCircle className="h-5 w-5" />
+                                                {TEXTS.success.contactWhatsApp}
+                                            </button>
+                                            <button
+                                                onClick={() => window.print()}
+                                                className="flex-none flex items-center justify-center gap-3 px-6 py-4 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                                            >
+                                                <Download className="h-4 w-4" />
+                                                Imprimir / PDF
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-[#0A0A0A] border border-white/5 rounded-2xl p-6 text-center">
+                                        <p className="text-[9px] text-gray-700 font-black uppercase tracking-[0.3em]">Registro de Transacción: {selectedOrder.id}</p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <>
+                                    {(selectedOrder.adminPrice || selectedOrder.admin_offer_price) && (
+                                        <div className="flex flex-col gap-4">
+                                            {/* Admin Counter-Offer */}
+                                            {(selectedOrder.adminPrice || selectedOrder.admin_offer_price) && (
+                                                <div className="bg-primary/5 rounded-2xl p-6 border border-primary/20">
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <BadgeDollarSign className="h-5 w-5 text-primary" />
+                                                        <span className="text-xs font-black uppercase tracking-widest text-primary">Oldie but Goldie te ofrece</span>
+                                                    </div>
+                                                    <p className="text-4xl font-display font-black text-white tracking-tight">
+                                                        {(selectedOrder.adminCurrency || selectedOrder.admin_offer_currency) === "USD" ? "US$" : "$"} {(selectedOrder.adminPrice || selectedOrder.admin_offer_price || 0).toLocaleString()}
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </div>
 
