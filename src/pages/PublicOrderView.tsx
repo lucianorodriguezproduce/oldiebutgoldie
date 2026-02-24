@@ -205,7 +205,9 @@ export default function PublicOrderView() {
         );
     }
 
-    const items = order.isBatch ? (order.items || []) : [
+    const isBatch = order.isBatch === true || order.is_batch === true;
+
+    const items = isBatch ? (order.items || []) : [
         {
             title: order.details?.artist ? `${order.details.artist} - ${order.details.album}` : (order.title || "Unknown Title"),
             artist: order.details?.artist || order.artist || "Unknown Artist",
@@ -220,11 +222,11 @@ export default function PublicOrderView() {
     const generateDescription = () => {
         if (!items || items.length === 0) return TEXTS.common.batchDescription;
         const artists = Array.from(new Set(items.map((i: any) => i.artist || "Varios"))).slice(0, 3);
-        const prefix = order.isBatch ? `Lote de ${items.length} ítems.` : TEXTS.common.pieceDescription;
+        const prefix = isBatch ? `Lote de ${items.length} ítems.` : TEXTS.common.pieceDescription;
         return `${prefix} Incluye: ${artists.join(", ")}${artists.length < items.length ? " y más" : ""}.`;
     };
 
-    const titleStr = order.isBatch ? `Lote de ${items.length} discos en Oldie but Goldie` : `${order.details?.artist || "Álbum"} - ${order.details?.album || "Desconocido"} en Oldie but Goldie`;
+    const titleStr = isBatch ? `Lote de ${items.length} discos en Oldie but Goldie` : `${order.details?.artist || "Álbum"} - ${order.details?.album || "Desconocido"} en Oldie but Goldie`;
 
     // Render Schema markup for items
     const schemaMarkup = {
