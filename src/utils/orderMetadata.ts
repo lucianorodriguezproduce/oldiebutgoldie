@@ -28,19 +28,14 @@ export const getCleanOrderMetadata = (order: any) => {
         (order.title?.includes(' - ') ? order.title.split(' - ')[1] : null)
     );
 
-    // 2. IDENTITY RESOLUTION (Anti-duplication)
-    // If artist and album are identical (brittle split or missing data), we handle it semantically.
+    // 2. IDENTITY RESOLUTION
+    // [RECOVERY] Removing the filter that forced "Pendiente" if artist === album.
+    // Redundancy is preferred over loss of information.
     let artist = rawArtist;
     let album = rawAlbum;
 
-    if (!isBatch && artist.toLowerCase() === album.toLowerCase()) {
-        if (artist.toLowerCase() === "unknown artist" || !artist) {
-            artist = "Artista No Definido";
-        } else {
-            // If they are the same but not "unknown", maybe it's just the album title in both.
-            // In this case, we prefer to show Artist as "Pendiente" to avoid duplication.
-            artist = "Pendiente";
-        }
+    if (!isBatch && artist.toLowerCase() === "unknown artist") {
+        artist = "";
     }
 
     if (!artist) artist = isBatch ? "Varios Artistas" : "Artista No Definido";

@@ -46,6 +46,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
                 if (fbResponse.ok) {
                     const fbData = await fbResponse.json();
+                    const fields = fbData.fields || {};
                     // [STRICT-EXTRACT-EDGE] Sync with getCleanOrderMetadata logic
                     const itemsArray = fields.items?.arrayValue?.values || [];
                     const isBatch = fields.isBatch?.booleanValue || itemsArray.length > 1;
@@ -68,11 +69,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     let displayArtist = rawArtist;
                     let displayAlbum = rawAlbum;
 
-                    if (!isBatch && displayArtist.toLowerCase() === displayAlbum.toLowerCase()) {
-                        displayArtist = (!displayArtist || displayArtist.toLowerCase() === "unknown artist") ? "Artista No Definido" : "Pendiente";
-                    }
+                    const status = (fields.status?.stringValue || 'PENDIENTE').toUpperCase();
+                    const intent = (fields.details?.mapValue?.fields?.intent?.stringValue || fields.intent?.stringValue || 'CONSULTAR').toUpperCase();
+                    const intentStr = intent === 'VENDER' ? 'En Venta' : 'En Compra';
 
-                    if (!displayArtist) displayArtist = isBatch ? "Varios Artistas" : "Artista No Definido";
+                    const isNegotiating = ['PENDING', 'QUOTED', 'COUNTEROFFERED'].includes(status);
+
+                    // [RECOVERY] Removing the filter that forced "Pendiente" if artist === album
+                    if (!displayArtist) displayArtist = isBatch ? "Varios Artistas" : "";
 
                     const thumbUrl = fields.thumbnailUrl?.stringValue;
                     const coverImage = fields.details?.mapValue?.fields?.cover_image?.stringValue || fields.details?.mapValue?.fields?.thumb?.stringValue;
@@ -83,17 +87,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         image = image.replace('http://', 'https://');
                     }
 
-                    const status = fields.status?.stringValue || 'PENDIENTE';
-                    const intent = fields.details?.mapValue?.fields?.intent?.stringValue || 'CONSULTAR';
-                    const intentStr = intent.toUpperCase() === 'VENDER' ? 'En Venta' : 'En Compra';
+                    // Hierarchy Elevation for Title
+                    let title = defaultTitle;
+                    if (isBatch) {
+                        title = `Lote de ${itemsArray.length > 0 ? itemsArray.length : 'varios'} discos | Oldie but Goldie`;
+                    } else {
+                        // Priority: Display Artist - Display Album. If artist is missing, just Title.
+                        title = displayArtist
+                            ? `${displayArtist} - ${displayAlbum || "Detalle"} | Oldie but Goldie`
+                            : `${displayAlbum || "Disco Registrado"} | Oldie but Goldie`;
+                    }
 
-                    const title = isBatch
-                        ? `Lote de ${itemsArray.length > 0 ? itemsArray.length : 'varios'} discos | Oldie but Goldie`
-                        : `${displayArtist} - ${displayAlbum} | Oldie but Goldie`;
+                    const description = `Orden de ${intentStr}: estado ${status}. ${isNegotiating ? "¡Participa en la negociación abierta!" : ""}`;
 
-                    const description = `Orden de ${intentStr}: estado ${status.toUpperCase()}. ${isNegotiating ? "¡Participa en la negociación abierta!" : ""}`;
-
-                    return serveFallback(res, title, description, finalImage, url);
+                    return serveFallback(res, title, description, image, url);
                 }
             } catch (e) {
                 console.error("Firebase prerender orden fetch failed: ", e);

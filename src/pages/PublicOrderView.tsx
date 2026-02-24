@@ -307,9 +307,9 @@ export default function PublicOrderView() {
                         <div className="flex items-center gap-4 flex-wrap">
                             <div className="flex flex-col gap-1 items-start">
                                 <h1 className={`text-4xl md:text-5xl font-display font-black tracking-tightest leading-none transition-colors ${isAdminOrder ? 'bg-gradient-to-r from-yellow-200 via-yellow-500 to-yellow-700 bg-clip-text text-transparent drop-shadow-xl' : 'text-white hover:text-primary'}`}>
-                                    {displayArtist}
+                                    {displayArtist || displayAlbum}
                                 </h1>
-                                {displayAlbum && (
+                                {displayAlbum && (displayArtist || isBatch) && (
                                     <h2 className="text-xl md:text-2xl font-bold text-gray-400 uppercase tracking-widest leading-tight opacity-80">
                                         {isBatch ? `LOTE DE ${itemsCount} DISCOS` : displayAlbum}
                                     </h2>
