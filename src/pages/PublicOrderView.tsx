@@ -269,7 +269,10 @@ export default function PublicOrderView() {
         }))
     };
 
-    const ogImage = items.length > 0 && items[0].cover_image ? items[0].cover_image : order.thumbnailUrl;
+    const timestamp = new Date().getTime();
+    const ogImage = items.length > 0 && items[0].cover_image
+        ? `${items[0].cover_image}${items[0].cover_image.includes('?') ? '&' : '?'}v=${timestamp}`
+        : `${order.thumbnailUrl}${order.thumbnailUrl?.includes('?') ? '&' : '?'}v=${timestamp}`;
 
     return (
         <div className="min-h-screen bg-black pt-12">
@@ -277,7 +280,7 @@ export default function PublicOrderView() {
                 title={titleStr}
                 description={generateDescription()}
                 image={ogImage}
-                url={`https://oldiebutgoldie.com.ar/orden/${id}`}
+                url={`https://www.oldiebutgoldie.com.ar/orden/${id}`}
                 schema={schemaMarkup}
                 status={order.status}
             />

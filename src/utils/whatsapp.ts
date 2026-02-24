@@ -34,29 +34,35 @@ export const generateWhatsAppLink = (order: OrderData): string => {
     const phoneNumber = "5492974188914";
     const orderId = order.order_number || order.id || "";
     const isPurchase = order.is_admin_offer || order.details?.intent?.toUpperCase() === "COMPRAR" || order.type?.toUpperCase() === "COMPRAR";
+    const canonicalUrl = `https://www.oldiebutgoldie.com.ar/orden/${order.id}`;
 
     const getItemsList = () => {
         if (order.isBatch && order.items && order.items.length > 0) {
             return order.items.map((item, idx) => {
-                const labelStr = item.label ? ` [${item.label}]` : '';
-                return `${idx + 1}. ${item.artist || 'Artista'} - ${item.album || 'Álbum'} (${item.format || 'N/A'} | ${item.condition || 'N/A'})${labelStr}`;
+                const artist = item.artist?.trim() || 'Artista';
+                const album = item.album?.trim() || 'Álbum';
+                const format = item.format?.trim() || 'N/A';
+                const condition = item.condition?.trim() || 'N/A';
+                const label = item.label?.trim() ? ` [${item.label.trim()}]` : '';
+                return `${idx + 1}. ${artist} - ${album} (${format} | ${condition})${label}`;
             }).join('\n');
         } else {
-            const art = order.details?.artist || order.artist || "Artista";
-            const alb = order.details?.album || order.title || "Álbum";
-            const fmt = order.details?.format || order.format || "N/A";
-            const cnd = order.details?.condition || order.condition || "N/A";
-            const lbl = order.details?.label || order.label;
+            const art = (order.details?.artist || order.artist || "Artista").trim();
+            const alb = (order.details?.album || order.title || "Álbum").trim();
+            const fmt = (order.details?.format || order.format || "N/A").trim();
+            const cnd = (order.details?.condition || order.condition || "N/A").trim();
+            const lbl = (order.details?.label || order.label)?.trim();
             const labelStr = lbl ? ` [${lbl}]` : '';
             return `- ${art} - ${alb} (${fmt} | ${cnd})${labelStr}`;
         }
     };
 
     const itemsList = getItemsList();
+    const count = order.isBatch ? (order.items?.length || 0) : 1;
     let message = "";
 
     if (isPurchase) {
-        message = `¡Hola Oldie But Goldie! 📀\n\nHe decidido sumar estas piezas a mi colección desde la tienda oficial.\n\nDetalle del Pedido:\n${itemsList}\n\nID de Transacción: #${orderId}\nEnlace de Referencia: https://www.oldiebutgoldie.com.ar/orden/${order.id}\n\nQuedo a la espera para coordinar el pago y el envío de mis discos. ✨`;
+        message = `¡Hola Oldie But Goldie! 📀\n\nQuiero comprar este lote de ${count} ítems:\n\n${itemsList}\n\nOrden de referencia: #${orderId}\n\nLink de mi lote: ${canonicalUrl}`;
     } else {
         const adminPriceDisplay = order.adminPrice
             ? `${order.adminCurrency === "USD" ? "US$" : "$"} ${order.adminPrice.toLocaleString()}`
@@ -64,7 +70,11 @@ export const generateWhatsAppLink = (order: OrderData): string => {
                 ? `${order.currency === "USD" ? "US$" : "$"} ${order.totalPrice.toLocaleString()}`
                 : "A confirmar";
 
-        message = `¡Hola Oldie But Goldie! 👋\n\nMe interesa concretar la negociación por mi lote de discos. Aquí tienes el resumen:\n\nMi Lote:\n${itemsList}\n\nValor Acordado: ${adminPriceDisplay}\nReferencia: #${orderId}\n\nLink de Seguimiento: https://www.oldiebutgoldie.com.ar/orden/${order.id}\n\n¿Cómo procedemos con la entrega?`;
+        const originalPrice = order.details?.price
+            ? `${order.details.currency === "USD" ? "US$" : "$"}${order.details.price.toLocaleString()}`
+            : "A confirmar";
+
+        message = `¡Hola Oldie But Goldie! 👋\n\nQuiero venderte este lote por ${adminPriceDisplay}. Detalle (${count} ítems):\n\n${itemsList}\n\nOrden de referencia: #${orderId}\nTu oferta original: ${originalPrice}\n\nLink de mi lote: ${canonicalUrl}`;
     }
 
     const encodedMessage = encodeURIComponent(message);

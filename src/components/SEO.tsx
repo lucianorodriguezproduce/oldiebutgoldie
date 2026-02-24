@@ -14,15 +14,17 @@ interface SEOProps {
 export function SEO({
     title = TEXTS.common.seo.defaultTitle,
     description = TEXTS.common.seo.defaultDescription,
-    image = 'https://oldiebutgoldie.com.ar/og-image.jpg', // URL genérica para OpenGraph
+    image = 'https://www.oldiebutgoldie.com.ar/og-image.jpg',
     url,
     type = 'website',
-    schema
+    schema,
+    status
 }: SEOProps) {
-    const currentUrl = url || (typeof window !== 'undefined' ? window.location.href : 'https://oldiebutgoldie.com.ar');
+    const canonicalBase = 'https://www.oldiebutgoldie.com.ar';
+    const currentUrl = url || (typeof window !== 'undefined' ? window.location.href : canonicalBase);
 
     // Make sure image is an absolute HTTPS URL if it isn't already
-    let ogImage = image.startsWith('http') ? image : `https://oldiebutgoldie.com.ar${image.startsWith('/') ? '' : '/'}${image}`;
+    let ogImage = image.startsWith('http') ? image : `${canonicalBase}${image.startsWith('/') ? '' : '/'}${image}`;
 
     // SocialPreviewManager Logic
     if (status && ['pending', 'quoted'].includes(status.toLowerCase())) {
