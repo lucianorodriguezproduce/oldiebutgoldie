@@ -310,26 +310,35 @@ export default function PublicOrderView() {
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: idx * 0.05 }}
-                                        className="border-b border-white/10 py-5 flex flex-col gap-1"
+                                        className="border-b border-white/10 py-5 flex items-center justify-between gap-4"
                                     >
-                                        <h4 className="font-bold text-white uppercase text-base leading-tight">
-                                            {item.title || (item.artist && item.album ? `${item.artist} - ${item.album}` : 'Sin Título')}
-                                        </h4>
-                                        {item.artist && (
-                                            <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">{item.artist}</p>
-                                        )}
+                                        <div className="flex-1 min-w-0">
+                                            <h4 className="font-bold text-white uppercase text-base leading-tight truncate">
+                                                {item.title || (item.artist && item.album ? `${item.artist} - ${item.album}` : 'Sin Título')}
+                                            </h4>
+                                            {item.artist && (
+                                                <p className="text-gray-500 text-xs font-bold uppercase tracking-widest truncate">{item.artist}</p>
+                                            )}
 
-                                        {isAdminOrder && item.condition && (
-                                            <div className="mt-1 flex items-center gap-2 text-[10px] font-mono text-gray-400">
-                                                <span className="text-yellow-500/70">Media: {item.condition.split('/')[0] || item.condition}</span>
-                                                {item.condition.includes('/') && <span className="text-gray-600">|</span>}
-                                                {item.condition.includes('/') && <span className="text-yellow-500/70">Cover: {item.condition.split('/')[1]}</span>}
+                                            {isAdminOrder && item.condition && (
+                                                <div className="mt-1 flex items-center gap-2 text-[10px] font-mono text-gray-400">
+                                                    <span className="text-yellow-500/70">Media: {item.condition.split('/')[0] || item.condition}</span>
+                                                    {item.condition.includes('/') && <span className="text-gray-600">|</span>}
+                                                    {item.condition.includes('/') && <span className="text-yellow-500/70">Cover: {item.condition.split('/')[1]}</span>}
+                                                </div>
+                                            )}
+
+                                            <div className="flex flex-wrap gap-2 mt-2">
+                                                <span className="bg-gray-800 text-gray-300 px-2 py-1 text-[9px] font-black uppercase rounded">{item.format}</span>
+                                                {!isAdminOrder && <span className="bg-blue-900/30 text-blue-400 px-2 py-1 text-[9px] font-black uppercase rounded border border-blue-500/20">{item.condition}</span>}
                                             </div>
-                                        )}
-
-                                        <div className="flex flex-wrap gap-2 mt-2">
-                                            <span className="bg-gray-800 text-gray-300 px-2 py-1 text-[9px] font-black uppercase rounded">{item.format}</span>
-                                            {!isAdminOrder && <span className="bg-blue-900/30 text-blue-400 px-2 py-1 text-[9px] font-black uppercase rounded border border-blue-500/20">{item.condition}</span>}
+                                        </div>
+                                        <div className="w-14 h-14 rounded-md overflow-hidden bg-white/5 border border-white/10 flex-shrink-0 shadow-sm">
+                                            <img
+                                                src={item.cover_image || item.image || item.thumb || "https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png"}
+                                                alt={item.title || "Item"}
+                                                className="w-full h-full object-cover"
+                                            />
                                         </div>
                                     </motion.div>
                                 ))}

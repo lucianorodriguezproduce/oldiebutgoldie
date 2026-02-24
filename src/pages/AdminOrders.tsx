@@ -713,14 +713,23 @@ export default function AdminOrders() {
                                         </div>
                                     </div>
                                     {selectedOrder.items.map((item: any, idx: number) => (
-                                        <div key={idx} className="border-b border-white/10 py-5 flex flex-col gap-2">
-                                            <div className="space-y-1">
-                                                <h4 className="font-bold text-white uppercase text-base leading-tight">{item.title}</h4>
-                                                <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">{item.artist}</p>
+                                        <div key={idx} className="border-b border-white/10 py-5 flex items-center justify-between gap-4">
+                                            <div className="flex-1 min-w-0">
+                                                <h4 className="font-bold text-white uppercase text-base leading-tight truncate">{item.title}</h4>
+                                                {item.artist && (
+                                                    <p className="text-gray-500 text-xs font-bold uppercase tracking-widest truncate">{item.artist}</p>
+                                                )}
+                                                <div className="flex flex-wrap gap-2 mt-2">
+                                                    <span className="bg-gray-800 text-gray-300 px-2 py-1 text-[9px] font-black uppercase rounded">{item.format}</span>
+                                                    <span className="bg-blue-900/30 text-blue-400 px-2 py-1 text-[9px] font-black uppercase rounded border border-blue-500/20">{item.condition}</span>
+                                                </div>
                                             </div>
-                                            <div className="flex flex-wrap gap-2 mt-1">
-                                                <span className="bg-gray-800 text-gray-300 px-2 py-1 text-[9px] font-black uppercase rounded">{item.format}</span>
-                                                <span className="bg-blue-900/30 text-blue-400 px-2 py-1 text-[9px] font-black uppercase rounded border border-blue-500/20">{item.condition}</span>
+                                            <div className="w-14 h-14 rounded-md overflow-hidden bg-white/5 border border-white/10 flex-shrink-0 shadow-sm">
+                                                <img
+                                                    src={item.cover_image || item.image || item.thumb || "https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png"}
+                                                    alt={item.title || "Item"}
+                                                    className="w-full h-full object-cover"
+                                                />
                                             </div>
                                         </div>
                                     ))}
