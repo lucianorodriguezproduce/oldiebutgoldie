@@ -570,29 +570,19 @@ export default function Profile() {
                             </div>
                         </div>
 
-                        {/* Negotiation Banner */}
-                        {selectedOrder.adminPrice && selectedOrder.status !== 'venta_finalizada' && selectedOrder.status !== 'completed' && (
-                            <NegotiationBanner
-                                adminPrice={selectedOrder.adminPrice}
-                                currency={selectedOrder.adminCurrency || selectedOrder.currency || 'ARS'}
-                                onAccept={handleAcceptOffer}
-                                onReject={handleRejectOffer}
-                                isSubmitting={isLoading}
-                                className="mb-8"
-                            />
-                        )}
+                        {/* Negotiation Banner Removed (Phase 12) - Redundant with Offer Cards */}
 
                         {/* Items List */}
-                        <div className="space-y-0 mb-8">
+                        <div className="space-y-0 mb-8 mt-2">
                             <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500 italic mb-4">Detalle del Lote</h4>
 
                             {selectedOrder.items && selectedOrder.items.length > 0 ? (
                                 selectedOrder.items.map((item: any, idx: number) => (
                                     <div key={idx} className="border-b border-white/10 py-5 flex items-start gap-4">
-                                        {/* TAREA 2: Imagen de ítem */}
+                                        {/* TAREA 2: Imagen de ítem con fallbacks robustos */}
                                         <div className="w-16 h-16 rounded overflow-hidden flex-shrink-0 bg-white/5 border border-white/10">
                                             <LazyImage
-                                                src={item.cover_image || item.thumb}
+                                                src={item.cover_image || item.thumb || item.image || item.cover || '/default-album.png'}
                                                 alt={item.title}
                                                 className="w-full h-full object-cover"
                                             />

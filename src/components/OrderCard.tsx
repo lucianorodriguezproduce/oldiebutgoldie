@@ -155,10 +155,10 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
         return str.replace(/UNKNOWN ARTIST\s*[-—–]*\s*/gi, '').trim();
     };
 
-    const firstItemImage = items.length > 0 ? (items[0].image || items[0].cover_image || items[0].thumbnailUrl) : null;
+    const firstItemImage = items.length > 0 ? (items[0].cover_image || items[0].thumb || items[0].image || items[0].cover || items[0].thumbnailUrl) : null;
     const coverImage = (isBatch && firstItemImage)
         ? firstItemImage
-        : (order.thumbnailUrl || order.details?.cover_image || order.imageUrl || "https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png");
+        : (order.cover_image || order.thumb || order.image || order.cover || order.thumbnailUrl || order.details?.cover_image || order.imageUrl || "https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png");
 
     const title = isBatch ? `Lote de ${items.length} discos` : cleanString(order.details?.album || order.title || 'Unknown Title');
     const artist = isBatch ? '' : cleanString(order.details?.artist || order.artist || 'Unknown Artist');
