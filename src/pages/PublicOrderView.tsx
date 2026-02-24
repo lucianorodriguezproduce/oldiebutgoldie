@@ -284,18 +284,20 @@ export default function PublicOrderView() {
 
             <div className="max-w-4xl mx-auto px-4 pt-8 pb-32 md:py-16 space-y-12">
                 <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                    <div className="space-y-4">
-                        <Link to="/actividad" className="inline-flex items-center gap-2 text-[10px] font-black uppercase text-gray-500 hover:text-white transition-colors">
-                            <ChevronLeft className="w-4 h-4" /> {TEXTS.navigation.activity}
-                        </Link>
+                    <div className="space-y-4 w-full">
+                        <div className="flex items-center justify-between">
+                            <Link to="/actividad" className="inline-flex items-center gap-2 text-[10px] font-black uppercase text-gray-500 hover:text-white transition-colors">
+                                <ChevronLeft className="w-4 h-4" /> {TEXTS.navigation.activity}
+                            </Link>
 
-                        {isAdminOrder && (
-                            <div className="inline-flex items-center px-3 py-1 rounded-full bg-gradient-to-r from-yellow-500/20 to-yellow-700/20 border border-yellow-500/50 w-fit">
-                                <span className="text-yellow-500 font-black uppercase tracking-widest text-[9px] animate-pulse">
-                                    ★ Disponible Ahora
-                                </span>
-                            </div>
-                        )}
+                            {isAdminOrder && (
+                                <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-gradient-to-r from-yellow-500/20 to-yellow-700/20 border border-yellow-500/50 w-fit">
+                                    <span className="text-yellow-500 font-black uppercase tracking-widest text-[8px] animate-pulse">
+                                        ★ Disponible Ahora
+                                    </span>
+                                </div>
+                            )}
+                        </div>
 
                         <div className="flex items-center gap-4 flex-wrap">
                             <h1 className={`text-4xl md:text-5xl font-display font-black tracking-tightest leading-none transition-colors ${isAdminOrder ? 'bg-gradient-to-r from-yellow-200 via-yellow-500 to-yellow-700 bg-clip-text text-transparent drop-shadow-xl' : 'text-white hover:text-primary'}`}>
