@@ -5,7 +5,7 @@ import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { db, auth } from "@/lib/firebase";
 import { SEO } from "@/components/SEO";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Music, Disc, Lock, Clock, Eye } from "lucide-react";
+import { ChevronLeft, Music, Disc, Lock, Clock, Eye, ChevronDown } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useLoading } from "@/context/LoadingContext";
 import { formatDate, getReadableDate } from "@/utils/date";
@@ -18,6 +18,7 @@ export default function PublicOrderView() {
     const { showLoading, hideLoading } = useLoading();
     const [order, setOrder] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [isItemsExpanded, setIsItemsExpanded] = useState(false);
 
     const isOwner = user?.uid === order?.user_id;
     const isAdminOrder = order?.user_id === "oldiebutgoldie" || order?.user_email === "admin@discography.ai";
@@ -111,7 +112,7 @@ export default function PublicOrderView() {
                     currency: order.adminCurrency || order.currency || order.details?.currency || "ARS",
                     sender: "user",
                     timestamp: new Date(),
-                    message: `Orden aceptada por ${user.displayName || user.email}`
+                    message: `Orden aceptada por ${user.displayName || user.email} `
                 })
             });
 
@@ -164,7 +165,7 @@ export default function PublicOrderView() {
                     currency: currentCurrency,
                     sender: "user",
                     timestamp: new Date(),
-                    message: `Contraoferta de ${user.displayName || user.email}`
+                    message: `Contraoferta de ${user.displayName || user.email} `
                 })
             });
             setOrder((prev: any) => ({
@@ -176,7 +177,7 @@ export default function PublicOrderView() {
                     currency: currentCurrency,
                     sender: "user",
                     timestamp: new Date(),
-                    message: `Contraoferta de ${user.displayName || user.email}`
+                    message: `Contraoferta de ${user.displayName || user.email} `
                 }]
             }));
             setShowOfferInput(false);
@@ -213,13 +214,17 @@ export default function PublicOrderView() {
 
     const items = isBatch ? (order.items || []) : [
         {
-            title: order.details?.artist ? `${order.details.artist} - ${order.details.album}` : (order.title || "Unknown Title"),
+            title: order.details?.artist ? `${order.details.artist} - ${order.details.album} ` : (order.title || "Unknown Title"),
             artist: order.details?.artist || order.artist || "Unknown Artist",
             album: order.details?.album || order.title || "Unknown Album",
             cover_image: order.details?.cover_image || order.thumbnailUrl || "https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png",
             format: order.details?.format || "N/A",
             condition: order.details?.condition || "N/A",
             intent: order.details?.intent || order.intent || (order.adminPrice || order.admin_offer_price ? "VENDER" : "COMPRAR"),
+            label: order.details?.label || order.label,
+            country: order.details?.country || order.country,
+            year: order.details?.year || order.year,
+            genre: order.details?.genre?.length ? order.details.genre.join(", ") : (order.genre?.length ? order.genre.join(", ") : undefined),
         }
     ];
 
@@ -241,7 +246,7 @@ export default function PublicOrderView() {
             "position": index + 1,
             "item": {
                 "@type": "MusicRelease",
-                "name": item.title || `${item.artist} - ${item.album}`,
+                "name": item.title || `${item.artist} - ${item.album} `,
                 "image": item.cover_image || order.thumbnailUrl,
                 "musicReleaseFormat": item.format,
                 "offers": {
@@ -263,7 +268,7 @@ export default function PublicOrderView() {
                 status={order.status}
             />
 
-            <div className="max-w-4xl mx-auto px-4 py-8 md:py-16 space-y-12">
+            <div className="max-w-4xl mx-auto px-4 pt-8 pb-32 md:py-16 space-y-12">
                 <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div className="space-y-4">
                         <Link to="/actividad" className="inline-flex items-center gap-2 text-[10px] font-black uppercase text-gray-500 hover:text-white transition-colors">
@@ -325,7 +330,7 @@ export default function PublicOrderView() {
                     ) : (
                         <div className="space-y-0">
                             <AnimatePresence>
-                                {items.map((item: any, idx: number) => (
+                                {(isItemsExpanded ? items : items.slice(0, 3)).map((item: any, idx: number) => (
                                     <motion.div
                                         key={idx}
                                         initial={{ opacity: 0, y: 10 }}
@@ -353,6 +358,21 @@ export default function PublicOrderView() {
                                                 <span className="bg-gray-800 text-gray-300 px-2 py-1 text-[9px] font-black uppercase rounded">{item.format}</span>
                                                 {!isAdminOrder && <span className="bg-blue-900/30 text-blue-400 px-2 py-1 text-[9px] font-black uppercase rounded border border-blue-500/20">{item.condition}</span>}
                                             </div>
+
+                                            {/* Ficha Técnica */}
+                                            {(item.label || item.country || item.year || item.genre) && (
+                                                <details className="mt-3 group cursor-pointer">
+                                                    <summary className="text-[9px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-colors outline-none flex items-center gap-1 w-max">
+                                                        Ficha Técnica <ChevronDown className="h-3 w-3 group-open:rotate-180 transition-transform" />
+                                                    </summary>
+                                                    <div className="mt-2 grid grid-cols-2 gap-2 p-3 bg-white/5 rounded-xl border border-white/5 text-[10px]">
+                                                        {item.label && <div className="flex flex-col min-w-0"><span className="text-gray-600 uppercase font-black tracking-widest text-[8px]">Sello</span><span className="text-white font-bold truncate">{item.label}</span></div>}
+                                                        {item.year && <div className="flex flex-col min-w-0"><span className="text-gray-600 uppercase font-black tracking-widest text-[8px]">Año</span><span className="text-white font-bold truncate">{item.year}</span></div>}
+                                                        {item.country && <div className="flex flex-col min-w-0"><span className="text-gray-600 uppercase font-black tracking-widest text-[8px]">País</span><span className="text-white font-bold truncate">{item.country}</span></div>}
+                                                        {item.genre && <div className="flex flex-col min-w-0"><span className="text-gray-600 uppercase font-black tracking-widest text-[8px]">Género</span><span className="text-white font-bold truncate">{item.genre}</span></div>}
+                                                    </div>
+                                                </details>
+                                            )}
                                         </div>
                                         <div className="w-14 h-14 rounded-md overflow-hidden bg-white/5 border border-white/10 flex-shrink-0 shadow-sm">
                                             <img
@@ -364,6 +384,16 @@ export default function PublicOrderView() {
                                     </motion.div>
                                 ))}
                             </AnimatePresence>
+
+                            {items.length > 3 && (
+                                <button
+                                    onClick={() => setIsItemsExpanded(!isItemsExpanded)}
+                                    className="w-full mt-4 py-3 border border-white/10 rounded-xl text-gray-400 text-[10px] font-black uppercase tracking-widest hover:bg-white/5 hover:text-white transition-all flex items-center justify-center gap-2"
+                                >
+                                    {isItemsExpanded ? 'Mostrar menos' : `Ver todos los discos (+${items.length - 3})`}
+                                    <ChevronDown className={`h-3.5 w-3.5 transition-transform ${isItemsExpanded ? 'rotate-180' : ''}`} />
+                                </button>
+                            )}
                         </div>
                     )}
                 </div>
@@ -449,34 +479,34 @@ export default function PublicOrderView() {
 
                         if (!['cancelled'].includes(order.status)) {
                             return (
-                                <div className="mt-8 p-6 md:p-8 bg-gradient-to-br from-yellow-500/10 to-orange-600/10 border border-yellow-500/30 rounded-[2.5rem] flex flex-col md:flex-row items-center gap-6 justify-between shadow-[0_0_30px_rgba(234,179,8,0.1)]">
-                                    <div className="space-y-2 text-center md:text-left">
+                                <div className="fixed bottom-0 left-0 right-0 z-[100] md:static mt-0 md:mt-8 p-4 md:p-8 bg-black/90 md:bg-gradient-to-br md:from-yellow-500/10 md:to-orange-600/10 border-t md:border border-white/10 md:border-yellow-500/30 md:rounded-[2.5rem] flex flex-col md:flex-row items-center gap-4 md:gap-6 justify-between shadow-[0_-20px_40px_rgba(0,0,0,0.5)] md:shadow-[0_0_30px_rgba(234,179,8,0.1)] backdrop-blur-md md:backdrop-blur-none transition-all">
+                                    <div className="hidden md:block space-y-2 text-left">
                                         <h4 className="text-xl font-display font-black text-white uppercase tracking-tight">Adquirir Coleccionable</h4>
                                         <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Asegura esta pieza antes que otro coleccionista</p>
                                     </div>
 
-                                    <div className="flex flex-col sm:flex-row w-full md:w-auto gap-4">
+                                    <div className="flex flex-row w-full md:w-auto gap-2 md:gap-4">
                                         {showOfferInput ? (
                                             <div className="flex items-center gap-2 bg-black/40 p-2 rounded-2xl border border-white/10 flex-1 md:flex-none">
-                                                <span className="text-gray-500 font-bold pl-3">$</span>
+                                                <span className="text-gray-500 font-bold pl-2 md:pl-3">$</span>
                                                 <input
                                                     type="number"
-                                                    placeholder="Tu Oferta"
+                                                    placeholder="Oferta"
                                                     value={offerAmount}
                                                     onChange={(e) => setOfferAmount(e.target.value)}
-                                                    className="bg-transparent border-none text-white font-black w-24 focus:ring-0 outline-none placeholder:text-gray-600"
+                                                    className="bg-transparent border-none text-white font-black w-20 md:w-24 focus:ring-0 outline-none placeholder:text-gray-600 text-xs md:text-sm"
                                                     autoFocus
                                                 />
                                                 <button
                                                     onClick={handleMakeOffer}
                                                     disabled={!offerAmount}
-                                                    className="px-4 py-2 bg-orange-500 hover:bg-orange-400 disabled:opacity-50 text-black font-black uppercase tracking-widest text-[10px] rounded-xl transition-all"
+                                                    className="px-3 md:px-4 py-2 bg-orange-500 hover:bg-orange-400 disabled:opacity-50 text-black font-black uppercase tracking-widest text-[9px] md:text-[10px] rounded-xl transition-all"
                                                 >
                                                     Enviar
                                                 </button>
                                                 <button
                                                     onClick={() => setShowOfferInput(false)}
-                                                    className="px-3 py-2 text-gray-500 hover:text-white transition-colors"
+                                                    className="px-2 md:px-3 py-2 text-gray-500 hover:text-white transition-colors"
                                                 >
                                                     ✕
                                                 </button>
@@ -484,15 +514,15 @@ export default function PublicOrderView() {
                                         ) : (
                                             <button
                                                 onClick={() => setShowOfferInput(true)}
-                                                className="px-6 py-4 rounded-2xl border border-yellow-500/30 text-yellow-500 font-black uppercase tracking-widest text-[10px] hover:bg-yellow-500/10 transition-all text-center flex-1 md:flex-none"
+                                                className="px-4 md:px-6 py-3 md:py-4 rounded-2xl border border-yellow-500/30 text-yellow-500 font-black uppercase tracking-widest text-[9px] md:text-[10px] hover:bg-yellow-500/10 transition-all text-center flex-1 md:flex-none whitespace-nowrap"
                                             >
-                                                Hacer Oferta (Regatear)
+                                                Regatear
                                             </button>
                                         )}
 
                                         <button
                                             onClick={handleBuyNow}
-                                            className="px-8 py-4 rounded-2xl bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-black font-black uppercase tracking-widest text-xs shadow-xl shadow-orange-500/20 hover:shadow-orange-500/40 transition-all text-center flex-1 md:flex-none transform hover:-translate-y-1"
+                                            className="px-4 md:px-8 py-3 md:py-4 rounded-2xl bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-black font-black uppercase tracking-widest text-[10px] md:text-xs shadow-xl shadow-orange-500/20 hover:shadow-orange-500/40 transition-all text-center flex-1 md:flex-none transform hover:-translate-y-1 whitespace-nowrap"
                                         >
                                             ¡Comprar Ahora!
                                         </button>
@@ -586,6 +616,6 @@ export default function PublicOrderView() {
                     </>
                 )}
             </AnimatePresence>
-        </div>
+        </div >
     );
 }
