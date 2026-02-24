@@ -432,14 +432,15 @@ export default function Profile() {
                 isOpen={!!selectedOrder}
                 onClose={() => setSelectedOrder(null)}
                 title={selectedOrder ? (() => {
-                    const isBatch = (selectedOrder.items && selectedOrder.items.length > 1);
-                    const rawArtist = (selectedOrder.items?.[0]?.artist || selectedOrder.details?.artist || "Artista Desconocido");
-                    const rawAlbum = (selectedOrder.details?.album || selectedOrder.items?.[0]?.title || "Detalle de Pedido");
+                    const items = selectedOrder.items || [];
+                    const isBatch = (items.length > 1);
+                    const rawArtist = (items[0]?.artist || selectedOrder.details?.artist || "Artista Desconocido");
+                    const rawAlbum = (selectedOrder.details?.album || items[0]?.title || "Detalle de Pedido");
 
-                    if (isBatch) return `LOTE DE ${selectedOrder.items.length} DISCOS`;
+                    if (isBatch) return `LOTE DE ${items.length} DISCOS`;
 
                     const displayArtist = (rawArtist.toLowerCase() === rawAlbum.toLowerCase())
-                        ? (selectedOrder.user_name || "Varios Artistas")
+                        ? (user?.displayName || "Varios Artistas")
                         : rawArtist;
 
                     return `${displayArtist} - ${rawAlbum}`;
