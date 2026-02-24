@@ -16,77 +16,55 @@ export interface OrderData {
         condition?: string;
         price?: number;
         currency?: string;
+        label?: string;
     };
     isBatch?: boolean;
+    is_admin_offer?: boolean;
     items?: any[];
     totalPrice?: number;
     currency?: string;
+    artist?: string;
+    title?: string;
+    format?: string;
+    condition?: string;
+    label?: string;
 }
 
 export const generateWhatsAppLink = (order: OrderData): string => {
     const phoneNumber = "5492974188914";
-    const safeAlbum = (order.details?.album || "").trim();
-    const safeArtist = (order.details?.artist || "").trim();
-    const itemTitle = `${safeAlbum} - ${safeArtist}`;
+    const orderId = order.order_number || order.id || "";
+    const isPurchase = order.is_admin_offer || order.details?.intent?.toUpperCase() === "COMPRAR" || order.type?.toUpperCase() === "COMPRAR";
 
-    const intentStr = order.details?.intent ? order.details.intent.toUpperCase().trim() : "";
-    let actionText = "Me interesa este disco";
-
-    if (intentStr === "COMPRAR" || intentStr === "EN COMPRA") {
-        actionText = "Quiero vender este disco";
-    } else if (intentStr === "VENDER" || intentStr === "EN VENTA") {
-        actionText = "Quiero comprar este disco";
-    }
-
-    const typeStr = order.type || order.item_type || "release";
-    const idStr = order.item_id || "";
-
-    let message = `Hola Oldie but Goldie! ${actionText}: ${itemTitle}.`;
-
-    if (order.isBatch && order.items && order.items.length > 0) {
-        if (intentStr === "COMPRAR" || intentStr === "EN COMPRA") {
-            message = `Hola Oldie but Goldie! Quiero comprar este lote de ${order.items.length} ítems:\n`;
-        } else if (intentStr === "VENDER" || intentStr === "EN VENTA") {
-            const priceStr = order.totalPrice ? ` por ${order.currency === 'USD' ? 'US$' : '$'}${order.totalPrice.toLocaleString()}` : '';
-            message = `Hola Oldie but Goldie! Quiero venderte este lote${priceStr}. Detalle (${order.items.length} ítems):\n`;
+    const getItemsList = () => {
+        if (order.isBatch && order.items && order.items.length > 0) {
+            return order.items.map((item, idx) => {
+                const labelStr = item.label ? ` [${item.label}]` : '';
+                return `${idx + 1}. ${item.artist || 'Artista'} - ${item.album || 'Álbum'} (${item.format || 'N/A'} | ${item.condition || 'N/A'})${labelStr}`;
+            }).join('\n');
         } else {
-            message = `Hola Oldie but Goldie! Me interesa este lote de ${order.items.length} ítems:\n`;
+            const art = order.details?.artist || order.artist || "Artista";
+            const alb = order.details?.album || order.title || "Álbum";
+            const fmt = order.details?.format || order.format || "N/A";
+            const cnd = order.details?.condition || order.condition || "N/A";
+            const lbl = order.details?.label || order.label;
+            const labelStr = lbl ? ` [${lbl}]` : '';
+            return `- ${art} - ${alb} (${fmt} | ${cnd})${labelStr}`;
         }
-        order.items.forEach((item, idx) => {
-            const itemPrice = item.price ? ` | ${item.currency === 'USD' ? 'US$' : '$'}${item.price.toLocaleString()}` : '';
-            message += `\n${idx + 1}. ${item.artist} - ${item.album} (${item.format} | ${item.condition}) [${item.intent}]${itemPrice}`;
-        });
-    } else if (idStr) {
-        message += ` Aquí puedes ver los detalles: https://buscadordiscogs-mslb.vercel.app/item/${typeStr}/${idStr}`;
-    }
+    };
 
-    if (order.order_number) {
-        message += `\n\nOrden de referencia: ${(order.order_number || "").trim()}`;
-    }
+    const itemsList = getItemsList();
+    let message = "";
 
-    if (!order.isBatch && order.details) {
-        const format = (order.details?.format || "").trim();
-        const condition = (order.details?.condition || "").trim();
-        message += `\nFormato: ${format} | Estado: ${condition}`;
-    }
+    if (isPurchase) {
+        message = `¡Hola Oldie But Goldie! 📀\n\nHe decidido sumar estas piezas a mi colección desde la tienda oficial.\n\nDetalle del Pedido:\n${itemsList}\n\nID de Transacción: #${orderId}\nEnlace de Referencia: https://www.oldiebutgoldie.com.ar/orden/${order.id}\n\nQuedo a la espera para coordinar el pago y el envío de mis discos. ✨`;
+    } else {
+        const adminPriceDisplay = order.adminPrice
+            ? `${order.adminCurrency === "USD" ? "US$" : "$"} ${order.adminPrice.toLocaleString()}`
+            : order.totalPrice
+                ? `${order.currency === "USD" ? "US$" : "$"} ${order.totalPrice.toLocaleString()}`
+                : "A confirmar";
 
-    if (order.adminPrice) {
-        const currency = order.adminCurrency === "USD" ? "US$" : "$";
-        message += `\n\n✅ Acepto la contraoferta de ${currency} ${order.adminPrice.toLocaleString()} por mi lote.`;
-    } else if (order.admin_offer_price) {
-        const currency = order.admin_offer_currency === "USD" ? "US$" : "$";
-        message += `\nCotización Admin Lote/Disco: ${currency} ${order.admin_offer_price.toLocaleString()}`;
-    } else if (order.totalPrice || (order as any).price) {
-        const currency = order.currency || order.details.currency === "USD" ? "US$" : "$";
-        const price = order.totalPrice || (order as any).price;
-        message += `\nTu oferta original: ${currency} ${price.toLocaleString()}`;
-    } else if (!order.isBatch && order.details.price) {
-        const currency = order.details.currency === "USD" ? "US$" : "$";
-        message += `\nPrecio Sugerido: ${currency} ${order.details.price.toLocaleString()}`;
-    }
-
-    if (order.id) {
-        message += `\n\nLink de mi lote: https://buscadordiscogs-mslb.vercel.app/orden/${order.id}`;
+        message = `¡Hola Oldie But Goldie! 👋\n\nMe interesa concretar la negociación por mi lote de discos. Aquí tienes el resumen:\n\nMi Lote:\n${itemsList}\n\nValor Acordado: ${adminPriceDisplay}\nReferencia: #${orderId}\n\nLink de Seguimiento: https://www.oldiebutgoldie.com.ar/orden/${order.id}\n\n¿Cómo procedemos con la entrega?`;
     }
 
     const encodedMessage = encodeURIComponent(message);

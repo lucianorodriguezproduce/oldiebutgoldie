@@ -269,12 +269,14 @@ export default function PublicOrderView() {
         }))
     };
 
+    const ogImage = items.length > 0 && items[0].cover_image ? items[0].cover_image : order.thumbnailUrl;
+
     return (
         <div className="min-h-screen bg-black pt-12">
             <SEO
                 title={titleStr}
                 description={generateDescription()}
-                image={order.thumbnailUrl}
+                image={ogImage}
                 url={`https://oldiebutgoldie.com.ar/orden/${id}`}
                 schema={schemaMarkup}
                 status={order.status}
