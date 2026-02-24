@@ -740,6 +740,88 @@ export default function Home() {
                                     </motion.div>
                                 )}
                             </AnimatePresence>
+
+                            {/* GRILLA DE RESULTADOS (Restaurada) */}
+                            {isSearchActive && (
+                                <div className="flex-1 w-full overflow-y-auto px-4 md:px-8 pb-32 mt-4 hide-scrollbar scroll-smooth" ref={resultsContainerRef}>
+                                    <div className="max-w-4xl mx-auto">
+                                        {/* Loading State */}
+                                        {isLoadingSearch && searchResults.length === 0 && (
+                                            <div className="flex flex-col items-center justify-center py-20 space-y-4">
+                                                <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+                                                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500 animate-pulse">
+                                                    {TEXTS.home.loadingDiscogs}
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        {/* Results Grid */}
+                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6">
+                                            {searchResults.map((result, idx) => (
+                                                <motion.button
+                                                    key={`${result.id}-${idx}`}
+                                                    initial={{ opacity: 0, y: 20 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    transition={{ delay: idx * 0.05 }}
+                                                    onClick={() => handleEntityDrillDown(result)}
+                                                    className="group relative flex flex-col items-start bg-white/[0.03] border-2 border-white/5 hover:border-primary/40 rounded-2xl md:rounded-[2rem] overflow-hidden transition-all text-left aspect-[3/4]"
+                                                >
+                                                    <div className="w-full h-full relative">
+                                                        <LazyImage
+                                                            src={result.cover_image || result.thumb}
+                                                            alt={result.title}
+                                                            className="w-full h-full object-cover grayscale-[0.3] group-hover:grayscale-0 transition-transform duration-700 group-hover:scale-110"
+                                                        />
+                                                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-80 group-hover:opacity-60 transition-opacity" />
+
+                                                        <div className="absolute inset-x-0 bottom-0 p-4 md:p-6 space-y-1">
+                                                            <h5 className="text-sm md:text-lg font-bold font-display italic text-white leading-tight line-clamp-2 md:line-clamp-1 group-hover:text-primary transition-colors">
+                                                                {result.title.split(' - ')[1] || result.title}
+                                                            </h5>
+                                                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none truncate block">
+                                                                {result.title.split(' - ')[0]}
+                                                            </span>
+                                                        </div>
+
+                                                        {result.type && (
+                                                            <div className="absolute top-4 left-4 px-2 py-1 rounded bg-black/60 backdrop-blur-md border border-white/10">
+                                                                <span className="text-[8px] font-black uppercase tracking-tighter text-white/80">{result.type}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </motion.button>
+                                            ))}
+                                        </div>
+
+                                        {/* No Results Case */}
+                                        {!isLoadingSearch && searchResults.length === 0 && query.trim().length >= 3 && (
+                                            <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+                                                <Search className="w-12 h-12 text-white/10" />
+                                                <div>
+                                                    <h3 className="text-xl font-display font-black text-white uppercase tracking-widest leading-none">
+                                                        Sin resultados
+                                                    </h3>
+                                                    <p className="text-xs text-gray-500 font-bold mt-2 uppercase tracking-widest">
+                                                        Probá simplificando la búsqueda
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Pagination */}
+                                        {hasMore && (
+                                            <div className="mt-12 flex justify-center pb-20">
+                                                <button
+                                                    onClick={handleLoadMore}
+                                                    className="px-10 py-4 rounded-full bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/10 hover:border-white/20 transition-all"
+                                                >
+                                                    {TEXTS.home.loadMore}
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </motion.div>
                 ) : (
