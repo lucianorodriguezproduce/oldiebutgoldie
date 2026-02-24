@@ -340,6 +340,7 @@ export default function BulkUpload() {
                         title: finalTitle,
                         artist: finalArtist,
                         album: finalTitle,
+                        item_id: match.id,
                         cover_image: match.cover_image,
                         totalPrice: row.originalPrice,
                         status: "store_offer",
