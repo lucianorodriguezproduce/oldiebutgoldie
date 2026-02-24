@@ -75,7 +75,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
                     const isNegotiating = ['PENDING', 'QUOTED', 'COUNTEROFFERED'].includes(status);
 
-                    // [RECOVERY] Removing the filter that forced "Pendiente" if artist === album
+                    // [STRICT-TACTICAL] Deduplication for zero-error visual parity
+                    if (!isBatch && displayArtist && displayAlbum && displayArtist.toLowerCase() === displayAlbum.toLowerCase()) {
+                        displayAlbum = "";
+                    }
+
                     if (!displayArtist) displayArtist = isBatch ? "Varios Artistas" : "";
 
                     const thumbUrl = fields.thumbnailUrl?.stringValue;
@@ -92,9 +96,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     if (isBatch) {
                         title = `Lote de ${itemsArray.length > 0 ? itemsArray.length : 'varios'} discos | Oldie but Goldie`;
                     } else {
-                        // Priority: Display Artist - Display Album. If artist is missing, just Title.
+                        // Priority: Display Artist - Display Album. If album was deduplicated, it will be empty.
                         title = displayArtist
-                            ? `${displayArtist} - ${displayAlbum || "Detalle"} | Oldie but Goldie`
+                            ? (displayAlbum ? `${displayArtist} - ${displayAlbum} | Oldie but Goldie` : `${displayArtist} | Oldie but Goldie`)
                             : `${displayAlbum || "Disco Registrado"} | Oldie but Goldie`;
                     }
 

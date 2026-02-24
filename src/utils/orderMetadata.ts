@@ -28,17 +28,20 @@ export const getCleanOrderMetadata = (order: any) => {
         (order.title?.includes(' - ') ? order.title.split(' - ')[1] : null)
     );
 
-    // 2. IDENTITY RESOLUTION
-    // [RECOVERY] Removing the filter that forced "Pendiente" if artist === album.
-    // Redundancy is preferred over loss of information.
+    // 2. IDENTITY RESOLUTION (Deduplication)
+    // [STRICT-TACTICAL] If artist and album are identical, we suppress the album to prioritize the artist.
     let artist = rawArtist;
     let album = rawAlbum;
+
+    if (!isBatch && artist && album && artist.toLowerCase() === album.toLowerCase()) {
+        album = ""; // Prevent "Soda Stereo / Soda Stereo" visual error
+    }
 
     if (!isBatch && artist.toLowerCase() === "unknown artist") {
         artist = "";
     }
 
-    if (!artist) artist = isBatch ? "Varios Artistas" : "Artista No Definido";
+    if (!artist) artist = isBatch ? "Varios Artistas" : "";
     if (!album) album = isBatch ? `Lote de ${items.length} discos` : "Detalle del Disco";
 
     // 3. IMAGE EXTRACTION
