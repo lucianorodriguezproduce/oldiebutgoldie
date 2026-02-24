@@ -63,14 +63,12 @@ export const discogsService = {
 
     async getArtistReleases(artistId: string, page: number = 1, options: { sort?: string, type?: string } = {}): Promise<{ results: DiscogsSearchResult[], pagination: any }> {
         const params: Record<string, string> = {
-            sort: options.sort || "have",
+            sort: options.sort || "year", // 'have' is not supported on artist releases endpoint
             sort_order: "desc",
             per_page: "10",
             page: page.toString(),
         };
-        if (options.type) {
-            params.type = options.type;
-        }
+        // The artist releases endpoint does NOT support 'type' or 'q' parameters in the standard API
         const data = await fetchFromDiscogs(`/artists/${artistId}/releases`, params);
         // Artist releases endpoint has a slightly different format, we map it to match DiscogsSearchResult
         const mappedResults = (data.releases || []).map((r: any) => ({
@@ -87,26 +85,16 @@ export const discogsService = {
         return { results: mappedResults, pagination: data.pagination };
     },
 
-    async searchArtistReleases(artistId: string, query: string, page: number = 1): Promise<{ results: DiscogsSearchResult[], pagination: any }> {
+    async searchArtistReleases(artistName: string, query: string, page: number = 1): Promise<{ results: DiscogsSearchResult[], pagination: any }> {
         const params: Record<string, string> = {
             q: query,
+            artist: artistName, // Use search endpoint with artist filter for contextual search
             type: "master",
             per_page: "10",
             page: page.toString(),
         };
-        const data = await fetchFromDiscogs(`/artists/${artistId}/releases`, params);
-        const mappedResults = (data.releases || []).map((r: any) => ({
-            id: r.id,
-            title: `${r.artist || r.role} - ${r.title}`,
-            cover_image: r.thumb,
-            thumb: r.thumb,
-            year: r.year?.toString() || "",
-            type: r.type || "release",
-            uri: r.resource_url,
-            resource_url: r.resource_url
-        }));
-
-        return { results: mappedResults, pagination: data.pagination };
+        const data = await fetchFromDiscogs(`/database/search`, params);
+        return { results: data.results, pagination: data.pagination };
     },
 
     async getLabelReleases(labelId: string, page: number = 1): Promise<{ results: DiscogsSearchResult[], pagination: any }> {

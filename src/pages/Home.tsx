@@ -287,8 +287,8 @@ export default function Home() {
                     let results, pagination;
 
                     if (selectedArtist) {
-                        // CONTEXTUAL SEARCH: Filter within selected artist
-                        const response = await discogsService.searchArtistReleases(selectedArtist.id.toString(), debouncedQuery, 1);
+                        // CONTEXTUAL SEARCH: Filter within selected artist using search endpoint
+                        const response = await discogsService.searchArtistReleases(selectedArtist.name, debouncedQuery, 1);
                         results = response.results;
                         pagination = response.pagination;
                     } else {
@@ -330,7 +330,7 @@ export default function Home() {
             let results, pagination;
 
             if (selectedArtist) {
-                const response = await discogsService.searchArtistReleases(selectedArtist.id.toString(), debouncedQuery, nextPage);
+                const response = await discogsService.searchArtistReleases(selectedArtist.name, debouncedQuery, nextPage);
                 results = response.results;
                 pagination = response.pagination;
             } else {
@@ -372,6 +372,9 @@ export default function Home() {
     }, [hasMore, isLoadingSearch, currentPage, debouncedQuery]);
 
     const handleEntityDrillDown = async (result: DiscogsSearchResult) => {
+        // Essential: Keep search UI active during drill-downs
+        setIsSearchActive(true);
+
         // SAVE CURRENT STATE TO HISTORY BEFORE DRILL-DOWN
         setSearchHistory(prev => [...prev, {
             results: searchResults,
@@ -394,13 +397,17 @@ export default function Home() {
         // Re-brand the input query text to denote the user is now browsing this entity
         setQuery(result.title);
         setIsLoadingSearch(true);
+
+        // OPTIMISTIC UPDATE: Set selected artist early for immediate UI feedback (Chip appearance)
+        if (result.type === "artist") {
+            setSelectedArtist({ id: result.id, name: result.title });
+        }
+
         try {
             let drillDownData;
             if (result.type === "artist") {
-                // MASTER-FIRST STRATEGY: Sort by 'have' (popularity) and filter by 'master'
-                drillDownData = await discogsService.getArtistReleases(result.id.toString(), 1, { sort: "have", type: "master" });
-                // CONTEXTUAL FILTER: Set selected artist for subsequent searches
-                setSelectedArtist({ id: result.id, name: result.title });
+                // Initial catalog load (no query)
+                drillDownData = await discogsService.getArtistReleases(result.id.toString(), 1);
             } else if (result.type === "label") {
                 drillDownData = await discogsService.getLabelReleases(result.id.toString(), 1);
             } else if (result.type === "master") {
