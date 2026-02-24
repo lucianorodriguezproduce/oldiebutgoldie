@@ -120,7 +120,7 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                     </div>
                 );
             case 'negotiating':
-            case 'contraoferta_usuario':
+            case 'contraofertado':
                 return (
                     <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 backdrop-blur-md">
                         <Handshake className="w-3.5 h-3.5 text-blue-400" />
@@ -165,7 +165,7 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
     const artist = isBatch ? '' : cleanString(order.details?.artist || order.artist || 'Unknown Artist');
     // Fallback intent for legacy admin orders
     const isSellerOfferLegacy = order.admin_offer_price || order.adminPrice;
-    const intent = isBatch ? (orderType === 'buy' ? 'COMPRAR LOTE' : 'VENDER LOTE') : (orderIntent || (isSellerOfferLegacy ? 'VENDER' : 'COMPRAR'));
+    const intent = isBatch ? (orderType === 'buy' ? TEXTS.badges.buying : TEXTS.badges.forSale) : (orderIntent || (isSellerOfferLegacy ? 'VENDER' : 'COMPRAR'));
     const format = isBatch ? 'Varios Formatos' : (order.details?.format || 'N/A');
     const condition = isBatch ? 'Varias Condiciones' : (order.details?.condition || 'N/A');
     const status = orderStatus;
@@ -319,7 +319,7 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                         )}
                         {isBatch && (
                             <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-yellow-500/20 to-yellow-700/20 border border-yellow-500/50 text-yellow-500 text-[9px] font-black uppercase tracking-widest shadow-[0_0_10px_rgba(234,179,8,0.2)]">
-                                ★ Lote de Colección
+                                {TEXTS.badges.storeObg}
                             </span>
                         )}
                     </div>
@@ -417,7 +417,7 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                                 onClick={handleQuickOffer}
                                 disabled={!quickOffer || parseFloat(quickOffer) <= 0 || isSubmitting}
                                 className="p-2 bg-primary/10 text-primary border border-primary/20 rounded-lg hover:bg-primary hover:text-black transition-all disabled:opacity-10 active:scale-95 shadow-lg shadow-primary/5"
-                                title="Enviar Contraoferta Rápida"
+                                title="Enviar Contraoferta"
                             >
                                 <CheckCircle2 className="h-3.5 w-3.5" />
                             </button>

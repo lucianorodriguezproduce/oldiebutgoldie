@@ -303,10 +303,10 @@ export default function BulkUpload() {
                     updatedCount++;
                 }
             }
-            alert(`¡Sanitización completada! Se actualizaron ${updatedCount} órdenes.`);
+            alert(`${TEXTS.bulk.operationFinished} ${updatedCount} órdenes.`);
         } catch (error) {
             console.error("Sanitize error", error);
-            alert("Hubo un error al sanitizar la base de datos.");
+            alert(TEXTS.bulk.operationFinished);
         } finally {
             setIsSanitizing(false);
             hideLoading();
@@ -426,10 +426,10 @@ export default function BulkUpload() {
 
             setRows(newRows);
             pushBulkUploadCompleted(publishCount);
-            alert(`¡Se publicaron exitosamente al catálogo!`);
+            alert(TEXTS.bulk.operationFinished);
         } catch (error) {
             console.error("Publish error", error);
-            alert("Hubo un error al publicar algunos discos.");
+            alert(TEXTS.bulk.operationFinished);
         } finally {
             hideLoading();
             setBatchPrice(0);
@@ -441,10 +441,10 @@ export default function BulkUpload() {
             <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div className="flex flex-col gap-2">
                     <h1 className="text-4xl md:text-5xl font-display font-black tracking-tight text-white uppercase drop-shadow-xl">
-                        Ingesta Masiva
+                        {TEXTS.bulk.title}
                     </h1>
                     <p className="text-sm font-bold text-gray-500 uppercase tracking-widest max-w-xl">
-                        Acelerador de Inventario. Identificación y pre-validación automática con Discogs.
+                        {TEXTS.bulk.subtitle}
                     </p>
                 </div>
                 <div className="flex items-center gap-4">
@@ -507,8 +507,8 @@ export default function BulkUpload() {
                     <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mb-6 shadow-2xl shadow-primary/20">
                         <FileSpreadsheet className="w-10 h-10 text-primary" />
                     </div>
-                    <p className="text-xl font-display font-black text-white mb-2 tracking-tight">Arrastra tu matriz aquí</p>
-                    <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">Soporta CSV y XLSX (Excel)</p>
+                    <p className="text-xl font-display font-black text-white mb-2 tracking-tight">{TEXTS.bulk.dropTitle}</p>
+                    <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">{TEXTS.bulk.dropSubtitle}</p>
                 </div>
             )}
 
@@ -516,10 +516,9 @@ export default function BulkUpload() {
                 <div className="max-w-4xl p-6 rounded-3xl bg-orange-500/5 border border-orange-500/20 flex flex-col sm:flex-row items-start gap-4 shadow-inner">
                     <AlertCircle className="w-6 h-6 text-orange-400 shrink-0 mt-0.5" />
                     <div className="space-y-2">
-                        <h4 className="text-sm font-black text-orange-400 uppercase tracking-widest">Requisito de Columnas</h4>
+                        <h4 className="text-sm font-black text-orange-400 uppercase tracking-widest">{TEXTS.bulk.columnRequirements}</h4>
                         <p className="text-xs text-orange-400/80 font-bold leading-relaxed">
-                            Para que el motor Stitch reconozca el catálogo automáticamente, tu archivo debe contener headers con palabras clave.
-                            Ejemplos válidos: <span className="bg-orange-500/20 px-2 rounded text-orange-300">Artista, Title, Precio, Estado Cover</span>. Carga la plantilla para máxima precisión.
+                            {TEXTS.bulk.columnRequirementsDesc}
                         </p>
                     </div>
                 </div>
@@ -529,7 +528,7 @@ export default function BulkUpload() {
                 <div className="max-w-4xl p-8 rounded-[2.5rem] bg-white/5 border border-white/10 space-y-6">
                     <div className="flex items-center justify-between">
                         <h3 className="text-xl font-display font-black text-white tracking-tight flex items-center gap-3">
-                            <span className="w-3 h-3 rounded-full bg-primary animate-ping" /> Procesando Lote
+                            <span className="w-3 h-3 rounded-full bg-primary animate-ping" /> {TEXTS.bulk.processingBatch}
                         </h3>
                         <span className="text-primary font-mono font-bold">{progress}%</span>
                     </div>
@@ -537,7 +536,7 @@ export default function BulkUpload() {
                         <div className="h-full bg-primary transition-all duration-300 ease-out" style={{ width: `${progress}%` }} />
                     </div>
                     <p className="text-xs text-gray-500 font-bold uppercase tracking-widest flex items-center gap-2">
-                        <Lock className="w-3 h-3" /> Aplicando rate limiting (Chunks de 5)
+                        <Lock className="w-3 h-3" /> {TEXTS.bulk.rateLimiting}
                     </p>
                 </div>
             )}
@@ -546,12 +545,12 @@ export default function BulkUpload() {
             {rows.length > 0 && !isProcessing && (
                 <div className="space-y-4">
                     <div className="flex items-center justify-between flex-wrap gap-4 mb-8">
-                        <h3 className="text-xl font-display font-black text-white uppercase">{rows.length} Ítems Total</h3>
+                        <h3 className="text-xl font-display font-black text-white uppercase">{rows.length} {TEXTS.bulk.itemsTotal}</h3>
                         <div className="flex items-center gap-4 flex-wrap">
                             <div className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase">
-                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500" /> {rows.filter(r => r.status === 'MATCH_FOUND').length} Listos</span>
-                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-yellow-500 ml-2" /> {rows.filter(r => r.status === 'AMBIGUOUS').length} Duda</span>
-                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 ml-2" /> {rows.filter(r => r.status === 'NOT_FOUND').length} Fallo</span>
+                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500" /> {rows.filter(r => r.status === 'MATCH_FOUND').length} {TEXTS.bulk.ready}</span>
+                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-yellow-500 ml-2" /> {rows.filter(r => r.status === 'AMBIGUOUS').length} {TEXTS.bulk.doubt}</span>
+                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 ml-2" /> {rows.filter(r => r.status === 'NOT_FOUND').length} {TEXTS.bulk.fail}</span>
                             </div>
                             <button
                                 onClick={handleClearWorkspace}
@@ -583,7 +582,7 @@ export default function BulkUpload() {
                                 <div className="flex-1 mt-auto pt-4 border-t border-white/5 z-10 relative">
                                     {row.published ? (
                                         <div className="flex items-center justify-center gap-2 text-green-500 font-bold uppercase text-[10px] tracking-widest h-16 bg-green-500/10 rounded-2xl">
-                                            <CheckCircle2 className="w-4 h-4" /> Publicado
+                                            <CheckCircle2 className="w-4 h-4" /> {TEXTS.bulk.operationFinished}
                                         </div>
                                     ) : row.status === 'MATCH_FOUND' && row.selectedMatch ? (
                                         <div className="flex flex-col gap-3 h-full justify-between">
@@ -608,7 +607,7 @@ export default function BulkUpload() {
                                                     : "bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white border border-white/10"
                                                     }`}
                                             >
-                                                {row.inBatch ? "✔ Encolado" : "+ Añadir a Lote"}
+                                                {row.inBatch ? `✔ ${TEXTS.bulk.workspace}` : `+ ${TEXTS.bulk.workspace}`}
                                             </button>
                                         </div>
                                     ) : row.status === 'AMBIGUOUS' ? (
@@ -646,7 +645,7 @@ export default function BulkUpload() {
                                         </div>
                                     ) : (
                                         <div className="space-y-3">
-                                            <p className="text-[10px] font-black uppercase text-red-500 tracking-widest mb-1">Cruce de Datos Huérfano</p>
+                                            <p className="text-[10px] font-black uppercase text-red-500 tracking-widest mb-1">{TEXTS.bulk.noIdentity}</p>
                                             <div className="flex items-center gap-2">
                                                 <input
                                                     type="text"
@@ -683,8 +682,8 @@ export default function BulkUpload() {
                                 <List className="w-6 h-6" />
                             </div>
                             <div>
-                                <h4 className="text-white font-black uppercase tracking-tight">The Batch Tray</h4>
-                                <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">{rows.filter(r => r.inBatch).length} Ítems seleccionados</p>
+                                <h4 className="text-white font-black uppercase tracking-tight">{TEXTS.bulk.workspace}</h4>
+                                <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">{rows.filter(r => r.inBatch).length} {TEXTS.bulk.registeredOfficially}</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-4 w-full md:w-auto">
@@ -719,9 +718,9 @@ export default function BulkUpload() {
 
                         <div>
                             <h3 className="text-2xl font-black text-white uppercase flex items-center gap-3 tracking-tight">
-                                Estrategia de Salida
+                                {TEXTS.bulk.strategyTitle}
                             </h3>
-                            <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-2">{rows.filter(r => r.inBatch).length} discos en el lote</p>
+                            <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-2">{rows.filter(r => r.inBatch).length} {TEXTS.bulk.registeredOfficially}</p>
                         </div>
 
                         <div className="space-y-4">
@@ -730,18 +729,18 @@ export default function BulkUpload() {
                                 className="w-full text-left p-6 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 transition-all group"
                             >
                                 <h4 className="flex items-center gap-2 text-white font-black uppercase tracking-tight group-hover:text-primary transition-colors">
-                                    Modo Individual
+                                    {TEXTS.bulk.individualMode}
                                 </h4>
-                                <p className="text-xs text-gray-500 font-bold mt-2">Crear una orden de venta independiente para cada disco seleccionado en la base de datos.</p>
+                                <p className="text-xs text-gray-500 font-bold mt-2">{TEXTS.bulk.individualModeDesc}</p>
                             </button>
 
                             <div className="w-full text-left p-6 rounded-2xl border border-primary/30 bg-primary/5 transition-all space-y-4">
                                 <div>
-                                    <h4 className="text-primary font-black uppercase tracking-tight">Modo Lote Especial</h4>
-                                    <p className="text-xs text-primary/70 font-bold mt-1 max-w-[90%]">Generar una única orden agrupando todos los discos. ¡Ideal para lotes DJ!</p>
+                                    <h4 className="text-primary font-black uppercase tracking-tight">{TEXTS.bulk.bundleMode}</h4>
+                                    <p className="text-xs text-primary/70 font-bold mt-1 max-w-[90%]">{TEXTS.bulk.bundleModeDesc}</p>
                                 </div>
                                 <div className="space-y-2 pt-2 border-t border-primary/20">
-                                    <label className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Ajuste de Precio Total</label>
+                                    <label className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{TEXTS.bulk.priceAdjustment}</label>
                                     <div className="flex items-center gap-2 bg-black/50 border border-white/10 rounded-xl px-4 py-2 focus-within:border-primary transition-colors">
                                         <span className="text-white font-mono">$</span>
                                         <input
@@ -756,7 +755,7 @@ export default function BulkUpload() {
                                     onClick={() => handlePublishStrategy("BUNDLE")}
                                     className="w-full mt-4 py-4 rounded-xl bg-primary text-black font-black uppercase text-xs tracking-widest transition-all hover:bg-white shadow-xl shadow-primary/20"
                                 >
-                                    Publicar Lote ({rows.filter(r => r.inBatch).length})
+                                    {TEXTS.bulk.publishBundle} ({rows.filter(r => r.inBatch).length})
                                 </button>
                             </div>
                         </div>

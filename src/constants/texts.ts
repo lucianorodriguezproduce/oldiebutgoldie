@@ -1,7 +1,7 @@
 export const TEXTS = {
     navigation: {
         home: "Descubrir",
-        activity: "Actividad",
+        activity: "Tienda",
         editorial: "Comunidad",
         profile: "Ver Perfil",
         logout: "Cerrar Sesión",
@@ -88,6 +88,11 @@ export const TEXTS = {
         buyFull: "¡COMPRAR!",
         requiredAction: "Acción Requerida"
     },
+    badges: {
+        forSale: "EN VENTA",
+        buying: "EN COMPRA",
+        storeObg: "★ Tienda OBG"
+    },
     details: {
         technicalSheet: "Ficha Técnica",
         label: "Sello",
@@ -101,6 +106,25 @@ export const TEXTS = {
         loginToNegotiate: "Inicia sesión para negociar o proponer precio"
     },
     bulk: {
+        title: "Ingesta Masiva",
+        subtitle: "Acelerador de Inventario. Identificación y pre-validación automática con Discogs.",
+        dropTitle: "Arrastra tu matriz aquí",
+        dropSubtitle: "Soporta CSV y XLSX (Excel)",
+        columnRequirements: "Requisito de Columnas",
+        columnRequirementsDesc: "Para que el motor Stitch reconozca el catálogo automáticamente, tu archivo debe contener headers con palabras clave.",
+        processingBatch: "Procesando Lote",
+        rateLimiting: "Aplicando rate limiting (Chunks de 5)",
+        itemsTotal: "Ítems Total",
+        ready: "Listos",
+        doubt: "Duda",
+        fail: "Fallo",
+        strategyTitle: "Estrategia de Salida",
+        individualMode: "Modo Individual",
+        individualModeDesc: "Crear una orden de venta independiente para cada disco seleccionado en la base de datos.",
+        bundleMode: "Modo Lote Especial",
+        bundleModeDesc: "Generar una única orden agrupando todos los discos. ¡Ideal para lotes DJ!",
+        priceAdjustment: "Ajuste de Precio Total",
+        publishBundle: "Publicar Lote",
         clearWorkspaceConfirm: "¿Estás seguro de limpiar la mesa de trabajo? Esto descartará el escaneo actual.",
         unsupportedFormat: "Formato no soportado. Usa .CSV o .XLSX",
         sanitizingDB: "Sanitizando base de datos global...",
