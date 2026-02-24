@@ -14,19 +14,30 @@ export const getCleanOrderMetadata = (order: any) => {
 
     // 1. EXTRACT RAW DATA (Priority: items[0] > details > root)
     const rawArtist = cleanString(
-        items[0]?.artist ||
         order.details?.artist ||
+        items[0]?.artist ||
         order.artist ||
         (order.title?.includes(' - ') ? order.title.split(' - ')[0] : null)
     );
 
     const rawAlbum = cleanString(
         order.details?.album ||
-        items[0]?.title ||
         items[0]?.album ||
+        items[0]?.title ||
         order.title ||
         (order.title?.includes(' - ') ? order.title.split(' - ')[1] : null)
     );
+
+    const format =
+        order.details?.format ||
+        items[0]?.format ||
+        order.format ||
+        "Vinyl";
+
+    const condition =
+        order.details?.condition ||
+        items[0]?.condition ||
+        "N/A";
 
     // 2. IDENTITY RESOLUTION (Deduplication)
     let artist = rawArtist;
@@ -71,6 +82,8 @@ export const getCleanOrderMetadata = (order: any) => {
     return {
         artist,
         album,
+        format,
+        condition,
         image: image.startsWith('http://') ? image.replace('http://', 'https://') : image,
         isBatch,
         itemsCount: items.length

@@ -223,7 +223,7 @@ export default function PublicOrderView() {
         );
     }
 
-    const { artist: displayArtist, album: displayAlbum, image: coverImage, isBatch, itemsCount } = getCleanOrderMetadata(order);
+    const { artist: displayArtist, album: displayAlbum, image: coverImage, format, condition, isBatch, itemsCount } = getCleanOrderMetadata(order);
 
     const items = isBatch ? (order.items || []) : [
         {
@@ -231,8 +231,8 @@ export default function PublicOrderView() {
             artist: displayArtist,
             album: displayAlbum,
             cover_image: coverImage,
-            format: order.details?.format || "N/A",
-            condition: order.details?.condition || "N/A",
+            format: format || "N/A",
+            condition: condition || "N/A",
             intent: order.details?.intent || order.intent || (order.adminPrice || order.admin_offer_price ? "VENDER" : "COMPRAR"),
             label: order.details?.label || order.label,
             country: order.details?.country || order.country,
@@ -412,8 +412,8 @@ export default function PublicOrderView() {
                                             )}
 
                                             <div className="flex flex-wrap gap-2 mt-2">
-                                                <span className="bg-gray-800 text-gray-300 px-2 py-1 text-[9px] font-black uppercase rounded">{item.format}</span>
-                                                {!isAdminOrder && <span className="bg-blue-900/30 text-blue-400 px-2 py-1 text-[9px] font-black uppercase rounded border border-blue-500/20">{item.condition}</span>}
+                                                <span className="bg-gray-800 text-gray-300 px-2 py-1 text-[9px] font-black uppercase rounded">{item.format || format}</span>
+                                                {!isAdminOrder && <span className="bg-blue-900/30 text-blue-400 px-2 py-1 text-[9px] font-black uppercase rounded border border-blue-500/20">{item.condition || condition}</span>}
                                             </div>
 
                                             {/* Ficha Técnica */}

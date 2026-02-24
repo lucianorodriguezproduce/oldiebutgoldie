@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { TEXTS } from "@/constants/texts";
 import { useNavigate } from "react-router-dom";
 import { LazyImage } from "@/components/ui/LazyImage";
-import { ChevronRight, Disc, Star } from "lucide-react";
+import { ChevronRight, Disc, Star, Package } from "lucide-react";
+import { getCleanOrderMetadata } from "@/utils/orderMetadata";
 
 export function PremiumShowcase() {
     const [orders, setOrders] = useState<any[]>([]);
@@ -72,25 +73,9 @@ export function PremiumShowcase() {
                 {orders.map((order) => {
                     const price = order.adminPrice || order.totalPrice;
                     const currency = order.adminCurrency || order.currency || "ARS";
-                    const itemsCount = order.items?.length || 1;
-                    const isBatchActual = itemsCount > 1;
-                    const title = isBatchActual
-                        ? `LOTE DE ${itemsCount} DISCOS`
-                        : (order.items?.[0]?.title || order.details?.album || "Disco Registrado");
 
-                    const artist = isBatchActual
-                        ? "Varios Artistas"
-                        : (order.items?.[0]?.artist || order.details?.artist || order.artist || (order.title?.includes(' - ') ? order.title.split(' - ')[0] : "Varios"));
-
-                    // Image Recovery: Prioritize direct item image, then order level images, then nested details
-                    const cover = order.items?.[0]?.image ||
-                        order.items?.[0]?.cover_image ||
-                        order.items?.[0]?.details?.cover_image ||
-                        order.items?.[0]?.thumb ||
-                        order.cover_image ||
-                        order.imageUrl ||
-                        order.details?.cover_image ||
-                        order.thumbnailUrl;
+                    const { artist, album, format, image: cover, isBatch: isBatchActual, itemsCount } = getCleanOrderMetadata(order);
+                    const title = isBatchActual ? `LOTE DE ${itemsCount} DISCOS` : album;
 
                     return (
                         <motion.button
@@ -139,12 +124,22 @@ export function PremiumShowcase() {
                                 </div>
                             </div>
 
-                            {/* Corner Badge */}
-                            <div className="absolute top-4 right-4 px-3 py-1 bg-yellow-500/10 border border-yellow-500/20 backdrop-blur-md rounded-lg flex items-center gap-1.5">
-                                <Disc className="h-3 w-3 text-yellow-500" />
-                                <span className="text-[9px] font-black text-yellow-500 uppercase tracking-widest">
-                                    {TEXTS.showcase.officialStore}
-                                </span>
+                            {/* Corner Badges */}
+                            <div className="absolute top-4 right-4 flex flex-col items-end gap-2">
+                                <div className="px-3 py-1 bg-yellow-500/10 border border-yellow-500/20 backdrop-blur-md rounded-lg flex items-center gap-1.5">
+                                    <Disc className="h-3 w-3 text-yellow-500" />
+                                    <span className="text-[9px] font-black text-yellow-500 uppercase tracking-widest">
+                                        {TEXTS.showcase.officialStore}
+                                    </span>
+                                </div>
+                                {!isBatchActual && (
+                                    <div className="px-3 py-1 bg-white/10 border border-white/10 backdrop-blur-md rounded-lg flex items-center gap-1.5">
+                                        <Package className="h-3 w-3 text-gray-400" />
+                                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">
+                                            {format}
+                                        </span>
+                                    </div>
+                                )}
                             </div>
                         </motion.button>
                     );
