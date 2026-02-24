@@ -13,19 +13,19 @@ export function PremiumShowcase() {
     const navigate = useNavigate();
 
     useEffect(() => {
+        console.log("PremiumShowcase: Component mounted");
         const q = query(
             collection(db, "orders"),
-            where("is_admin_offer", "==", true),
-            where("status", "==", "pending"),
-            orderBy("timestamp", "desc"),
-            limit(10)
+            where("status", "==", "pending")
         );
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            const items = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            }));
+            const items = snapshot.docs
+                .map(doc => ({ id: doc.id, ...doc.data() } as any))
+                .filter(item => item.is_admin_offer === true || item.isBatch === true || item.is_batch === true)
+                .sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0))
+                .slice(0, 10);
+
             setOrders(items);
             setLoading(false);
         }, (error) => {
@@ -37,12 +37,23 @@ export function PremiumShowcase() {
         return () => unsubscribe();
     }, []);
 
-    if (loading || orders.length === 0) return null;
+    if (loading) {
+        return (
+            <div className="w-full py-12 flex items-center justify-center">
+                <div className="h-2 w-2 bg-yellow-500 animate-ping rounded-full" />
+            </div>
+        );
+    }
+
+    if (orders.length === 0) {
+        console.log("PremiumShowcase: No orders found with is_admin_offer === true");
+        return null; // Keep it clean if no data, but we'll know via console
+    }
 
     return (
-        <section className="w-full py-2 space-y-8 mt-8">
+        <section className="w-full py-2 space-y-8 mt-8 border-b border-yellow-500/10">
             <div className="px-6 flex items-end justify-between">
-                <div className="space-y-1">
+                <div className="space-y-1 text-left">
                     <div className="flex items-center gap-2">
                         <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
                         <span className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-500/80">

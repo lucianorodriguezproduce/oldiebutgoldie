@@ -639,11 +639,9 @@ export default function Home() {
                         key="step1-search-container"
                         initial={{ opacity: 0, scale: 0.98 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        // Fixed vertical alignment: justify-start ensures top alignment when active, removing the dead space above the header
                         className={`w-full flex flex-col items-center ${isSearchActive ? 'h-full flex-1 justify-start' : 'justify-center gap-12 md:gap-16 text-center'}`}
                     >
                         {/* BLOQUE SUPERIOR (Header Fijo) */}
-                        {!isSearchActive && <PremiumShowcase />}
                         <div className={`w-full transition-all flex flex-col items-center ${isSearchActive ? 'flex-none shrink-0 z-10 bg-neutral-950 pt-[env(safe-area-inset-top,1rem)] md:pt-8 pb-4 px-4 border-b border-white/5 shadow-2xl' : ''}`}>
                             <AnimatePresence mode="wait">
                                 {!isSearchActive ? (
@@ -676,6 +674,8 @@ export default function Home() {
                                     </motion.header>
                                 )}
                             </AnimatePresence>
+
+                            {!isSearchActive && <PremiumShowcase />}
 
                             <motion.div layout className={`relative group w-full flex items-center justify-center ${isSearchActive ? 'max-w-4xl mx-auto' : ''}`}>
                                 <Search className="absolute left-6 md:left-8 top-1/2 -translate-y-1/2 h-5 md:h-6 w-5 md:w-6 text-gray-500 group-focus-within:text-primary transition-colors" />
@@ -740,114 +740,6 @@ export default function Home() {
                                     </motion.div>
                                 )}
                             </AnimatePresence>
-                        </div>
-
-                        {/* BLOQUE INFERIOR (Resultados Scrollables Independentemente) */}
-                        <div className={`w-full ${isSearchActive ? 'flex-1 overflow-y-auto overscroll-contain p-4 pb-[env(safe-area-inset-bottom,2rem)] block bg-[#050505]' : 'hidden'}`}>
-                            <div className="max-w-4xl mx-auto w-full pb-[10vh]">
-                                <AnimatePresence>
-                                    {isSearchActive && (searchResults || []).length > 0 && (
-                                        <motion.div
-                                            ref={resultsContainerRef}
-                                            initial={{ opacity: 0 }}
-                                            animate={{ opacity: 1 }}
-                                            exit={{ opacity: 0 }}
-                                            className="space-y-3 md:space-y-4 text-left touch-pan-y"
-                                        >
-                                            {(searchResults || []).map((result, i) => (
-                                                <motion.button
-                                                    initial={{ opacity: 0, y: 20 }}
-                                                    animate={{ opacity: 1, y: 0 }}
-                                                    transition={{ delay: i * 0.05 }}
-                                                    key={`${result.id}-${result.type}`}
-                                                    type="button"
-                                                    onClick={() => handleEntityDrillDown(result)}
-                                                    className="w-full relative overflow-hidden bg-white/[0.03] border-2 border-white/10 rounded-2xl md:rounded-[2rem] hover:border-primary/40 transition-all group active:scale-[0.98]"
-                                                >
-                                                    <div className="absolute left-0 top-0 bottom-0 w-2 bg-transparent group-hover:bg-primary transition-colors" />
-                                                    <div className="p-4 md:p-6 flex items-center gap-4 md:gap-6 ml-1">
-                                                        <div className="w-16 md:w-20 h-16 md:h-20 rounded-xl md:rounded-2xl overflow-hidden bg-black flex-shrink-0 border border-white/10 shadow-lg">
-                                                            <LazyImage
-                                                                src={result.thumb || result.cover_image}
-                                                                alt=""
-                                                                className="w-full h-full object-cover grayscale-[0.3] group-hover:grayscale-0 transition-all duration-500"
-                                                            />
-                                                        </div>
-                                                        <div className="flex-1 min-w-0 flex flex-col items-start gap-1 text-left">
-                                                            <h4 className="text-xl md:text-2xl font-bold font-display italic text-white truncate w-full group-hover:text-primary transition-colors">
-                                                                {(result.title || "").split(' - ')[1] || result.title || "Untitled"}
-                                                            </h4>
-                                                            <span className="text-xs md:text-sm font-black text-gray-400 uppercase tracking-widest leading-none truncate w-full">
-                                                                {(result.title || "").split(' - ')[0] || "Unknown Artist"}
-                                                            </span>
-                                                            <div className="flex items-center gap-2 mt-2 flex-wrap">
-                                                                {result.type === 'artist' ? (
-                                                                    <span className="text-[10px] text-primary/80 font-mono tracking-widest uppercase border border-primary/20 bg-primary/5 px-2 py-0.5 rounded">
-                                                                        Ver Discografía
-                                                                    </span>
-                                                                ) : (
-                                                                    <>
-                                                                        {result.year && result.year !== "0" && result.year.toUpperCase() !== "N/A" && (
-                                                                            <span className="text-[10px] text-gray-400 font-mono tracking-widest uppercase">
-                                                                                {result.year}
-                                                                            </span>
-                                                                        )}
-                                                                        {(Array.isArray(result.format) && result.format.length > 0) ? (
-                                                                            <>
-                                                                                {result.year && result.year !== "0" && result.year.toUpperCase() !== "N/A" && (
-                                                                                    <span className="text-[10px] text-gray-600 font-mono">•</span>
-                                                                                )}
-                                                                                <span className="text-[10px] text-gray-500 font-mono tracking-widest uppercase">
-                                                                                    {result.format[0]}
-                                                                                </span>
-                                                                            </>
-                                                                        ) : (
-                                                                            <span className="text-[10px] text-gray-500 font-mono tracking-widest uppercase">
-                                                                                {result.type || "release"}
-                                                                            </span>
-                                                                        )}
-                                                                    </>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-primary/10 group-hover:border-primary/30 transition-all">
-                                                            <ChevronRight className="h-5 w-5 text-gray-500 group-hover:text-primary transition-colors" />
-                                                        </div>
-                                                    </div>
-                                                </motion.button>
-                                            ))}
-
-                                            {hasMore && (
-                                                <div className="pt-8 text-center pb-8">
-                                                    <button
-                                                        onClick={handleLoadMore}
-                                                        disabled={isLoadingSearch}
-                                                        className="bg-black hover:bg-white/5 border border-white/20 text-white px-8 py-4 rounded-full font-black uppercase text-xs tracking-widest transition-all hover:border-white/40 flex items-center justify-center gap-3 mx-auto min-w-[200px]"
-                                                    >
-                                                        {isLoadingSearch ? (
-                                                            <div className="h-4 w-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                                                        ) : "Cargar Más"}
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </motion.div>
-                                    )}
-
-                                    {isSearchActive && isLoadingSearch && (searchResults || []).length === 0 && (
-                                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-20 flex flex-col items-center justify-center gap-4 text-center">
-                                            <div className="h-8 w-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-                                            <span className="text-xs font-black uppercase tracking-widest text-gray-500">{TEXTS.home.analyzingDB}</span>
-                                        </motion.div>
-                                    )}
-
-                                    {isSearchActive && !isLoadingSearch && (debouncedQuery || "").length >= 3 && (searchResults || []).length === 0 && (
-                                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-20 text-center space-y-4">
-                                            <p className="text-gray-500 font-medium text-lg font-display italic">"{TEXTS.home.noResults} {query}"</p>
-                                            <button onClick={() => setQuery("")} className="text-primary text-xs font-black uppercase tracking-widest hover:underline hover:text-white transition-colors">{TEXTS.home.clearSearch}</button>
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
-                            </div>
                         </div>
                     </motion.div>
                 ) : (
@@ -1258,8 +1150,9 @@ export default function Home() {
 
                         {/* Previous recommendation block removed from here as it's now nested or only shown at the very end if needed */}
                     </motion.div>
-                )}
-            </AnimatePresence>
-        </div>
+                )
+                }
+            </AnimatePresence >
+        </div >
     );
 }
