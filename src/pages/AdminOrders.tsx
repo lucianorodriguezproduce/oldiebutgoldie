@@ -40,6 +40,7 @@ import OrderDetailsDrawer from "@/components/OrderDetailsDrawer";
 import { useLoading } from "@/context/LoadingContext";
 import { useAuth } from "@/context/AuthContext";
 import { trackEvent } from "@/components/AnalyticsProvider";
+import { generateWhatsAppAdminContactMsg } from "@/utils/whatsapp";
 
 interface OrderDoc {
     id: string;
@@ -346,26 +347,10 @@ export default function AdminOrders() {
         }
     };
 
-    const handleWhatsAppContact = (order: OrderDoc) => {
+    const handleWhatsAppCustomer = (order: any) => {
         const name = order.user_name || "Cliente";
-        let message;
-        if (order.isBatch) {
-            message = encodeURIComponent(
-                `Hola ${name}! Te contactamos desde Oldie but Goldie por tu Lote de ${(order.items || []).length} ítems. ¿Seguimos coordinando?`
-            );
-        } else {
-            const artist = (order.details?.artist || (order as any).artist || "Unknown Artist").trim();
-            const album = (order.details?.album || (order as any).title || "Unknown Album").trim();
-            const item = `${artist} - ${album}`;
-            const intent = (order.details?.intent || order.status || "COMPRAR") === "COMPRAR" ? "comprar" : "vender";
-            const priceText = order.details?.price
-                ? ` por ${order.details.currency === "USD" ? "US$" : "$"}${order.details.price.toLocaleString()}`
-                : "";
-            message = encodeURIComponent(
-                `Hola ${name}! Te contactamos desde Oldie but Goldie por tu pedido de ${intent}: ${item}${priceText}. ¿Seguimos coordinando?`
-            );
-        }
-        window.open(`https://wa.me/?text=${message}`, "_blank");
+        const link = generateWhatsAppAdminContactMsg(order, name);
+        window.open(link, "_blank");
     };
 
     const formatDate = (timestamp: any) => {
@@ -712,11 +697,11 @@ export default function AdminOrders() {
 
                                     {/* WhatsApp */}
                                     <button
-                                        onClick={() => handleWhatsAppContact(selectedOrder)}
+                                        onClick={() => handleWhatsAppCustomer(selectedOrder)}
                                         className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-green-500/10 border border-green-500/20 text-green-400 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-green-500 hover:text-white transition-all"
                                     >
                                         <MessageCircle className="h-4 w-4" />
-                                        Contactar por WhatsApp
+                                        {TEXTS.success.contactWhatsApp}
                                     </button>
                                 </>
                             )}

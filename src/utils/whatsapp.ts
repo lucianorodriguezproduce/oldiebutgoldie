@@ -70,3 +70,35 @@ export const generateWhatsAppLink = (order: OrderData): string => {
     const encodedMessage = encodeURIComponent(message);
     return `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
 };
+
+export const generateWhatsAppAcceptDealMsg = (order: OrderData): string => {
+    const phoneNumber = "5491140411796"; // Profile.tsx hardcoded number
+    const orderId = order.order_number || order.id || "";
+    const msg = encodeURIComponent(`Hola! Acepté el trato por el lote ${orderId}. Coordinemos el pago y el envío.`);
+    return `https://wa.me/${phoneNumber}?text=${msg}`;
+};
+
+export const generateWhatsAppAdminContactMsg = (order: OrderData, customerName?: string): string => {
+    const phoneNumber = ""; // AdminOrders uses wa.me/?text= (user selects contact on web whatsapp)
+    const name = customerName || "Cliente";
+    let message = "";
+
+    if (order.isBatch) {
+        message = encodeURIComponent(
+            `Hola ${name}! Te contactamos desde Oldie but Goldie por tu Lote de ${(order.items || []).length} ítems. ¿Seguimos coordinando?`
+        );
+    } else {
+        const artist = (order.details?.artist || order.artist || "Unknown Artist").trim();
+        const album = (order.details?.album || order.title || "Unknown Album").trim();
+        const item = `${artist} - ${album}`;
+        const intent = (order.details?.intent || order.type || "COMPRAR").toUpperCase() === "COMPRAR" ? "comprar" : "vender";
+        const priceText = order.details?.price
+            ? ` por ${order.details.currency === "USD" ? "US$" : "$"}${order.details.price.toLocaleString()}`
+            : "";
+        message = encodeURIComponent(
+            `Hola ${name}! Te contactamos desde Oldie but Goldie por tu pedido de ${intent}: ${item}${priceText}. ¿Seguimos coordinando?`
+        );
+    }
+
+    return `https://wa.me/${phoneNumber}?text=${message}`;
+};

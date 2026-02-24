@@ -5,7 +5,7 @@ import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { db, auth } from "@/lib/firebase";
 import { SEO } from "@/components/SEO";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Music, Disc, Lock, Clock, Eye, ChevronDown, Share2 } from "lucide-react";
+import { ChevronLeft, Music, Disc, Lock, Clock, Eye, ChevronDown, Share2, ChevronRight } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useLoading } from "@/context/LoadingContext";
 import { formatDate, getReadableDate } from "@/utils/date";
@@ -285,19 +285,20 @@ export default function PublicOrderView() {
             <div className="max-w-4xl mx-auto px-4 pt-8 pb-32 md:py-16 space-y-12">
                 <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div className="space-y-4 w-full">
-                        <div className="flex items-center justify-between">
-                            <Link to="/actividad" className="inline-flex items-center gap-2 text-[10px] font-black uppercase text-gray-500 hover:text-white transition-colors">
-                                <ChevronLeft className="w-4 h-4" /> {TEXTS.navigation.activity}
-                            </Link>
-
-                            {isAdminOrder && (
-                                <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-gradient-to-r from-yellow-500/20 to-yellow-700/20 border border-yellow-500/50 w-fit">
-                                    <span className="text-yellow-500 font-black uppercase tracking-widest text-[8px] animate-pulse">
-                                        ★ Disponible Ahora
-                                    </span>
-                                </div>
-                            )}
-                        </div>
+                        {isAdminOrder && order.status === 'pending' && (
+                            <div className="flex w-full items-center justify-between mb-4 mt-2">
+                                <Link
+                                    to="/actividad"
+                                    className="flex items-center gap-2 text-gray-500 hover:text-white transition-colors group"
+                                >
+                                    <ChevronRight className="h-5 w-5 md:h-6 md:w-6 rotate-180 group-hover:-translate-x-1 transition-transform" />
+                                    <span className="text-[10px] md:text-xs font-black uppercase tracking-widest">{TEXTS.navigation.activity}</span>
+                                </Link>
+                                <span className="bg-yellow-500/10 text-yellow-500 text-[8px] md:text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded shadow-lg shadow-yellow-500/10 border border-yellow-500/20">
+                                    {TEXTS.activity.availableNow}
+                                </span>
+                            </div>
+                        )}
 
                         <div className="flex items-center gap-4 flex-wrap">
                             <h1 className={`text-4xl md:text-5xl font-display font-black tracking-tightest leading-none transition-colors ${isAdminOrder ? 'bg-gradient-to-r from-yellow-200 via-yellow-500 to-yellow-700 bg-clip-text text-transparent drop-shadow-xl' : 'text-white hover:text-primary'}`}>
@@ -308,7 +309,7 @@ export default function PublicOrderView() {
                                     if (navigator.share) {
                                         navigator.share({
                                             title: titleStr,
-                                            text: '¡Mira esta joya que encontré en Oldie But Goldie!',
+                                            text: TEXTS.item.share,
                                             url: `https://oldiebutgoldie.com.ar/orden/${id}`
                                         }).catch(console.error);
                                     } else {
@@ -399,13 +400,13 @@ export default function PublicOrderView() {
                                             {(item.label || item.country || item.year || item.genre) && (
                                                 <details className="mt-3 group cursor-pointer">
                                                     <summary className="text-[9px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-colors outline-none flex items-center gap-1 w-max">
-                                                        Ficha Técnica <ChevronDown className="h-3 w-3 group-open:rotate-180 transition-transform" />
+                                                        {TEXTS.details.technicalSheet} <ChevronDown className="h-3 w-3 group-open:rotate-180 transition-transform" />
                                                     </summary>
                                                     <div className="mt-2 grid grid-cols-2 gap-2 p-3 bg-white/5 rounded-xl border border-white/5 text-[10px]">
-                                                        {item.label && <div className="flex flex-col min-w-0"><span className="text-gray-600 uppercase font-black tracking-widest text-[8px]">Sello</span><span className="text-white font-bold truncate">{item.label}</span></div>}
-                                                        {item.year && <div className="flex flex-col min-w-0"><span className="text-gray-600 uppercase font-black tracking-widest text-[8px]">Año</span><span className="text-white font-bold truncate">{item.year}</span></div>}
-                                                        {item.country && <div className="flex flex-col min-w-0"><span className="text-gray-600 uppercase font-black tracking-widest text-[8px]">País</span><span className="text-white font-bold truncate">{item.country}</span></div>}
-                                                        {item.genre && <div className="flex flex-col min-w-0"><span className="text-gray-600 uppercase font-black tracking-widest text-[8px]">Género</span><span className="text-white font-bold truncate">{item.genre}</span></div>}
+                                                        {item.label && <div className="flex flex-col min-w-0"><span className="text-gray-600 uppercase font-black tracking-widest text-[8px]">{TEXTS.details.label}</span><span className="text-white font-bold truncate">{item.label}</span></div>}
+                                                        {item.year && <div className="flex flex-col min-w-0"><span className="text-gray-600 uppercase font-black tracking-widest text-[8px]">{TEXTS.details.year}</span><span className="text-white font-bold truncate">{item.year}</span></div>}
+                                                        {item.country && <div className="flex flex-col min-w-0"><span className="text-gray-600 uppercase font-black tracking-widest text-[8px]">{TEXTS.details.country}</span><span className="text-white font-bold truncate">{item.country}</span></div>}
+                                                        {item.genre && <div className="flex flex-col min-w-0"><span className="text-gray-600 uppercase font-black tracking-widest text-[8px]">{TEXTS.details.genre}</span><span className="text-white font-bold truncate">{item.genre}</span></div>}
                                                     </div>
                                                 </details>
                                             )}
@@ -426,7 +427,7 @@ export default function PublicOrderView() {
                                     onClick={() => setIsItemsExpanded(!isItemsExpanded)}
                                     className="w-full mt-4 py-3 border border-white/10 rounded-xl text-gray-400 text-[10px] font-black uppercase tracking-widest hover:bg-white/5 hover:text-white transition-all flex items-center justify-center gap-2"
                                 >
-                                    {isItemsExpanded ? 'Mostrar menos' : `Ver todos los discos (+${items.length - 3})`}
+                                    {isItemsExpanded ? TEXTS.details.showLess : `${TEXTS.details.showAll} (+${items.length - 3})`}
                                     <ChevronDown className={`h-3.5 w-3.5 transition-transform ${isItemsExpanded ? 'rotate-180' : ''}`} />
                                 </button>
                             )}

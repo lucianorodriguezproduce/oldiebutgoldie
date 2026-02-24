@@ -718,8 +718,8 @@ export default function Profile() {
                                             <button
                                                 onClick={() => {
                                                     pushWhatsAppContactFromOrder(selectedOrder);
-                                                    const msg = encodeURIComponent(`Hola! Acepté el trato por el lote ${selectedOrder.order_number || selectedOrder.id}. Coordinemos el pago y el envío.`);
-                                                    window.open(`https://wa.me/5491140411796?text=${msg}`, "_blank");
+                                                    const link = generateWhatsAppAcceptDealMsg(selectedOrder);
+                                                    window.open(link, "_blank");
                                                 }}
                                                 className="w-full flex items-center justify-center gap-3 bg-green-600 hover:bg-green-500 text-white px-8 py-4 rounded-2xl font-black uppercase text-xs tracking-widest transition-all shadow-lg shadow-green-500/20"
                                             >

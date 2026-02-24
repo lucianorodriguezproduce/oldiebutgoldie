@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2, ChevronDown, Search, PlusCircle, LayoutGrid, List, Lock, Download, Trash2 } from "lucide-react";
+import { TEXTS } from "@/constants/texts";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { discogsService, type DiscogsSearchResult } from "@/lib/discogs";
@@ -70,7 +71,7 @@ export default function BulkUpload() {
     };
 
     const handleClearWorkspace = () => {
-        if (window.confirm("¿Estás seguro de limpiar la mesa de trabajo? Esto descartará el escaneo actual.")) {
+        if (window.confirm(TEXTS.bulk.clearWorkspaceConfirm)) {
             setRows([]);
             localStorage.removeItem(STAGING_KEY);
         }
@@ -96,7 +97,7 @@ export default function BulkUpload() {
             reader.readAsArrayBuffer(file);
         } else {
             setIsProcessing(false);
-            alert("Formato no soportado. Usa .CSV o .XLSX");
+            alert(TEXTS.bulk.unsupportedFormat);
         }
     };
 

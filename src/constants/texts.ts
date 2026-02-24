@@ -48,7 +48,7 @@ export const TEXTS = {
             format: "[ 01 ] Seleccionar Formato",
             condition: "[ 02 ] Estado",
             addAnother: "+ Añadir otro ítem al lote",
-            finishOrder: "FINALIZAR MI PEDIDO"
+            finishOrder: "FINALIZAR MI ORDEN"
         },
         recommendations: "Otros álbumes que podrían interesarte"
     },
@@ -72,16 +72,44 @@ export const TEXTS = {
         emailPlaceholder: "Email de Terminal...",
         passwordPlaceholder: "Clave Técnica...",
         connecting: "CONECTANDO...",
-        registerAndLink: "REGISTRARSE Y VINCULAR",
+        registerAndLink: "REGISTRARSE",
         levelElite: "Nivel Elite",
         masterArchitect: "Arquitecto Maestro",
-        proCollector: "Coleccionista Pro"
+        proCollector: "Coleccionista"
     },
     success: {
         orderRegistered: "Orden Registrada",
         successMessage: "Tu orden ha sido registrada. Contacta a Oldie but Goldie para obtener más detalles de tu pedido.",
         contactWhatsApp: "Contactar por WhatsApp",
         newSearch: "Nueva Búsqueda"
+    },
+    activity: {
+        availableNow: "★ Disponible",
+        buyFull: "¡COMPRAR!",
+        requiredAction: "Acción Requerida"
+    },
+    details: {
+        technicalSheet: "Ficha Técnica",
+        label: "Sello",
+        year: "Año",
+        country: "País",
+        genre: "Género",
+        showLess: "Mostrar menos",
+        showAll: "Ver todos los discos"
+    },
+    gatekeeper: {
+        loginToNegotiate: "Inicia sesión para negociar o proponer precio"
+    },
+    bulk: {
+        clearWorkspaceConfirm: "¿Estás seguro de limpiar la mesa de trabajo? Esto descartará el escaneo actual.",
+        unsupportedFormat: "Formato no soportado. Usa .CSV o .XLSX",
+        sanitizingDB: "Sanitizando base de datos global...",
+        operationFinished: "Operación Finalizada. Revisa la consola.",
+        baseCentral: "Base Central",
+        workspace: "Mesa de Trabajo",
+        registeredOfficially: "Registrados Oficialmente",
+        noIdentity: "Sin Identidad Discogs",
+        falseAlarm: "Falsa Alarma"
     },
     profile: {
         syncing: "Sincronizando Perfil de Coleccionista...",
@@ -258,13 +286,13 @@ export const TEXTS = {
                 ogImage: "https://firebasestorage.googleapis.com/v0/b/vinilos-app-e1d2c.appspot.com/o/brand%2Flogo_og.png?alt=media"
             },
             activity: {
-                title: "Actividad en Tiempo Real | Marketplace de Vinilos",
+                title: "Actividad en Tiempo Real | Comprá o vendé Vinilos",
                 desc: "Monitoreo en vivo de transacciones de discos de colección. Transparencia y fluidez en el mercado sónico.",
                 keys: "actividad vinilos, mercado discos, transacciones música, coleccionismo vivo",
                 ogImage: "https://firebasestorage.googleapis.com/v0/b/vinilos-app-e1d2c.appspot.com/o/brand%2Factivity_og.png?alt=media"
             },
             editorial: {
-                title: "Comunidad y Editorial Sónica | Oldie but Goldie",
+                title: "Comunidad y Editorial | Oldie but Goldie",
                 desc: "Despachos de inteligencia musical, entrevistas y cultura del vinilo.",
                 keys: "editorial música, cultura vinilo, entrevistas artistas, noticias coleccionismo",
                 ogImage: "https://firebasestorage.googleapis.com/v0/b/vinilos-app-e1d2c.appspot.com/o/brand%2Feditorial_og.png?alt=media"
@@ -279,8 +307,8 @@ export const TEXTS = {
             rejectOffer: "Rechazar"
         },
         adminDashboard: {
-            title: "System Pilot Dashboard",
-            description: "Deterministic lead generation and global traffic telemetry.",
+            title: "OBG Dashboard",
+            description: "Admin Dashboard",
             liveInteractions: "Live Interactions",
             uniqueSpectators: "Unique Spectators",
             argentinaLeads: "Argentina Leads",
@@ -293,15 +321,15 @@ export const TEXTS = {
         },
         batchReview: {
             batchRegistered: "Lote Registrado",
-            intentionsRegistered: "Tus intenciones han sido registradas. Contacta a Oldie but Goldie para procesar tu pedido.",
+            intentionsRegistered: "Tus orden fue registrada. Contacta a Oldie but Goldie para procesar tu pedido.",
             contactWhatsApp: "Contactar por WhatsApp",
             backToStart: "Volver al Inicio",
             batchEmpty: "Tu Lote está vacío",
             exploreCatalog: "Explorar Catálogo",
             reviewBatch: "Revisar Lote",
-            selectedDiscs: "Discos Seleccionados",
+            selectedDiscs: "Ítems Seleccionados",
             processOrder: "Procesar Pedido",
-            batchIntent: "Intención del Lote",
+            batchIntent: "¿Queres comprar o vender?",
             iWantToBuy: "Quiero Comprar",
             iWantToSell: "Quiero Vender",
             intendedPrice: "Precio pretendido por el lote",
@@ -322,13 +350,13 @@ export const TEXTS = {
             connecting: "CONECTANDO..."
         },
         publicActivity: {
-            verifiedFeed: "Feed Público Verificado",
+            verifiedFeed: "Feed Público de Oldie But Goldie",
             recentActivity: "Actividad Reciente",
-            exploreDiscs: "Explora los discos/cds/cassettes que están en movimiento ahora mismo. Cada transacción es una pieza de historia física preservada.",
+            exploreDiscs: "Explora los discos/cds/cassettes que están en negociación.",
             noActivity: "Sin Actividad",
             noPublicOrders: "No hay órdenes públicas registradas aún.",
             activityTitle: "Actividad Reciente | Oldie but Goldie",
-            activityDesc: "Últimas adquisiciones, cotizaciones y ventas de vinilos de colección en tiempo real.",
+            activityDesc: "Últimas compras, cotizaciones y ventas en tiempo real.",
             activityName: "Feed de Actividad de Vinilos",
             activityFeedDesc: "Monitoreo en tiempo real del catálogo rotativo de Oldie but Goldie"
         },
