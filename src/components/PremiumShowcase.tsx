@@ -76,10 +76,12 @@ export function PremiumShowcase() {
                     const count = isBatch ? (order.items?.length || 1) : 1;
                     const title = `LOTE DE ${count} DISCOS`;
 
-                    // Image Recovery: Prioritize first item of the batch, then order level images
-                    const cover = order.items?.[0]?.details?.cover_image ||
+                    // Image Recovery: Prioritize direct item image, then order level images, then nested details
+                    const cover = order.items?.[0]?.image ||
                         order.items?.[0]?.cover_image ||
+                        order.items?.[0]?.details?.cover_image ||
                         order.items?.[0]?.thumb ||
+                        order.cover_image ||
                         order.imageUrl ||
                         order.details?.cover_image ||
                         order.thumbnailUrl;
