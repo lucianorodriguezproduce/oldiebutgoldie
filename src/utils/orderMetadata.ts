@@ -29,10 +29,15 @@ export const getCleanOrderMetadata = (order: any) => {
     );
 
     // 2. IDENTITY RESOLUTION (Deduplication)
-    // [STRICT-TACTICAL] If artist and album are identical, we suppress the album to prioritize the artist.
     let artist = rawArtist;
     let album = rawAlbum;
 
+    // [STRICT-RECOVERY] If root artist is empty, fallback to the first item's artist
+    if (!artist && items.length > 0 && items[0].artist) {
+        artist = items[0].artist;
+    }
+
+    // [STRICT-TACTICAL] If artist and album are identical, suppress the album to prioritize the artist.
     if (!isBatch && artist && album && artist.toLowerCase() === album.toLowerCase()) {
         album = ""; // Prevent "Soda Stereo / Soda Stereo" visual error
     }
@@ -41,7 +46,16 @@ export const getCleanOrderMetadata = (order: any) => {
         artist = "";
     }
 
-    if (!artist) artist = isBatch ? "Varios Artistas" : "";
+    if (!artist) {
+        // Final emergency fallback: try segmenting the album if it was previously used as title
+        if (album && album.includes(' - ')) {
+            artist = album.split(' - ')[0].trim();
+            album = album.split(' - ').slice(1).join(' - ').trim();
+        } else {
+            artist = isBatch ? "Varios Artistas" : "";
+        }
+    }
+
     if (!album) album = isBatch ? `Lote de ${items.length} discos` : "Detalle del Disco";
 
     // 3. IMAGE EXTRACTION

@@ -372,8 +372,12 @@ export default function Home() {
 
         const currentUser = auth.currentUser;
 
-        const artistData = (selectedItem as any).artist || (selectedItem.title.includes(' - ') ? selectedItem.title.split(' - ')[0] : "");
-        const albumData = (selectedItem as any).album || (selectedItem.title.includes(' - ') ? (selectedItem.title.split(' - ')[1] || selectedItem.title) : selectedItem.title);
+        const artistData = (selectedItem as any).artist ||
+            (selectedItem as any).artist_names?.[0] ||
+            (selectedItem.title.includes(' - ') ? selectedItem.title.split(' - ')[0] : 'Varios');
+
+        const albumData = (selectedItem as any).album ||
+            (selectedItem.title.includes(' - ') ? (selectedItem.title.split(' - ')[1] || selectedItem.title) : selectedItem.title);
         const discogsId = (selectedItem as any).id;
 
         const payload: any = {
