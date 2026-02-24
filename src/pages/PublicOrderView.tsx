@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { doc, getDoc, updateDoc, increment, arrayUnion, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, updateDoc, increment, arrayUnion, serverTimestamp, addDoc, collection } from "firebase/firestore";
 import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { db, auth } from "@/lib/firebase";
 import { SEO } from "@/components/SEO";
@@ -112,6 +112,21 @@ export default function PublicOrderView() {
                     message: `Orden aceptada por ${user.displayName || user.email}`
                 })
             });
+
+            if (order.is_admin_offer) {
+                await addDoc(collection(db, "notifications"), {
+                    userId: "oldiebutgoldie", // Target the master admin
+                    orderId: id,
+                    title: "¡Vendido!",
+                    message: `El usuario ${user.displayName || user.email || 'Usuario'} ha comprado el ${order.isBatch || order.is_batch ? 'lote' : 'vinilo'} "${order.title || 'Sin Título'}".`,
+                    type: "sale_completed",
+                    read: false,
+                    createdAt: serverTimestamp(),
+                    sender_email: user.email,
+                    sender_name: user.displayName || "Usuario",
+                });
+            }
+
             setOrder((prev: any) => ({ ...prev, status: "venta_finalizada" }));
         } catch (error) {
             console.error("Buy error:", error);

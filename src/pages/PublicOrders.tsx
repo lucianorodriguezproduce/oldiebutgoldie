@@ -25,7 +25,7 @@ export default function PublicOrders() {
             });
 
             // Filter out empty invalid routes or crash-ready docs.
-            const validOrders = publicOrdersData.filter((o: any) => o.item_id || o.isBatch);
+            const validOrders = publicOrdersData.filter((o: any) => o.item_id || o.isBatch || o.is_batch);
             setOrders(validOrders);
             setLoading(false);
         }, (error) => {
