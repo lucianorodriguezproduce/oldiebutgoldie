@@ -78,6 +78,10 @@ export function PremiumShowcase() {
                         ? `LOTE DE ${itemsCount} DISCOS`
                         : (order.items?.[0]?.title || order.details?.album || "Disco Registrado");
 
+                    const artist = isBatchActual
+                        ? "Varios Artistas"
+                        : (order.items?.[0]?.artist || order.details?.artist || order.artist || (order.title?.includes(' - ') ? order.title.split(' - ')[0] : "Varios"));
+
                     // Image Recovery: Prioritize direct item image, then order level images, then nested details
                     const cover = order.items?.[0]?.image ||
                         order.items?.[0]?.cover_image ||
@@ -112,7 +116,10 @@ export function PremiumShowcase() {
 
                                 {/* Info section */}
                                 <div className="space-y-4 text-left">
-                                    <div className="min-h-[3.5rem]">
+                                    <div className="min-h-[4.5rem] space-y-1">
+                                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] block truncate">
+                                            {artist}
+                                        </span>
                                         <h3 className="text-xl font-display font-black text-white uppercase tracking-tight leading-none line-clamp-2 group-hover:text-yellow-400 transition-colors">
                                             {title}
                                         </h3>
