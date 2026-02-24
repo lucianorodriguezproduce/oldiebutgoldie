@@ -340,11 +340,11 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
 
                     <div className="flex flex-col">
                         <h3 className={`text-xl md:text-2xl font-display font-black text-white uppercase tracking-tight truncate ${context !== 'public' ? 'group-hover:text-primary transition-colors' : ''}`}>
-                            {title}
+                            {isBatchDetected ? title : artist}
                         </h3>
-                        {!isBatchDetected && artist && artist !== 'Unknown Artist' && (
+                        {!isBatchDetected && title && (
                             <h4 className="text-sm font-bold text-gray-400 uppercase tracking-widest truncate mt-0.5">
-                                {artist}
+                                {title}
                             </h4>
                         )}
                     </div>
