@@ -281,8 +281,13 @@ export default function Home() {
     // Effect for real-time Discogs search
     useEffect(() => {
         const performSearch = async () => {
+            // SKIP if we just did a drill-down (query matches artist name and results are already set)
+            if (selectedArtist && debouncedQuery === selectedArtist.name && searchResults.length > 0) return;
+
             if (debouncedQuery.trim().length >= 3 && !selectedItem) {
-                showLoading(TEXTS.home.loadingDiscogs);
+                // Use a local loading state for internal search to avoid the global heavy overlay
+                // which might be causing the "stuck" feeling due to race conditions.
+                setIsLoadingSearch(true);
                 try {
                     let results, pagination;
 
@@ -302,21 +307,19 @@ export default function Home() {
                         pagination = response.pagination;
                     }
 
-                    setSearchResults(results);
-                    setHasMore(pagination.page < pagination.pages);
-                    setCurrentPage(1);
+                    if (results) {
+                        setSearchResults(results);
+                        setHasMore(pagination.page < pagination.pages);
+                        setCurrentPage(1);
+                    }
                 } catch (error) {
                     console.error("Search error:", error);
                 } finally {
-                    hideLoading();
+                    setIsLoadingSearch(false);
                 }
-            } else if (!selectedItem) {
-                // If query is small but we have a selectedArtist, we might want to show their top releases
-                // or just clear depending on preference. The directive says "If writing... is reactive"
-                if (debouncedQuery.trim().length < 3 && !selectedArtist) {
-                    setSearchResults([]);
-                    setHasMore(false);
-                }
+            } else if (!selectedItem && !selectedArtist) {
+                setSearchResults([]);
+                setHasMore(false);
             }
         };
         performSearch();
@@ -859,71 +862,80 @@ export default function Home() {
                                 )}
                             </AnimatePresence>
 
-                            <motion.div layout className={`relative group w-full flex items-center justify-center ${isSearchActive ? 'max-w-4xl mx-auto' : ''}`}>
+                            <motion.div layout className={`relative group w-full flex flex-col items-center justify-center ${isSearchActive ? 'max-w-4xl mx-auto' : ''}`}>
+                                <div className="relative w-full flex items-center justify-center">
+                                    <AnimatePresence>
+                                        {isSearchActive && searchHistory.length > 0 && (
+                                            <motion.button
+                                                initial={{ opacity: 0, x: -10 }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                exit={{ opacity: 0, x: -10 }}
+                                                onClick={handleGoBack}
+                                                className="absolute left-1 md:left-2 top-1/2 -translate-y-1/2 p-2 text-primary hover:text-white transition-colors z-20"
+                                            >
+                                                <ArrowLeft className="h-6 w-6" />
+                                            </motion.button>
+                                        )}
+                                    </AnimatePresence>
+
+                                    <Search className={`absolute ${isSearchActive && searchHistory.length > 0 ? 'left-10 md:left-12' : 'left-6 md:left-8'} top-1/2 -translate-y-1/2 h-5 md:h-6 w-5 md:w-6 text-gray-500 group-focus-within:text-primary transition-all`} />
+                                    <input
+                                        id="searchQuery"
+                                        name="searchQuery"
+                                        type="text"
+                                        onFocus={() => setIsSearchActive(true)}
+                                        autoComplete="off"
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                e.currentTarget.blur();
+                                            }
+                                        }}
+                                        value={query}
+                                        onChange={(e) => setQuery(e.target.value)}
+                                        placeholder={TEXTS.home.searchPlaceholder}
+                                        className={`w-full bg-white/5 border-2 border-white/5 hover:border-white/10 rounded-[1.5rem] md:rounded-[2.5rem] py-5 md:py-8 ${isSearchActive && searchHistory.length > 0 ? 'pl-20 md:pl-28' : 'pl-14 md:pl-20'} pr-16 md:pr-20 text-xl md:text-2xl font-bold text-white placeholder:text-gray-700/50 focus:outline-none focus:ring-0 focus:border-primary/50 transition-all focus:bg-neutral-900 shadow-2xl`}
+                                    />
+                                    <AnimatePresence>
+                                        {query && (
+                                            <div className="absolute right-4 md:right-6 top-0 bottom-0 flex items-center justify-center z-10">
+                                                <motion.button
+                                                    initial={{ opacity: 0, scale: 0.8 }}
+                                                    animate={{ opacity: 1, scale: 1 }}
+                                                    exit={{ opacity: 0, scale: 0.8 }}
+                                                    onClick={() => {
+                                                        setQuery("");
+                                                        setIsSearchActive(false);
+                                                        setSearchResults([]);
+                                                        setHasMore(false);
+                                                    }}
+                                                    className="w-8 h-8 md:w-10 md:h-10 text-gray-400 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center"
+                                                >
+                                                    <X className="h-4 md:h-5 w-4 md:w-5" />
+                                                </motion.button>
+                                            </div>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
+
+                                {/* CHIP LOCATION (In flow to prevent overlap) */}
                                 <AnimatePresence>
                                     {selectedArtist && (
-                                        <div className="absolute top-full left-0 right-0 mt-3 flex justify-center pointer-events-none">
-                                            <div className="pointer-events-auto">
-                                                <SearchChip
-                                                    name={selectedArtist.name}
-                                                    onRemove={() => {
-                                                        setSelectedArtist(null);
-                                                        setSearchResults([]); // Clear results to trigger global search re-fetch or reset
-                                                    }}
-                                                />
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {isSearchActive && searchHistory.length > 0 && (
-                                        <motion.button
-                                            initial={{ opacity: 0, x: -10 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            exit={{ opacity: 0, x: -10 }}
-                                            onClick={handleGoBack}
-                                            className="absolute left-1 md:left-2 top-1/2 -translate-y-1/2 p-2 text-primary hover:text-white transition-colors z-20"
+                                        <motion.div
+                                            initial={{ opacity: 0, scale: 0.9, height: 0 }}
+                                            animate={{ opacity: 1, scale: 1, height: "auto" }}
+                                            exit={{ opacity: 0, scale: 0.9, height: 0 }}
+                                            className="pt-4 pb-1 w-full flex justify-center overflow-hidden"
                                         >
-                                            <ArrowLeft className="h-6 w-6" />
-                                        </motion.button>
-                                    )}
-                                </AnimatePresence>
-
-                                <Search className={`absolute ${isSearchActive && searchHistory.length > 0 ? 'left-10 md:left-12' : 'left-6 md:left-8'} top-1/2 -translate-y-1/2 h-5 md:h-6 w-5 md:w-6 text-gray-500 group-focus-within:text-primary transition-all`} />
-                                <input
-                                    id="searchQuery"
-                                    name="searchQuery"
-                                    type="text"
-                                    onFocus={() => setIsSearchActive(true)}
-                                    autoComplete="off"
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                            e.preventDefault();
-                                            e.currentTarget.blur();
-                                        }
-                                    }}
-                                    value={query}
-                                    onChange={(e) => setQuery(e.target.value)}
-                                    placeholder={TEXTS.home.searchPlaceholder}
-                                    className={`w-full bg-white/5 border-2 border-white/5 hover:border-white/10 rounded-[1.5rem] md:rounded-[2.5rem] py-5 md:py-8 ${isSearchActive && searchHistory.length > 0 ? 'pl-20 md:pl-28' : 'pl-14 md:pl-20'} pr-16 md:pr-20 text-xl md:text-2xl font-bold text-white placeholder:text-gray-700/50 focus:outline-none focus:ring-0 focus:border-primary/50 transition-all focus:bg-neutral-900 shadow-2xl`}
-                                />
-                                <AnimatePresence>
-                                    {query && (
-                                        <div className="absolute right-4 md:right-6 top-0 bottom-0 flex items-center justify-center z-10">
-                                            <motion.button
-                                                initial={{ opacity: 0, scale: 0.8 }}
-                                                animate={{ opacity: 1, scale: 1 }}
-                                                exit={{ opacity: 0, scale: 0.8 }}
-                                                onClick={() => {
+                                            <SearchChip
+                                                name={selectedArtist.name}
+                                                onRemove={() => {
+                                                    setSelectedArtist(null);
                                                     setQuery("");
-                                                    setIsSearchActive(false);
                                                     setSearchResults([]);
-                                                    setHasMore(false);
                                                 }}
-                                                className="w-8 h-8 md:w-10 md:h-10 text-gray-400 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center"
-                                            >
-                                                <X className="h-4 md:h-5 w-4 md:w-5" />
-                                            </motion.button>
-                                        </div>
+                                            />
+                                        </motion.div>
                                     )}
                                 </AnimatePresence>
                             </motion.div>
@@ -956,59 +968,61 @@ export default function Home() {
                         {!isSearchActive && <PremiumShowcase />}
 
                         {/* GRILLA DE RESULTADOS (ULTRA-COMPACT) */}
-                        {isSearchActive && (
-                            <div className="flex-1 overflow-y-auto px-4 w-full hide-scrollbar" ref={resultsContainerRef}>
-                                <div className="max-w-4xl mx-auto pb-40">
-                                    {/* Loading State */}
-                                    {isLoadingSearch && searchResults.length === 0 && (
-                                        <div className="flex flex-col items-center justify-center py-20 space-y-4">
-                                            <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-                                            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500 animate-pulse">
-                                                {TEXTS.home.loadingDiscogs}
-                                            </p>
-                                        </div>
-                                    )}
-
-                                    {/* Results Grid - COMPACT UI */}
-                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6">
-                                        {searchResults.map((result, idx) => (
-                                            <CompactSearchCard
-                                                key={`${result.id}-${idx}`}
-                                                result={result}
-                                                idx={idx}
-                                                onClick={() => handleEntityDrillDown(result)}
-                                            />
-                                        ))}
-                                    </div>
-
-                                    {/* No Results Case */}
-                                    {!isLoadingSearch && searchResults.length === 0 && query.trim().length >= 3 && (
-                                        <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
-                                            <Search className="w-12 h-12 text-white/10" />
-                                            <div>
-                                                <h3 className="text-xl font-display font-black text-white uppercase tracking-widest leading-none">
-                                                    Sin resultados
-                                                </h3>
-                                                <p className="text-xs text-gray-500 font-bold mt-2 uppercase tracking-widest">
-                                                    Probá simplificando la búsqueda
+                        {
+                            isSearchActive && (
+                                <div className="flex-1 overflow-y-auto px-4 w-full hide-scrollbar" ref={resultsContainerRef}>
+                                    <div className="max-w-4xl mx-auto pb-40">
+                                        {/* Loading State */}
+                                        {isLoadingSearch && searchResults.length === 0 && (
+                                            <div className="flex flex-col items-center justify-center py-20 space-y-4">
+                                                <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+                                                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500 animate-pulse">
+                                                    {TEXTS.home.loadingDiscogs}
                                                 </p>
                                             </div>
-                                        </div>
-                                    )}
+                                        )}
 
-                                    {/* Infinite Scroll Anchor */}
-                                    <div ref={observerTarget} className="h-20 w-full flex items-center justify-center mt-8">
-                                        {isLoadingSearch && searchResults.length > 0 && (
-                                            <div className="flex items-center gap-2">
-                                                <div className="h-4 w-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
-                                                <span className="text-[8px] font-black uppercase tracking-[0.3em] text-gray-500 animate-pulse">Cargando más...</span>
+                                        {/* Results Grid - COMPACT UI */}
+                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6">
+                                            {searchResults.map((result, idx) => (
+                                                <CompactSearchCard
+                                                    key={`${result.id}-${idx}`}
+                                                    result={result}
+                                                    idx={idx}
+                                                    onClick={() => handleEntityDrillDown(result)}
+                                                />
+                                            ))}
+                                        </div>
+
+                                        {/* No Results Case */}
+                                        {!isLoadingSearch && searchResults.length === 0 && query.trim().length >= 3 && (
+                                            <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+                                                <Search className="w-12 h-12 text-white/10" />
+                                                <div>
+                                                    <h3 className="text-xl font-display font-black text-white uppercase tracking-widest leading-none">
+                                                        Sin resultados
+                                                    </h3>
+                                                    <p className="text-xs text-gray-500 font-bold mt-2 uppercase tracking-widest">
+                                                        Probá simplificando la búsqueda
+                                                    </p>
+                                                </div>
                                             </div>
                                         )}
+
+                                        {/* Infinite Scroll Anchor */}
+                                        <div ref={observerTarget} className="h-20 w-full flex items-center justify-center mt-8">
+                                            {isLoadingSearch && searchResults.length > 0 && (
+                                                <div className="flex items-center gap-2">
+                                                    <div className="h-4 w-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+                                                    <span className="text-[8px] font-black uppercase tracking-[0.3em] text-gray-500 animate-pulse">Cargando más...</span>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        )}
-                    </motion.div>
+                            )
+                        }
+                    </motion.div >
                 ) : (
                     <motion.div
                         key="steps-container"
@@ -1418,11 +1432,9 @@ export default function Home() {
                             </motion.div>
                         )}
 
-                        {/* Previous recommendation block removed from here as it's now nested or only shown at the very end if needed */}
                     </motion.div>
-                )
-                }
-            </AnimatePresence >
-        </div >
+                )}
+            </AnimatePresence>
+        </div>
     );
 }
