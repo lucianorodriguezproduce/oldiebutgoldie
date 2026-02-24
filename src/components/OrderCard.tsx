@@ -147,7 +147,7 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
     };
 
     const isBatch = order.isBatch === true || order.is_batch === true;
-    const items = isBatch && Array.isArray(order.items) ? order.items : [];
+    const items = Array.isArray(order.items) ? order.items : [];
 
     // Frontend Shield: Limpieza en tiempo de renderizado
     const cleanString = (str: string | undefined | null) => {
@@ -161,8 +161,8 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
         ? firstItemImage
         : (order.cover_image || order.thumb || order.image || order.cover || order.thumbnailUrl || order.details?.cover_image || order.imageUrl || "https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png");
 
-    const title = isBatch ? `Lote de ${items.length} discos` : cleanString(order.details?.album || order.title || 'Unknown Title');
-    const artist = isBatch ? '' : cleanString(order.details?.artist || order.artist || 'Unknown Artist');
+    const title = isBatch ? `Lote de ${items.length} discos` : cleanString(order.details?.album || order.title || items[0]?.title || 'Unknown Title');
+    const artist = isBatch ? '' : cleanString(order.details?.artist || order.artist || items[0]?.artist || 'Unknown Artist');
     // Fallback intent for legacy admin orders
     const isSellerOfferLegacy = order.admin_offer_price || order.adminPrice;
     const intent = isBatch ? (orderType === 'buy' ? TEXTS.badges.buying : TEXTS.badges.forSale) : (orderIntent || (isSellerOfferLegacy ? 'VENDER' : 'COMPRAR'));

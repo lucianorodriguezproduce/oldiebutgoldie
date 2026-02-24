@@ -73,8 +73,8 @@ export function PremiumShowcase() {
                     const price = order.adminPrice || order.totalPrice;
                     const currency = order.adminCurrency || order.currency || "ARS";
                     const isBatch = order.isBatch || order.is_batch;
-                    const title = order.title || order.details?.album || (isBatch ? `Lote de ${order.items?.length} ítems` : "Álbum");
-                    const artist = order.artist || order.details?.artist || "";
+                    const title = order.title || order.details?.album || order.album || order.items?.[0]?.title || (isBatch ? `Lote de ${order.items?.length} ítems` : "Álbum");
+                    const artist = order.artist || order.details?.artist || order.items?.[0]?.artist || "";
                     const cover = order.imageUrl || order.details?.cover_image || order.thumbnailUrl;
 
                     return (

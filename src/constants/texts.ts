@@ -98,7 +98,7 @@ export const TEXTS = {
         title: "Nuestro Catálogo",
         subtitle: "",
         viewMore: "Ver más",
-        officialStore: "Colección Oficial"
+        officialStore: "Oldie But Goldie"
     },
     details: {
         technicalSheet: "Ficha Técnica",
@@ -285,7 +285,7 @@ export const TEXTS = {
         readAll: "Leer todas",
         now: "Ahora",
         syncingIdentity: "Sincronizando Identidad...",
-        locatingBatch: "Localizando Lote...",
+        locatingBatch: "Localizando Orden...",
         loadingData: "Cargando datos...",
         batchNotFound: "Lote No Encontrado",
         batchAccessDenied: "El acceso a este lote no está disponible o la referencia ha expirado.",

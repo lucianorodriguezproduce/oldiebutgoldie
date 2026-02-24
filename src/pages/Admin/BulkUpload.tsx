@@ -338,6 +338,8 @@ export default function BulkUpload() {
 
                     const orderData = {
                         title: finalTitle,
+                        artist: finalArtist,
+                        album: finalTitle,
                         cover_image: match.cover_image,
                         totalPrice: row.originalPrice,
                         status: "store_offer",
