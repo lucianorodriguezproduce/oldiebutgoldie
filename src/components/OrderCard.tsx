@@ -148,9 +148,16 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
     const isBatch = order.isBatch === true;
     const items = isBatch && Array.isArray(order.items) ? order.items : [];
 
+    // Frontend Shield: Limpieza en tiempo de renderizado
+    const cleanString = (str: string | undefined | null) => {
+        if (!str) return '';
+        // Reemplaza UNKNOWN ARTIST - o — o directamente UNKNOWN ARTIST
+        return str.replace(/UNKNOWN ARTIST\s*[-—–]*\s*/gi, '').trim();
+    };
+
     const coverImage = order.thumbnailUrl || order.details?.cover_image || order.imageUrl || "https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png";
-    const title = isBatch ? `Lote de ${items.length} discos` : (order.details?.album || order.title || 'Unknown Title');
-    const artist = isBatch ? 'Múltiples Artistas' : (order.details?.artist || order.artist || 'Unknown Artist');
+    const title = isBatch ? `Lote de ${items.length} discos` : cleanString(order.details?.album || order.title || 'Unknown Title');
+    const artist = isBatch ? 'Múltiples Artistas' : cleanString(order.details?.artist || order.artist || 'Unknown Artist');
     // Fallback intent for legacy admin orders
     const isSellerOfferLegacy = order.admin_offer_price || order.adminPrice;
     const intent = isBatch ? (orderType === 'buy' ? 'COMPRAR LOTE' : 'VENDER LOTE') : (orderIntent || (isSellerOfferLegacy ? 'VENDER' : 'COMPRAR'));

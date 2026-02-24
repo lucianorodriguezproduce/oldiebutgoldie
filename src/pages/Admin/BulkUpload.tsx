@@ -263,8 +263,9 @@ export default function BulkUpload() {
                 const hasIntent = data.intent || data.details?.intent;
 
                 // Check order title
-                if (typeof newTitle === 'string' && /unknown artist\s*[-—–]\s*/i.test(newTitle)) {
-                    newTitle = newTitle.replace(/^unknown artist\s*[-—–]\s*/i, '').trim();
+                if (typeof newTitle === 'string' && /unknown artist/i.test(newTitle)) {
+                    // Replace "unknown artist" literally with empty string, then cleanup leftover dashes/spaces
+                    newTitle = newTitle.replace(/unknown artist/ig, '').replace(/^[-—–\s]+|[-—–\s]+$/g, '').trim();
                     needsUpdate = true;
                 }
 
@@ -276,12 +277,13 @@ export default function BulkUpload() {
 
                 // Check items array
                 newItems.forEach((item, index) => {
-                    if (typeof item.title === 'string' && /unknown artist\s*[-—–]\s*/i.test(item.title)) {
-                        newItems[index].title = item.title.replace(/^unknown artist\s*[-—–]\s*/i, '').trim();
+                    if (typeof item.title === 'string' && /unknown artist/i.test(item.title)) {
+                        newItems[index].title = item.title.replace(/unknown artist/ig, '').replace(/^[-—–\s]+|[-—–\s]+$/g, '').trim();
                         needsUpdate = true;
                     }
-                    if (item.artist?.toLowerCase() === 'unknown artist') {
-                        newItems[index].artist = 'Desconocido';
+                    if (item.artist && /unknown artist/i.test(item.artist)) {
+                        newItems[index].artist = item.artist.replace(/unknown artist/ig, '').trim();
+                        if (newItems[index].artist === '') newItems[index].artist = 'Desconocido';
                         needsUpdate = true;
                     }
                 });
@@ -323,10 +325,18 @@ export default function BulkUpload() {
             if (strategy === "INDIVIDUAL") {
                 for (const row of batchItems) {
                     const match = row.selectedMatch!;
-                    const { artist, title } = parseDiscogsTitle(match.title);
+                    const parsed = parseDiscogsTitle(match.title);
+
+                    const finalArtist = (row.originalArtist && row.originalArtist.trim() !== '')
+                        ? row.originalArtist
+                        : parsed.artist;
+
+                    const finalTitle = (row.originalTitle && row.originalTitle.trim() !== '')
+                        ? row.originalTitle
+                        : parsed.title;
 
                     const orderData = {
-                        title: title,
+                        title: finalTitle,
                         cover_image: match.cover_image,
                         totalPrice: row.originalPrice,
                         status: "store_offer",
@@ -341,8 +351,8 @@ export default function BulkUpload() {
                         createdAt: serverTimestamp(),
                         items: [{
                             id: match.id.toString(),
-                            title: title,
-                            artist: artist,
+                            title: finalTitle,
+                            artist: finalArtist,
                             format: match.format?.[0] || "Vinyl",
                             condition: `${row.originalMedia} / ${row.originalCover}`,
                             image: match.cover_image,
@@ -376,11 +386,20 @@ export default function BulkUpload() {
                     createdAt: serverTimestamp(),
                     items: batchItems.map(row => {
                         const match = row.selectedMatch!;
-                        const { artist, title } = parseDiscogsTitle(match.title);
+                        const parsed = parseDiscogsTitle(match.title);
+
+                        const finalArtist = (row.originalArtist && row.originalArtist.trim() !== '')
+                            ? row.originalArtist
+                            : parsed.artist;
+
+                        const finalTitle = (row.originalTitle && row.originalTitle.trim() !== '')
+                            ? row.originalTitle
+                            : parsed.title;
+
                         return {
                             id: match.id.toString(),
-                            title: title,
-                            artist: artist,
+                            title: finalTitle,
+                            artist: finalArtist,
                             format: match.format?.[0] || "Vinyl",
                             condition: `${row.originalMedia} / ${row.originalCover}`,
                             image: match.cover_image,
