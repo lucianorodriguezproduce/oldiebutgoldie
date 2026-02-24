@@ -18,6 +18,47 @@ import { pushViewItem, pushViewItemFromOrder, pushWhatsAppContactFromOrder } fro
 import { SEO } from "@/components/SEO";
 import { useLote } from "@/context/LoteContext";
 import { PremiumShowcase } from "@/components/PremiumShowcase";
+import React, { memo } from "react";
+
+// --- COMPACT SEARCH CARD (MOBILE OPTIMIZED) ---
+const CompactSearchCard = memo(({ result, idx, onClick }: { result: DiscogsSearchResult, idx: number, onClick: () => void }) => {
+    return (
+        <motion.button
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: Math.min(idx * 0.03, 0.3) }}
+            onClick={onClick}
+            className="group relative flex flex-col items-start bg-white/[0.03] border border-white/5 hover:border-primary/40 rounded-xl overflow-hidden transition-all text-left aspect-square md:aspect-[3/4]"
+        >
+            <div className="w-full h-full relative">
+                <LazyImage
+                    src={result.cover_image || result.thumb}
+                    alt={result.title}
+                    className="w-full h-full object-cover grayscale-[0.3] group-hover:grayscale-0 transition-transform duration-700 group-hover:scale-110"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/10 to-transparent opacity-80 group-hover:opacity-40 transition-opacity" />
+
+                <div className="absolute inset-x-0 bottom-0 p-3 md:p-6 space-y-0.5">
+                    <h5 className="text-[10px] md:text-lg font-bold font-display italic text-white leading-tight line-clamp-1 group-hover:text-primary transition-colors">
+                        {(result as any).normalizedAlbum || (result.title.includes(' - ') ? result.title.split(' - ')[1] : result.title)}
+                    </h5>
+                    <span className="text-[8px] md:text-[10px] font-black text-gray-500 uppercase tracking-widest leading-none truncate block">
+                        {(result as any).normalizedArtist || (result.title.includes(' - ') ? result.title.split(' - ')[0] : result.title)}
+                    </span>
+                </div>
+
+                {/* Mobile Type Indicator */}
+                {result.type && (
+                    <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/60 backdrop-blur-md border border-white/10 md:top-4 md:left-4 md:px-2 md:py-1">
+                        <span className="text-[6px] md:text-[8px] font-black uppercase tracking-tighter text-white/80">{result.type}</span>
+                    </div>
+                )}
+            </div>
+        </motion.button>
+    );
+});
+
+CompactSearchCard.displayName = "CompactSearchCard";
 
 type Intent = "COMPRAR" | "VENDER";
 type Format = "CD" | "VINILO" | "CASSETTE" | "OTROS";
@@ -59,6 +100,7 @@ export default function Home() {
     // Local Auth UI states (only for the manual form)
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const observerTarget = useRef<HTMLDivElement>(null);
 
     // Start of the block to be replaced/modified
     // const debouncedQuery = useDebounce(query, 500); // Original line
@@ -247,7 +289,7 @@ export default function Home() {
 
     const handleLoadMore = async () => {
         if (isLoadingSearch || !hasMore) return;
-        showLoading(TEXTS.home.loadMore);
+        setIsLoadingSearch(true);
         try {
             const nextPage = currentPage + 1;
             let typeParam = "release,master,artist";
@@ -261,9 +303,27 @@ export default function Home() {
         } catch (error) {
             console.error("Load more error:", error);
         } finally {
-            hideLoading();
+            setIsLoadingSearch(false);
         }
     };
+
+    // Infinite Scroll Intersection Observer
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            entries => {
+                if (entries[0].isIntersecting && hasMore && !isLoadingSearch) {
+                    handleLoadMore();
+                }
+            },
+            { threshold: 0.8 }
+        );
+
+        if (observerTarget.current) {
+            observer.observe(observerTarget.current);
+        }
+
+        return () => observer.disconnect();
+    }, [hasMore, isLoadingSearch, currentPage, debouncedQuery]);
 
     const handleEntityDrillDown = async (result: DiscogsSearchResult) => {
         if (result.type === "release" || result.type === "master") {
@@ -799,41 +859,15 @@ export default function Home() {
                                             </div>
                                         )}
 
-                                        {/* Results Grid */}
+                                        {/* Results Grid - COMPACT UI */}
                                         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6">
                                             {searchResults.map((result, idx) => (
-                                                <motion.button
+                                                <CompactSearchCard
                                                     key={`${result.id}-${idx}`}
-                                                    initial={{ opacity: 0, y: 20 }}
-                                                    animate={{ opacity: 1, y: 0 }}
-                                                    transition={{ delay: idx * 0.05 }}
+                                                    result={result}
+                                                    idx={idx}
                                                     onClick={() => handleEntityDrillDown(result)}
-                                                    className="group relative flex flex-col items-start bg-white/[0.03] border-2 border-white/5 hover:border-primary/40 rounded-2xl md:rounded-[2rem] overflow-hidden transition-all text-left aspect-[3/4]"
-                                                >
-                                                    <div className="w-full h-full relative">
-                                                        <LazyImage
-                                                            src={result.cover_image || result.thumb}
-                                                            alt={result.title}
-                                                            className="w-full h-full object-cover grayscale-[0.3] group-hover:grayscale-0 transition-transform duration-700 group-hover:scale-110"
-                                                        />
-                                                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-80 group-hover:opacity-60 transition-opacity" />
-
-                                                        <div className="absolute inset-x-0 bottom-0 p-4 md:p-6 space-y-1">
-                                                            <h5 className="text-sm md:text-lg font-bold font-display italic text-white leading-tight line-clamp-2 md:line-clamp-1 group-hover:text-primary transition-colors">
-                                                                {(result as any).normalizedAlbum || (result.title.includes(' - ') ? result.title.split(' - ')[1] : result.title)}
-                                                            </h5>
-                                                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none truncate block">
-                                                                {(result as any).normalizedArtist || (result.title.includes(' - ') ? result.title.split(' - ')[0] : result.title)}
-                                                            </span>
-                                                        </div>
-
-                                                        {result.type && (
-                                                            <div className="absolute top-4 left-4 px-2 py-1 rounded bg-black/60 backdrop-blur-md border border-white/10">
-                                                                <span className="text-[8px] font-black uppercase tracking-tighter text-white/80">{result.type}</span>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </motion.button>
+                                                />
                                             ))}
                                         </div>
 
@@ -852,17 +886,15 @@ export default function Home() {
                                             </div>
                                         )}
 
-                                        {/* Pagination */}
-                                        {hasMore && (
-                                            <div className="mt-12 flex justify-center pb-20">
-                                                <button
-                                                    onClick={handleLoadMore}
-                                                    className="px-10 py-4 rounded-full bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/10 hover:border-white/20 transition-all"
-                                                >
-                                                    {TEXTS.home.loadMore}
-                                                </button>
-                                            </div>
-                                        )}
+                                        {/* Infinite Scroll Anchor */}
+                                        <div ref={observerTarget} className="h-20 w-full flex items-center justify-center mt-8">
+                                            {isLoadingSearch && searchResults.length > 0 && (
+                                                <div className="flex items-center gap-2">
+                                                    <div className="h-4 w-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+                                                    <span className="text-[8px] font-black uppercase tracking-[0.3em] text-gray-500 animate-pulse">Cargando más...</span>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             )}
