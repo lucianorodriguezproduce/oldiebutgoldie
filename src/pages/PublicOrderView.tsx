@@ -198,7 +198,7 @@ export default function PublicOrderView() {
             cover_image: order.details?.cover_image || order.thumbnailUrl || "https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png",
             format: order.details?.format || "N/A",
             condition: order.details?.condition || "N/A",
-            intent: order.details?.intent || order.status || "COMPRAR",
+            intent: order.details?.intent || order.intent || (order.adminPrice || order.admin_offer_price ? "VENDER" : "COMPRAR"),
         }
     ];
 

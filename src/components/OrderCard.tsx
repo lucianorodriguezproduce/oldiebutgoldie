@@ -146,7 +146,10 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
     const coverImage = order.thumbnailUrl || order.details?.cover_image || order.imageUrl || "https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png";
     const title = isBatch ? `Lote de ${items.length} discos` : (order.details?.album || order.title || 'Unknown Title');
     const artist = isBatch ? 'Múltiples Artistas' : (order.details?.artist || order.artist || 'Unknown Artist');
-    const intent = isBatch ? (order.type === 'buy' ? 'COMPRAR LOTE' : 'VENDER LOTE') : (order.details?.intent || order.intent || 'COMPRAR');
+    // Fallback intent for legacy admin orders
+    const rawIntent = order.details?.intent || order.intent;
+    const isSellerOfferLegacy = order.admin_offer_price || order.adminPrice;
+    const intent = isBatch ? (order.type === 'buy' ? 'COMPRAR LOTE' : 'VENDER LOTE') : (rawIntent || (isSellerOfferLegacy ? 'VENDER' : 'COMPRAR'));
     const format = isBatch ? 'Varios Formatos' : (order.details?.format || 'N/A');
     const condition = isBatch ? 'Varias Condiciones' : (order.details?.condition || 'N/A');
     const status = order.status || 'pending';

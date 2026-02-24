@@ -22,11 +22,11 @@ export function LoadingProvider({ children }: { children: ReactNode }) {
         setMessage(msg);
         setIsLoading(true);
 
-        // Safety Timeout: 8 seconds
+        // Safety Timeout: 12 seconds
         const newTimer = setTimeout(() => {
             setIsLoading(false);
-            console.warn('Loading safety timeout reached (8s). Forcing closure.');
-        }, 8000);
+            console.warn('Loading safety timeout reached (12s). Forcing closure.');
+        }, 12000);
 
         setTimerId(newTimer);
     };
