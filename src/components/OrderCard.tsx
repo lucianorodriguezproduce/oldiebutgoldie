@@ -317,10 +317,16 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                                 {isHot && <Flame className="h-3 w-3 ml-0.5" />}
                             </span>
                         )}
-                        {isBatch && (
-                            <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-yellow-500/20 to-yellow-700/20 border border-yellow-500/50 text-yellow-500 text-[9px] font-black uppercase tracking-widest shadow-[0_0_10px_rgba(234,179,8,0.2)]">
-                                {TEXTS.badges.storeObg}
-                            </span>
+                        {(isBatch || order.is_admin_offer) && (
+                            order.is_admin_offer || order.user_id === 'oldiebutgoldie' ? (
+                                <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-yellow-500/20 to-yellow-700/20 border border-yellow-500/50 text-yellow-500 text-[9px] font-black uppercase tracking-widest shadow-[0_0_10px_rgba(234,179,8,0.2)]">
+                                    {TEXTS.badges.storeObg}
+                                </span>
+                            ) : (
+                                <span className="px-2 py-0.5 rounded-full bg-slate-500/10 border border-slate-500/30 text-slate-400 text-[9px] font-black uppercase tracking-widest">
+                                    {TEXTS.badges.user_label}
+                                </span>
+                            )
                         )}
                     </div>
 

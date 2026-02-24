@@ -91,7 +91,8 @@ export const TEXTS = {
     badges: {
         forSale: "EN VENTA",
         buying: "EN COMPRA",
-        storeObg: "★ Tienda OBG"
+        storeObg: "★ Tienda OBG",
+        user_label: "👤 USUARIO"
     },
     details: {
         technicalSheet: "Ficha Técnica",
