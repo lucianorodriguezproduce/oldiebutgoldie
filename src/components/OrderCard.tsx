@@ -37,6 +37,13 @@ interface OrderCardProps {
 }
 
 export default function OrderCard({ order, context, onClick }: OrderCardProps) {
+    if (!order) return null;
+
+    // Extracción tolerante a fallas para órdenes V1
+    const orderIntent = (order && (order.intent || order.details?.intent)) ? (order.intent || order.details.intent) : "VENDER";
+    const orderStatus = order?.status || 'pending';
+    const orderType = order?.type || 'buy';
+
     const { user, isAdmin } = useAuth();
     const { showLoading, hideLoading } = useLoading();
     const [isExpanded, setIsExpanded] = useState(false);
@@ -138,21 +145,18 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
         }
     };
 
-    // Safe Data Extraction
     const isBatch = order.isBatch === true;
     const items = isBatch && Array.isArray(order.items) ? order.items : [];
 
-    // Extracción tolerante a fallas para órdenes V1
     const coverImage = order.thumbnailUrl || order.details?.cover_image || order.imageUrl || "https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png";
     const title = isBatch ? `Lote de ${items.length} discos` : (order.details?.album || order.title || 'Unknown Title');
     const artist = isBatch ? 'Múltiples Artistas' : (order.details?.artist || order.artist || 'Unknown Artist');
     // Fallback intent for legacy admin orders
-    const rawIntent = order.details?.intent || order.intent;
     const isSellerOfferLegacy = order.admin_offer_price || order.adminPrice;
-    const intent = isBatch ? (order.type === 'buy' ? 'COMPRAR LOTE' : 'VENDER LOTE') : (rawIntent || (isSellerOfferLegacy ? 'VENDER' : 'COMPRAR'));
+    const intent = isBatch ? (orderType === 'buy' ? 'COMPRAR LOTE' : 'VENDER LOTE') : (orderIntent || (isSellerOfferLegacy ? 'VENDER' : 'COMPRAR'));
     const format = isBatch ? 'Varios Formatos' : (order.details?.format || 'N/A');
     const condition = isBatch ? 'Varias Condiciones' : (order.details?.condition || 'N/A');
-    const status = order.status || 'pending';
+    const status = orderStatus;
 
     const renderPriceOffer = () => {
         // 1. OFERTA DEL VENDEDOR (From User)

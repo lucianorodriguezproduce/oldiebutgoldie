@@ -247,21 +247,30 @@ export default function BulkUpload() {
         if (!window.confirm("¿Seguro que deseas sanitizar los títulos de la base de datos eliminando 'UNKNOWN ARTIST'?")) return;
 
         setIsSanitizing(true);
-        showLoading("Sanitizando base de datos...");
+        showLoading("Sanitizando base de datos global...");
         try {
-            const q = query(collection(db, "orders"), where("status", "==", "store_offer"));
+            // Se quitó el where("status", "==", "store_offer") para ser más agresivo (TAREA 3)
+            const q = query(collection(db, "orders"));
             const snapshot = await getDocs(q);
             let updatedCount = 0;
 
             for (const document of snapshot.docs) {
                 const data = document.data();
                 let needsUpdate = false;
-                let newTitle = data.title;
+                let newTitle = data.title || "";
                 const newItems = [...(data.items || [])];
+                const newDetails = { ...(data.details || {}) };
+                const hasIntent = data.intent || data.details?.intent;
 
                 // Check order title
                 if (typeof newTitle === 'string' && /unknown artist\s*[-—–]\s*/i.test(newTitle)) {
                     newTitle = newTitle.replace(/^unknown artist\s*[-—–]\s*/i, '').trim();
+                    needsUpdate = true;
+                }
+
+                // Force Data Integrity (TAREA 3)
+                if (!hasIntent) {
+                    newDetails.intent = "VENDER";
                     needsUpdate = true;
                 }
 
@@ -278,10 +287,16 @@ export default function BulkUpload() {
                 });
 
                 if (needsUpdate) {
-                    await updateDoc(doc(db, "orders", document.id), {
+                    const updatePayload: any = {
                         title: newTitle,
-                        items: newItems
-                    });
+                        items: newItems,
+                    };
+                    if (!hasIntent) {
+                        updatePayload.details = newDetails;
+                        updatePayload.intent = "VENDER";
+                    }
+
+                    await updateDoc(doc(db, "orders", document.id), updatePayload);
                     updatedCount++;
                 }
             }

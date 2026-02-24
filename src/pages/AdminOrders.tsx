@@ -79,6 +79,7 @@ interface OrderDoc {
     isBatch?: boolean;
     items?: any[];
     type?: 'buy' | 'sell';
+    intent?: string;
     view_count?: number;
     last_viewed_at?: any;
     unique_visitors?: string[];
@@ -126,16 +127,21 @@ export default function AdminOrders() {
         showLoading("Sincronizando Base de Pedidos...");
         const q = query(collection(db, "orders"), orderBy("timestamp", "desc"));
         const unsub = onSnapshot(q, (snap) => {
-            const docs = snap.docs.map(d => ({
-                id: d.id,
-                user_email: "Sin email",
-                user_name: "Usuario Registrado",
-                user_photo: "",
-                ...d.data()
-            } as OrderDoc));
-            setOrders(docs);
-            setLoading(false);
-            hideLoading();
+            try {
+                const docs = snap.docs.map(d => ({
+                    id: d.id,
+                    user_email: "Sin email",
+                    user_name: "Usuario Registrado",
+                    user_photo: "",
+                    ...d.data()
+                } as OrderDoc));
+                setOrders(docs);
+            } catch (processError) {
+                console.error("Error processing orders snapshot:", processError);
+            } finally {
+                setLoading(false);
+                hideLoading();
+            }
         }, (err) => {
             console.error("Orders snapshot error:", err);
             setLoading(false);
