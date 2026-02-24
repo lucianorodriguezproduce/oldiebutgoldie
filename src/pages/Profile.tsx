@@ -319,7 +319,10 @@ export default function Profile() {
             quoted: { label: "Cotizado", color: "bg-purple-500/10 text-purple-400 border-purple-500/20" },
             negotiating: { label: "En Negociación", color: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
             pending_acceptance: { label: "Esperando tu ok", color: "bg-orange-500/10 text-orange-400 border-orange-500/20" },
+            counteroffered: { label: "Esperando tu ok", color: "bg-orange-500/10 text-orange-400 border-orange-500/20" },
+            contraoferta_usuario: { label: "En Revisión", color: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
             confirmed: { label: "Confirmado", color: "bg-primary/10 text-primary border-primary/20" },
+            venta_finalizada: { label: "Trato Cerrado", color: "bg-primary/10 text-primary border-primary/20" },
             completed: { label: "Completado", color: "bg-green-500/10 text-green-500 border-green-500/20" },
             cancelled: { label: "Cancelado", color: "bg-red-500/10 text-red-500 border-red-500/20" },
         };

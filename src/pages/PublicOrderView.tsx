@@ -101,6 +101,8 @@ export default function PublicOrderView() {
                 status: "venta_finalizada",
                 purchased_by: user.uid,
                 buyer_uid: user.uid,
+                user_id: user.uid,
+                original_admin: "oldiebutgoldie",
                 buyer_email: user.email,
                 buyer_name: user.displayName || "Usuario",
                 confirmedAt: serverTimestamp(),
@@ -152,6 +154,8 @@ export default function PublicOrderView() {
                 totalPrice: offerVal,
                 status: "contraoferta_usuario",
                 buyer_uid: user.uid,
+                user_id: user.uid, // Mutate ownership so it appears in Profile
+                original_admin: "oldiebutgoldie", // Track the creator
                 buyer_email: user.email,
                 buyer_name: user.displayName || "Usuario",
                 confirmedAt: serverTimestamp(),

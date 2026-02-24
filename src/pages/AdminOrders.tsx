@@ -47,6 +47,7 @@ interface OrderDoc {
     user_email: string;
     user_name: string;
     user_photo: string;
+    buyer_uid?: string;
     order_number?: string;
     item_id: number;
     status: string;
@@ -226,7 +227,7 @@ export default function AdminOrders() {
 
                 const currSymbol = currencyVal === "USD" ? "US$" : "$";
                 await addDoc(collection(db, "notifications"), {
-                    user_id: order.user_id,
+                    user_id: order.buyer_uid || order.user_id,
                     title: "Contraoferta Recibida",
                     message: `Oldie but Goldie ha definido un precio de ${currSymbol} ${priceVal.toLocaleString()} para tu lote/disco.`,
                     read: false,
@@ -279,7 +280,7 @@ export default function AdminOrders() {
                 });
 
                 await addDoc(collection(db, "notifications"), {
-                    user_id: order.user_id,
+                    user_id: order.buyer_uid || order.user_id,
                     title: "¡Trato Cerrado! 🎉",
                     message: `Oldie but Goldie ha ACEPTADO tu oferta final. Ingresa a tu Actividad para contactarlos por WhatsApp.`,
                     read: false,
@@ -320,7 +321,7 @@ export default function AdminOrders() {
 
             const currSymbol = currencyVal === "USD" ? "US$" : "$";
             await addDoc(collection(db, "notifications"), {
-                user_id: order.user_id,
+                user_id: order.buyer_uid || order.user_id,
                 title: "Oferta Recibida",
                 message: `Oldie but Goldie ha cotizado tu pedido ${order.order_number || ""} por ${currSymbol} ${priceVal.toLocaleString()}`,
                 read: false,
