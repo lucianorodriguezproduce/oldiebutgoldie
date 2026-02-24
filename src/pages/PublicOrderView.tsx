@@ -304,9 +304,16 @@ export default function PublicOrderView() {
                         )}
 
                         <div className="flex items-center gap-4 flex-wrap">
-                            <h1 className={`text-4xl md:text-5xl font-display font-black tracking-tightest leading-none transition-colors ${isAdminOrder ? 'bg-gradient-to-r from-yellow-200 via-yellow-500 to-yellow-700 bg-clip-text text-transparent drop-shadow-xl' : 'text-white hover:text-primary'}`}>
-                                {isBatch ? TEXTS.common.batchDetail : (order.details?.artist || order.artist || order.details?.album || order.title || "Detalle del Disco")}
-                            </h1>
+                            <div className="flex flex-col gap-1 items-start">
+                                <h1 className={`text-4xl md:text-5xl font-display font-black tracking-tightest leading-none transition-colors ${isAdminOrder ? 'bg-gradient-to-r from-yellow-200 via-yellow-500 to-yellow-700 bg-clip-text text-transparent drop-shadow-xl' : 'text-white hover:text-primary'}`}>
+                                    {isBatch ? TEXTS.common.batchDetail : (order.details?.artist || order.artist || "Artista Desconocido")}
+                                </h1>
+                                {!isBatch && (order.details?.album || order.title) && (
+                                    <h2 className="text-xl md:text-2xl font-bold text-gray-400 uppercase tracking-widest leading-tight">
+                                        {order.details?.album || order.title}
+                                    </h2>
+                                )}
+                            </div>
                             {isAdminOrder ? (
                                 <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-yellow-500/20 to-yellow-700/20 border border-yellow-500/50 text-yellow-500 text-[9px] font-black uppercase tracking-widest shadow-[0_0_10px_rgba(234,179,8,0.2)]">
                                     {TEXTS.badges.storeObg}

@@ -166,10 +166,10 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
         : (order.cover_image || order.thumb || order.image || order.cover || order.thumbnailUrl || order.details?.cover_image || order.imageUrl || "https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png");
 
     // Tarea Singular-Logic-Only: Título dinámico
+    const artist = isBatchDetected ? '' : cleanString(order.details?.artist || items[0]?.artist || order.artist || 'Unknown Artist');
     const title = isBatchDetected
         ? `LOTE DE ${itemsCount} DISCOS`
-        : cleanString(order.details?.album || order.title || items[0]?.title || 'Disco Registrado');
-    const artist = isBatchDetected ? '' : cleanString(order.details?.artist || order.artist || items[0]?.artist || 'Unknown Artist');
+        : cleanString(order.details?.album || items[0]?.title || items[0]?.album || order.title || 'Disco Registrado');
 
     // Fallback intent for legacy admin orders
     const isSellerOfferLegacy = order.admin_offer_price || order.adminPrice;

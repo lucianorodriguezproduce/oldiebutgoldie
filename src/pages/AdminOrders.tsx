@@ -508,7 +508,7 @@ export default function AdminOrders() {
                 title={selectedOrder ? (
                     (selectedOrder.items && selectedOrder.items.length > 1)
                         ? `LOTE DE ${selectedOrder.items.length} DISCOS`
-                        : (selectedOrder.items?.[0]?.artist || selectedOrder.details?.artist || selectedOrder.items?.[0]?.title || selectedOrder.details?.album || selectedOrder.order_number || "Detalle de Pedido")
+                        : `${selectedOrder.items?.[0]?.artist || selectedOrder.details?.artist || "Artista"} - ${selectedOrder.items?.[0]?.title || selectedOrder.details?.album || "Disco"}`
                 ) : "Detalle de Pedido"}
                 footer={
                     selectedOrder && (
