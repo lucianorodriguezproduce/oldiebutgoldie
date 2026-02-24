@@ -3,7 +3,7 @@ import { TEXTS } from "@/constants/texts";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { LazyImage } from "@/components/ui/LazyImage";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, ChevronRight, CheckCircle2, Mail, Layers, DollarSign, TrendingUp, MessageCircle, X, Share } from "lucide-react";
+import { Search, ChevronRight, CheckCircle2, Mail, Layers, DollarSign, TrendingUp, MessageCircle, X, Share, ArrowLeft } from "lucide-react";
 import { db, auth } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp, query as firestoreQuery, where, getDocs, limit } from "firebase/firestore";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -101,12 +101,9 @@ export default function Home() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const observerTarget = useRef<HTMLDivElement>(null);
+    const [searchHistory, setSearchHistory] = useState<any[]>([]); // To allow "Go Back" in drill-downs
 
     // Start of the block to be replaced/modified
-    // const debouncedQuery = useDebounce(query, 500); // Original line
-    // const resultsContainerRef = useRef<HTMLDivElement>(null); // Original line
-
-    // The instruction's provided code block starts here:
     // Local Auth UI states (only for the manual form)
     const debouncedQuery = useDebounce(query, 300);
     const resultsContainerRef = useRef<HTMLDivElement>(null);
@@ -326,6 +323,15 @@ export default function Home() {
     }, [hasMore, isLoadingSearch, currentPage, debouncedQuery]);
 
     const handleEntityDrillDown = async (result: DiscogsSearchResult) => {
+        // SAVE CURRENT STATE TO HISTORY BEFORE DRILL-DOWN
+        setSearchHistory(prev => [...prev, {
+            results: searchResults,
+            hasMore,
+            currentPage,
+            filter: searchFilter,
+            querySnapshot: query
+        }]);
+
         if (result.type === "release" || result.type === "master") {
             // Use Client-Side Routing to preserve UX, which also updates the URL for sharing/SEO
             navigate(`/item/${result.type}/${result.id}`);
@@ -351,14 +357,27 @@ export default function Home() {
 
             if (drillDownData) {
                 setSearchResults(drillDownData.results);
-                setHasMore(drillDownData.pagination?.pages > 1);
+                setHasMore(drillDownData.pagination.page < drillDownData.pagination.pages);
                 setCurrentPage(1);
+                if (resultsContainerRef.current) resultsContainerRef.current.scrollTop = 0;
             }
         } catch (error) {
             console.error("Entity drill-down error:", error);
         } finally {
             hideLoading();
         }
+    };
+
+    const handleGoBack = () => {
+        if (searchHistory.length === 0) return;
+        const lastState = searchHistory[searchHistory.length - 1];
+        setSearchResults(lastState.results);
+        setHasMore(lastState.hasMore);
+        setCurrentPage(lastState.currentPage);
+        setSearchFilter(lastState.filter);
+        setQuery(lastState.querySnapshot); // Restore the query as well
+        setSearchHistory(prev => prev.slice(0, -1));
+        if (resultsContainerRef.current) resultsContainerRef.current.scrollTop = 0;
     };
 
     // Recommendation Engine Effect
@@ -744,10 +763,10 @@ export default function Home() {
                         key="step1-search-container"
                         initial={{ opacity: 0, scale: 0.98 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className={`w-full flex flex-col items-center ${isSearchActive ? 'h-full flex-1 justify-start' : 'justify-center gap-12 md:gap-16 text-center'}`}
+                        className={`w-full flex flex-col items-center min-h-[100dvh] ${isSearchActive ? 'justify-start' : 'justify-center gap-12 md:gap-16 text-center'}`}
                     >
-                        {/* BLOQUE SUPERIOR (Header Fijo) */}
-                        <div className={`w-full transition-all flex flex-col items-center ${isSearchActive ? 'flex-none shrink-0 z-10 bg-neutral-950 pt-[env(safe-area-inset-top,1rem)] md:pt-8 pb-4 px-4 border-b border-white/5 shadow-2xl' : ''}`}>
+                        {/* BLOQUE SUPERIOR (Sticky Header) */}
+                        <div className={`w-full transition-all flex flex-col items-center ${isSearchActive ? 'sticky top-0 z-50 bg-[#050505]/95 backdrop-blur-xl pt-[env(safe-area-inset-top,1rem)] md:pt-8 pb-4 px-4 border-b border-white/5 shadow-2xl' : ''}`}>
                             <AnimatePresence mode="wait">
                                 {!isSearchActive ? (
                                     <motion.header
@@ -781,12 +800,27 @@ export default function Home() {
                             </AnimatePresence>
 
                             <motion.div layout className={`relative group w-full flex items-center justify-center ${isSearchActive ? 'max-w-4xl mx-auto' : ''}`}>
-                                <Search className="absolute left-6 md:left-8 top-1/2 -translate-y-1/2 h-5 md:h-6 w-5 md:w-6 text-gray-500 group-focus-within:text-primary transition-colors" />
+                                <AnimatePresence>
+                                    {isSearchActive && searchHistory.length > 0 && (
+                                        <motion.button
+                                            initial={{ opacity: 0, x: -10 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            exit={{ opacity: 0, x: -10 }}
+                                            onClick={handleGoBack}
+                                            className="absolute left-1 md:left-2 top-1/2 -translate-y-1/2 p-2 text-primary hover:text-white transition-colors z-20"
+                                        >
+                                            <ArrowLeft className="h-6 w-6" />
+                                        </motion.button>
+                                    )}
+                                </AnimatePresence>
+
+                                <Search className={`absolute ${isSearchActive && searchHistory.length > 0 ? 'left-10 md:left-12' : 'left-6 md:left-8'} top-1/2 -translate-y-1/2 h-5 md:h-6 w-5 md:w-6 text-gray-500 group-focus-within:text-primary transition-all`} />
                                 <input
                                     id="searchQuery"
                                     name="searchQuery"
                                     type="text"
                                     onFocus={() => setIsSearchActive(true)}
+                                    autoComplete="off"
                                     onKeyDown={(e) => {
                                         if (e.key === 'Enter') {
                                             e.preventDefault();
@@ -796,7 +830,7 @@ export default function Home() {
                                     value={query}
                                     onChange={(e) => setQuery(e.target.value)}
                                     placeholder={TEXTS.home.searchPlaceholder}
-                                    className="w-full bg-white/5 border-2 border-white/5 hover:border-white/10 rounded-[1.5rem] md:rounded-[2.5rem] py-6 md:py-8 pl-14 md:pl-20 pr-16 md:pr-20 text-xl md:text-2xl font-bold text-white placeholder:text-gray-700/50 focus:outline-none focus:ring-0 focus:border-primary/50 transition-all focus:bg-neutral-900 shadow-2xl"
+                                    className={`w-full bg-white/5 border-2 border-white/5 hover:border-white/10 rounded-[1.5rem] md:rounded-[2.5rem] py-5 md:py-8 ${isSearchActive && searchHistory.length > 0 ? 'pl-20 md:pl-28' : 'pl-14 md:pl-20'} pr-16 md:pr-20 text-xl md:text-2xl font-bold text-white placeholder:text-gray-700/50 focus:outline-none focus:ring-0 focus:border-primary/50 transition-all focus:bg-neutral-900 shadow-2xl`}
                                 />
                                 <AnimatePresence>
                                     {query && (
