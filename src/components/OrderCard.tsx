@@ -32,7 +32,7 @@ import { doc, updateDoc, arrayUnion, addDoc, serverTimestamp, collection } from 
 import { useLoading } from '@/context/LoadingContext';
 
 interface OrderCardProps {
-    order: any;
+    order: any; // Using any or an extended OrderData to catch legacy fields without crashing
     context: 'admin' | 'public' | 'profile';
     onClick?: () => void;
 }
@@ -40,6 +40,7 @@ interface OrderCardProps {
 export default function OrderCard({ order, context, onClick }: OrderCardProps) {
     if (!order) return null;
 
+    // Extracción tolerante a fallas para órdenes V1
     const orderIntent = (order && (order.intent || order.details?.intent)) ? (order.intent || order.details.intent) : "VENDER";
     const orderStatus = order?.status || 'pending';
     const orderType = order?.type || 'buy';
@@ -93,8 +94,10 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
         }
     };
 
+    // Ownership check for privacy
     const isOwner = user?.uid === order.user_id;
     const canSeePrice = isAdmin || isOwner || order.is_admin_offer;
+
 
     const getStatusBadge = (status: string) => {
         const statusLabel = TEXTS.admin.statusOptions[status as keyof typeof TEXTS.admin.statusOptions] || status;
@@ -146,32 +149,36 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
     const isBatch = order.isBatch === true || order.is_batch === true;
     const items = Array.isArray(order.items) ? order.items : [];
 
+    // Frontend Shield: Limpieza en tiempo de renderizado
     const cleanString = (str: string | undefined | null) => {
         if (!str) return '';
+        // Reemplaza UNKNOWN ARTIST - o — o directamente UNKNOWN ARTIST
         return str.replace(/UNKNOWN ARTIST\s*[-—–]*\s*/gi, '').trim();
     };
 
-    // 1. RECUPERACIÓN DE IMAGEN (Cover Fetcher)
-    const firstItemImage = items.length > 0
-        ? (items[0].cover_image || items[0].thumb || items[0].image || items[0].cover || items[0].thumbnailUrl)
-        : null;
+    const firstItemImage = items.length > 0 ? (items[0].cover_image || items[0].thumb || items[0].image || items[0].cover || items[0].thumbnailUrl) : null;
+    const coverImage = (isBatch && firstItemImage)
+        ? firstItemImage
+        : (order.cover_image || order.thumb || order.image || order.cover || order.thumbnailUrl || order.details?.cover_image || order.imageUrl || "https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png");
 
-    // Failsafe logic based on directive
-    const coverImage = firstItemImage || order.cover_image || order.thumb || order.image || order.cover || order.thumbnailUrl || order.details?.cover_image || order.imageUrl || "https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png";
-
-    // 2. DEPURACIÓN DE TEXTO (Minimalismo)
-    const title = isBatch ? `LOTE DE ${items.length} DISCOS` : cleanString(order.details?.album || order.title || items[0]?.title || 'Unknown Title');
+    const title = isBatch ? `Lote de ${items.length} discos` : cleanString(order.details?.album || order.title || items[0]?.title || 'Unknown Title');
     const artist = isBatch ? '' : cleanString(order.details?.artist || order.artist || items[0]?.artist || 'Unknown Artist');
-
+    // Fallback intent for legacy admin orders
     const isSellerOfferLegacy = order.admin_offer_price || order.adminPrice;
     const intent = isBatch ? (orderType === 'buy' ? TEXTS.badges.buying : TEXTS.badges.forSale) : (orderIntent || (isSellerOfferLegacy ? 'VENDER' : 'COMPRAR'));
+    const format = isBatch ? 'Varios Formatos' : (order.details?.format || 'N/A');
+    const condition = isBatch ? 'Varias Condiciones' : (order.details?.condition || 'N/A');
     const status = orderStatus;
 
     const renderPriceOffer = () => {
+        // 1. OFERTA DEL VENDEDOR (From User)
+        // If it's a VENDER (Sell) order, the user's price is their bid.
         const userPrice = order.totalPrice || order.details?.price;
         const userCurrency = order.currency || order.details?.currency || "ARS";
         const isSellOrder = intent.includes("VENDER");
 
+        // 2. CONTRAOFERTA (From Admin)
+        // This is the new adminPrice field for negotiation.
         const historyAdminOffer = order.negotiationHistory?.filter((h: any) => h.sender === 'admin').pop();
         const adminPrice = historyAdminOffer?.price || order.adminPrice;
         const adminCurrency = historyAdminOffer?.currency || order.adminCurrency || "ARS";
@@ -206,6 +213,7 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                     </div>
                 )}
 
+                {/* Legacy admin_offer_price for backward compatibility */}
                 {!adminPrice && order.admin_offer_price && (
                     <div className={`bg-purple-500/10 border border-purple-500/20 px-3 py-2 rounded-xl flex flex-col items-end shadow-sm shadow-purple-500/5 ${context === 'admin' ? "mr-4" : ""}`}>
                         <span className="text-[9px] font-black uppercase tracking-widest text-purple-400">{TEXTS.admin.ourOffer}</span>
@@ -225,108 +233,271 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                 ? (Date.now() - order.createdAt.seconds * 1000) < 86400000
                 : false));
 
-    // MAIN RENDER - Refactored for Directive [MINIMAL-CATALOG-VISUALS]
     return (
         <motion.article
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             onClick={context !== 'public' ? onClick : undefined}
+            aria-label={`${intent}: ${artist} - ${title}`}
             className={`
-                group relative bg-white/[0.02] border rounded-[2rem] overflow-hidden transition-all duration-700
-                ${context !== 'public' ? 'cursor-pointer hover:border-white/20' : 'hover:border-white/10'}
-                ${isHot ? "border-orange-500/50 shadow-[0_0_30px_rgba(249,115,22,0.1)]" : "border-white/5"}
+                group relative bg-white/[0.02] border rounded-[1.5rem] overflow-hidden transition-all duration-300
+                ${context !== 'public' ? 'cursor-pointer hover:border-primary/30' : 'hover:border-white/10'}
+                ${isHot ? "border-orange-500/50 shadow-[0_0_15px_rgba(249,115,22,0.15)]" : (order.admin_offer_price ? "border-purple-500/20" : "border-white/5")}
             `}
         >
-            {/* 3. ESTÉTICA DE TARJETA - Imagen superior full space */}
-            <div className="p-6 space-y-6">
-                <div className="aspect-square w-full relative rounded-2xl overflow-hidden bg-black shadow-2xl border border-white/10">
-                    <div className="relative overflow-hidden h-full w-full" style={{ aspectRatio: '1 / 1' }}>
-                        <div className="animate-pulse rounded-md bg-white/5 absolute inset-0 w-full h-full rounded-inherit"></div>
+            {/* Context Badge Corner - Floating Island to prevent overlaps */}
+            <div className="absolute top-2 right-2 md:top-4 md:right-4 flex items-center z-20 bg-black/40 backdrop-blur-md rounded-[1.25rem] border border-white/10 shadow-lg">
+                {context === 'admin' && order.user_email && (
+                    <>
+                        {requiresAction && (
+                            <div className="px-3 py-1.5 bg-red-500/80 text-white text-[8px] font-black uppercase tracking-widest rounded-l-[1.25rem] animate-pulse">
+                                Acción
+                            </div>
+                        )}
+                        <div className="px-3 py-1.5 text-[9px] text-gray-300 font-mono hidden md:block border-r border-white/10">
+                            {order.user_email}
+                        </div>
+                    </>
+                )}
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        if (navigator.share) {
+                            navigator.share({
+                                title: `Oldie But Goldie - ${title}`,
+                                text: '¡Mira esta joya que encontré en Oldie But Goldie!',
+                                url: `https://www.oldiebutgoldie.com.ar/orden/${order.id}`
+                            }).catch(console.error);
+                        } else {
+                            navigator.clipboard.writeText(`https://www.oldiebutgoldie.com.ar/orden/${order.id}`);
+                            alert('Enlace copiado al portapapeles');
+                        }
+                    }}
+                    className={`p-2.5 text-gray-400 hover:text-white transition-colors ${context === 'admin' && order.user_email ? 'rounded-r-[1.25rem]' : 'rounded-[1.25rem]'}`}
+                    title="Compartir"
+                >
+                    <Share2 className="w-4 h-4" />
+                </button>
+            </div>
+
+            <div className="p-4 pt-12 md:p-6 lg:p-8 flex flex-col lg:flex-row items-start lg:items-center gap-6">
+
+                {/* Image Section */}
+                <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl overflow-hidden bg-black/50 flex-shrink-0 border border-white/10 group-hover:border-primary/20 transition-all relative shadow-md shadow-black/50">
+                    {coverImage ? (
                         <LazyImage
                             src={coverImage}
                             alt={title}
-                            className="w-full h-full object-cover grayscale-[0.2] group-hover:grayscale-0 group-hover:scale-110 transition-all duration-700"
+                            className="w-full h-full object-cover grayscale-[0.3] group-hover:grayscale-0 transition-all duration-500"
                         />
-                    </div>
-                    {/* Overlay al hacer hover */}
-                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-
-                    {/* Share Button Overlay */}
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            e.preventDefault();
-                            if (navigator.share) {
-                                navigator.share({
-                                    title: `Oldie But Goldie - ${title}`,
-                                    text: '¡Mira esta joya que encontré en Oldie But Goldie!',
-                                    url: `https://www.oldiebutgoldie.com.ar/orden/${order.id}`
-                                }).catch(console.error);
-                            } else {
-                                navigator.clipboard.writeText(`https://www.oldiebutgoldie.com.ar/orden/${order.id}`);
-                                alert('Enlace copiado al portapapeles');
-                            }
-                        }}
-                        className="absolute top-4 right-4 p-2.5 bg-black/40 backdrop-blur-md rounded-full border border-white/10 text-white opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0"
-                    >
-                        <Share2 className="w-4 h-4" />
-                    </button>
+                    ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                            <Music className="w-8 h-8 text-white/10" />
+                        </div>
+                    )}
+                    {isBatch && (
+                        <div className="absolute bottom-1 right-1 bg-black/80 backdrop-blur-md px-2 py-0.5 rounded-md border border-white/10 text-[10px] font-bold text-white flex items-center gap-1 shadow-sm shadow-black/50">
+                            <ShoppingBag className="w-3 h-3" /> {items.length}
+                        </div>
+                    )}
                 </div>
 
-                {/* Content Section - Minimalismo */}
-                <div className="space-y-4 text-left">
-                    <div className="min-h-[3.5rem]">
-                        <h3 className="text-xl font-display font-black text-white uppercase tracking-tight leading-none line-clamp-2 group-hover:text-yellow-400 transition-colors">
-                            {title}
-                        </h3>
-                        {/* 2. DEPURACIÓN DE TEXTO - Condicionalmente removemos el artista para lotes o según directiva */}
-                        {artist && !isBatch && context !== 'public' && (
-                            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mt-1">
-                                {artist}
-                            </p>
+                {/* Details Section */}
+                <div className="flex-1 min-w-0 flex flex-col justify-center space-y-2.5 w-full">
+                    <div className="flex items-center gap-3">
+                        {order.order_number && (
+                            <span className="inline-flex items-center gap-1.5 text-[9px] font-mono font-bold text-gray-500 uppercase tracking-wider">
+                                <Hash className="h-3 w-3" /> {order.order_number}
+                            </span>
                         )}
-                        {/* Indicador de Lote en vista pública si es necesario, pero minimalista */}
-                        {isBatch && (
-                            <div className="flex items-center gap-1.5 mt-1.5 opacity-60">
-                                <ShoppingBag className="w-3 h-3 text-gray-400" />
-                                <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">
-                                    Contenido verificado
+                        {context === 'admin' && (order.view_count !== undefined) && order.view_count > 0 && (
+                            <span className={`inline-flex items-center gap-1 text-[9px] font-mono font-bold uppercase tracking-wider ${isHot ? 'text-orange-400' : 'text-gray-500'}`} title={`Vistas: ${order.view_count}`}>
+                                <Eye className="h-3 w-3" /> {order.view_count}
+                                {isHot && <Flame className="h-3 w-3 ml-0.5" />}
+                            </span>
+                        )}
+                        {(isBatch || order.is_admin_offer) && (
+                            order.is_admin_offer || order.user_id === 'oldiebutgoldie' || order.user_email === 'admin@discography.ai' ? (
+                                <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-yellow-500/20 to-yellow-700/20 border border-yellow-500/50 text-yellow-500 text-[9px] font-black uppercase tracking-widest shadow-[0_0_10px_rgba(234,179,8,0.2)]">
+                                    {TEXTS.badges.storeObg}
                                 </span>
-                            </div>
+                            ) : (
+                                <span className="px-2 py-0.5 rounded-full bg-slate-500/10 border border-slate-500/30 text-slate-400 text-[9px] font-black uppercase tracking-widest">
+                                    {TEXTS.badges.user_label}
+                                </span>
+                            )
                         )}
                     </div>
 
-                    <div className="flex items-center justify-between pt-2 border-t border-white/5">
-                        <div className="flex flex-col">
-                            <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest mb-0.5">
-                                Precio de Colección
-                            </span>
-                            <span className="text-lg font-display font-black text-white">
+                    <div className="flex flex-col">
+                        <h3 className={`text-xl md:text-2xl font-display font-black text-white uppercase tracking-tight truncate ${context !== 'public' ? 'group-hover:text-primary transition-colors' : ''}`}>
+                            {isBatch ? title : artist}
+                        </h3>
+                        {!isBatch && title && (
+                            <h4 className="text-sm font-bold text-gray-400 uppercase tracking-widest truncate mt-0.5">
+                                {title}
+                            </h4>
+                        )}
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 md:gap-3 mt-1">
+                        <span className={`px-2 md:px-3 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest border ${intent.includes("COMPRAR") ? "bg-green-500/10 text-green-400 border-green-500/20" : "bg-orange-500/10 text-orange-400 border-orange-500/20"
+                            }`}>
+                            {intent}
+                        </span>
+                        {!isBatch && (
+                            <>
+                                <span className="flex items-center gap-1 text-gray-500 text-[9px] md:text-[10px] font-black uppercase">
+                                    <Tag className="h-3 w-3" /> {format}
+                                </span>
+                                <span className="text-gray-600 text-[9px] md:text-[10px] font-bold uppercase">{condition}</span>
+                            </>
+                        )}
+
+                        {/* Premium Price Badge */}
+                        {(order.details?.price || order.totalPrice) && (
+                            <span className="flex items-center gap-1.5 bg-primary/10 border border-primary/20 text-primary px-3 py-1 rounded-lg text-xs md:text-sm font-black shadow-sm shadow-primary/5 ml-auto md:ml-2">
+                                <DollarSign className="h-4 w-4" />
                                 {canSeePrice ? (
                                     `${(order.details?.currency || order.currency) === "USD" ? "US$" : "$"} ${((order.details?.price || order.totalPrice) || 0).toLocaleString()}`
                                 ) : (
-                                    <span className="text-gray-700 italic text-[10px]">{TEXTS.common.private}</span>
+                                    <span className="text-primary/50 italic text-[10px]">{TEXTS.common.private}</span>
                                 )}
                             </span>
-                        </div>
-
-                        {/* Action Icon / Button */}
-                        <div className="p-3 bg-white/5 group-hover:bg-yellow-500 group-hover:text-black rounded-full transition-all border border-white/5 group-hover:border-yellow-500 shadow-xl">
-                            <ChevronRight className="h-5 w-5" />
-                        </div>
+                        )}
                     </div>
+
+                    {/* Time & Public Link Line */}
+                    <div className="flex items-center justify-between pt-2">
+                        <time
+                            dateTime={new Date(order.createdAt?.seconds * 1000 || order.timestamp?.seconds * 1000 || Date.now()).toISOString()}
+                            className="text-[10px] text-gray-600 font-bold flex items-center gap-1.5 uppercase font-mono"
+                        >
+                            <Clock className="w-3.5 h-3.5" /> {getReadableDate(order.createdAt || order.timestamp)}
+                        </time>
+                        <Link
+                            to={`/orden/${order.id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className={`px-3 py-1.5 border rounded-lg text-[9px] font-black uppercase tracking-widest transition-colors flex items-center gap-2
+                                ${context === 'public' ? 'bg-white/5 hover:bg-white/10 text-white border-white/10' : 'bg-transparent hover:bg-white/5 text-gray-400 border-transparent hover:border-white/10'}
+                            `}
+                        >
+                            <Search className="w-3 h-3" /> Ver Detalle Público
+                        </Link>
+                    </div>
+                </div>
+
+                {/* Right Status Panel */}
+                <div className="flex flex-col w-full lg:w-auto mt-4 lg:mt-0 gap-3 md:gap-4 flex-shrink-0 border-t border-white/5 lg:border-t-0 pt-4 lg:pt-0">
+                    <div className="flex w-full justify-start lg:justify-end">
+                        {getStatusBadge(status)}
+                    </div>
+
+                    {/* Direct Buy Button for Public Feed */}
+                    {context === 'public' && order.is_admin_offer && status !== 'completed' && status !== 'venta_finalizada' && status !== 'cancelled' && (
+                        <Link
+                            to={`/orden/${order.id}?action=buy`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-full px-6 py-4 bg-gradient-to-r from-yellow-500 to-orange-500 text-black font-black uppercase tracking-widest text-[11px] md:text-sm rounded-xl shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 hover:-translate-y-0.5 transition-all text-center lg:mt-auto"
+                        >
+                            ¡COMPRAR!
+                        </Link>
+                    )}
+
+                    {/* QuickOffer Component for Admins - Minimalist & Validated */}
+                    {context === 'admin' && status !== 'completed' && status !== 'venta_finalizada' && (
+                        <div className="flex items-center gap-1.5 mt-auto group/quick" onClick={(e) => e.stopPropagation()}>
+                            <div className="relative">
+                                <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-primary/50 group-focus-within/quick:text-primary transition-colors" />
+                                <input
+                                    type="number"
+                                    placeholder="Cotizar"
+                                    value={quickOffer}
+                                    onChange={(e) => setQuickOffer(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleQuickOffer(e as any)}
+                                    className="bg-white/5 border border-white/10 rounded-lg pl-6 pr-2 py-1.5 text-[10px] font-black text-white w-20 focus:w-28 focus:border-primary/50 focus:bg-white/[0.08] focus:outline-none transition-all placeholder:text-gray-700 placeholder:font-bold"
+                                />
+                            </div>
+                            <button
+                                onClick={handleQuickOffer}
+                                disabled={!quickOffer || parseFloat(quickOffer) <= 0 || isSubmitting}
+                                className="p-2 bg-primary/10 text-primary border border-primary/20 rounded-lg hover:bg-primary hover:text-black transition-all disabled:opacity-10 active:scale-95 shadow-lg shadow-primary/5"
+                                title="Enviar Contraoferta"
+                            >
+                                <CheckCircle2 className="h-3.5 w-3.5" />
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
 
-            {/* Admin/Internal Overlay Info - Floating and Subtle */}
-            {context !== 'public' && (
-                <div className="absolute top-2 left-2 flex flex-col gap-1 pointer-events-none">
-                    {order.order_number && (
-                        <span className="bg-black/60 backdrop-blur-md px-2 py-0.5 rounded text-[8px] font-mono text-gray-400 border border-white/5">
-                            #{order.order_number}
+            {/* Offer Injection for internal contexts */}
+            {context !== 'public' && (order.adminPrice || order.admin_offer_price) && (
+                <div className="px-6 md:px-8 pb-6 w-full flex justify-end">
+                    {renderPriceOffer()}
+                </div>
+            )}
+
+            {/* Collapsible Batch Section */}
+            {isBatch && context !== 'public' && (
+                <div className="border-t border-white/5">
+                    <button
+                        onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded); }}
+                        className="w-full px-6 py-3 flex items-center justify-between bg-white/[0.01] hover:bg-white/[0.03] transition-colors"
+                    >
+                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                            Desplegar Contenido del Lote ({items.length})
                         </span>
-                    )}
-                    {getStatusBadge(status)}
+                        <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform duration-300 ${isExpanded ? "rotate-180" : ""}`} />
+                    </button>
+                    <AnimatePresence>
+                        {isExpanded && (
+                            <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: "auto", opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                className="overflow-hidden"
+                            >
+                                <div className="px-6 pb-6 pt-2 space-y-2">
+                                    {(items || []).map((item: any, idx: number) => {
+                                        const cleanArtist = item.artist ? item.artist.replace(/UNKNOWN ARTIST\s*[-—–]*\s*/gi, '').trim() : 'Falta Artista';
+                                        return (
+                                            <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-black/40 border border-white/5 gap-4 hover:bg-white/[0.02] transition-colors">
+                                                <div className="flex-1 min-w-0">
+                                                    <h5 className="text-sm font-bold text-white truncate w-full uppercase">
+                                                        {item.title || cleanArtist}
+                                                    </h5>
+                                                    {item.artist && item.title && (
+                                                        <p className="text-[10px] text-gray-500 uppercase tracking-widest truncate mt-0.5">
+                                                            {cleanArtist}
+                                                        </p>
+                                                    )}
+                                                    <div className="flex gap-2 mt-1">
+                                                        {item.format && <span className="text-[9px] bg-white/5 border border-white/10 px-1.5 py-0.5 rounded text-gray-400 uppercase font-bold">{item.format}</span>}
+                                                        {item.condition && <span className="text-[9px] bg-white/5 border border-white/10 px-1.5 py-0.5 rounded text-gray-400 uppercase font-bold">{item.condition}</span>}
+                                                    </div>
+                                                </div>
+                                                <div className="w-14 h-14 rounded-md overflow-hidden bg-white/5 flex-shrink-0 shadow-sm border border-white/5 group-hover:border-white/10 transition-colors">
+                                                    {(item.cover_image || item.image || item.thumbnailUrl) ? (
+                                                        <LazyImage
+                                                            src={item.cover_image || item.image || item.thumbnailUrl}
+                                                            alt=""
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    ) : (
+                                                        <div className="w-full h-full flex items-center justify-center">
+                                                            <Disc className="w-6 h-6 text-white/10" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
             )}
         </motion.article>
