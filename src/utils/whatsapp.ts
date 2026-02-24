@@ -30,8 +30,18 @@ export interface OrderData {
     label?: string;
 }
 
+export const WHATSAPP_CONFIG = {
+    phoneNumber: "5492974188914",
+    templates: {
+        purchase: "¡Hola Oldie But Goldie! 📀\n\nHe seleccionado estas piezas para mi colección:\n\n{itemsList}\n\nOrden: #{orderId}\n\nLink: {canonicalUrl}",
+        sale: "¡Hola! Me interesa comprar este lote por {adminPriceDisplay}. Detalle:\n\n{itemsList}\n\nReferencia: #{orderId}\n\nLink de seguimiento: {canonicalUrl}",
+        acceptDeal: "Hola! Acepté el trato por el lote {orderId}. Coordinemos el pago y el envío.",
+        adminContact: "Hola {name}, te contacto desde la administración de Oldie But Goldie por tu gestión de {intent}. ¿Cómo procedemos con la logística de entrega?"
+    }
+};
+
 export const generateWhatsAppLink = (order: OrderData): string => {
-    const phoneNumber = "5492974188914";
+    const { phoneNumber, templates } = WHATSAPP_CONFIG;
     const orderId = order.order_number || order.id || "";
     const isPurchase = order.is_admin_offer || order.details?.intent?.toUpperCase() === "COMPRAR" || order.type?.toUpperCase() === "COMPRAR";
     const canonicalUrl = `https://www.oldiebutgoldie.com.ar/orden/${order.id}`;
@@ -58,11 +68,13 @@ export const generateWhatsAppLink = (order: OrderData): string => {
     };
 
     const itemsList = getItemsList();
-    const count = order.isBatch ? (order.items?.length || 0) : 1;
     let message = "";
 
     if (isPurchase) {
-        message = `¡Hola Oldie But Goldie! 📀\n\nQuiero comprar este lote de ${count} ítems:\n\n${itemsList}\n\nOrden de referencia: #${orderId}\n\nLink de mi lote: ${canonicalUrl}`;
+        message = templates.purchase
+            .replace("{itemsList}", itemsList)
+            .replace("{orderId}", orderId)
+            .replace("{canonicalUrl}", canonicalUrl);
     } else {
         const adminPriceDisplay = order.adminPrice
             ? `${order.adminCurrency === "USD" ? "US$" : "$"} ${order.adminPrice.toLocaleString()}`
@@ -70,11 +82,11 @@ export const generateWhatsAppLink = (order: OrderData): string => {
                 ? `${order.currency === "USD" ? "US$" : "$"} ${order.totalPrice.toLocaleString()}`
                 : "A confirmar";
 
-        const originalPrice = order.details?.price
-            ? `${order.details.currency === "USD" ? "US$" : "$"}${order.details.price.toLocaleString()}`
-            : "A confirmar";
-
-        message = `¡Hola Oldie But Goldie! 👋\n\nQuiero venderte este lote por ${adminPriceDisplay}. Detalle (${count} ítems):\n\n${itemsList}\n\nOrden de referencia: #${orderId}\nTu oferta original: ${originalPrice}\n\nLink de mi lote: ${canonicalUrl}`;
+        message = templates.sale
+            .replace("{adminPriceDisplay}", adminPriceDisplay)
+            .replace("{itemsList}", itemsList)
+            .replace("{orderId}", orderId)
+            .replace("{canonicalUrl}", canonicalUrl);
     }
 
     const encodedMessage = encodeURIComponent(message);
@@ -82,33 +94,20 @@ export const generateWhatsAppLink = (order: OrderData): string => {
 };
 
 export const generateWhatsAppAcceptDealMsg = (order: OrderData): string => {
-    const phoneNumber = "5492974188914";
+    const { phoneNumber, templates } = WHATSAPP_CONFIG;
     const orderId = order.order_number || order.id || "";
-    const msg = encodeURIComponent(`Hola! Acepté el trato por el lote ${orderId}. Coordinemos el pago y el envío.`);
+    const msg = encodeURIComponent(templates.acceptDeal.replace("{orderId}", orderId));
     return `https://wa.me/${phoneNumber}?text=${msg}`;
 };
 
 export const generateWhatsAppAdminContactMsg = (order: OrderData, customerName?: string): string => {
-    const phoneNumber = "5492974188914";
+    const { phoneNumber, templates } = WHATSAPP_CONFIG;
     const name = customerName || "Cliente";
-    let message = "";
+    const intent = (order.details?.intent || order.type || "COMPRAR").toUpperCase() === "COMPRAR" ? "comprar" : "vender";
 
-    if (order.isBatch) {
-        message = encodeURIComponent(
-            `Hola ${name}! Te contactamos desde Oldie but Goldie por tu Lote de ${(order.items || []).length} ítems. ¿Seguimos coordinando?`
-        );
-    } else {
-        const artist = (order.details?.artist || order.artist || "Unknown Artist").trim();
-        const album = (order.details?.album || order.title || "Unknown Album").trim();
-        const item = `${artist} - ${album}`;
-        const intent = (order.details?.intent || order.type || "COMPRAR").toUpperCase() === "COMPRAR" ? "comprar" : "vender";
-        const priceText = order.details?.price
-            ? ` por ${order.details.currency === "USD" ? "US$" : "$"}${order.details.price.toLocaleString()}`
-            : "";
-        message = encodeURIComponent(
-            `Hola ${name}! Te contactamos desde Oldie but Goldie por tu pedido de ${intent}: ${item}${priceText}. ¿Seguimos coordinando?`
-        );
-    }
+    const message = templates.adminContact
+        .replace("{name}", name)
+        .replace("{intent}", intent);
 
-    return `https://wa.me/${phoneNumber}?text=${message}`;
+    return `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
 };

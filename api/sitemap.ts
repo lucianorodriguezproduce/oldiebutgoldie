@@ -4,7 +4,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Content-Type', 'text/xml; charset=utf-8');
     res.setHeader('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=43200'); // Cache for 24h at the edge
 
-    const host = req.headers.host || 'oldie-but-goldie.vercel.app';
+    const host = req.headers.host || 'www.oldiebutgoldie.com.ar';
     const protocol = host.includes('localhost') ? 'http' : 'https';
     const baseUrl = `${protocol}://${host}`;
 

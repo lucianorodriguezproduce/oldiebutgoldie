@@ -10,7 +10,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Cache-Control', CACHE_CONTROL);
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
 
-    const defaultImage = 'https://oldie-but-goldie.vercel.app/og-image.jpg';
+    const defaultImage = 'https://www.oldiebutgoldie.com.ar/og-image.jpg';
     const defaultTitle = 'Oldie but Goldie';
     const defaultDescription = 'Comprar/Vender formato físico. Consultar disponibilidad vía WhatsApp.';
 
@@ -140,7 +140,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 seconds strict timeout
 
         const fetchHeaders: Record<string, string> = {
-            'User-Agent': 'OldieButGoldieBot/1.0 +https://oldie-but-goldie.vercel.app'
+            'User-Agent': 'OldieButGoldieBot/1.0 +https://www.oldiebutgoldie.com.ar'
         };
 
         if (process.env.DISCOGS_API_TOKEN) {
