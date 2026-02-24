@@ -98,18 +98,44 @@ export default function Home() {
         if (selectedItem && format && condition) {
             const existing = loteItems.find(i => i.id === selectedItem.id);
 
-            // Only add/update if it's new OR if attributes (format/condition) changed
-            if (!existing || existing.format !== format || existing.condition !== condition) {
+            if (!existing ||
+                existing.format !== format ||
+                existing.condition !== condition ||
+                (price && existing.price !== parseFloat(price))) {
+
                 addItemToBatch({
                     id: selectedItem.id,
                     title: selectedItem.title,
-                    cover_image: selectedItem.cover_image || selectedItem.thumb || '',
+                    artist: (selectedItem as any).normalizedArtist,
+                    album: (selectedItem as any).normalizedAlbum,
+                    cover_image: selectedItem.cover_image || selectedItem.thumb,
                     format,
-                    condition
+                    condition,
+                    price: price ? parseFloat(price) : undefined,
+                    currency
                 });
             }
         }
     }, [format, condition, selectedItem, loteItems, addItemToBatch]);
+
+    // normalizer for Discogs data to ensure high-fidelity artist/album separation
+    const normalizeDiscogsData = (data: any) => {
+        if (!data) return data;
+
+        // Extract real artist name from the structured 'artists' array
+        const realArtist = data.artists?.[0]?.name ||
+            data.artist ||
+            (data.title?.includes(' - ') ? data.title.split(' - ')[0].trim() : "Varios");
+
+        // Use the 'title' field as the real album title
+        const realAlbum = data.title?.includes(' - ') ? data.title.split(' - ')[1].trim() : data.title || "Detalle del Disco";
+
+        return {
+            ...data,
+            normalizedArtist: realArtist,
+            normalizedAlbum: realAlbum
+        };
+    };
 
     // Handle initial route loading if hitting /item/:type/:id directly
     useEffect(() => {
@@ -117,32 +143,35 @@ export default function Home() {
             if (routeId && routeType && !selectedItem) {
                 showLoading(TEXTS.home.loadingDiscogs);
                 try {
-                    let data;
+                    let itemData;
                     if (routeType === 'release') {
-                        data = await discogsService.getReleaseDetails(routeId);
+                        itemData = await discogsService.getReleaseDetails(routeId);
                     } else if (routeType === 'master') {
-                        data = await discogsService.getMasterDetails(routeId);
+                        itemData = await discogsService.getMasterDetails(routeId);
+                    } else if (routeType === 'artist') {
+                        itemData = await discogsService.getArtistReleases(routeId);
                     }
 
-                    if (data) {
+                    if (itemData) {
+                        const normalized = normalizeDiscogsData(itemData);
                         setSelectedItem({
-                            id: data.id,
-                            title: data.title || (data.artists ? `${data.artists[0]?.name} - ${data.title}` : 'Desconocido'),
-                            cover_image: data.images?.[0]?.uri || data.thumb || '',
-                            thumb: data.thumb || '',
+                            id: normalized.id,
+                            title: normalized.title,
+                            cover_image: normalized.images?.[0]?.uri || normalized.thumb || '',
+                            thumb: normalized.thumb || '',
                             type: routeType,
-                            uri: data.uri || '',
-                            resource_url: data.resource_url || '',
-                            genre: data.genres || [],
-                            year: data.year?.toString() || ''
-                        });
+                            uri: normalized.uri || '',
+                            resource_url: normalized.resource_url || '',
+                            genre: normalized.genres || [],
+                            year: normalized.year?.toString() || '',
+                            normalizedArtist: normalized.normalizedArtist,
+                            normalizedAlbum: normalized.normalizedAlbum
+                        } as any);
                         setIsSearchActive(false);
 
-                        // If user accessed a direct item, it might be an order link from /actividad
-                        // We check Firebase to see if there's a recent order for this item
+                        // Cross-reference with existing orders in Firebase
                         try {
                             const numericalRouteId = Number(routeId || 0);
-
                             const q = firestoreQuery(
                                 collection(db, "orders"),
                                 where("item_id", "==", numericalRouteId),
@@ -150,7 +179,6 @@ export default function Home() {
                             );
                             const orderSnap = await getDocs(q);
                             if (!orderSnap.empty) {
-                                // Extract and scrub sensitive user info before dropping into state
                                 const orderData = orderSnap.docs[0].data() as any;
                                 setPublicOrder({
                                     id: orderSnap.docs[0].id,
@@ -335,9 +363,8 @@ export default function Home() {
     const handleShare = async () => {
         if (!selectedItem) return;
 
-        const safeTitle = (selectedItem.title || "").trim();
-        const artist = (safeTitle.split(' - ')[0] || "").trim();
-        const album = (safeTitle.split(' - ')[1] || safeTitle || "").trim();
+        const artist = (selectedItem as any).normalizedArtist || "Varios";
+        const album = (selectedItem as any).normalizedAlbum || selectedItem.title;
         const text = `Mira este hallazgo en Oldie but Goldie: ${album} de ${artist}. ¿Qué te parece?`;
 
         // Use the absolute URL of the item
@@ -372,39 +399,43 @@ export default function Home() {
 
         const currentUser = auth.currentUser;
 
-        const artistData = (selectedItem as any).artist ||
-            (selectedItem as any).artist_names?.[0] ||
-            (selectedItem.title.includes(' - ') ? selectedItem.title.split(' - ')[0] : 'Varios');
-
-        const albumData = (selectedItem as any).album ||
-            (selectedItem.title.includes(' - ') ? (selectedItem.title.split(' - ')[1] || selectedItem.title) : selectedItem.title);
+        const artistData = (selectedItem as any).normalizedArtist || "Varios";
+        const albumData = (selectedItem as any).normalizedAlbum || selectedItem.title;
         const discogsId = (selectedItem as any).id;
 
         const payload: any = {
-            user_id: uid,
-            user_email: currentUser?.email || "Sin email",
-            user_name: currentUser?.displayName || "Usuario Registrado",
-            user_photo: currentUser?.photoURL || "",
-            thumbnailUrl: selectedItem?.cover_image || selectedItem?.thumb || "https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png",
-            order_number: generateOrderNumber(),
+            order_number: `ORD-${Date.now().toString().slice(-6)}`,
+            user_id: user?.uid || "anonymous",
+            user_email: user?.email || "anonymous@oldiebutgoldie.com.ar",
+            status: "pending",
             item_id: discogsId,
-            discogs_id: discogsId, // Root-level ID
-            artist: artistData,    // Root-level Artist
-            title: albumData,     // Root-level Title (Standardizing on Album as Title)
-            album: albumData,     // Root-level Album
+            discogs_id: discogsId,
+            artist: artistData,
+            title: albumData,
+            album: albumData,
+            timestamp: serverTimestamp(),
             details: {
-                format,
-                condition,
-                intent: resolvedIntent,
-                discogs_id: discogsId, // Nested ID for backward/forward compatibility
+                format: format,
+                condition: condition,
+                intent: intent,
+                price: price ? parseFloat(price) : null,
+                currency: currency,
+                discogs_id: discogsId,
                 artist: artistData,
                 album: albumData,
-                cover_image: selectedItem.cover_image || selectedItem.thumb || '',
+                market_price: marketPrice,
+                market_currency: "USD"
             },
-            timestamp: serverTimestamp(),
-            createdAt: serverTimestamp(),
-            status: 'pending',
-            type: resolvedIntent // Root type for schema consistency
+            items: [
+                {
+                    id: discogsId,
+                    discogs_id: discogsId,
+                    title: albumData,
+                    artist: artistData,
+                    album: albumData,
+                    cover_image: selectedItem.cover_image || selectedItem.thumb
+                }
+            ]
         };
 
         // Add pricing info for VENDER orders
@@ -789,10 +820,10 @@ export default function Home() {
 
                                                         <div className="absolute inset-x-0 bottom-0 p-4 md:p-6 space-y-1">
                                                             <h5 className="text-sm md:text-lg font-bold font-display italic text-white leading-tight line-clamp-2 md:line-clamp-1 group-hover:text-primary transition-colors">
-                                                                {result.title.split(' - ')[1] || result.title}
+                                                                {(result as any).normalizedAlbum || (result.title.includes(' - ') ? result.title.split(' - ')[1] : result.title)}
                                                             </h5>
                                                             <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none truncate block">
-                                                                {result.title.split(' - ')[0]}
+                                                                {(result as any).normalizedArtist || (result.title.includes(' - ') ? result.title.split(' - ')[0] : result.title)}
                                                             </span>
                                                         </div>
 
@@ -890,7 +921,10 @@ export default function Home() {
                                     <div className="flex-1 p-8 md:p-12 space-y-10 flex flex-col justify-center border-l border-white/5 z-20 bg-[#0A0A0A]">
                                         <div className="space-y-4">
                                             <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500">{TEXTS.item.receiptTitle}</h4>
-                                            <h3 className="text-3xl lg:text-5xl font-display font-black text-white uppercase tracking-tighter leading-none">{selectedItem.title}</h3>
+                                            <h3 className="text-3xl lg:text-5xl font-display font-black text-white uppercase tracking-tighter leading-none">
+                                                {(selectedItem as any).normalizedArtist} <br />
+                                                <span className="text-primary">{(selectedItem as any).normalizedAlbum}</span>
+                                            </h3>
                                             <p className="text-primary font-mono tracking-widest text-sm">{publicOrder.order_number}</p>
                                         </div>
 
@@ -1079,10 +1113,10 @@ export default function Home() {
                                                                 <img src={rec.cover_image || rec.thumb} alt={rec.title} className="w-full h-full object-cover grayscale-[0.3] group-hover:grayscale-0 transition-transform duration-700 group-hover:scale-105" />
                                                             </div>
                                                             <h5 className="text-lg font-bold font-display italic text-white truncate w-full group-hover:text-primary transition-colors">
-                                                                {rec.title.split(' - ')[1] || rec.title}
+                                                                {(rec as any).normalizedAlbum || (rec.title.includes(' - ') ? rec.title.split(' - ')[1] : rec.title)}
                                                             </h5>
                                                             <span className="text-xs font-black text-gray-500 uppercase tracking-widest leading-none truncate w-full mt-1">
-                                                                {rec.title.split(' - ')[0]}
+                                                                {(rec as any).normalizedArtist || (rec.title.includes(' - ') ? rec.title.split(' - ')[0] : rec.title)}
                                                             </span>
                                                         </button>
                                                     ))}

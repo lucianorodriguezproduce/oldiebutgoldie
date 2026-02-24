@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 export interface BatchItem {
     id: number;
     title: string;
+    artist?: string;
+    album?: string;
     cover_image: string;
     format: string;
     condition: string;

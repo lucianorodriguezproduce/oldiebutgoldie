@@ -54,9 +54,9 @@ export default function RevisarLote() {
             items: loteItems.map(item => ({
                 id: item.id || Math.floor(Math.random() * 1000000),
                 discogs_id: item.id,
-                title: item.title || "Sin Título",
-                artist: (item as any).artist || (item.title?.includes(' - ') ? item.title.split(' - ')[0] : ""),
-                album: (item as any).album || (item.title?.includes(' - ') ? (item.title.split(' - ')[1] || item.title) : (item.title || "")),
+                title: item.album || item.title || "Sin Título",
+                artist: item.artist || "Varios",
+                album: item.album || item.title || "Sin Título",
                 cover_image: item.cover_image || "https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png",
                 format: item.format || "No especificado",
                 condition: item.condition || "No especificado",
