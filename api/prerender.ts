@@ -54,16 +54,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     const cleanStr = (s: string | undefined | null) => s ? s.replace(/UNKNOWN ARTIST\s*[-—–]*\s*/gi, '').trim() : '';
 
                     const rawArtist = cleanStr(
+                        fields.artist?.stringValue ||
                         itemsArray[0]?.mapValue?.fields?.artist?.stringValue ||
                         fields.details?.mapValue?.fields?.artist?.stringValue ||
-                        fields.artist?.stringValue || ""
+                        ""
                     );
 
                     const rawAlbum = cleanStr(
+                        fields.title?.stringValue ||
+                        fields.album?.stringValue ||
                         fields.details?.mapValue?.fields?.album?.stringValue ||
                         itemsArray[0]?.mapValue?.fields?.title?.stringValue ||
                         itemsArray[0]?.mapValue?.fields?.album?.stringValue ||
-                        fields.title?.stringValue || "Detalle del Disco"
+                        "Detalle del Disco"
                     );
 
                     let displayArtist = rawArtist;

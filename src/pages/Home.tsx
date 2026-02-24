@@ -372,6 +372,10 @@ export default function Home() {
 
         const currentUser = auth.currentUser;
 
+        const artistData = (selectedItem as any).artist || (selectedItem.title.includes(' - ') ? selectedItem.title.split(' - ')[0] : "");
+        const albumData = (selectedItem as any).album || (selectedItem.title.includes(' - ') ? (selectedItem.title.split(' - ')[1] || selectedItem.title) : selectedItem.title);
+        const discogsId = (selectedItem as any).id;
+
         const payload: any = {
             user_id: uid,
             user_email: currentUser?.email || "Sin email",
@@ -379,14 +383,18 @@ export default function Home() {
             user_photo: currentUser?.photoURL || "",
             thumbnailUrl: selectedItem?.cover_image || selectedItem?.thumb || "https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png",
             order_number: generateOrderNumber(),
-            item_id: selectedItem.id,
+            item_id: discogsId,
+            discogs_id: discogsId, // Root-level ID
+            artist: artistData,    // Root-level Artist
+            title: albumData,     // Root-level Title (Standardizing on Album as Title)
+            album: albumData,     // Root-level Album
             details: {
                 format,
                 condition,
                 intent: resolvedIntent,
-                discogs_id: (selectedItem as any).id,
-                artist: (selectedItem as any).artist || (selectedItem.title.includes(' - ') ? selectedItem.title.split(' - ')[0] : ""),
-                album: (selectedItem as any).album || (selectedItem.title.includes(' - ') ? (selectedItem.title.split(' - ')[1] || selectedItem.title) : selectedItem.title),
+                discogs_id: discogsId, // Nested ID for backward/forward compatibility
+                artist: artistData,
+                album: albumData,
                 cover_image: selectedItem.cover_image || selectedItem.thumb || '',
             },
             timestamp: serverTimestamp(),

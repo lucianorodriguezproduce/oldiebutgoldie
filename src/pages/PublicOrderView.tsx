@@ -227,7 +227,7 @@ export default function PublicOrderView() {
 
     const items = isBatch ? (order.items || []) : [
         {
-            title: order.details?.artist ? `${order.details.artist} - ${order.details.album} ` : (order.title || "Unknown Title"),
+            title: displayAlbum || order.title || "Detalle del Disco",
             artist: displayArtist,
             album: displayAlbum,
             cover_image: coverImage,
