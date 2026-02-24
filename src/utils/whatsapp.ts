@@ -72,14 +72,14 @@ export const generateWhatsAppLink = (order: OrderData): string => {
 };
 
 export const generateWhatsAppAcceptDealMsg = (order: OrderData): string => {
-    const phoneNumber = "5491140411796"; // Profile.tsx hardcoded number
+    const phoneNumber = "5492974188914";
     const orderId = order.order_number || order.id || "";
     const msg = encodeURIComponent(`Hola! Acepté el trato por el lote ${orderId}. Coordinemos el pago y el envío.`);
     return `https://wa.me/${phoneNumber}?text=${msg}`;
 };
 
 export const generateWhatsAppAdminContactMsg = (order: OrderData, customerName?: string): string => {
-    const phoneNumber = ""; // AdminOrders uses wa.me/?text= (user selects contact on web whatsapp)
+    const phoneNumber = "5492974188914";
     const name = customerName || "Cliente";
     let message = "";
 
