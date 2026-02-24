@@ -38,7 +38,7 @@ import { TEXTS } from "@/constants/texts";
 import { AlbumCardSkeleton } from "@/components/ui/Skeleton";
 import { Link, useSearchParams } from "react-router-dom";
 import OrderDetailsDrawer from "@/components/OrderDetailsDrawer";
-import { generateWhatsAppLink } from '@/utils/whatsapp';
+import { generateWhatsAppLink, generateWhatsAppAcceptDealMsg } from '@/utils/whatsapp';
 import type { OrderData } from '@/utils/whatsapp';
 import OrderCard from '@/components/OrderCard';
 import { pushWhatsAppContactFromOrder } from "@/utils/analytics";
