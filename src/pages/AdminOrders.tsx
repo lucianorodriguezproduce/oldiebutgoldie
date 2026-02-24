@@ -686,32 +686,34 @@ export default function AdminOrders() {
 
                             {selectedOrder.items && selectedOrder.items.length > 0 ? (
                                 <>
-                                    <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-                                        <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">{TEXTS.admin.stats.total}</p>
-                                            <p className="text-2xl font-display font-black text-white">{selectedOrder.items.length}</p>
+                                    {!selectedOrder.isBatch && !(selectedOrder as any).is_admin_offer && (
+                                        <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
+                                            <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">{TEXTS.admin.stats.total}</p>
+                                                <p className="text-2xl font-display font-black text-white">{selectedOrder.items.length}</p>
+                                            </div>
+                                            <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">{TEXTS.admin.stats.pending}</p>
+                                                <p className="text-2xl font-display font-black text-amber-500">{selectedOrder.items.filter((o: any) => o.status === 'pending').length}</p>
+                                            </div>
+                                            <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">{TEXTS.admin.stats.quoted}</p>
+                                                <p className="text-2xl font-display font-black text-blue-400">{selectedOrder.items.filter((o: any) => o.status === 'quoted').length}</p>
+                                            </div>
+                                            <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">{TEXTS.admin.stats.negotiating}</p>
+                                                <p className="text-2xl font-display font-black text-indigo-400">{selectedOrder.items.filter((o: any) => o.status === 'negotiating').length}</p>
+                                            </div>
+                                            <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">{TEXTS.admin.stats.finished}</p>
+                                                <p className="text-2xl font-display font-black text-primary">{selectedOrder.items.filter((o: any) => o.status === 'venta_finalizada').length}</p>
+                                            </div>
+                                            <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">{TEXTS.admin.stats.completed}</p>
+                                                <p className="text-2xl font-display font-black text-gray-500">{selectedOrder.items.filter((o: any) => o.status === 'completed').length}</p>
+                                            </div>
                                         </div>
-                                        <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">{TEXTS.admin.stats.pending}</p>
-                                            <p className="text-2xl font-display font-black text-amber-500">{selectedOrder.items.filter(o => o.status === 'pending').length}</p>
-                                        </div>
-                                        <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">{TEXTS.admin.stats.quoted}</p>
-                                            <p className="text-2xl font-display font-black text-blue-400">{selectedOrder.items.filter(o => o.status === 'quoted').length}</p>
-                                        </div>
-                                        <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">{TEXTS.admin.stats.negotiating}</p>
-                                            <p className="text-2xl font-display font-black text-indigo-400">{selectedOrder.items.filter(o => o.status === 'negotiating').length}</p>
-                                        </div>
-                                        <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">{TEXTS.admin.stats.finished}</p>
-                                            <p className="text-2xl font-display font-black text-primary">{selectedOrder.items.filter(o => o.status === 'venta_finalizada').length}</p>
-                                        </div>
-                                        <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">{TEXTS.admin.stats.completed}</p>
-                                            <p className="text-2xl font-display font-black text-gray-500">{selectedOrder.items.filter(o => o.status === 'completed').length}</p>
-                                        </div>
-                                    </div>
+                                    )}
                                     {selectedOrder.items.map((item: any, idx: number) => (
                                         <div key={idx} className="border-b border-white/10 py-5 flex items-center justify-between gap-4">
                                             <div className="flex-1 min-w-0">
