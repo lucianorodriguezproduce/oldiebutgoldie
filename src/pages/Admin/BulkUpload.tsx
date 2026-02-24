@@ -3,7 +3,7 @@ import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2, ChevronDown, Search
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { discogsService, type DiscogsSearchResult } from "@/lib/discogs";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { addDoc, collection, serverTimestamp, getDocs, query, where, updateDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useLoading } from "@/context/LoadingContext";
 import { pushBulkUploadCompleted } from "@/utils/analytics";
@@ -38,6 +38,7 @@ export default function BulkUpload() {
     const [progress, setProgress] = useState(0);
     const [showBatchModal, setShowBatchModal] = useState(false);
     const [batchPrice, setBatchPrice] = useState<number>(0);
+    const [isSanitizing, setIsSanitizing] = useState(false);
 
     // Initial Load from localStorage
     useEffect(() => {
@@ -224,6 +225,76 @@ export default function BulkUpload() {
         }
     };
 
+    const parseDiscogsTitle = (rawTitle: string) => {
+        let clean = rawTitle.replace(/^unknown artist\s*[-—–]\s*/i, '').trim();
+        let artist = "Desconocido";
+        let title = clean;
+
+        if (clean.includes(' - ')) {
+            const parts = clean.split(' - ');
+            artist = parts[0].trim();
+            title = parts.slice(1).join(' - ').trim();
+        } else if (clean.includes(' — ')) {
+            const parts = clean.split(' — ');
+            artist = parts[0].trim();
+            title = parts.slice(1).join(' — ').trim();
+        }
+
+        return { artist, title };
+    };
+
+    const handleSanitizeDatabase = async () => {
+        if (!window.confirm("¿Seguro que deseas sanitizar los títulos de la base de datos eliminando 'UNKNOWN ARTIST'?")) return;
+
+        setIsSanitizing(true);
+        showLoading("Sanitizando base de datos...");
+        try {
+            const q = query(collection(db, "orders"), where("status", "==", "store_offer"));
+            const snapshot = await getDocs(q);
+            let updatedCount = 0;
+
+            for (const document of snapshot.docs) {
+                const data = document.data();
+                let needsUpdate = false;
+                let newTitle = data.title;
+                const newItems = [...(data.items || [])];
+
+                // Check order title
+                if (typeof newTitle === 'string' && /unknown artist\s*[-—–]\s*/i.test(newTitle)) {
+                    newTitle = newTitle.replace(/^unknown artist\s*[-—–]\s*/i, '').trim();
+                    needsUpdate = true;
+                }
+
+                // Check items array
+                newItems.forEach((item, index) => {
+                    if (typeof item.title === 'string' && /unknown artist\s*[-—–]\s*/i.test(item.title)) {
+                        newItems[index].title = item.title.replace(/^unknown artist\s*[-—–]\s*/i, '').trim();
+                        needsUpdate = true;
+                    }
+                    if (item.artist?.toLowerCase() === 'unknown artist') {
+                        newItems[index].artist = 'Desconocido';
+                        needsUpdate = true;
+                    }
+                });
+
+                if (needsUpdate) {
+                    await updateDoc(doc(db, "orders", document.id), {
+                        title: newTitle,
+                        items: newItems
+                    });
+                    updatedCount++;
+                }
+            }
+            alert(`¡Sanitización completada! Se actualizaron ${updatedCount} órdenes.`);
+        } catch (error) {
+            console.error("Sanitize error", error);
+            alert("Hubo un error al sanitizar la base de datos.");
+        } finally {
+            setIsSanitizing(false);
+            hideLoading();
+        }
+    };
+
     const handlePublishStrategy = async (strategy: "INDIVIDUAL" | "BUNDLE") => {
         const batchItems = rows.filter(r => r.inBatch && r.status === "MATCH_FOUND" && r.selectedMatch && !r.published);
         if (batchItems.length === 0) return;
@@ -237,8 +308,10 @@ export default function BulkUpload() {
             if (strategy === "INDIVIDUAL") {
                 for (const row of batchItems) {
                     const match = row.selectedMatch!;
+                    const { artist, title } = parseDiscogsTitle(match.title);
+
                     const orderData = {
-                        title: match.title,
+                        title: title,
                         cover_image: match.cover_image,
                         totalPrice: row.originalPrice,
                         status: "store_offer",
@@ -253,8 +326,8 @@ export default function BulkUpload() {
                         createdAt: serverTimestamp(),
                         items: [{
                             id: match.id.toString(),
-                            title: match.title,
-                            artist: match.title.split('-')[0]?.trim() || "Desconocido",
+                            title: title,
+                            artist: artist,
                             format: match.format?.[0] || "Vinyl",
                             condition: `${row.originalMedia} / ${row.originalCover}`,
                             image: match.cover_image,
@@ -288,10 +361,11 @@ export default function BulkUpload() {
                     createdAt: serverTimestamp(),
                     items: batchItems.map(row => {
                         const match = row.selectedMatch!;
+                        const { artist, title } = parseDiscogsTitle(match.title);
                         return {
                             id: match.id.toString(),
-                            title: match.title,
-                            artist: match.title.split('-')[0]?.trim() || "Desconocido",
+                            title: title,
+                            artist: artist,
                             format: match.format?.[0] || "Vinyl",
                             condition: `${row.originalMedia} / ${row.originalCover}`,
                             image: match.cover_image,
@@ -357,6 +431,14 @@ export default function BulkUpload() {
                             <Download className="w-4 h-4" /> Plantilla XLSX
                         </button>
                     )}
+                    <button
+                        onClick={handleSanitizeDatabase}
+                        disabled={isSanitizing}
+                        className="px-6 py-4 rounded-2xl border border-orange-500/20 text-orange-400 hover:bg-orange-500/10 font-bold uppercase tracking-widest text-[10px] transition-all flex items-center gap-2"
+                        title="Eliminar prefijos 'UNKNOWN ARTIST' de las publicaciones"
+                    >
+                        Sanitizar BD
+                    </button>
                 </div>
             </header>
 
