@@ -165,11 +165,15 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
         ? firstItemImage
         : (order.cover_image || order.thumb || order.image || order.cover || order.thumbnailUrl || order.details?.cover_image || order.imageUrl || "https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png");
 
-    // Tarea Singular-Logic-Only: Título dinámico
-    const artist = isBatchDetected ? '' : cleanString(order.details?.artist || items[0]?.artist || order.artist || 'Unknown Artist');
-    const title = isBatchDetected
-        ? `LOTE DE ${itemsCount} DISCOS`
-        : cleanString(order.details?.album || items[0]?.title || items[0]?.album || order.title || 'Disco Registrado');
+    // [STRICT-EXTRACT] Tarea Singular-Logic-Only: Algoritmo de extracción y anti-duplicación
+    const rawArtist = cleanString(items[0]?.artist || order.details?.artist || order.artist || 'Unknown Artist');
+    const rawAlbum = cleanString(order.details?.album || items[0]?.title || items[0]?.album || order.title || 'Disco Registrado');
+
+    // Anti-duplicación: Si artista y álbum son idénticos, usamos fallback
+    const artist = (!isBatchDetected && rawArtist.toLowerCase() === rawAlbum.toLowerCase())
+        ? (order.user_name || "Varios Artistas")
+        : rawArtist;
+    const title = isBatchDetected ? `LOTE DE ${itemsCount} DISCOS` : rawAlbum;
 
     // Fallback intent for legacy admin orders
     const isSellerOfferLegacy = order.admin_offer_price || order.adminPrice;

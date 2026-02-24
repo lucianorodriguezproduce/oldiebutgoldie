@@ -224,6 +224,15 @@ export default function PublicOrderView() {
 
     const isBatch = (order.items && order.items.length > 1);
 
+    // [STRICT-EXTRACT] Algoritmo de extracción y anti-duplicación
+    const rawArtist = (order.items?.[0]?.artist || order.details?.artist || order.artist || "Artista Desconocido");
+    const rawAlbum = (order.details?.album || order.items?.[0]?.title || order.title || "Detalle del Disco");
+
+    const displayArtist = (!isBatch && rawArtist.toLowerCase() === rawAlbum.toLowerCase())
+        ? (order.user_name || "Varios Artistas")
+        : rawArtist;
+    const displayAlbum = rawAlbum;
+
     const items = isBatch ? (order.items || []) : [
         {
             title: order.details?.artist ? `${order.details.artist} - ${order.details.album} ` : (order.title || "Unknown Title"),
@@ -306,11 +315,11 @@ export default function PublicOrderView() {
                         <div className="flex items-center gap-4 flex-wrap">
                             <div className="flex flex-col gap-1 items-start">
                                 <h1 className={`text-4xl md:text-5xl font-display font-black tracking-tightest leading-none transition-colors ${isAdminOrder ? 'bg-gradient-to-r from-yellow-200 via-yellow-500 to-yellow-700 bg-clip-text text-transparent drop-shadow-xl' : 'text-white hover:text-primary'}`}>
-                                    {isBatch ? TEXTS.common.batchDetail : (order.details?.artist || order.artist || "Artista Desconocido")}
+                                    {isBatch ? TEXTS.common.batchDetail : displayArtist}
                                 </h1>
-                                {!isBatch && (order.details?.album || order.title) && (
+                                {!isBatch && displayAlbum && (
                                     <h2 className="text-xl md:text-2xl font-bold text-gray-400 uppercase tracking-widest leading-tight">
-                                        {order.details?.album || order.title}
+                                        {displayAlbum}
                                     </h2>
                                 )}
                             </div>

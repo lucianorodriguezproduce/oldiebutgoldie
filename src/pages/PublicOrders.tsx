@@ -101,7 +101,7 @@ export default function PublicOrders() {
                             <AnimatePresence>
                                 {orders.map((order, idx) => (
                                     <OrderCard
-                                        key={order.id || idx}
+                                        key={`${order.id}-${order.items?.length || 0}-${order.status}`}
                                         order={order}
                                         context="public"
                                     />

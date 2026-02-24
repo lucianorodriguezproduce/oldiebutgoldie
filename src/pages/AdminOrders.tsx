@@ -488,7 +488,7 @@ export default function AdminOrders() {
                     <AnimatePresence>
                         {sortedOrders.map(order => (
                             <OrderCard
-                                key={order.id}
+                                key={`${order.id}-${order.items?.length || 0}-${order.status}`}
                                 order={order}
                                 context="admin"
                                 onClick={() => setSelectedOrder(order)}
@@ -505,11 +505,19 @@ export default function AdminOrders() {
             <OrderDetailsDrawer
                 isOpen={!!selectedOrder}
                 onClose={() => { setSelectedOrder(null); setActiveDropdown(null); }}
-                title={selectedOrder ? (
-                    (selectedOrder.items && selectedOrder.items.length > 1)
-                        ? `LOTE DE ${selectedOrder.items.length} DISCOS`
-                        : `${selectedOrder.items?.[0]?.artist || selectedOrder.details?.artist || "Artista"} - ${selectedOrder.items?.[0]?.title || selectedOrder.details?.album || "Disco"}`
-                ) : "Detalle de Pedido"}
+                title={selectedOrder ? (() => {
+                    const isBatch = (selectedOrder.items && selectedOrder.items.length > 1);
+                    const rawArtist = (selectedOrder.items?.[0]?.artist || selectedOrder.details?.artist || "Artista Desconocido");
+                    const rawAlbum = (selectedOrder.details?.album || selectedOrder.items?.[0]?.title || "Detalle de Pedido");
+
+                    if (isBatch) return `LOTE DE ${selectedOrder.items?.length || 0} DISCOS`;
+
+                    const displayArtist = (rawArtist.toLowerCase() === rawAlbum.toLowerCase())
+                        ? (selectedOrder.user_name || "Varios Artistas")
+                        : rawArtist;
+
+                    return `${displayArtist} - ${rawAlbum}`;
+                })() : "Detalle de Pedido"}
                 footer={
                     selectedOrder && (
                         <div className="space-y-4">
