@@ -261,7 +261,7 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
             <div className="p-4 md:p-6 lg:p-8 flex flex-col lg:flex-row items-start lg:items-center gap-6">
 
                 {/* Image Section */}
-                <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl overflow-hidden bg-black/50 flex-shrink-0 border border-white/10 group-hover:border-primary/20 transition-all relative">
+                <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl overflow-hidden bg-black/50 flex-shrink-0 border border-white/10 group-hover:border-primary/20 transition-all relative shadow-md shadow-black/50">
                     {coverImage ? (
                         <LazyImage
                             src={coverImage}
@@ -274,14 +274,14 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                         </div>
                     )}
                     {isBatch && (
-                        <div className="absolute bottom-1 right-1 bg-black/80 backdrop-blur-md px-2 py-0.5 rounded-md border border-white/10 text-[10px] font-bold text-white flex items-center gap-1">
+                        <div className="absolute bottom-1 right-1 bg-black/80 backdrop-blur-md px-2 py-0.5 rounded-md border border-white/10 text-[10px] font-bold text-white flex items-center gap-1 shadow-sm shadow-black/50">
                             <ShoppingBag className="w-3 h-3" /> {items.length}
                         </div>
                     )}
                 </div>
 
                 {/* Details Section */}
-                <div className="flex-1 min-w-0 space-y-3 w-full">
+                <div className="flex-1 min-w-0 flex flex-col justify-center space-y-2.5 w-full">
                     <div className="flex items-center gap-3">
                         {order.order_number && (
                             <span className="inline-flex items-center gap-1.5 text-[9px] font-mono font-bold text-gray-500 uppercase tracking-wider">
@@ -294,17 +294,25 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                                 {isHot && <Flame className="h-3 w-3 ml-0.5" />}
                             </span>
                         )}
+                        {isBatch && (
+                            <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-yellow-500/20 to-yellow-700/20 border border-yellow-500/50 text-yellow-500 text-[9px] font-black uppercase tracking-widest shadow-[0_0_10px_rgba(234,179,8,0.2)]">
+                                ★ Lote de Colección
+                            </span>
+                        )}
                     </div>
 
-                    <h4 className={`text-lg md:text-xl font-display font-black text-white uppercase tracking-tight truncate ${context !== 'public' ? 'group-hover:text-primary transition-colors' : ''}`}>
-                        {isBatch ? (
-                            <span className="text-white">{title}</span>
-                        ) : (
-                            <>{artist ? `${artist} — ` : ""}<span className="text-gray-400">{title}</span></>
+                    <div className="flex flex-col">
+                        <h3 className={`text-xl md:text-2xl font-display font-black text-white uppercase tracking-tight truncate ${context !== 'public' ? 'group-hover:text-primary transition-colors' : ''}`}>
+                            {isBatch ? title : artist}
+                        </h3>
+                        {!isBatch && title && (
+                            <h4 className="text-sm font-bold text-gray-400 uppercase tracking-widest truncate mt-0.5">
+                                {title}
+                            </h4>
                         )}
-                    </h4>
+                    </div>
 
-                    <div className="flex flex-wrap items-center gap-2 md:gap-3">
+                    <div className="flex flex-wrap items-center gap-2 md:gap-3 mt-1">
                         <span className={`px-2 md:px-3 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest border ${intent.includes("COMPRAR") ? "bg-green-500/10 text-green-400 border-green-500/20" : "bg-orange-500/10 text-orange-400 border-orange-500/20"
                             }`}>
                             {intent}
@@ -317,13 +325,15 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                                 <span className="text-gray-600 text-[9px] md:text-[10px] font-bold uppercase">{condition}</span>
                             </>
                         )}
-                        {!isBatch && order.details?.price && (
-                            <span className="flex items-center gap-1 text-primary text-xs md:text-sm font-black">
-                                <DollarSign className="h-3.5 w-3.5" />
+
+                        {/* Premium Price Badge */}
+                        {(order.details?.price || order.totalPrice) && (
+                            <span className="flex items-center gap-1.5 bg-primary/10 border border-primary/20 text-primary px-3 py-1 rounded-lg text-xs md:text-sm font-black shadow-sm shadow-primary/5 ml-auto md:ml-2">
+                                <DollarSign className="h-4 w-4" />
                                 {canSeePrice ? (
-                                    `${order.details.currency === "USD" ? "US$" : "$"} ${(order.details.price || 0).toLocaleString()}`
+                                    `${(order.details?.currency || order.currency) === "USD" ? "US$" : "$"} ${((order.details?.price || order.totalPrice) || 0).toLocaleString()}`
                                 ) : (
-                                    <span className="text-gray-600 italic opacity-50">{TEXTS.common.private}</span>
+                                    <span className="text-primary/50 italic text-[10px]">{TEXTS.common.private}</span>
                                 )}
                             </span>
                         )}
@@ -410,25 +420,40 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                                 className="overflow-hidden"
                             >
                                 <div className="px-6 pb-6 pt-2 space-y-2">
-                                    {(items || []).map((item: any, idx: number) => (
-                                        <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-black/40 border border-white/5">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-lg overflow-hidden bg-white/5">
-                                                    {item.cover_image && (
+                                    {(items || []).map((item: any, idx: number) => {
+                                        const cleanArtist = item.artist ? item.artist.replace(/UNKNOWN ARTIST\s*[-—–]*\s*/gi, '').trim() : 'Falta Artista';
+                                        return (
+                                            <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-black/40 border border-white/5 gap-4 hover:bg-white/[0.02] transition-colors">
+                                                <div className="flex-1 min-w-0">
+                                                    <h5 className="text-sm font-bold text-white truncate w-full uppercase">
+                                                        {item.title || cleanArtist}
+                                                    </h5>
+                                                    {item.artist && item.title && (
+                                                        <p className="text-[10px] text-gray-500 uppercase tracking-widest truncate mt-0.5">
+                                                            {cleanArtist}
+                                                        </p>
+                                                    )}
+                                                    <div className="flex gap-2 mt-1">
+                                                        {item.format && <span className="text-[9px] bg-white/5 border border-white/10 px-1.5 py-0.5 rounded text-gray-400 uppercase font-bold">{item.format}</span>}
+                                                        {item.condition && <span className="text-[9px] bg-white/5 border border-white/10 px-1.5 py-0.5 rounded text-gray-400 uppercase font-bold">{item.condition}</span>}
+                                                    </div>
+                                                </div>
+                                                <div className="w-14 h-14 rounded-md overflow-hidden bg-white/5 flex-shrink-0 shadow-sm border border-white/5 group-hover:border-white/10 transition-colors">
+                                                    {(item.cover_image || item.image || item.thumbnailUrl) ? (
                                                         <LazyImage
-                                                            src={item.cover_image}
+                                                            src={item.cover_image || item.image || item.thumbnailUrl}
                                                             alt=""
                                                             className="w-full h-full object-cover"
                                                         />
+                                                    ) : (
+                                                        <div className="w-full h-full flex items-center justify-center">
+                                                            <Disc className="w-6 h-6 text-white/10" />
+                                                        </div>
                                                     )}
                                                 </div>
-                                                <div>
-                                                    <p className="text-xs font-bold text-white truncate max-w-[150px] md:max-w-xs">{item.artist || 'Unknown'} - {item.album || 'Unknown'}</p>
-                                                    <p className="text-[9px] text-gray-500 uppercase">{item.format || '?'} • {item.condition || '?'}</p>
-                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </motion.div>
                         )}
