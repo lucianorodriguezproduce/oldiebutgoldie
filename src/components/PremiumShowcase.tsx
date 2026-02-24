@@ -23,7 +23,7 @@ export function PremiumShowcase() {
             const items = snapshot.docs
                 .map(doc => ({ id: doc.id, ...doc.data() } as any))
                 .filter(item =>
-                    (item.is_admin_offer === true || item.user_id === 'oldiebutgoldie') &&
+                    (item.is_admin_offer === true || item.user_id === 'oldiebutgoldie' || item.user_email === 'admin@discography.ai') &&
                     item.status === 'pending'
                 )
                 .sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0))

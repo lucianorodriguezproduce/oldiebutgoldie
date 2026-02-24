@@ -318,7 +318,7 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                             </span>
                         )}
                         {(isBatch || order.is_admin_offer) && (
-                            order.is_admin_offer || order.user_id === 'oldiebutgoldie' ? (
+                            order.is_admin_offer || order.user_id === 'oldiebutgoldie' || order.user_email === 'admin@discography.ai' ? (
                                 <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-yellow-500/20 to-yellow-700/20 border border-yellow-500/50 text-yellow-500 text-[9px] font-black uppercase tracking-widest shadow-[0_0_10px_rgba(234,179,8,0.2)]">
                                     {TEXTS.badges.storeObg}
                                 </span>
