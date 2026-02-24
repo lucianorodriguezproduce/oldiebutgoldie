@@ -19,6 +19,7 @@ interface ParsedRow {
     originalCurrency: string;
     originalMedia: string;
     originalCover: string;
+    originalFormat: string;
     status: ProcessingStatus;
     results: DiscogsSearchResult[];
     selectedMatch: DiscogsSearchResult | null;
@@ -60,10 +61,20 @@ export default function BulkUpload() {
         }
     }, [rows]);
 
+    const normalizeFormat = (val: string): string => {
+        if (!val) return "Vinyl";
+        const v = val.toLowerCase();
+        if (v.includes("vinilo") || v.includes("vinyl") || v.includes("lp")) return "Vinyl";
+        if (v.includes("cd") || v.includes("compact disc")) return "CD";
+        if (v.includes("cassette") || v.includes("tape") || v.includes("cinta") || v.includes("casete")) return "Cassette";
+        return "Vinyl"; // Default
+    };
+
     const generateSampleExcel = () => {
         const worksheet = XLSX.utils.json_to_sheet([
-            { Artista: "Pink Floyd", Álbum: "The Dark Side of the Moon", Precio: 85000, Moneda: "ARS", "Estado Media": "M/NM", "Estado Cover": "VG+" },
-            { Artista: "Sui Generis", Álbum: "Instituciones", Precio: 45000, Moneda: "ARS", "Estado Media": "VG+", "Estado Cover": "VG" },
+            { Artista: "Pink Floyd", Álbum: "The Dark Side of the Moon", Precio: 85000, Moneda: "ARS", Formato: "Vinyl", "Estado Media": "M/NM", "Estado Cover": "VG+" },
+            { Artista: "Sui Generis", Álbum: "Instituciones", Precio: 45000, Moneda: "ARS", Formato: "Vinyl", "Estado Media": "VG+", "Estado Cover": "VG" },
+            { Artista: "Miles Davis", Álbum: "Kind of Blue", Precio: 35000, Moneda: "ARS", Formato: "CD", "Estado Media": "M", "Estado Cover": "NM" },
         ]);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "PlantillaOBG");
@@ -112,6 +123,7 @@ export default function BulkUpload() {
             const title = getVal(["title", "título", "titulo", "name", "nombre", "album", "álbum"]);
             const price = parseFloat(getVal(["price", "precio", "monto", "amount", "costo"])) || 0;
             const currency = getVal(["currency", "moneda", "divisa"]) || "ARS";
+            const format = normalizeFormat(getVal(["format", "formato", "tipo", "soporte", "type", "media"]));
             const media = getVal(["media", "vinilo", "disco", "estado media", "record"]) || "Mint (M)";
             const cover = getVal(["cover", "tapa", "funda", "estado cover", "sleeve"]) || "Mint (M)";
 
@@ -121,6 +133,7 @@ export default function BulkUpload() {
                 originalTitle: title,
                 originalPrice: price,
                 originalCurrency: currency,
+                originalFormat: format,
                 originalMedia: media,
                 originalCover: cover,
                 status: "WAITING" as ProcessingStatus,
@@ -145,7 +158,7 @@ export default function BulkUpload() {
                 const rowIndex = newRows.findIndex(r => r.id === row.id);
                 try {
                     const query = `${row.originalArtist} ${row.originalTitle}`.trim();
-                    const response = await discogsService.searchReleases(query, 1, undefined, "release", "vinyl");
+                    const response = await discogsService.searchReleases(query, 1, undefined, "release", row.originalFormat.toLowerCase());
                     const results = response.results;
 
                     newRows[rowIndex].page = 1;
@@ -186,7 +199,7 @@ export default function BulkUpload() {
         try {
             const query = `${row.originalArtist} ${row.originalTitle}`.trim();
             const nextPage = (row.page || 1) + 1;
-            const response = await discogsService.searchReleases(query, nextPage, undefined, "release", "vinyl");
+            const response = await discogsService.searchReleases(query, nextPage, undefined, "release", row.originalFormat.toLowerCase());
 
             const newRows = [...rows];
             newRows[rowIndex].results = [...newRows[rowIndex].results, ...response.results];
@@ -352,14 +365,17 @@ export default function BulkUpload() {
                         user_name: "Stitch Admin",
                         view_count: 0,
                         currency: row.originalCurrency || "ARS",
-                        details: match,
+                        details: {
+                            ...match,
+                            format: row.originalFormat
+                        },
                         timestamp: serverTimestamp(),
                         createdAt: serverTimestamp(),
                         items: [{
                             id: match.id.toString(),
                             title: finalTitle,
                             artist: finalArtist,
-                            format: match.format?.[0] || "Vinyl",
+                            format: row.originalFormat,
                             condition: `${row.originalMedia} / ${row.originalCover}`,
                             image: match.cover_image,
                             price: row.originalPrice,
@@ -409,7 +425,7 @@ export default function BulkUpload() {
                             id: match.id.toString(),
                             title: finalTitle,
                             artist: finalArtist,
-                            format: match.format?.[0] || "Vinyl",
+                            format: row.originalFormat,
                             condition: `${row.originalMedia} / ${row.originalCover}`,
                             image: match.cover_image,
                             price: row.originalPrice,
