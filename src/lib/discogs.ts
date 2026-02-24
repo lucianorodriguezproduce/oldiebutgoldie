@@ -61,13 +61,16 @@ export const discogsService = {
         return fetchFromDiscogs(`/masters/${id}`);
     },
 
-    async getArtistReleases(artistId: string, page: number = 1): Promise<{ results: DiscogsSearchResult[], pagination: any }> {
+    async getArtistReleases(artistId: string, page: number = 1, options: { sort?: string, type?: string } = {}): Promise<{ results: DiscogsSearchResult[], pagination: any }> {
         const params: Record<string, string> = {
-            sort: "year",
+            sort: options.sort || "have",
             sort_order: "desc",
             per_page: "10",
             page: page.toString(),
         };
+        if (options.type) {
+            params.type = options.type;
+        }
         const data = await fetchFromDiscogs(`/artists/${artistId}/releases`, params);
         // Artist releases endpoint has a slightly different format, we map it to match DiscogsSearchResult
         const mappedResults = (data.releases || []).map((r: any) => ({

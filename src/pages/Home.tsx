@@ -38,19 +38,19 @@ const CompactSearchCard = memo(({ result, idx, onClick }: { result: DiscogsSearc
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/10 to-transparent opacity-80 group-hover:opacity-40 transition-opacity" />
 
-                <div className="absolute inset-x-0 bottom-0 p-3 md:p-6 space-y-0.5">
-                    <h5 className="text-[10px] md:text-lg font-bold font-display italic text-white leading-tight line-clamp-1 group-hover:text-primary transition-colors">
+                <div className="absolute inset-x-0 bottom-0 p-2 md:p-6 space-y-0.5">
+                    <h5 className="text-[9px] md:text-lg font-bold font-display italic text-white leading-tight line-clamp-1 group-hover:text-primary transition-colors">
                         {(result as any).normalizedAlbum || (result.title.includes(' - ') ? result.title.split(' - ')[1] : result.title)}
                     </h5>
-                    <span className="text-[8px] md:text-[10px] font-black text-gray-500 uppercase tracking-widest leading-none truncate block">
+                    <span className="text-[7px] md:text-[10px] font-black text-gray-500 uppercase tracking-widest leading-none truncate block">
                         {(result as any).normalizedArtist || (result.title.includes(' - ') ? result.title.split(' - ')[0] : result.title)}
                     </span>
                 </div>
 
-                {/* Mobile Type Indicator */}
+                {/* Mobile Type Indicator - More discreet */}
                 {result.type && (
-                    <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/60 backdrop-blur-md border border-white/10 md:top-4 md:left-4 md:px-2 md:py-1">
-                        <span className="text-[6px] md:text-[8px] font-black uppercase tracking-tighter text-white/80">{result.type}</span>
+                    <div className="absolute top-1.5 left-1.5 px-1 py-0.5 rounded-sm bg-black/60 backdrop-blur-md border border-white/5 md:top-4 md:left-4 md:px-2 md:py-1">
+                        <span className="text-[5px] md:text-[8px] font-black uppercase tracking-tighter text-white/60">{result.type}</span>
                     </div>
                 )}
             </div>
@@ -341,7 +341,8 @@ export default function Home() {
         try {
             let drillDownData;
             if (result.type === "artist") {
-                drillDownData = await discogsService.getArtistReleases(result.id.toString(), 1);
+                // MASTER-FIRST STRATEGY: Sort by 'have' (popularity) and filter by 'master'
+                drillDownData = await discogsService.getArtistReleases(result.id.toString(), 1, { sort: "have", type: "master" });
             } else if (result.type === "label") {
                 drillDownData = await discogsService.getLabelReleases(result.id.toString(), 1);
             } else if (result.type === "master") {
@@ -770,9 +771,9 @@ export default function Home() {
                                         key="header-active"
                                         initial={{ opacity: 0, y: 20 }}
                                         animate={{ opacity: 1, y: 0 }}
-                                        className="w-full text-center md:text-left mb-2 md:mb-4 max-w-4xl mx-auto"
+                                        className="w-full text-center md:text-left mb-1 md:mb-4 max-w-4xl mx-auto"
                                     >
-                                        <h1 className="text-5xl md:text-7xl font-display font-black text-white italic uppercase tracking-tighter pt-2 md:pt-0">
+                                        <h1 className="text-3xl md:text-7xl font-display font-black text-white italic uppercase tracking-tighter pt-1 md:pt-0">
                                             {TEXTS.home.resultsTitle}
                                         </h1>
                                     </motion.header>
@@ -845,10 +846,10 @@ export default function Home() {
                                 )}
                             </AnimatePresence>
 
-                            {/* GRILLA DE RESULTADOS (Restaurada) */}
+                            {/* GRILLA DE RESULTADOS (ULTRA-COMPACT) */}
                             {isSearchActive && (
-                                <div className="flex-1 w-full overflow-y-auto px-4 md:px-8 pb-32 mt-4 hide-scrollbar scroll-smooth" ref={resultsContainerRef}>
-                                    <div className="max-w-4xl mx-auto">
+                                <div className="flex-1 overflow-y-auto px-4 w-full hide-scrollbar" ref={resultsContainerRef}>
+                                    <div className="max-w-4xl mx-auto pb-40">
                                         {/* Loading State */}
                                         {isLoadingSearch && searchResults.length === 0 && (
                                             <div className="flex flex-col items-center justify-center py-20 space-y-4">
