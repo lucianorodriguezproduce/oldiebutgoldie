@@ -248,9 +248,51 @@ export default function AdminOrders() {
                 console.log(`${TEXTS.admin.orderUpdate}: ${TEXTS.admin.priceSaved}`);
             } catch (error) {
                 console.error("Error setting admin price:", error);
-                alert(TEXTS.profile.genericError);
+                alert("Hubo un error al comunicar el precio al cliente.");
             } finally {
                 setQuotingId(null);
+                hideLoading();
+            }
+        }
+    };
+
+    const handleAcceptUserOffer = async (order: OrderDoc) => {
+        if (!order.totalPrice && !order.details?.price) return;
+
+        const agreedPrice = order.totalPrice || order.details?.price || 0;
+        const agreedCurrency = order.currency || order.details?.currency || "ARS";
+
+        const confirmResult = window.confirm(`¿Aceptar la oferta final de $${agreedPrice.toLocaleString()} del cliente?`);
+        if (confirmResult) {
+            showLoading("Finalizando negociación...");
+            try {
+                await updateDoc(doc(db, "orders", order.id), {
+                    status: "venta_finalizada",
+                    acceptedAt: serverTimestamp(),
+                    negotiationHistory: arrayUnion({
+                        price: agreedPrice,
+                        currency: agreedCurrency,
+                        sender: 'admin',
+                        timestamp: new Date(),
+                        message: "Oldie but Goldie ha aceptado tu oferta final."
+                    })
+                });
+
+                await addDoc(collection(db, "notifications"), {
+                    user_id: order.user_id,
+                    title: "¡Trato Cerrado! 🎉",
+                    message: `Oldie but Goldie ha ACEPTADO tu oferta final. Ingresa a tu Actividad para contactarlos por WhatsApp.`,
+                    read: false,
+                    timestamp: serverTimestamp(),
+                    order_id: order.id
+                });
+
+                setSelectedOrder(prev => prev ? { ...prev, status: "venta_finalizada" } : null);
+                console.log("Oferta del usuario aceptada exitosamente.");
+            } catch (error) {
+                console.error("Error accepting user offer:", error);
+                alert("Error crítico al intentar aceptar la orden.");
+            } finally {
                 hideLoading();
             }
         }
@@ -566,9 +608,35 @@ export default function AdminOrders() {
                                         </AnimatePresence>
                                     </div>
 
-                                    {/* Counter-offer Form (VENDER orders) */}
-                                    {(selectedOrder.details?.intent === "VENDER" || selectedOrder.intent === "VENDER" || selectedOrder.adminPrice) && selectedOrder.status !== "venta_finalizada" && (
-                                        <div className="space-y-3 pt-2 border-t border-white/5">
+                                    {/* Action Buttons based on status */}
+                                    {selectedOrder.status === "contraoferta_usuario" ? (
+                                        <div className="pt-2 border-t border-white/5 space-y-3">
+                                            <div className="bg-orange-500/10 border border-orange-500/20 p-4 rounded-xl flex items-center justify-between">
+                                                <div>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-orange-400">Oferta del Cliente</p>
+                                                    <p className="text-xl font-bold text-white mt-1">
+                                                        {selectedOrder.currency === "USD" ? "US$" : "$"} {(selectedOrder.totalPrice || selectedOrder.details?.price || 0).toLocaleString()}
+                                                    </p>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleAcceptUserOffer(selectedOrder)}
+                                                    className="flex items-center gap-2 px-5 py-3 bg-primary hover:bg-white text-black rounded-lg text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-primary/20"
+                                                >
+                                                    <CheckCircle2 className="h-4 w-4" /> Aceptar
+                                                </button>
+                                            </div>
+
+                                            <div className="flex items-center gap-2">
+                                                <div className="h-px bg-white/10 flex-1" />
+                                                <span className="text-[9px] font-black uppercase tracking-widest text-gray-500">O enviar nueva cotización</span>
+                                                <div className="h-px bg-white/10 flex-1" />
+                                            </div>
+                                        </div>
+                                    ) : null}
+
+                                    {/* Counter-offer / Quote Form */}
+                                    {(selectedOrder.details?.intent === "VENDER" || selectedOrder.intent === "VENDER" || selectedOrder.adminPrice || selectedOrder.status === "contraoferta_usuario") && selectedOrder.status !== "venta_finalizada" && selectedOrder.status !== "completed" && (
+                                        <div className="space-y-3 pt-2">
                                             <span className="text-[9px] font-black uppercase tracking-widest text-orange-400/70 flex items-center gap-1.5">
                                                 <BadgeDollarSign className="h-3.5 w-3.5" />
                                                 Definir Precio de Venta/Lote
