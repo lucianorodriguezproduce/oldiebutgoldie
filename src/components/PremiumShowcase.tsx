@@ -16,16 +16,21 @@ export function PremiumShowcase() {
         console.log("PremiumShowcase: Component mounted");
         const q = query(
             collection(db, "orders"),
-            where("status", "==", "pending")
+            where("is_admin_offer", "==", true)
         );
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const items = snapshot.docs
                 .map(doc => ({ id: doc.id, ...doc.data() } as any))
-                .filter(item =>
-                    (item.is_admin_offer === true || item.user_id === 'oldiebutgoldie' || item.user_email === 'admin@discography.ai') &&
-                    item.status === 'pending'
-                )
+                .filter(item => {
+                    const isAdmin = item.is_admin_offer === true ||
+                        item.user_id === 'oldiebutgoldie' ||
+                        item.user_email === 'admin@discography.ai';
+
+                    const isAvailable = !['sold', 'venta_finalizada', 'completed', 'cancelled', 'rejected'].includes(item.status);
+
+                    return isAdmin && isAvailable;
+                })
                 .sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0))
                 .slice(0, 10);
 
