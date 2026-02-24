@@ -95,8 +95,8 @@ export const TEXTS = {
         user_label: "👤 USUARIO"
     },
     showcase: {
-        title: "Boutique de Vinilos",
-        subtitle: "Joyas de la Corona",
+        title: "Nuestro Catálogo",
+        subtitle: "",
         viewMore: "Ver más",
         officialStore: "Colección Oficial"
     },

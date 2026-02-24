@@ -675,8 +675,6 @@ export default function Home() {
                                 )}
                             </AnimatePresence>
 
-                            {!isSearchActive && <PremiumShowcase />}
-
                             <motion.div layout className={`relative group w-full flex items-center justify-center ${isSearchActive ? 'max-w-4xl mx-auto' : ''}`}>
                                 <Search className="absolute left-6 md:left-8 top-1/2 -translate-y-1/2 h-5 md:h-6 w-5 md:w-6 text-gray-500 group-focus-within:text-primary transition-colors" />
                                 <input
@@ -716,6 +714,8 @@ export default function Home() {
                                     )}
                                 </AnimatePresence>
                             </motion.div>
+
+                            {!isSearchActive && <PremiumShowcase />}
 
                             <AnimatePresence>
                                 {isSearchActive && (

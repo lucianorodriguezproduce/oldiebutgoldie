@@ -22,14 +22,16 @@ export function PremiumShowcase() {
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const items = snapshot.docs
                 .map(doc => ({ id: doc.id, ...doc.data() } as any))
-                .filter(item => item.is_admin_offer === true || item.isBatch === true || item.is_batch === true)
+                .filter(item =>
+                    (item.is_admin_offer === true || item.user_id === 'oldiebutgoldie') &&
+                    item.status === 'pending'
+                )
                 .sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0))
                 .slice(0, 10);
 
             setOrders(items);
             setLoading(false);
         }, (error) => {
-            // Silently fail if index is missing or other firestore issues
             console.warn("Showcase fetch error:", error);
             setLoading(false);
         });
@@ -37,29 +39,24 @@ export function PremiumShowcase() {
         return () => unsubscribe();
     }, []);
 
-    if (loading) {
-        return (
-            <div className="w-full py-12 flex items-center justify-center">
-                <div className="h-2 w-2 bg-yellow-500 animate-ping rounded-full" />
-            </div>
-        );
-    }
+    if (loading) return null;
 
     if (orders.length === 0) {
-        console.log("PremiumShowcase: No orders found with is_admin_offer === true");
-        return null; // Keep it clean if no data, but we'll know via console
+        return null;
     }
 
     return (
-        <section className="w-full py-2 space-y-8 mt-8 border-b border-yellow-500/10">
-            <div className="px-6 flex items-end justify-between">
-                <div className="space-y-1 text-left">
-                    <div className="flex items-center gap-2">
-                        <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
-                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-500/80">
-                            {TEXTS.showcase.subtitle}
-                        </span>
-                    </div>
+        <section className="w-full py-2 space-y-8 mt-4">
+            <div className="px-6 text-center">
+                <div className="space-y-1">
+                    {TEXTS.showcase.subtitle && (
+                        <div className="flex items-center justify-center gap-2">
+                            <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
+                            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-500/80">
+                                {TEXTS.showcase.subtitle}
+                            </span>
+                        </div>
+                    )}
                     <h2 className="text-3xl md:text-5xl font-display font-black text-white uppercase tracking-tighter">
                         {TEXTS.showcase.title}
                     </h2>
