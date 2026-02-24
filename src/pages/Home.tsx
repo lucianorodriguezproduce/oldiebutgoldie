@@ -854,8 +854,6 @@ export default function Home() {
                                 </AnimatePresence>
                             </motion.div>
 
-                            {!isSearchActive && <PremiumShowcase />}
-
                             <AnimatePresence>
                                 {isSearchActive && (
                                     <motion.div
@@ -870,7 +868,7 @@ export default function Home() {
                                                 onClick={() => setSearchFilter(f as any)}
                                                 className={`px-8 py-3 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest whitespace-nowrap transition-all border-2 snap-center shrink-0 ${searchFilter === f
                                                     ? "bg-primary border-primary text-black shadow-[0_0_20px_rgba(204,255,0,0.3)]"
-                                                    : "bg-transparent border-white/20 text-white hover:border-white/40 hover:bg-white/5"
+                                                    : "bg-white/5 border-white/5 text-gray-500"
                                                     }`}
                                             >
                                                 {TEXTS.home.filters[f as keyof typeof TEXTS.home.filters] || f}
@@ -879,61 +877,63 @@ export default function Home() {
                                     </motion.div>
                                 )}
                             </AnimatePresence>
+                        </div>
 
-                            {/* GRILLA DE RESULTADOS (ULTRA-COMPACT) */}
-                            {isSearchActive && (
-                                <div className="flex-1 overflow-y-auto px-4 w-full hide-scrollbar" ref={resultsContainerRef}>
-                                    <div className="max-w-4xl mx-auto pb-40">
-                                        {/* Loading State */}
-                                        {isLoadingSearch && searchResults.length === 0 && (
-                                            <div className="flex flex-col items-center justify-center py-20 space-y-4">
-                                                <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-                                                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500 animate-pulse">
-                                                    {TEXTS.home.loadingDiscogs}
+                        {!isSearchActive && <PremiumShowcase />}
+
+                        {/* GRILLA DE RESULTADOS (ULTRA-COMPACT) */}
+                        {isSearchActive && (
+                            <div className="flex-1 overflow-y-auto px-4 w-full hide-scrollbar" ref={resultsContainerRef}>
+                                <div className="max-w-4xl mx-auto pb-40">
+                                    {/* Loading State */}
+                                    {isLoadingSearch && searchResults.length === 0 && (
+                                        <div className="flex flex-col items-center justify-center py-20 space-y-4">
+                                            <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+                                            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500 animate-pulse">
+                                                {TEXTS.home.loadingDiscogs}
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {/* Results Grid - COMPACT UI */}
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6">
+                                        {searchResults.map((result, idx) => (
+                                            <CompactSearchCard
+                                                key={`${result.id}-${idx}`}
+                                                result={result}
+                                                idx={idx}
+                                                onClick={() => handleEntityDrillDown(result)}
+                                            />
+                                        ))}
+                                    </div>
+
+                                    {/* No Results Case */}
+                                    {!isLoadingSearch && searchResults.length === 0 && query.trim().length >= 3 && (
+                                        <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+                                            <Search className="w-12 h-12 text-white/10" />
+                                            <div>
+                                                <h3 className="text-xl font-display font-black text-white uppercase tracking-widest leading-none">
+                                                    Sin resultados
+                                                </h3>
+                                                <p className="text-xs text-gray-500 font-bold mt-2 uppercase tracking-widest">
+                                                    Probá simplificando la búsqueda
                                                 </p>
                                             </div>
-                                        )}
-
-                                        {/* Results Grid - COMPACT UI */}
-                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6">
-                                            {searchResults.map((result, idx) => (
-                                                <CompactSearchCard
-                                                    key={`${result.id}-${idx}`}
-                                                    result={result}
-                                                    idx={idx}
-                                                    onClick={() => handleEntityDrillDown(result)}
-                                                />
-                                            ))}
                                         </div>
+                                    )}
 
-                                        {/* No Results Case */}
-                                        {!isLoadingSearch && searchResults.length === 0 && query.trim().length >= 3 && (
-                                            <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
-                                                <Search className="w-12 h-12 text-white/10" />
-                                                <div>
-                                                    <h3 className="text-xl font-display font-black text-white uppercase tracking-widest leading-none">
-                                                        Sin resultados
-                                                    </h3>
-                                                    <p className="text-xs text-gray-500 font-bold mt-2 uppercase tracking-widest">
-                                                        Probá simplificando la búsqueda
-                                                    </p>
-                                                </div>
+                                    {/* Infinite Scroll Anchor */}
+                                    <div ref={observerTarget} className="h-20 w-full flex items-center justify-center mt-8">
+                                        {isLoadingSearch && searchResults.length > 0 && (
+                                            <div className="flex items-center gap-2">
+                                                <div className="h-4 w-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+                                                <span className="text-[8px] font-black uppercase tracking-[0.3em] text-gray-500 animate-pulse">Cargando más...</span>
                                             </div>
                                         )}
-
-                                        {/* Infinite Scroll Anchor */}
-                                        <div ref={observerTarget} className="h-20 w-full flex items-center justify-center mt-8">
-                                            {isLoadingSearch && searchResults.length > 0 && (
-                                                <div className="flex items-center gap-2">
-                                                    <div className="h-4 w-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
-                                                    <span className="text-[8px] font-black uppercase tracking-[0.3em] text-gray-500 animate-pulse">Cargando más...</span>
-                                                </div>
-                                            )}
-                                        </div>
                                     </div>
                                 </div>
-                            )}
-                        </div>
+                            </div>
+                        )}
                     </motion.div>
                 ) : (
                     <motion.div
