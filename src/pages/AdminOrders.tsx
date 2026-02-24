@@ -561,7 +561,7 @@ export default function AdminOrders() {
                                     </div>
 
                                     {/* Counter-offer Form (VENDER orders) */}
-                                    {selectedOrder.details.intent === "VENDER" && selectedOrder.status !== "venta_finalizada" && (
+                                    {(selectedOrder.details?.intent === "VENDER" || selectedOrder.intent === "VENDER" || selectedOrder.adminPrice) && selectedOrder.status !== "venta_finalizada" && (
                                         <div className="space-y-3 pt-2 border-t border-white/5">
                                             <span className="text-[9px] font-black uppercase tracking-widest text-orange-400/70 flex items-center gap-1.5">
                                                 <BadgeDollarSign className="h-3.5 w-3.5" />
@@ -612,7 +612,7 @@ export default function AdminOrders() {
                                     )}
 
                                     {/* Quote Form (COMPRAR orders without existing quote) */}
-                                    {selectedOrder.details.intent === "COMPRAR" && !selectedOrder.admin_offer_price && (
+                                    {(selectedOrder.details?.intent === "COMPRAR" || (!selectedOrder.details?.intent && !selectedOrder.intent && !selectedOrder.adminPrice)) && !selectedOrder.admin_offer_price && (
                                         <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 space-y-4">
                                             <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-500">{TEXTS.admin.definePrice}</h4>
                                             <div className="flex gap-3">
