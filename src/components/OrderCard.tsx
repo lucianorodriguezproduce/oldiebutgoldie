@@ -156,9 +156,9 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
         return str.replace(/UNKNOWN ARTIST\s*[-—–]*\s*/gi, '').trim();
     };
 
-    // Si es un lote (más de 1 item) o si explícitamente es un lote (para compatibilidad)
+    // Si es un lote (más de 1 item)
     const itemsCount = items.length;
-    const isBatchDetected = itemsCount > 1 || order.isBatch === true || order.is_batch === true;
+    const isBatchDetected = itemsCount > 1;
 
     const firstItemImage = items.length > 0 ? (items[0].cover_image || items[0].thumb || items[0].image || items[0].cover || items[0].thumbnailUrl) : null;
     const coverImage = (isBatchDetected && firstItemImage)
@@ -340,11 +340,11 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
 
                     <div className="flex flex-col">
                         <h3 className={`text-xl md:text-2xl font-display font-black text-white uppercase tracking-tight truncate ${context !== 'public' ? 'group-hover:text-primary transition-colors' : ''}`}>
-                            {isBatch ? title : artist}
+                            {title}
                         </h3>
-                        {!isBatch && title && (
+                        {!isBatchDetected && artist && artist !== 'Unknown Artist' && (
                             <h4 className="text-sm font-bold text-gray-400 uppercase tracking-widest truncate mt-0.5">
-                                {title}
+                                {artist}
                             </h4>
                         )}
                     </div>

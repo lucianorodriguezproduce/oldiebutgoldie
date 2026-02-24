@@ -73,7 +73,7 @@ export function PremiumShowcase() {
                     const price = order.adminPrice || order.totalPrice;
                     const currency = order.adminCurrency || order.currency || "ARS";
                     const itemsCount = order.items?.length || 1;
-                    const isBatchActual = itemsCount > 1 || order.isBatch;
+                    const isBatchActual = itemsCount > 1;
                     const title = isBatchActual
                         ? `LOTE DE ${itemsCount} DISCOS`
                         : (order.items?.[0]?.title || order.details?.album || "Disco Registrado");
