@@ -73,9 +73,16 @@ export function PremiumShowcase() {
                     const price = order.adminPrice || order.totalPrice;
                     const currency = order.adminCurrency || order.currency || "ARS";
                     const isBatch = order.isBatch || order.is_batch;
-                    const title = order.title || order.details?.album || order.album || order.items?.[0]?.title || (isBatch ? `Lote de ${order.items?.length} ítems` : "Álbum");
-                    const artist = order.artist || order.details?.artist || order.items?.[0]?.artist || "";
-                    const cover = order.imageUrl || order.details?.cover_image || order.thumbnailUrl;
+                    const count = isBatch ? (order.items?.length || 1) : 1;
+                    const title = `LOTE DE ${count} DISCOS`;
+
+                    // Image Recovery: Prioritize first item of the batch, then order level images
+                    const cover = order.items?.[0]?.details?.cover_image ||
+                        order.items?.[0]?.cover_image ||
+                        order.items?.[0]?.thumb ||
+                        order.imageUrl ||
+                        order.details?.cover_image ||
+                        order.thumbnailUrl;
 
                     return (
                         <motion.button
@@ -105,11 +112,6 @@ export function PremiumShowcase() {
                                         <h3 className="text-xl font-display font-black text-white uppercase tracking-tight leading-none line-clamp-2 group-hover:text-yellow-400 transition-colors">
                                             {title}
                                         </h3>
-                                        {artist && (
-                                            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mt-1">
-                                                {artist}
-                                            </p>
-                                        )}
                                     </div>
 
                                     <div className="flex items-center justify-between pt-2 border-t border-white/5">
