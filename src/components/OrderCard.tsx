@@ -165,13 +165,13 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
         ? firstItemImage
         : (order.cover_image || order.thumb || order.image || order.cover || order.thumbnailUrl || order.details?.cover_image || order.imageUrl || "https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png");
 
-    // [STRICT-EXTRACT] Tarea Singular-Logic-Only: Algoritmo de extracción y anti-duplicación
+    // [STRICT-EXTRACT] Algoritmo de extracción y anti-duplicación
     const rawArtist = cleanString(items[0]?.artist || order.details?.artist || order.artist || 'Unknown Artist');
     const rawAlbum = cleanString(order.details?.album || items[0]?.title || items[0]?.album || order.title || 'Disco Registrado');
 
-    // Anti-duplicación: Si artista y álbum son idénticos, usamos fallback
+    // Anti-duplicación: Si artista y álbum son idénticos, usamos fallback visual genérico (NUNCA el username)
     const artist = (!isBatchDetected && rawArtist.toLowerCase() === rawAlbum.toLowerCase())
-        ? (order.user_name || "Varios Artistas")
+        ? "Varios Artistas"
         : rawArtist;
     const title = isBatchDetected ? `LOTE DE ${itemsCount} DISCOS` : rawAlbum;
 

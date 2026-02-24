@@ -224,12 +224,13 @@ export default function PublicOrderView() {
 
     const isBatch = (order.items && order.items.length > 1);
 
-    // [STRICT-EXTRACT] Algoritmo de extracción y anti-duplicación
-    const rawArtist = (order.items?.[0]?.artist || order.details?.artist || order.artist || "Artista Desconocido");
-    const rawAlbum = (order.details?.album || order.items?.[0]?.title || order.title || "Detalle del Disco");
+    // [STRICT-EXTRACT] Algoritmo de extracción y anti-duplicación sincronizado
+    const rawArtist = (order.items?.[0]?.artist || order.details?.artist || order.artist || order.title?.split(' - ')[0] || "Artista Desconocido");
+    const rawAlbum = (order.details?.album || order.items?.[0]?.title || order.title?.split(' - ')[1] || order.title || "Detalle del Disco");
 
+    // NUNCA usar order.user_name para la identidad del disco
     const displayArtist = (!isBatch && rawArtist.toLowerCase() === rawAlbum.toLowerCase())
-        ? (order.user_name || "Varios Artistas")
+        ? "Varios Artistas"
         : rawArtist;
     const displayAlbum = rawAlbum;
 
