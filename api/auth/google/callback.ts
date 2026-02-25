@@ -3,13 +3,23 @@ import { google } from 'googleapis';
 import { initializeApp, getApps, cert, getApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
-// PROTOCOLO: ANTIGRAVITY-STRUCTURAL-FIX
+// PROTOCOLO: PEM-FORCE-RECONSTRUCTION
+let privateKey = process.env.FIREBASE_PRIVATE_KEY || '';
+if (privateKey.includes('LS0t')) {
+    // 1. Decodificar Base64
+    privateKey = Buffer.from(privateKey, 'base64').toString('utf-8');
+}
+
+// 2. Limpieza Quirúrgica: Asegurar saltos de línea reales (\n) y quitar basura
+privateKey = privateKey
+    .replace(/\\n/g, '\n') // Asegurar saltos físicos si vienen como escape string
+    .replace(/\r/g, '')    // Quitar retornos de carro
+    .trim();               // Quitar espacios en los extremos
+
 const adminConfig = {
     projectId: process.env.FIREBASE_PROJECT_ID,
     clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-    privateKey: process.env.FIREBASE_PRIVATE_KEY?.includes('LS0t')
-        ? Buffer.from(process.env.FIREBASE_PRIVATE_KEY, 'base64').toString('utf-8')
-        : process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    privateKey: privateKey,
 };
 
 const app = getApps().length === 0
