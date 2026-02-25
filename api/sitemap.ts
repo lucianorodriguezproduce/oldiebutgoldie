@@ -1,8 +1,28 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+
+// Initialize Firebase Admin (Identity Sync)
+if (!getApps().length) {
+    const creds = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+    if (creds) {
+        try {
+            const serviceAccount = creds.startsWith('{') ? JSON.parse(creds) : JSON.parse(Buffer.from(creds, 'base64').toString());
+            initializeApp({ credential: cert(serviceAccount) });
+        } catch (e) {
+            console.error("Firebase Admin Init Error (Sitemap):", e);
+            initializeApp();
+        }
+    } else {
+        initializeApp();
+    }
+}
+
+const db = getFirestore();
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Content-Type', 'text/xml; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=43200'); // Cache for 24h at the edge
+    res.setHeader('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=43200');
 
     const host = req.headers.host || 'oldiebutgoldie.com.ar';
     const protocol = host.includes('localhost') ? 'http' : 'https';
@@ -33,54 +53,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     `;
 
     try {
-        const projectId = process.env.VITE_FIREBASE_PROJECT_ID || 'intras-projects';
+        // Fetch Orders (Active Public Orders)
+        const ordersSnap = await db.collection('orders')
+            .where('status', '!=', 'venta_finalizada')
+            .limit(1000)
+            .get();
 
-        // Fetch Orders
-        const ordersUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/orders?pageSize=1000`;
-        const ordersRes = await fetch(ordersUrl);
-
-        if (ordersRes.ok) {
-            const data = await ordersRes.json();
-            if (data.documents && Array.isArray(data.documents)) {
-                data.documents.forEach((doc: any) => {
-                    const orderId = doc.name.split('/').pop();
-                    const updatedAt = doc.updateTime || doc.createTime;
-                    const status = doc.fields?.status?.stringValue;
-                    if (orderId && status !== 'venta_finalizada') {
-                        urls += `
+        ordersSnap.forEach(doc => {
+            const data = doc.data();
+            const updatedAt = data.updatedAt?.toDate()?.toISOString() || data.timestamp?.toDate()?.toISOString() || new Date().toISOString();
+            urls += `
         <url>
-            <loc>${baseUrl}/orden/${orderId}</loc>
+            <loc>${baseUrl}/orden/${doc.id}</loc>
             <lastmod>${updatedAt}</lastmod>
             <changefreq>daily</changefreq>
             <priority>0.8</priority>
         </url>`;
-                    }
-                });
-            }
-        }
+        });
 
         // Fetch Editorial Articles
-        const articlesUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/articles?pageSize=100`;
-        const articlesRes = await fetch(articlesUrl);
+        const articlesSnap = await db.collection('articles')
+            .limit(100)
+            .get();
 
-        if (articlesRes.ok) {
-            const data = await articlesRes.json();
-            if (data.documents && Array.isArray(data.documents)) {
-                data.documents.forEach((doc: any) => {
-                    const articleId = doc.name.split('/').pop();
-                    const updatedAt = doc.updateTime || doc.createTime;
-                    if (articleId) {
-                        urls += `
+        articlesSnap.forEach(doc => {
+            const data = doc.data();
+            const updatedAt = data.updatedAt?.toDate()?.toISOString() || data.timestamp?.toDate()?.toISOString() || new Date().toISOString();
+            urls += `
         <url>
-            <loc>${baseUrl}/editorial/${articleId}</loc>
+            <loc>${baseUrl}/editorial/${doc.id}</loc>
             <lastmod>${updatedAt}</lastmod>
             <changefreq>daily</changefreq>
             <priority>0.8</priority>
         </url>`;
-                    }
-                });
-            }
-        }
+        });
     } catch (error) {
         console.error('Sitemap generation error:', error);
     }

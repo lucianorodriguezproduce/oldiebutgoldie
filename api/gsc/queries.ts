@@ -3,13 +3,17 @@ import { google } from 'googleapis';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
-// Initialize Firebase Admin (Static fallback if needed)
+// Initialize Firebase Admin (Identity Sync)
 if (!getApps().length) {
-    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-        const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-        initializeApp({
-            credential: cert(serviceAccount)
-        });
+    const creds = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+    if (creds) {
+        try {
+            const serviceAccount = creds.startsWith('{') ? JSON.parse(creds) : JSON.parse(Buffer.from(creds, 'base64').toString());
+            initializeApp({ credential: cert(serviceAccount) });
+        } catch (e) {
+            console.error("Firebase Admin Init Error (GSC):", e);
+            initializeApp();
+        }
     } else {
         initializeApp();
     }
