@@ -3,18 +3,22 @@ import { google } from 'googleapis';
 import { initializeApp, getApps, cert, getApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
-// PROTOCOLO: PEM-FORCE-RECONSTRUCTION
-let privateKey = process.env.FIREBASE_PRIVATE_KEY || '';
-if (privateKey.includes('LS0t')) {
-    // 1. Decodificar Base64
-    privateKey = Buffer.from(privateKey, 'base64').toString('utf-8');
-}
+// PROTOCOLO: CRITICAL-DEBUG-AUTONOMY (Forensic Cleanup)
+let rawKey = process.env.FIREBASE_PRIVATE_KEY || '';
+let privateKey = rawKey.includes('LS0t')
+    ? Buffer.from(rawKey.trim(), 'base64').toString('utf-8')
+    : rawKey;
 
-// 2. Limpieza Quirúrgica: Asegurar saltos de línea reales (\n) y quitar basura
 privateKey = privateKey
+    .replace(/^["']|["']$/g, '')
     .replace(/\\n/g, '\n')
     .replace(/\r/g, '')
+    .replace(/ +/g, ' ')
     .trim();
+
+if (privateKey.length > 0) {
+    console.log(`FORENSIC (Inspect): Size=${privateKey.length}. ASCII(0-20)=[${privateKey.substring(0, 20).split('').map(c => c.charCodeAt(0)).join(',')}]`);
+}
 
 const adminConfig = {
     projectId: process.env.FIREBASE_PROJECT_ID,

@@ -3,18 +3,27 @@ import { google } from 'googleapis';
 import { initializeApp, getApps, cert, getApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
-// PROTOCOLO: PEM-FORCE-RECONSTRUCTION
-let privateKey = process.env.FIREBASE_PRIVATE_KEY || '';
-if (privateKey.includes('LS0t')) {
-    // 1. Decodificar Base64
-    privateKey = Buffer.from(privateKey, 'base64').toString('utf-8');
-}
+// PROTOCOLO: CRITICAL-DEBUG-AUTONOMY (Forensic Cleanup)
+let rawKey = process.env.FIREBASE_PRIVATE_KEY || '';
 
-// 2. Limpieza Quirúrgica: Asegurar saltos de línea reales (\n) y quitar basura
+// 1. Detección Base64 y Decodificación
+let privateKey = rawKey.includes('LS0t')
+    ? Buffer.from(rawKey.trim(), 'base64').toString('utf-8')
+    : rawKey;
+
+// 2. Limpieza Quirúrgica Profunda
 privateKey = privateKey
-    .replace(/\\n/g, '\n') // Asegurar saltos físicos si vienen como escape string
-    .replace(/\r/g, '')    // Quitar retornos de carro
-    .trim();               // Quitar espacios en los extremos
+    .replace(/^["']|["']$/g, '') // Quitar comillas externas (dobles o simples)
+    .replace(/\\n/g, '\n')       // Convertir escapes literales \n a saltos reales
+    .replace(/\r/g, '')          // Eliminar retornos de carro
+    .replace(/ +/g, ' ')         // Colapsar espacios múltiples (posibles copypaste bugs)
+    .trim();
+
+// 3. Diagnóstico Forense: Mapeo ASCII para encontrar "saboteadores" invisibles
+if (privateKey.length > 0) {
+    const chars = privateKey.substring(0, 50).split('').map(c => c.charCodeAt(0)).join(',');
+    console.log(`FORENSIC ANALYTICS: Size=${privateKey.length} bytes. ASCII(0-50)=[${chars}]`);
+}
 
 const adminConfig = {
     projectId: process.env.FIREBASE_PROJECT_ID,
