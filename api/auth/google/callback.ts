@@ -1,22 +1,22 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { google } from 'googleapis';
-import * as admin from 'firebase-admin';
+import { initializeApp, getApps, cert, getApp } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
 
-// PROTOCOLO: FIREBASE-SINGLETON-ENFORCEMENT
-if (!admin.apps.length) {
-    admin.initializeApp({
-        credential: admin.credential.cert({
-            projectId: process.env.FIREBASE_PROJECT_ID,
-            clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-            privateKey: process.env.FIREBASE_PRIVATE_KEY?.includes('LS0t')
-                ? Buffer.from(process.env.FIREBASE_PRIVATE_KEY, 'base64').toString('utf-8')
-                : process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-        }),
-    });
-    console.log(`Firebase Identity: Key Coupled (${process.env.FIREBASE_PRIVATE_KEY?.length || 0} bytes).`);
-}
+// PROTOCOLO: ANTIGRAVITY-STRUCTURAL-FIX
+const adminConfig = {
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+    privateKey: process.env.FIREBASE_PRIVATE_KEY?.includes('LS0t')
+        ? Buffer.from(process.env.FIREBASE_PRIVATE_KEY, 'base64').toString('utf-8')
+        : process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+};
 
-const db = admin.firestore();
+const app = getApps().length === 0
+    ? initializeApp({ credential: cert(adminConfig) })
+    : getApp();
+
+const db = getFirestore(app);
 
 /**
  * Callback handler for GSC OAuth2.
