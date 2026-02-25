@@ -59,7 +59,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // 1. Get Refresh Token
         const gscConfig = await db.collection('system_config').doc('gsc_auth').get();
         if (!gscConfig.exists || !gscConfig.data()?.refresh_token) {
-            return res.status(401).json({ error: 'GSC not connected', needs_auth: true });
+            console.warn("GSC Auth missing in Firestore. Returning 401.");
+            return res.status(401).json({
+                error: 'GSC not connected',
+                needs_auth: true,
+                redirect: '/api/auth/gsc-init'
+            });
         }
 
         const refreshToken = gscConfig.data()?.refresh_token;

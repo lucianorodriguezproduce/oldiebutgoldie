@@ -23,7 +23,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Use the provided token directly to ensure it works on Vercel 
     // without needing manual env configuration in the dashboard
-    const DISCOGS_TOKEN = "cWbHttScejgMgzHxjMXNUcZGRTqjVYhouCGxMMVt";
+    const DISCOGS_TOKEN = process.env.DISCOGS_API_TOKEN || "cWbHttScejgMgzHxjMXNUcZGRTqjVYhouCGxMMVt";
     const discogsUrl = new URL(`https://api.discogs.com${path}`);
     discogsUrl.searchParams.append('token', DISCOGS_TOKEN);
 

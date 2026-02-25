@@ -36,7 +36,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         if (targetType === 'orden') {
             try {
-                const projectId = process.env.VITE_FIREBASE_PROJECT_ID || 'intras-projects';
+                const projectId = process.env.FIREBASE_PROJECT_ID || process.env.VITE_FIREBASE_PROJECT_ID || 'intras-projects';
                 const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/orders/${targetId}`;
 
                 const fbResponse = await fetch(firestoreUrl, {
@@ -118,94 +118,93 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // FIREBASE CROSS-REFERENCE FOR DYNAMIC SEO [LEGACY /item/type/id]
         let orderStatusStr = "";
         let orderIntentStr = "SOLICITUD";
-        try {
-            const projectId = process.env.VITE_FIREBASE_PROJECT_ID || 'intras-projects';
-            const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery`;
+        const projectId = process.env.FIREBASE_PROJECT_ID || process.env.VITE_FIREBASE_PROJECT_ID || 'intras-projects';
+        const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery`;
 
-            const fbResponse = await fetch(firestoreUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    structuredQuery: {
-                        from: [{ collectionId: "orders" }],
-                        where: {
-                            fieldFilter: {
-                                field: { fieldPath: "item_id" },
-                                op: "EQUAL",
-                                value: { integerValue: parseInt(targetId) }
-                            }
-                        },
-                        limit: 1
-                    }
-                }),
-                signal: AbortSignal.timeout(1000)
-            });
-
-            if (fbResponse.ok) {
-                const fbData = await fbResponse.json();
-                if (fbData && fbData.length > 0 && fbData[0].document) {
-                    const status = fbData[0].document.fields?.status?.stringValue;
-                    const detailsMap = fbData[0].document.fields?.details?.mapValue?.fields;
-                    const intent = detailsMap?.intent?.stringValue;
-
-                    if (status) orderStatusStr = status.toUpperCase();
-                    if (intent) {
-                        orderIntentStr = intent === 'VENDER' ? 'EN VENTA' : 'EN COMPRA';
-                    }
+        const fbResponse = await fetch(firestoreUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                structuredQuery: {
+                    from: [{ collectionId: "orders" }],
+                    where: {
+                        fieldFilter: {
+                            field: { fieldPath: "item_id" },
+                            op: "EQUAL",
+                            value: { integerValue: parseInt(targetId) }
+                        }
+                    },
+                    limit: 1
                 }
-            }
-        } catch (e) {
-            console.error("Firebase prerender cross-ref failed: ", e);
-        }
-
-        // 2. Fetch with Strict Timeout (WhatsApp bots abandon quickly)
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 seconds strict timeout
-
-        const fetchHeaders: Record<string, string> = {
-            'User-Agent': 'OldieButGoldieBot/1.0 +https://www.oldiebutgoldie.com.ar'
-        };
-
-        if (process.env.DISCOGS_API_TOKEN) {
-            fetchHeaders['Authorization'] = `Discogs token=${process.env.DISCOGS_API_TOKEN}`;
-        }
-
-        const DISCOGS_URL = `https://api.discogs.com/${targetType}s/${targetId}`;
-        const discogsRes = await fetch(DISCOGS_URL, {
-            headers: fetchHeaders,
-            signal: controller.signal
+            }),
+            signal: AbortSignal.timeout(1000)
         });
 
-        clearTimeout(timeoutId);
+        if (fbResponse.ok) {
+            const fbData = await fbResponse.json();
+            if (fbData && fbData.length > 0 && fbData[0].document) {
+                const status = fbData[0].document.fields?.status?.stringValue;
+                const detailsMap = fbData[0].document.fields?.details?.mapValue?.fields;
+                const intent = detailsMap?.intent?.stringValue;
 
-        if (!discogsRes.ok) {
-            throw new Error(`Discogs returned ${discogsRes.status}`);
+                if (status) orderStatusStr = status.toUpperCase();
+                if (intent) {
+                    orderIntentStr = intent === 'VENDER' ? 'EN VENTA' : 'EN COMPRA';
+                }
+            }
         }
-
-        const discogsData = await discogsRes.json();
-
-        // 3. Precise Meta Tags per User Instructions
-        const title = discogsData.title ? `${discogsData.title} | Oldie but Goldie` : defaultTitle;
-
-        // Generate description based on whether an order exists in Firebase
-        const description = orderStatusStr
-            ? `Orden de ${orderIntentStr}: ${title} en Oldie but Goldie. Estado: ${orderStatusStr}.`
-            : defaultDescription;
-
-        // Ensure image is absolute and HTTPS. Discogs sometimes returns HTTP or missing images.
-        // Also fallback to higher resolution image first.
-        let image = discogsData.images?.[0]?.resource_url || discogsData.images?.[0]?.uri || discogsData.thumb || defaultImage;
-        if (image.startsWith('http://')) {
-            image = image.replace('http://', 'https://');
-        }
-
-        return serveFallback(res, title, description, image, url);
-
-    } catch (error) {
-        console.error('Prerender API Error/Timeout:', (error as Error).message);
-        // 4. Bulletproof Fallback
-        return serveFallback(res, defaultTitle, defaultDescription, defaultImage, urlObj.href);
+    } catch (e) {
+        console.error("Firebase prerender cross-ref failed: ", e);
     }
+
+    // 2. Fetch with Strict Timeout (WhatsApp bots abandon quickly)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 seconds strict timeout
+
+    const fetchHeaders: Record<string, string> = {
+        'User-Agent': 'OldieButGoldieBot/1.0 +https://www.oldiebutgoldie.com.ar'
+    };
+
+    if (process.env.DISCOGS_API_TOKEN) {
+        fetchHeaders['Authorization'] = `Discogs token=${process.env.DISCOGS_API_TOKEN}`;
+    }
+
+    const DISCOGS_URL = `https://api.discogs.com/${targetType}s/${targetId}`;
+    const discogsRes = await fetch(DISCOGS_URL, {
+        headers: fetchHeaders,
+        signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!discogsRes.ok) {
+        throw new Error(`Discogs returned ${discogsRes.status}`);
+    }
+
+    const discogsData = await discogsRes.json();
+
+    // 3. Precise Meta Tags per User Instructions
+    const title = discogsData.title ? `${discogsData.title} | Oldie but Goldie` : defaultTitle;
+
+    // Generate description based on whether an order exists in Firebase
+    const description = orderStatusStr
+        ? `Orden de ${orderIntentStr}: ${title} en Oldie but Goldie. Estado: ${orderStatusStr}.`
+        : defaultDescription;
+
+    // Ensure image is absolute and HTTPS. Discogs sometimes returns HTTP or missing images.
+    // Also fallback to higher resolution image first.
+    let image = discogsData.images?.[0]?.resource_url || discogsData.images?.[0]?.uri || discogsData.thumb || defaultImage;
+    if (image.startsWith('http://')) {
+        image = image.replace('http://', 'https://');
+    }
+
+    return serveFallback(res, title, description, image, url);
+
+} catch (error) {
+    console.error('Prerender API Error/Timeout:', (error as Error).message);
+    // 4. Bulletproof Fallback
+    return serveFallback(res, defaultTitle, defaultDescription, defaultImage, urlObj.href);
+}
 }
 
 function serveFallback(res: VercelResponse, title: string, description: string, image: string, url: string) {
