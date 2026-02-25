@@ -10,6 +10,12 @@ const secretClient = new SecretManagerServiceClient();
 
 async function initBunkerIdentity() {
     console.log('Bunker: Accessing Secret Manager...');
+
+    // PREVENCIÓN DE INFERENCIA DE RUTA
+    if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+        delete process.env.GOOGLE_APPLICATION_CREDENTIALS;
+    }
+
     const [version] = await secretClient.accessSecretVersion({
         name: 'projects/344484307950/secrets/FIREBASE_ADMIN_SDK_JSON/versions/latest',
     });
@@ -18,9 +24,9 @@ async function initBunkerIdentity() {
     if (!payload) throw new Error('CRITICAL_IDENTITY_FAILURE: Secret payload empty');
 
     const sa = JSON.parse(payload);
-    const rawKey = (sa.private_key || sa.privateKey || sa.private_key_id || '').trim();
+    const rawKey = (sa.private_key || sa.privateKey || '').trim();
 
-    // FILTRO DE VACÍO (Seguridad Bunker): Aislamiento total del cuerpo
+    // FILTRO DE VACÍO (Seguridad Bunker)
     const body = rawKey
         .replace(/\\n/g, '\n')
         .replace(/-----[^-]*-----/g, '')
@@ -31,14 +37,15 @@ async function initBunkerIdentity() {
 
     const finalKey = `-----BEGIN PRIVATE KEY-----\n${body}\n-----END PRIVATE KEY-----\n`;
 
+    // SCHEMA SNAKE_CASE
     const config = {
-        projectId: (sa.project_id || sa.projectId || 'buscador-discogs-11425').trim(),
-        clientEmail: (sa.client_email || sa.clientEmail || '').trim(),
-        privateKey: finalKey,
+        project_id: (sa.project_id || sa.projectId || 'buscador-discogs-11425').trim(),
+        client_email: (sa.client_email || sa.clientEmail || '').trim(),
+        private_key: finalKey,
     };
 
     if (getApps().length === 0) {
-        initializeApp({ credential: cert(config) });
+        initializeApp({ credential: cert(config as any) });
         console.log('Bunker: Firebase Initialized Successfully.');
     }
     return getFirestore();

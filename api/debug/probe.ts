@@ -8,11 +8,17 @@ const secretClient = new SecretManagerServiceClient();
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     const report: any = {
         timestamp: new Date().toISOString(),
-        version_sig: "BUNKER-OMEGA-1.0",
+        version_sig: "BUNKER-OMEGA-2.0",
         steps: []
     };
 
     try {
+        // PREVENCIÓN DE INFERENCIA DE RUTA (SDK Conflict Rescue)
+        if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+            report.steps.push("0. Unsetting GOOGLE_APPLICATION_CREDENTIALS from scope");
+            delete process.env.GOOGLE_APPLICATION_CREDENTIALS;
+        }
+
         report.steps.push("1. Accessing Bunker (Secret Manager)");
         const [version] = await secretClient.accessSecretVersion({
             name: 'projects/344484307950/secrets/FIREBASE_ADMIN_SDK_JSON/versions/latest',
@@ -36,16 +42,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         const finalKey = `-----BEGIN PRIVATE KEY-----\n${body}\n-----END PRIVATE KEY-----\n`;
 
+        // SCHEMA ESTÁNDAR (SNAKE_CASE): Compatibilidad Total Firebase Admin 13.x
         const config = {
-            projectId: (sa.project_id || sa.projectId || 'buscador-discogs-11425').trim(),
-            clientEmail: (sa.client_email || sa.clientEmail || '').trim(),
-            privateKey: finalKey
+            project_id: (sa.project_id || sa.projectId || 'buscador-discogs-11425').trim(),
+            client_email: (sa.client_email || sa.clientEmail || '').trim(),
+            private_key: finalKey
         };
-        report.project_id = config.projectId;
+        report.project_id = config.project_id;
 
+        report.version_sig = "BUNKER-OMEGA-2.0.1";
         report.steps.push("3. Initializing Admin SDK (Bunker Code)");
         const tempApp = initializeApp({
-            credential: cert(config)
+            credential: cert(config as any)
         }, 'probe-bunker-' + Date.now());
 
         report.steps.push("4. Testing Firestore Connectivity");
