@@ -14,7 +14,12 @@ if (!getApps().length) {
         throw new Error('KEY_TRUNCATED');
     }
 
-    const privateKey = rawKey?.replace(/\\n/g, '\n');
+    // INTEGRIDAD DE SALTO (Jump Integrity)
+    const privateKey = rawKey?.replace(/\\n/g, '\n').replace(/"/g, '').trim();
+
+    if (privateKey && !privateKey.includes('\n')) {
+        console.warn('PEM_STRUCTURE_WARNING (Sitemap): No real line jumps detected.');
+    }
 
     if (projectId && clientEmail && privateKey) {
         initializeApp({
