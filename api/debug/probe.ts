@@ -1,72 +1,65 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { initializeApp, cert } from 'firebase-admin/app';
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+import { SecretManagerServiceClient } from '@google-cloud/secret-manager';
+
+const secretClient = new SecretManagerServiceClient();
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     const report: any = {
         timestamp: new Date().toISOString(),
-        env: {}
+        version_sig: "BUNKER-OMEGA-1.0",
+        steps: []
     };
 
     try {
-        const creds = process.env.GOOGLE_APPLICATION_CREDENTIALS || '';
-        report.env.creds_length = creds.length;
-        report.env.creds_first_10 = creds.slice(0, 10);
-        report.env.creds_last_10 = creds.slice(-10);
+        report.steps.push("1. Accessing Bunker (Secret Manager)");
+        const [version] = await secretClient.accessSecretVersion({
+            name: 'projects/344484307950/secrets/FIREBASE_ADMIN_SDK_JSON/versions/latest',
+        });
 
-        let sa: any = {};
-        if (creds.trim().startsWith('{')) {
-            sa = JSON.parse(creds);
-            report.env.format = "JSON";
-        } else {
-            sa = {
-                private_key: process.env.FIREBASE_PRIVATE_KEY,
-                project_id: process.env.FIREBASE_PROJECT_ID,
-                client_email: process.env.FIREBASE_CLIENT_EMAIL
-            };
-            report.env.format = "FALLBACK";
-        }
+        const payload = version.payload?.data?.toString();
+        if (!payload) throw new Error('Secret payload empty');
+        report.steps.push("2. Payload Retried");
 
-        const raw = (sa.private_key || sa.privateKey || '').trim();
-        report.raw_length = raw.length;
+        const sa = JSON.parse(payload);
+        const rawKey = (sa.private_key || sa.privateKey || '').trim();
 
-        const body = raw
+        // FILTRO DE VACÍO (Seguridad Bunker)
+        const body = rawKey
             .replace(/\\n/g, '\n')
             .replace(/-----[^-]*-----/g, '')
             .replace(/\s/g, '')
             .trim();
 
         report.body_length = body.length;
-        report.body_preview_start = body.slice(0, 32);
-        report.body_preview_end = body.slice(-32);
-
-        // Check for non-base64 chars
-        const illegal = body.replace(/[A-Za-z0-9+/=]/g, '');
-        report.illegal_chars = illegal.length > 0 ? illegal : "NONE";
-        if (illegal.length > 0) {
-            report.illegal_codes = illegal.split('').map(c => c.charCodeAt(0));
-        }
 
         const finalKey = `-----BEGIN PRIVATE KEY-----\n${body}\n-----END PRIVATE KEY-----\n`;
 
         const config = {
-            projectId: (sa.project_id || sa.projectId || 'buscador-discogs-11425').trim().replace(/^["']|["']$/g, ''),
-            clientEmail: (sa.client_email || sa.clientEmail || '').trim().replace(/^["']|["']$/g, ''),
+            projectId: (sa.project_id || sa.projectId || 'buscador-discogs-11425').trim(),
+            clientEmail: (sa.client_email || sa.clientEmail || '').trim(),
             privateKey: finalKey
         };
+        report.project_id = config.projectId;
 
-        // Attempt Buffer conversion
-        const buffer = Buffer.from(body, 'base64');
-        report.buffer_size = buffer.length;
-        report.buffer_head = buffer.slice(0, 10).toString('hex');
+        report.steps.push("3. Initializing Admin SDK (Bunker Code)");
+        const tempApp = initializeApp({
+            credential: cert(config)
+        }, 'probe-bunker-' + Date.now());
 
-        // Attempt Ignition
-        initializeApp({ credential: cert(config) }, 'test-' + Date.now());
-        report.status = "SUCCESS";
+        report.steps.push("4. Testing Firestore Connectivity");
+        const db = getFirestore(tempApp);
+        const collections = await db.listCollections();
+        report.collections_count = collections.length;
+
+        report.status = "SUCCESS: Bunker Identity Stabilized.";
 
     } catch (e: any) {
         report.status = "FAILURE";
-        report.error = e.message;
-        report.stack = e.stack;
+        report.error_name = e.name;
+        report.error_message = e.message;
+        report.error_stack = e.stack;
     }
 
     return res.status(200).json(report);

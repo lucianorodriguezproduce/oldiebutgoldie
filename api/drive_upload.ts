@@ -2,55 +2,59 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { google } from 'googleapis';
 import { Readable } from 'stream';
 
-import { initializeApp, getApps, cert, getApp } from 'firebase-admin/app';
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
+import { SecretManagerServiceClient } from '@google-cloud/secret-manager';
 
-// PROTOCOLO: ANTIGRAVITY-ATOMIC-FIX (Filtro de Vacío V2)
-const getAdminConfig = () => {
-    const creds = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-    let sa: any = {};
-    if (creds && creds.trim().startsWith('{')) {
-        try { sa = JSON.parse(creds); } catch (e) { console.error('JSON Parse failed'); }
-    } else {
-        sa = {
-            project_id: process.env.FIREBASE_PROJECT_ID,
-            client_email: process.env.FIREBASE_CLIENT_EMAIL,
-            private_key: process.env.FIREBASE_PRIVATE_KEY
-        };
-    }
+const secretClient = new SecretManagerServiceClient();
 
-    let raw = (sa.private_key || sa.privateKey || sa.private_key_id || '').trim();
-    if (raw.startsWith('{')) {
-        try { raw = JSON.parse(raw).private_key || raw; } catch (e) { }
-    }
+async function initBunkerIdentity() {
+    console.log('Bunker: Accessing Secret Manager...');
+    const [version] = await secretClient.accessSecretVersion({
+        name: 'projects/344484307950/secrets/FIREBASE_ADMIN_SDK_JSON/versions/latest',
+    });
 
-    // ATOMIC VACUUM: Aislamiento total del cuerpo (Sin espacios ni marcadores previos)
-    const body = raw
+    const payload = version.payload?.data?.toString();
+    if (!payload) throw new Error('CRITICAL_IDENTITY_FAILURE: Secret payload empty');
+
+    const sa = JSON.parse(payload);
+    const rawKey = (sa.private_key || sa.privateKey || sa.private_key_id || '').trim();
+
+    // FILTRO DE VACÍO (Seguridad Bunker): Aislamiento total del cuerpo
+    const body = rawKey
         .replace(/\\n/g, '\n')
-        .replace(/-----[^-]*-----/g, '') // Strip ALL headers/footers
-        .replace(/\s/g, '') // ELIMINACIÓN TOTAL (Vacuum)
+        .replace(/-----[^-]*-----/g, '')
+        .replace(/\s/g, '')
         .trim();
 
-    if (body.length < 1500) throw new Error("CRITICAL_INTEGRITY_FAILURE: Key body too short.");
+    if (body.length < 1500) throw new Error("CRITICAL_INTEGRITY_FAILURE: Key body too short in Bunker.");
 
     const finalKey = `-----BEGIN PRIVATE KEY-----\n${body}\n-----END PRIVATE KEY-----\n`;
 
-    return {
-        projectId: (sa.project_id || sa.projectId || process.env.FIREBASE_PROJECT_ID || 'buscador-discogs-11425').trim().replace(/^["']|["^']$/g, ''),
-        clientEmail: (sa.client_email || sa.clientEmail || process.env.FIREBASE_CLIENT_EMAIL || '').trim().replace(/^["']|["']$/g, ''),
+    const config = {
+        projectId: (sa.project_id || sa.projectId || 'buscador-discogs-11425').trim(),
+        clientEmail: (sa.client_email || sa.clientEmail || '').trim(),
         privateKey: finalKey,
     };
-};
 
-const app = getApps().length === 0 ? initializeApp({ credential: cert(getAdminConfig()) }) : getApp();
-const db = getFirestore(app);
+    if (getApps().length === 0) {
+        initializeApp({ credential: cert(config) });
+        console.log('Bunker: Firebase Initialized Successfully.');
+    }
+    return getFirestore();
+}
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID?.trim().replace(/^=/, '');
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET?.trim().replace(/^=/, '');
 const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI?.trim().replace(/^=/, '');
 const DRIVE_FOLDER_ID = process.env.DRIVE_FOLDER_ID?.trim().replace(/^=/, '');
 
+/**
+ * Handler for Drive upload.
+ */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+    const db = await initBunkerIdentity();
+
     if (req.method === 'OPTIONS') {
         res.status(200).end();
         return;
@@ -62,14 +66,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Diagnostic logging (non-sensitive)
     console.log('[DriveSync] Received upload request');
-    console.log('[DriveSync] Env Check:', {
-        hasClientId: !!GOOGLE_CLIENT_ID,
-        clientIdStart: GOOGLE_CLIENT_ID?.substring(0, 10) + '...',
-        hasClientSecret: !!GOOGLE_CLIENT_SECRET,
-        hasFolderId: !!DRIVE_FOLDER_ID
-    });
 
-    // Verify environment variables (Exclude REFRESH_TOKEN check as we fetch it from DB)
+    // Verify environment variables
     const missingVars = [];
     if (!GOOGLE_CLIENT_ID) missingVars.push('GOOGLE_CLIENT_ID');
     if (!GOOGLE_CLIENT_SECRET) missingVars.push('GOOGLE_CLIENT_SECRET');
@@ -165,40 +163,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             directLink: directLink,
         });
     } catch (error: any) {
-        console.error('[DriveSync] ERROR:', {
-            message: error.message,
-            code: error.code,
-            errors: error.errors,
-            data: error.response?.data
-        });
+        console.error('[DriveSync] ERROR:', error.message);
 
         let googleError = error.message;
         if (error.response?.data?.error) {
             const gErr = error.response.data.error;
-            if (typeof gErr === 'string') {
-                googleError = `${gErr}`;
-            } else {
-                googleError = `${gErr.message || error.message} (${gErr.code || error.code})`;
-                if (gErr.errors && gErr.errors.length > 0) {
-                    googleError += `: ${gErr.errors[0].reason} - ${gErr.errors[0].message}`;
-                }
-            }
-        } else if (error.response?.data?.error_description) {
-            googleError = error.response.data.error_description;
+            googleError = typeof gErr === 'string' ? gErr : (gErr.message || error.message);
         }
-
-        const redactedCheck = {
-            clientId: GOOGLE_CLIENT_ID ? `${GOOGLE_CLIENT_ID.substring(0, 10)}...${GOOGLE_CLIENT_ID.slice(-5)}` : 'MISSING',
-            clientSecret: GOOGLE_CLIENT_SECRET ? `${GOOGLE_CLIENT_SECRET.substring(0, 5)}...` : 'MISSING',
-            hasDynamicRefreshToken: !!dynamicRefreshToken,
-            redirectUri: GOOGLE_REDIRECT_URI,
-            folderId: DRIVE_FOLDER_ID
-        };
 
         return res.status(500).json({
             error: 'Failed to upload to Google Drive',
             details: googleError,
-            meta: redactedCheck,
             fullError: error.response?.data || error.message
         });
     }

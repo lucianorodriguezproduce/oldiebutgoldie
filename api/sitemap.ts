@@ -2,47 +2,48 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { initializeApp, getApps, cert, getApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
-// PROTOCOLO: ANTIGRAVITY-ATOMIC-FIX (Filtro de Vacío V2)
-const getAdminConfig = () => {
-    const creds = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-    let sa: any = {};
-    if (creds && creds.trim().startsWith('{')) {
-        try { sa = JSON.parse(creds); } catch (e) { console.error('JSON Parse failed'); }
-    } else {
-        sa = {
-            project_id: process.env.FIREBASE_PROJECT_ID,
-            client_email: process.env.FIREBASE_CLIENT_EMAIL,
-            private_key: process.env.FIREBASE_PRIVATE_KEY
-        };
-    }
+import { SecretManagerServiceClient } from '@google-cloud/secret-manager';
 
-    let raw = (sa.private_key || sa.privateKey || sa.private_key_id || '').trim();
-    if (raw.startsWith('{')) {
-        try { raw = JSON.parse(raw).private_key || raw; } catch (e) { }
-    }
+const secretClient = new SecretManagerServiceClient();
 
-    // ATOMIC VACUUM: Aislamiento total del cuerpo (Sin espacios ni marcadores previos)
-    const body = raw
+async function initBunkerIdentity() {
+    console.log('Bunker: Accessing Secret Manager...');
+    const [version] = await secretClient.accessSecretVersion({
+        name: 'projects/344484307950/secrets/FIREBASE_ADMIN_SDK_JSON/versions/latest',
+    });
+
+    const payload = version.payload?.data?.toString();
+    if (!payload) throw new Error('CRITICAL_IDENTITY_FAILURE: Secret payload empty');
+
+    const sa = JSON.parse(payload);
+    const rawKey = (sa.private_key || sa.privateKey || sa.private_key_id || '').trim();
+
+    // FILTRO DE VACÍO (Seguridad Bunker): Aislamiento total del cuerpo
+    const body = rawKey
         .replace(/\\n/g, '\n')
-        .replace(/-----[^-]*-----/g, '') // Strip ALL headers/footers
-        .replace(/\s/g, '') // ELIMINACIÓN TOTAL (Vacuum)
+        .replace(/-----[^-]*-----/g, '')
+        .replace(/\s/g, '')
         .trim();
 
-    if (body.length < 1500) throw new Error("CRITICAL_INTEGRITY_FAILURE: Key body too short.");
+    if (body.length < 1500) throw new Error("CRITICAL_INTEGRITY_FAILURE: Key body too short in Bunker.");
 
     const finalKey = `-----BEGIN PRIVATE KEY-----\n${body}\n-----END PRIVATE KEY-----\n`;
 
-    return {
-        projectId: (sa.project_id || sa.projectId || process.env.FIREBASE_PROJECT_ID || 'buscador-discogs-11425').trim().replace(/^["']|["']$/g, ''),
-        clientEmail: (sa.client_email || sa.clientEmail || process.env.FIREBASE_CLIENT_EMAIL || '').trim().replace(/^["']|["']$/g, ''),
+    const config = {
+        projectId: (sa.project_id || sa.projectId || 'buscador-discogs-11425').trim(),
+        clientEmail: (sa.client_email || sa.clientEmail || '').trim(),
         privateKey: finalKey,
     };
-};
-const app = getApps().length === 0 ? initializeApp({ credential: cert(getAdminConfig()) }) : getApp();
 
-const db = getFirestore(app);
+    if (getApps().length === 0) {
+        initializeApp({ credential: cert(config) });
+        console.log('Bunker: Firebase Initialized Successfully.');
+    }
+    return getFirestore();
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+    const db = await initBunkerIdentity();
     res.setHeader('Content-Type', 'text/xml; charset=utf-8');
     res.setHeader('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=43200');
 
