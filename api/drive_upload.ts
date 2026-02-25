@@ -5,7 +5,7 @@ import { Readable } from 'stream';
 import { initializeApp, getApps, cert, getApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
-// PROTOCOLO: ANTIGRAVITY-FINAL-FIX (Filtro de Pureza)
+// PROTOCOLO: ANTIGRAVITY-ATOMIC-FIX (Filtro de Vacío)
 const getAdminConfig = () => {
     const creds = process.env.GOOGLE_APPLICATION_CREDENTIALS;
     if (!creds) throw new Error('GOOGLE_APPLICATION_CREDENTIALS missing');
@@ -20,19 +20,17 @@ const getAdminConfig = () => {
         sa = creds;
     }
 
-    let pKey = (typeof sa === 'object' ? (sa.private_key || sa.privateKey) : sa) || '';
+    let rawKey = (typeof sa === 'object' ? (sa.private_key || sa.privateKey) : sa) || '';
 
-    // FILTRO DE PUREZA: Eliminación absoluta de espacios (ASCII 32)
-    pKey = pKey
+    // FILTRO DE VACÍO: Aislamiento total del cuerpo (Sin espacios ni saltos)
+    const body = rawKey
         .replace(/\\n/g, '\n')
-        .replace(/ /g, '')
-        .replace(/-----BEGINPRIVATEKEY-----/, '-----BEGIN PRIVATE KEY-----')
-        .replace(/-----ENDPRIVATEKEY-----/, '-----END PRIVATE KEY-----');
+        .replace('-----BEGIN PRIVATE KEY-----', '')
+        .replace('-----END PRIVATE KEY-----', '')
+        .replace(/\s/g, '') // ELIMINACIÓN TOTAL (Vacuum)
+        .trim();
 
-    const body = pKey
-        .replace(/-----BEGIN[^-]*PRIVATE KEY-----/, '')
-        .replace(/-----END[^-]*PRIVATE KEY-----/, '')
-        .replace(/\s/g, '');
+    if (body.length < 1500) throw new Error("CRITICAL_INTEGRITY_FAILURE: Key body too short.");
 
     const finalKey = `-----BEGIN PRIVATE KEY-----\n${body}\n-----END PRIVATE KEY-----\n`;
 
