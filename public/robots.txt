@@ -1,5 +1,10 @@
 User-agent: *
 Allow: /
-Disallow: /admin
 
-Sitemap: https://oldie-but-goldie.vercel.app/sitemap.xml
+# Block sensitive administrative and private paths
+Disallow: /admin/*
+Disallow: /checkout/*
+Disallow: /api/*
+
+# Sitemap reference
+Sitemap: https://oldiebutgoldie.com.ar/sitemap.xml
