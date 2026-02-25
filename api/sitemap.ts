@@ -15,21 +15,32 @@ if (!getApps().length) {
     }
 
     // INTEGRIDAD DE SALTO (Jump Integrity)
-    const privateKey = rawKey?.replace(/\\n/g, '\n').replace(/"/g, '').trim();
+    // FILTRADO DE COMILLAS (Double-Escape Shielding)
+    let sanitizedKey = rawKey?.trim() || '';
+    if (sanitizedKey.startsWith('"') && sanitizedKey.endsWith('"')) {
+        sanitizedKey = sanitizedKey.substring(1, sanitizedKey.length - 1);
+    }
+
+    const privateKey = sanitizedKey.replace(/\\n/g, '\n').replace(/"/g, '').trim();
 
     if (privateKey && !privateKey.includes('\n')) {
         console.warn('PEM_STRUCTURE_WARNING (Sitemap): No real line jumps detected.');
     }
 
     if (projectId && clientEmail && privateKey) {
-        initializeApp({
-            credential: cert({
-                projectId,
-                clientEmail,
-                privateKey
-            })
-        });
-        console.log('Firebase Admin: Ignición manual exitosa (Sitemap).');
+        try {
+            initializeApp({
+                credential: cert({
+                    projectId,
+                    clientEmail,
+                    privateKey
+                })
+            });
+            console.log('Firebase Admin: Ignición manual exitosa (Sitemap).');
+        } catch (error: any) {
+            console.error('CRITICAL: Firebase Init Failed (Sitemap). PEM Prefix:', privateKey.substring(0, 50));
+            throw error;
+        }
     } else {
         console.warn("Manual Firebase Admin config missing (Sitemap). Falling back to default.");
         initializeApp();
