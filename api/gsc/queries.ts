@@ -3,11 +3,19 @@ import { google } from 'googleapis';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
-// Initialize Firebase Admin (Manual Identity Override)
+// Initialize Firebase Admin (Manual Identity Override with Safeguards)
 if (!getApps().length) {
     const projectId = process.env.FIREBASE_PROJECT_ID;
     const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-    const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+    const rawKey = process.env.FIREBASE_PRIVATE_KEY;
+
+    // VERIFICACIÓN DE LONGITUD (Safeguard)
+    if (rawKey && rawKey.length < 1600) {
+        console.error('CRITICAL: FIREBASE_PRIVATE_KEY is truncated (KEY_TRUNCATED). Length:', rawKey.length);
+        throw new Error('KEY_TRUNCATED');
+    }
+
+    const privateKey = rawKey?.replace(/\\n/g, '\n');
 
     if (projectId && clientEmail && privateKey) {
         initializeApp({
@@ -17,6 +25,7 @@ if (!getApps().length) {
                 privateKey
             })
         });
+        console.log('Firebase Admin: Ignición manual exitosa (Queries).');
     } else {
         console.warn("Manual Firebase Admin config missing (Queries). Falling back to default.");
         initializeApp();
