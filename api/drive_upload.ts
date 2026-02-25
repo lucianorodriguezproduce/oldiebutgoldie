@@ -5,42 +5,40 @@ import { Readable } from 'stream';
 import { initializeApp, getApps, cert, getApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
-// PROTOCOLO: NUCLEAR-PEM-RECONSTRUCTION (V20-Stabilized)
+// PROTOCOLO: ANTIGRAVITY-FINAL-FIX (Filtro de Pureza)
 const getAdminConfig = () => {
-    const credentials = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-    if (!credentials) throw new Error('GOOGLE_APPLICATION_CREDENTIALS missing');
+    const creds = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+    if (!creds) throw new Error('GOOGLE_APPLICATION_CREDENTIALS missing');
 
     let sa;
     try {
-        sa = typeof credentials === 'string' && credentials.trim().startsWith('{')
-            ? JSON.parse(credentials)
-            : null;
-    } catch (e) { console.error('JSON Parse failed'); }
-
-    if (!sa) {
-        sa = {
-            project_id: process.env.FIREBASE_PROJECT_ID,
-            client_email: process.env.FIREBASE_CLIENT_EMAIL,
-            private_key: process.env.FIREBASE_PRIVATE_KEY
-        };
+        sa = typeof creds === 'string' && creds.trim().startsWith('{')
+            ? JSON.parse(creds)
+            : creds;
+    } catch (e) {
+        console.error('Initial Parse failed');
+        sa = creds;
     }
 
-    const raw = (sa.private_key || sa.privateKey || '').trim();
-    let decoded = raw.includes('LS0t')
-        ? Buffer.from(raw.replace(/^["']|["']$/g, ''), 'base64').toString('utf-8')
-        : raw;
+    let pKey = (typeof sa === 'object' ? (sa.private_key || sa.privateKey) : sa) || '';
 
-    decoded = decoded.replace(/\\n/g, '\n').replace(/\\r/g, '').replace(/\r/g, '');
+    // FILTRO DE PUREZA: Eliminación absoluta de espacios (ASCII 32)
+    pKey = pKey
+        .replace(/\\n/g, '\n')
+        .replace(/ /g, '')
+        .replace(/-----BEGINPRIVATEKEY-----/, '-----BEGIN PRIVATE KEY-----')
+        .replace(/-----ENDPRIVATEKEY-----/, '-----END PRIVATE KEY-----');
 
-    const match = decoded.match(/-----BEGIN[^-]*PRIVATE KEY-----([\s\S]*?)-----END[^-]*PRIVATE KEY-----/);
-    const cleanBase64 = match ? match[1].replace(/\s/g, '') : decoded.replace(/-----[^-]*-----/g, '').replace(/\s/g, '');
+    const body = pKey
+        .replace(/-----BEGIN[^-]*PRIVATE KEY-----/, '')
+        .replace(/-----END[^-]*PRIVATE KEY-----/, '')
+        .replace(/\s/g, '');
 
-    const lines = cleanBase64.match(/.{1,64}/g) || [];
-    const finalKey = `-----BEGIN PRIVATE KEY-----\n${lines.join('\n')}\n-----END PRIVATE KEY-----`;
+    const finalKey = `-----BEGIN PRIVATE KEY-----\n${body}\n-----END PRIVATE KEY-----\n`;
 
     return {
-        projectId: (sa.project_id || sa.projectId || '').trim().replace(/^["']|["']$/g, ''),
-        clientEmail: (sa.client_email || sa.clientEmail || '').trim().replace(/^["']|["']$/g, ''),
+        projectId: (sa.project_id || sa.projectId || process.env.FIREBASE_PROJECT_ID || 'buscador-discogs-11425').trim().replace(/^["']|["^']$/g, ''),
+        clientEmail: (sa.client_email || sa.clientEmail || process.env.FIREBASE_CLIENT_EMAIL || '').trim().replace(/^["']|["']$/g, ''),
         privateKey: finalKey,
     };
 };

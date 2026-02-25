@@ -53,7 +53,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // MISSION B: BYTE OF RUPTURE (Trailing ASCII)
         const last20 = privateKey.slice(-20);
         report.trailing_text = last20;
-        report.trailing_ascii = last20.split('').map(c => c.charCodeAt(0));
+        report.trailing_ascii = last20.split('').map((c: string) => c.charCodeAt(0));
 
         report.has_begin_marker = privateKey.includes('-----BEGIN PRIVATE KEY-----');
         report.has_end_marker = privateKey.includes('-----END PRIVATE KEY-----');
