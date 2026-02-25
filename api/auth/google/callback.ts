@@ -18,17 +18,12 @@ if (!getApps().length) {
 
     // INTEGRIDAD DE SALTO (Jump Integrity)
     // Asegura que cada '\n' se convierta en un salto de línea real y limpia comillas incidentales
-    // FILTRADO DE COMILLAS (Double-Escape Shielding)
-    // Elimina comillas exteriores si existen antes de procesar saltos
-    let sanitizedKey = rawKey?.trim() || '';
-    if (sanitizedKey.startsWith('"') && sanitizedKey.endsWith('"')) {
-        sanitizedKey = sanitizedKey.substring(1, sanitizedKey.length - 1);
-    }
-
-    const privateKey = sanitizedKey.replace(/\\n/g, '\n').replace(/"/g, '').trim();
+    // LECTURA AS-IS (Raw Injection Support)
+    // Se toma el valor sin filtros de escape, confiando en la estructura multilínea inyectada.
+    const privateKey = rawKey?.trim();
 
     if (privateKey && !privateKey.includes('\n')) {
-        console.warn('PEM_STRUCTURE_WARNING: No real line jumps detected in privateKey.');
+        console.warn('PEM_STRUCTURE_WARNING: No real line jumps detected in privateKey. Verify raw injection.');
     }
 
     if (projectId && clientEmail && privateKey) {
@@ -40,9 +35,9 @@ if (!getApps().length) {
                     privateKey
                 })
             });
-            console.log('Firebase Admin: Ignición manual exitosa.');
+            console.log('Firebase Admin: Ignición manual exitosa (Raw).');
         } catch (error: any) {
-            // RECONSTRUCCIÓN DER: Log de diagnóstico si el parseo falla
+            // VERIFICACIÓN DE PREFIJO: Log de diagnóstico si el parseo falla
             console.error('CRITICAL: Firebase Init Failed. PEM Prefix:', privateKey.substring(0, 50));
             throw error;
         }
