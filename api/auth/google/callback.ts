@@ -3,44 +3,39 @@ import { google } from 'googleapis';
 import { initializeApp, getApps, cert, getApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
-// PROTOCOLO: NUCLEAR-PEM-RECONSTRUCTION
-let rawKey = (process.env.FIREBASE_PRIVATE_KEY || '').trim();
+// PROTOCOLO: PEM-REWRAP-STABILIZER (Definitive Fix)
+const normalizeEnvVar = (val: string | undefined) => (val || '').trim().replace(/^["']|["']$/g, '');
 
-// 1. Detección y Limpieza Prematura de Comores e Inyecciones
-rawKey = rawKey.replace(/^["']|["']$/g, '');
-
-// 2. Decodificación Base64 si aplica
-let privateKey = rawKey.includes('LS0t')
+const rawKey = normalizeEnvVar(process.env.FIREBASE_PRIVATE_KEY);
+let decodedKey = rawKey.includes('LS0t')
     ? Buffer.from(rawKey, 'base64').toString('utf-8')
     : rawKey;
 
-// 3. Normalización Física de PEM
-privateKey = privateKey
-    .replace(/\\n/g, '\n') // Normalizar escapes literales
-    .replace(/\\r/g, '')   // Quitar retornos literales
-    .replace(/\r/g, '')    // Quitar retornos reales
-    .replace(/\\ /g, ' ')  // Corregir espacios escapados (saboteadores comunes)
-    .trim();
+// 1. Normalización de Escapes
+decodedKey = decodedKey
+    .replace(/\\n/g, '\n')
+    .replace(/\\r/g, '')
+    .replace(/\r/g, '')
+    .replace(/\\ /g, ' ');
 
-// 4. Extracción Estructural: Filtrar solo el bloque PEM puro
+// 2. Re-envoltorio Estricto (Nuclear PEM Reset)
 const header = '-----BEGIN PRIVATE KEY-----';
 const footer = '-----END PRIVATE KEY-----';
-if (privateKey.includes(header) && privateKey.includes(footer)) {
-    const startIndex = privateKey.indexOf(header);
-    const endIndex = privateKey.indexOf(footer) + footer.length;
-    privateKey = privateKey.substring(startIndex, endIndex);
-}
 
-// 5. Diagnóstico Final
-if (privateKey.length > 0) {
-    const map = privateKey.substring(0, 50).split('').map(c => c.charCodeAt(0)).join(',');
-    console.log(`NUCLEAR RECONSTRUCTION: Coupled=${privateKey.length} bytes. ASCII=[${map}]`);
-}
+// Extraer solo la data base64, eliminando cualquier espacio o marker previo
+let cleanBase64 = decodedKey
+    .replace(header, '')
+    .replace(footer, '')
+    .replace(/\s/g, '');
+
+// Re-envolver cada 64 caracteres (estándar RFC 7468 / OpenSSL)
+const lines = cleanBase64.match(/.{1,64}/g) || [];
+const finalKey = `${header}\n${lines.join('\n')}\n${footer}`;
 
 const adminConfig = {
-    projectId: process.env.FIREBASE_PROJECT_ID,
-    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-    privateKey: privateKey,
+    projectId: normalizeEnvVar(process.env.FIREBASE_PROJECT_ID),
+    clientEmail: normalizeEnvVar(process.env.FIREBASE_CLIENT_EMAIL),
+    privateKey: finalKey,
 };
 
 const app = getApps().length === 0

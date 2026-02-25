@@ -3,35 +3,24 @@ import { google } from 'googleapis';
 import { initializeApp, getApps, cert, getApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
-// PROTOCOLO: NUCLEAR-PEM-RECONSTRUCTION
-let rawKey = (process.env.FIREBASE_PRIVATE_KEY || '').trim().replace(/^["']|["']$/g, '');
-let privateKey = rawKey.includes('LS0t')
+// PROTOCOLO: PEM-REWRAP-STABILIZER
+const normalizeEnvVar = (val: string | undefined) => (val || '').trim().replace(/^["']|["']$/g, '');
+const rawKey = normalizeEnvVar(process.env.FIREBASE_PRIVATE_KEY);
+let decodedKey = rawKey.includes('LS0t')
     ? Buffer.from(rawKey, 'base64').toString('utf-8')
     : rawKey;
 
-privateKey = privateKey
-    .replace(/\\n/g, '\n')
-    .replace(/\\r/g, '')
-    .replace(/\r/g, '')
-    .replace(/\\ /g, ' ')
-    .trim();
-
+decodedKey = decodedKey.replace(/\\n/g, '\n').replace(/\\r/g, '').replace(/\r/g, '').replace(/\\ /g, ' ');
 const header = '-----BEGIN PRIVATE KEY-----';
 const footer = '-----END PRIVATE KEY-----';
-if (privateKey.includes(header) && privateKey.includes(footer)) {
-    const startIndex = privateKey.indexOf(header);
-    const endIndex = privateKey.indexOf(footer) + footer.length;
-    privateKey = privateKey.substring(startIndex, endIndex);
-}
-
-if (privateKey.length > 0) {
-    console.log(`NUCLEAR (Inspect): Size=${privateKey.length}. ASCII=[${privateKey.substring(0, 20).split('').map(c => c.charCodeAt(0)).join(',')}]`);
-}
+let cleanBase64 = decodedKey.replace(header, '').replace(footer, '').replace(/\s/g, '');
+const lines = cleanBase64.match(/.{1,64}/g) || [];
+const finalKey = `${header}\n${lines.join('\n')}\n${footer}`;
 
 const adminConfig = {
-    projectId: process.env.FIREBASE_PROJECT_ID,
-    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-    privateKey: privateKey,
+    projectId: normalizeEnvVar(process.env.FIREBASE_PROJECT_ID),
+    clientEmail: normalizeEnvVar(process.env.FIREBASE_CLIENT_EMAIL),
+    privateKey: finalKey,
 };
 
 const app = getApps().length === 0
