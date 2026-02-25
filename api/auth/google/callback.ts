@@ -5,8 +5,6 @@ import { getFirestore } from 'firebase-admin/firestore';
 
 // Initialize Firebase Admin (Only once)
 if (!getApps().length) {
-    // Assuming service account info is in environment variables for security
-    // If using default credentials in Vercel/GCP, use initializeApp()
     if (process.env.FIREBASE_SERVICE_ACCOUNT) {
         const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
         initializeApp({
@@ -26,14 +24,16 @@ const db = getFirestore();
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { code } = req.query;
 
+    console.log(process.env.GOOGLE_CLIENT_ID ? 'Callback: GOOGLE_CLIENT_ID Detectado' : 'Callback: GOOGLE_CLIENT_ID Faltante');
+
     if (!code) {
         return res.status(400).send('No code provided');
     }
 
     const oauth2Client = new google.auth.OAuth2(
-        process.env.GSC_CLIENT_ID,
-        process.env.GSC_CLIENT_SECRET,
-        process.env.GSC_REDIRECT_URI
+        process.env.GOOGLE_CLIENT_ID,
+        process.env.GOOGLE_CLIENT_SECRET,
+        'https://www.oldiebutgoldie.com.ar/api/auth/google/callback'
     );
 
     try {
@@ -50,7 +50,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             // Redirect back to the Admin Dashboard
             res.redirect('/admin/analytics?gsc=success');
         } else {
-            // Already authorized might not return refresh_token unless prompt=consent was used
+            console.warn('GSC Callback: No refresh_token returned. User might need to re-consent.');
             res.redirect('/admin/analytics?gsc=partial');
         }
     } catch (error) {
