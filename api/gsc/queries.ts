@@ -10,17 +10,17 @@ const secretClient = new SecretManagerServiceClient();
 async function initBunkerIdentity() {
     console.log('Bunker: Accessing Secret Manager...');
 
-    // PREVENCIÓN DE INFERENCIA DE RUTA
-    if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-        delete process.env.GOOGLE_APPLICATION_CREDENTIALS;
-    }
-
     const [version] = await secretClient.accessSecretVersion({
         name: 'projects/344484307950/secrets/FIREBASE_ADMIN_SDK_JSON/versions/latest',
     });
 
     const payload = version.payload?.data?.toString();
     if (!payload) throw new Error('CRITICAL_IDENTITY_FAILURE: Secret payload empty');
+
+    // PREVENCIÓN DE INFERENCIA DE RUTA (Solo tras recuperar el secreto del Búnker)
+    if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+        delete process.env.GOOGLE_APPLICATION_CREDENTIALS;
+    }
 
     const sa = JSON.parse(payload);
     const rawKey = (sa.private_key || sa.privateKey || '').trim();
