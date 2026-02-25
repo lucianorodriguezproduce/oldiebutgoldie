@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShoppingBag, X, CheckCircle2, MessageCircle, Mail, Layers, ChevronLeft } from "lucide-react";
+import { ShoppingBag, X, CheckCircle2, MessageCircle, Mail, Layers, ChevronLeft, Disc } from "lucide-react";
 import { useLote } from "@/context/LoteContext";
 import { useAuth } from "@/context/AuthContext";
 import { useLoading } from "@/context/LoadingContext";
@@ -68,6 +68,14 @@ export default function RevisarLote() {
 
     const hasInventoryItems = loteItems.some(item => item.source === 'INVENTORY');
     const hasDiscogsItems = loteItems.some(item => item.source === 'DISCOGS');
+    const inventoryOnly = loteItems.every(item => item.source === 'INVENTORY');
+
+    // Auto-set intent and step if it's only inventory items
+    useReactEffect(() => {
+        if (inventoryOnly && loteItems.length > 0) {
+            setBatchIntent('COMPRAR');
+        }
+    }, [inventoryOnly, loteItems.length]);
 
     const generateOrderNumber = () => {
         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -397,119 +405,143 @@ export default function RevisarLote() {
                             </div>
                         </div>
 
-                        <div className="bg-white/[0.02] border border-white/5 p-5 rounded-2xl space-y-4">
-                            <h4 className="text-white font-black uppercase text-[10px] tracking-widest text-center">{TEXTS.common.batchReview.batchIntent}</h4>
-                            <div className="flex bg-black/50 p-1.5 rounded-xl">
-                                <button
-                                    onClick={() => setBatchIntent('COMPRAR')}
-                                    className={`flex-1 py-3 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${batchIntent === 'COMPRAR'
-                                        ? 'bg-green-600 text-white shadow-[0_0_20px_rgba(22,163,74,0.4)]'
-                                        : 'text-gray-500 hover:text-white hover:bg-white/5'
-                                        }`}
-                                >
-                                    {TEXTS.common.batchReview.iWantToBuy}
-                                </button>
-                                <button
-                                    onClick={() => setBatchIntent('VENDER')}
-                                    className={`flex-1 py-3 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${batchIntent === 'VENDER'
-                                        ? 'bg-orange-600 text-white shadow-[0_0_20px_rgba(234,88,12,0.4)]'
-                                        : 'text-gray-500 hover:text-white hover:bg-white/5'
-                                        }`}
-                                >
-                                    {TEXTS.common.batchReview.iWantToSell}
-                                </button>
-                            </div>
-
-                            {batchIntent === 'VENDER' && (
-                                <motion.div
-                                    initial={{ opacity: 0, height: 0 }}
-                                    animate={{ opacity: 1, height: 'auto' }}
-                                    className="pt-4 space-y-2 border-t border-white/5"
-                                >
-                                    <h4 className="text-white font-black uppercase text-[10px] tracking-widest text-center">{TEXTS.common.batchReview.intendedPrice}</h4>
-                                    <div className="flex flex-col md:flex-row bg-black/50 p-1.5 rounded-xl gap-2 w-full">
-                                        <select
-                                            value={currency}
-                                            onChange={(e) => setCurrency(e.target.value as 'ARS' | 'USD')}
-                                            className="w-full md:w-[30%] bg-[#111] border border-white/10 text-white rounded-lg px-3 py-3 md:py-4 text-xs font-bold focus:outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/40 text-center cursor-pointer"
-                                        >
-                                            <option value="ARS">ARS $</option>
-                                            <option value="USD">USD $</option>
-                                        </select>
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            value={totalPrice}
-                                            onChange={(e) => setTotalPrice(e.target.value)}
-                                            placeholder="Ej: 50000"
-                                            className="w-full md:w-[70%] bg-white/5 border border-white/10 text-white rounded-lg px-4 py-3 md:py-4 text-sm font-bold focus:outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/40 text-center"
-                                        />
-                                    </div>
-                                </motion.div>
-                            )}
-                        </div>
-
-                        {user ? (
-                            <button
-                                onClick={handleCheckout}
-                                disabled={isSubmitting || !batchIntent || (batchIntent === 'VENDER' && (!totalPrice || Number(totalPrice) <= 0))}
-                                className="w-full bg-primary text-black py-6 rounded-2xl font-black uppercase text-sm tracking-widest shadow-[0_0_40px_rgba(204,255,0,0.2)] hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center gap-2"
-                            >
-                                {isSubmitting ? (
-                                    <div className="h-4 w-4 border-2 border-black/40 border-t-black rounded-full animate-spin" />
-                                ) : (
-                                    <> <ShoppingBag className="w-4 h-4" /> {TEXTS.common.batchReview.confirmAndSend} </>
-                                )}
-                            </button>
-                        ) : (
-                            <div className="space-y-6">
-                                <button
-                                    onClick={handleGoogleSignIn}
-                                    disabled={!batchIntent || (batchIntent === 'VENDER' && (!totalPrice || Number(totalPrice) <= 0))}
-                                    className="w-full bg-white text-black py-4 rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-3 hover:bg-primary transition-all shadow-lg disabled:opacity-50"
-                                >
-                                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="" className="w-4 h-4" />
-                                    {TEXTS.common.batchReview.linkGoogle}
-                                </button>
-
-                                <div className="relative flex items-center gap-4 py-2">
-                                    <div className="flex-1 h-px bg-white/10" />
-                                    <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">{TEXTS.common.batchReview.manualAuth}</span>
-                                    <div className="flex-1 h-px bg-white/10" />
-                                </div>
-
-                                <form onSubmit={handleAuthAction} className="space-y-4">
-                                    <div className="relative">
-                                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-700" />
-                                        <input
-                                            type="email"
-                                            value={email}
-                                            onChange={e => setEmail(e.target.value)}
-                                            placeholder={`${TEXTS.common.auth.emailPlaceholder}...`}
-                                            className="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-sm text-white focus:border-primary/40 focus:outline-none transition-all"
-                                        />
-                                    </div>
-                                    <div className="relative">
-                                        <Layers className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-700" />
-                                        <input
-                                            type="password"
-                                            value={password}
-                                            onChange={e => setPassword(e.target.value)}
-                                            placeholder="Clave..."
-                                            className="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-sm text-white focus:border-primary/40 focus:outline-none transition-all"
-                                        />
-                                    </div>
+                        {/* Global Action Selector - ONLY show if there are Discogs items */}
+                        {hasDiscogsItems ? (
+                            <div className="space-y-3">
+                                <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] block mb-2 px-1">
+                                    ¿Qué quieres hacer con tus pedidos?
+                                </span>
+                                <div className="grid grid-cols-2 gap-2">
                                     <button
-                                        type="submit"
-                                        disabled={isSubmitting || !batchIntent || (batchIntent === 'VENDER' && (!totalPrice || Number(totalPrice) <= 0))}
-                                        className="w-full bg-primary text-black py-4 rounded-xl font-black uppercase text-[10px] tracking-widest hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
+                                        onClick={() => setBatchIntent('COMPRAR')}
+                                        className={`p-3 rounded-2xl border transition-all flex flex-col items-center gap-1.5 ${batchIntent === 'COMPRAR'
+                                            ? 'bg-primary/20 border-primary text-primary'
+                                            : 'bg-white/[0.03] border-white/10 text-gray-400 hover:border-white/20'
+                                            }`}
                                     >
-                                        {isSubmitting ? TEXTS.common.batchReview.connecting : TEXTS.common.batchReview.registerAndSend}
+                                        <div className={`p-1.5 rounded-lg ${batchIntent === 'COMPRAR' ? 'bg-primary text-black' : 'bg-white/5 text-gray-500'}`}>
+                                            <ShoppingBag className="w-3.5 h-3.5" />
+                                        </div>
+                                        <span className="text-[10px] font-black uppercase tracking-widest">Quiero Comprar</span>
                                     </button>
-                                </form>
+                                    <button
+                                        onClick={() => setBatchIntent('VENDER')}
+                                        className={`p-3 rounded-2xl border transition-all flex flex-col items-center gap-1.5 ${batchIntent === 'VENDER'
+                                            ? 'bg-orange-500/20 border-orange-500 text-orange-400'
+                                            : 'bg-white/[0.03] border-white/10 text-gray-400 hover:border-white/20'
+                                            }`}
+                                    >
+                                        <div className={`p-1.5 rounded-lg ${batchIntent === 'VENDER' ? 'bg-orange-500 text-black' : 'bg-white/5 text-gray-500'}`}>
+                                            <Disc className="w-3.5 h-3.5" />
+                                        </div>
+                                        <span className="text-[10px] font-black uppercase tracking-widest">Quiero Vender</span>
+                                    </button>
+                                </div>
+                                {batchIntent === null && (
+                                    <p className="text-[9px] text-orange-400 font-bold px-1 animate-pulse">
+                                        ⚠️ Por favor, define si quieres comprar o vender tus pedidos para continuar.
+                                    </p>
+                                )}
+                            </div>
+                        ) : (
+                            // No intent selection needed for inventory-only, but inform the user or keep it silent
+                            <div className="px-1 py-1">
+                                <span className="text-[9px] font-black text-emerald-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                                    Items de inventario listos para compra directa
+                                </span>
                             </div>
                         )}
+
+                        {batchIntent === 'VENDER' && (
+                            <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                className="pt-4 space-y-2 border-t border-white/5"
+                            >
+                                <h4 className="text-white font-black uppercase text-[10px] tracking-widest text-center">{TEXTS.common.batchReview.intendedPrice}</h4>
+                                <div className="flex flex-col md:flex-row bg-black/50 p-1.5 rounded-xl gap-2 w-full">
+                                    <select
+                                        value={currency}
+                                        onChange={(e) => setCurrency(e.target.value as 'ARS' | 'USD')}
+                                        className="w-full md:w-[30%] bg-[#111] border border-white/10 text-white rounded-lg px-3 py-3 md:py-4 text-xs font-bold focus:outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/40 text-center cursor-pointer"
+                                    >
+                                        <option value="ARS">ARS $</option>
+                                        <option value="USD">USD $</option>
+                                    </select>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={totalPrice}
+                                        onChange={(e) => setTotalPrice(e.target.value)}
+                                        placeholder="Ej: 50000"
+                                        className="w-full md:w-[70%] bg-white/5 border border-white/10 text-white rounded-lg px-4 py-3 md:py-4 text-sm font-bold focus:outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/40 text-center"
+                                    />
+                                </div>
+                            </motion.div>
+                        )}
                     </div>
+
+                    {user ? (
+                        <button
+                            onClick={handleCheckout}
+                            disabled={isSubmitting || (hasDiscogsItems && !batchIntent) || (batchIntent === 'VENDER' && (!totalPrice || Number(totalPrice) <= 0))}
+                            className="w-full bg-primary text-black py-6 rounded-2xl font-black uppercase text-sm tracking-widest shadow-[0_0_40px_rgba(204,255,0,0.2)] hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center gap-2"
+                        >
+                            {isSubmitting ? (
+                                <div className="h-4 w-4 border-2 border-black/40 border-t-black rounded-full animate-spin" />
+                            ) : (
+                                <> <ShoppingBag className="w-4 h-4" /> {TEXTS.common.batchReview.confirmAndSend} </>
+                            )}
+                        </button>
+                    ) : (
+                        <div className="space-y-6">
+                            <button
+                                onClick={handleGoogleSignIn}
+                                disabled={!batchIntent || (batchIntent === 'VENDER' && (!totalPrice || Number(totalPrice) <= 0))}
+                                className="w-full bg-white text-black py-4 rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-3 hover:bg-primary transition-all shadow-lg disabled:opacity-50"
+                            >
+                                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="" className="w-4 h-4" />
+                                {TEXTS.common.batchReview.linkGoogle}
+                            </button>
+
+                            <div className="relative flex items-center gap-4 py-2">
+                                <div className="flex-1 h-px bg-white/10" />
+                                <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">{TEXTS.common.batchReview.manualAuth}</span>
+                                <div className="flex-1 h-px bg-white/10" />
+                            </div>
+
+                            <form onSubmit={handleAuthAction} className="space-y-4">
+                                <div className="relative">
+                                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-700" />
+                                    <input
+                                        type="email"
+                                        value={email}
+                                        onChange={e => setEmail(e.target.value)}
+                                        placeholder={`${TEXTS.common.auth.emailPlaceholder}...`}
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-sm text-white focus:border-primary/40 focus:outline-none transition-all"
+                                    />
+                                </div>
+                                <div className="relative">
+                                    <Layers className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-700" />
+                                    <input
+                                        type="password"
+                                        value={password}
+                                        onChange={e => setPassword(e.target.value)}
+                                        placeholder="Clave..."
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-sm text-white focus:border-primary/40 focus:outline-none transition-all"
+                                    />
+                                </div>
+                                <button
+                                    type="submit"
+                                    disabled={isSubmitting || !batchIntent || (batchIntent === 'VENDER' && (!totalPrice || Number(totalPrice) <= 0))}
+                                    className="w-full bg-primary text-black py-4 rounded-xl font-black uppercase text-[10px] tracking-widest hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
+                                >
+                                    {isSubmitting ? TEXTS.common.batchReview.connecting : TEXTS.common.batchReview.registerAndSend}
+                                </button>
+                            </form>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

@@ -72,6 +72,9 @@ export const generateWhatsAppLink = (order: OrderData): string => {
     };
 
     const itemsList = getItemsList();
+    const hasInventory = order.isBatch ? order.items?.some(i => i.source === 'INVENTORY') : order.is_admin_offer;
+    const hasDiscogs = order.isBatch ? order.items?.some(i => i.source === 'DISCOGS') : !order.is_admin_offer;
+
     let message = "";
 
     const adminPriceDisplay = order.adminPrice
@@ -81,16 +84,20 @@ export const generateWhatsAppLink = (order: OrderData): string => {
             : "A confirmar";
 
     if (isPurchase) {
+        // Full purchase or Mixed (Purchase)
         message = templates.purchase
             .replace("{itemsList}", itemsList)
             .replace("{orderId}", orderId)
             .replace("{canonicalUrl}", canonicalUrl);
     } else {
-        message = templates.sale
-            .replace("{adminPriceDisplay}", adminPriceDisplay)
-            .replace("{itemsList}", itemsList)
-            .replace("{orderId}", orderId)
-            .replace("{canonicalUrl}", canonicalUrl);
+        // Sale or Mixed (Sale for Pedidos, Buy for Stock)
+        const mixedHeader = (hasInventory && hasDiscogs)
+            ? "¡Hola! Quiero comprar los discos en stock y ofrecerte estos otros para que los revises:\n\n"
+            : templates.sale.split('\n\n')[0] + "\n\n";
+
+        message = mixedHeader + itemsList +
+            (order.adminPrice || order.totalPrice ? `\n\nPrecio pretendido total (Pedidos): ${adminPriceDisplay}` : "") +
+            `\n\nReferencia: #{orderId}\n\nLink: ${canonicalUrl}`;
     }
 
     const encodedMessage = encodeURIComponent(message);
