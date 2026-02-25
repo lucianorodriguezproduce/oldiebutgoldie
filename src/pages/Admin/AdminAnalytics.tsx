@@ -18,6 +18,7 @@ import {
 } from "recharts";
 import { runReport } from "@/services/analyticsService";
 import type { AnalyticsDataPoint } from "@/services/analyticsService";
+import { gscService } from "@/services/gscService";
 
 interface InteractionEvent {
     id: string;
@@ -64,7 +65,8 @@ export default function AdminAnalytics() {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedKeyword, setSelectedKeyword] = useState<string | null>(null);
     const [isTrafficLoading, setIsTrafficLoading] = useState(true);
-    const [isKeywordsLoading, setIsKeywordsLoading] = useState(false);
+    const [isKeywordsLoading, setIsKeywordsLoading] = useState(true);
+    const [needsGSCAuth, setNeedsGSCAuth] = useState(false);
 
     useEffect(() => {
         const fetchAllData = async () => {
@@ -119,9 +121,14 @@ export default function AdminAnalytics() {
                 const gaData = await runReport();
                 setChartData(gaData);
 
-                // Traffic Metrics should come from GA4 API (analyticsService)
-                // Search Console integration is pending, so we clear the mock keywords
-                setKeywords([]);
+                // REAL GSC DATA: Fetch from bridge
+                const gscResult = await gscService.getKeywords();
+                if (gscResult.needs_auth) {
+                    setNeedsGSCAuth(true);
+                    setKeywords([]);
+                } else {
+                    setKeywords(gscResult.data || []);
+                }
                 setIsKeywordsLoading(false);
 
             } catch (error) {
@@ -301,6 +308,17 @@ export default function AdminAnalytics() {
                                     />
                                 </div>
                             </div>
+                            {needsGSCAuth && (
+                                <div className="p-8 pt-0">
+                                    <button
+                                        onClick={() => gscService.connect()}
+                                        className="px-4 py-2 bg-primary/20 border border-primary/40 text-primary text-[10px] font-bold uppercase tracking-wider hover:bg-primary/30 transition-all rounded-sm flex items-center gap-2"
+                                    >
+                                        <Search className="w-3 h-3" />
+                                        Connect Search Console
+                                    </button>
+                                </div>
+                            )}
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left">
                                     <thead className="bg-black/20 text-[10px] font-black uppercase tracking-widest text-gray-500">
@@ -310,6 +328,7 @@ export default function AdminAnalytics() {
                                             <th className="p-6">Impressions</th>
                                             <th className="p-6">CTR</th>
                                             <th className="p-6">Pos</th>
+                                            <th className="p-6">Insight</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-white/5 text-sm">
@@ -318,9 +337,16 @@ export default function AdminAnalytics() {
                                                 <tr key={i} className="hover:bg-white/5 transition-colors group cursor-pointer" onClick={() => setSelectedKeyword(kw.query)}>
                                                     <td className="p-6 font-bold text-white group-hover:text-primary transition-colors uppercase">{kw.query}</td>
                                                     <td className="p-6 text-primary font-mono">{kw.clicks}</td>
-                                                    <td className="p-6 text-blue-400 font-mono">{kw.impressions}</td>
-                                                    <td className="p-6 text-green-400 font-mono">{kw.ctr}%</td>
-                                                    <td className="p-6 text-purple-400 font-mono">#{kw.position}</td>
+                                                    <td className="p-6 text-blue-400 font-mono">{kw.impressions.toLocaleString()}</td>
+                                                    <td className="p-6 text-green-400 font-mono">{kw.ctr.toFixed(1)}%</td>
+                                                    <td className="p-6 text-purple-400 font-mono">#{kw.position.toFixed(1)}</td>
+                                                    <td className="p-6">
+                                                        {kw.ctr < 3 && kw.impressions > 100 && (
+                                                            <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 text-[9px] uppercase font-black px-2 py-0.5 animate-pulse">
+                                                                Editorial Opp
+                                                            </Badge>
+                                                        )}
+                                                    </td>
                                                 </tr>
                                             ))
                                         ) : (
