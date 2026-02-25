@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 
 export interface BatchItem {
-    id: number;
+    id: number | string;
     title: string;
     artist?: string;
     album?: string;
@@ -11,13 +11,15 @@ export interface BatchItem {
     condition: string;
     price?: number;
     currency?: string;
+    source: 'DISCOGS' | 'INVENTORY';
 }
 
 interface LoteContextType {
     loteItems: BatchItem[];
     toggleItem: (item: BatchItem) => void;
     addItemToBatch: (item: BatchItem) => void;
-    isInLote: (id: number) => boolean;
+    addItemFromInventory: (orderData: any) => void;
+    isInLote: (id: number | string) => boolean;
     clearLote: () => void;
     hardReset: () => void;
     totalCount: number;
@@ -29,7 +31,12 @@ export function LoteProvider({ children }: { children: ReactNode }) {
     const [loteItems, setLoteItems] = useState<BatchItem[]>(() => {
         try {
             const saved = localStorage.getItem("stitch_lote");
-            return saved ? JSON.parse(saved) : [];
+            // Migration: Ensure existing items have a source
+            const items = saved ? JSON.parse(saved) : [];
+            return items.map((item: any) => ({
+                ...item,
+                source: item.source || 'DISCOGS'
+            }));
         } catch {
             return [];
         }
@@ -57,16 +64,38 @@ export function LoteProvider({ children }: { children: ReactNode }) {
             let nextItems;
             if (existingIndex > -1) {
                 nextItems = [...prev];
-                nextItems[existingIndex] = item;
+                nextItems[existingIndex] = { ...item, source: item.source || 'DISCOGS' };
             } else {
-                nextItems = [...prev, item];
+                nextItems = [...prev, { ...item, source: item.source || 'DISCOGS' }];
             }
             localStorage.setItem("stitch_lote", JSON.stringify(nextItems));
             return nextItems;
         });
     };
 
-    const isInLote = (id: number) => loteItems.some(i => i.id === id);
+    const addItemFromInventory = (orderData: any) => {
+        if (['sold', 'venta_finalizada', 'completed'].includes(orderData.status)) {
+            alert("Atención: Este ítem ya fue vendido y no puede añadirse al lote.");
+            return;
+        }
+
+        const newItem: BatchItem = {
+            id: orderData.id,
+            title: orderData.album || orderData.title || "Sin Título",
+            artist: orderData.artist || "Varios",
+            album: orderData.album || orderData.title || "Sin Título",
+            cover_image: orderData.thumbnailUrl || orderData.cover_image || orderData.items?.[0]?.cover_image || "",
+            format: orderData.details?.format || orderData.format || "Vinilo",
+            condition: orderData.details?.condition || orderData.condition || "Usado",
+            price: orderData.adminPrice || orderData.totalPrice || 0,
+            currency: orderData.adminCurrency || orderData.currency || "ARS",
+            source: 'INVENTORY'
+        };
+
+        addItemToBatch(newItem);
+    };
+
+    const isInLote = (id: number | string) => loteItems.some(i => i.id === id);
 
     const clearLote = () => {
         localStorage.removeItem("stitch_lote");
@@ -85,6 +114,7 @@ export function LoteProvider({ children }: { children: ReactNode }) {
             loteItems,
             toggleItem,
             addItemToBatch,
+            addItemFromInventory,
             isInLote,
             clearLote,
             hardReset,

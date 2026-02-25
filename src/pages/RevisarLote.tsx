@@ -8,10 +8,11 @@ import { useLoading } from "@/context/LoadingContext";
 import { authenticateUser, signInWithGoogle } from "@/lib/auth";
 import { db, auth } from "@/lib/firebase";
 import { LazyImage } from "@/components/ui/LazyImage";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, query, where, getDocs } from "firebase/firestore";
 import { pushWhatsAppContactFromOrder } from "@/utils/analytics";
 import { generateWhatsAppLink } from "@/utils/whatsapp";
 import { TEXTS } from "@/constants/texts";
+import { useEffect as useReactEffect } from "react";
 
 export default function RevisarLote() {
     const { loteItems, toggleItem, clearLote, totalCount } = useLote();
@@ -26,6 +27,43 @@ export default function RevisarLote() {
     const [batchIntent, setBatchIntent] = useState<'COMPRAR' | 'VENDER' | null>(null);
     const [totalPrice, setTotalPrice] = useState("");
     const [currency, setCurrency] = useState<'ARS' | 'USD'>("ARS");
+
+    // Stock Validation for Inventory Items
+    useReactEffect(() => {
+        const validateInventoryItems = async () => {
+            const inventoryItems = loteItems.filter(item => item.source === 'INVENTORY');
+            if (inventoryItems.length === 0) return;
+
+            const ids = inventoryItems.map(item => item.id.toString()).slice(0, 30); // Firestore 'in' limit
+
+            try {
+                const q = query(collection(db, "orders"), where("__name__", "in", ids));
+                const snapshot = await getDocs(q);
+
+                const soldItems: string[] = [];
+                const updatedItemsMap = new Map(snapshot.docs.map(doc => [doc.id, doc.data()]));
+
+                inventoryItems.forEach(item => {
+                    const freshData = updatedItemsMap.get(item.id.toString()) as any;
+                    if (freshData && ['sold', 'venta_finalizada', 'completed'].includes(freshData.status)) {
+                        soldItems.push(item.title);
+                        toggleItem(item);
+                    }
+                });
+
+                if (soldItems.length > 0) {
+                    alert(`Atención: Los siguientes discos del inventario ya no están disponibles y fueron removidos: \n\n${soldItems.map(t => `• ${t}`).join('\n')}`);
+                }
+            } catch (error) {
+                console.warn("Stock validation error:", error);
+            }
+        };
+
+        validateInventoryItems();
+    }, []);
+
+    const calculatedTotal = loteItems.reduce((acc, item) => acc + (item.price || 0), 0);
+    const hasInventoryItems = loteItems.some(item => item.source === 'INVENTORY');
 
     const generateOrderNumber = () => {
         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -269,6 +307,12 @@ export default function RevisarLote() {
                                 <div className="flex-1 min-w-0">
                                     <h4 className="text-white font-bold truncate leading-tight">{item.title}</h4>
                                     <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                        <div className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest border ${item.source === 'INVENTORY'
+                                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                                            : 'bg-blue-500/10 border-blue-500/20 text-blue-400'
+                                            }`}>
+                                            {item.source === 'INVENTORY' ? 'ENTREGA INMEDIATA' : 'PEDIDO INTERNACIONAL'}
+                                        </div>
                                         <span className="text-xs text-gray-500 font-bold">{item.format} • {item.condition}</span>
                                         {item.price && (
                                             <span className="text-xs text-primary font-mono ml-auto">
@@ -292,11 +336,29 @@ export default function RevisarLote() {
                 {/* Checkout / Auth Column */}
                 <div className="lg:col-span-2">
                     <div className="bg-[#0A0A0A] border-2 border-primary/40 rounded-[2rem] p-6 md:p-8 space-y-6 sticky top-24 shadow-2xl">
-                        <div className="space-y-2">
-                            <h3 className="text-2xl font-display font-black text-white uppercase tracking-tighter">{TEXTS.common.batchReview.processOrder}</h3>
-                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest leading-relaxed">
-                                {TEXTS.common.batchReview.processDescription}
-                            </p>
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <h3 className="text-2xl font-display font-black text-white uppercase tracking-tighter">{TEXTS.common.batchReview.processOrder}</h3>
+                                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest leading-relaxed">
+                                    {TEXTS.common.batchReview.processDescription}
+                                </p>
+                            </div>
+
+                            {/* Total Summary for Hybrid Items */}
+                            <div className="bg-primary/5 border border-primary/20 p-4 rounded-2xl flex items-center justify-between">
+                                <div className="space-y-1">
+                                    <span className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em]">Resumen del Lote</span>
+                                    <p className="text-[10px] text-white/60 leading-tight">
+                                        {loteItems.length} {loteItems.length === 1 ? 'Ítem' : 'Ítems'} registrados
+                                    </p>
+                                </div>
+                                <div className="text-right">
+                                    <span className="text-[8px] font-black text-primary uppercase tracking-widest block mb-1">Total Estimado</span>
+                                    <span className="text-2xl font-display font-black text-white">
+                                        ${calculatedTotal.toLocaleString()}
+                                    </span>
+                                </div>
+                            </div>
                         </div>
 
                         <div className="bg-white/[0.02] border border-white/5 p-5 rounded-2xl space-y-4">

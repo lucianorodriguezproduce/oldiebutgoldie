@@ -172,7 +172,8 @@ export default function Home() {
                     format,
                     condition,
                     price: price ? parseFloat(price) : undefined,
-                    currency
+                    currency,
+                    source: 'DISCOGS'
                 });
             }
         }

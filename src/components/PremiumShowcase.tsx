@@ -5,14 +5,16 @@ import { motion, AnimatePresence } from "framer-motion";
 import { TEXTS } from "@/constants/texts";
 import { useNavigate } from "react-router-dom";
 import { LazyImage } from "@/components/ui/LazyImage";
-import { ChevronRight, Disc, Star, Package } from "lucide-react";
+import { ChevronRight, Disc, Star, Package, Plus, Check, ShoppingBag } from "lucide-react";
 import { getCleanOrderMetadata } from "@/utils/orderMetadata";
+import { useLote } from "@/context/LoteContext";
 
 export function PremiumShowcase() {
     const [orders, setOrders] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeIndex, setActiveIndex] = useState(0);
     const navigate = useNavigate();
+    const { addItemFromInventory, isInLote, loteItems } = useLote();
 
     useEffect(() => {
         console.log("PremiumShowcase: Component mounted");
@@ -114,6 +116,21 @@ export function PremiumShowcase() {
                                     <div className="p-6 space-y-6">
                                         {/* Cover Image Container */}
                                         <div className="aspect-square w-full relative rounded-2xl overflow-hidden bg-black shadow-2xl border border-white/10">
+                                            <div className="absolute inset-x-0 top-0 p-4 flex justify-end z-20">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        addItemFromInventory(order);
+                                                    }}
+                                                    className={`w-10 h-10 rounded-full flex items-center justify-center transition-all shadow-xl backdrop-blur-md border ${isInLote(order.id)
+                                                        ? 'bg-primary border-primary text-black'
+                                                        : 'bg-black/60 border-white/20 text-white hover:bg-primary hover:border-primary hover:text-black'
+                                                        }`}
+                                                >
+                                                    {isInLote(order.id) ? <Check className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
+                                                </button>
+                                            </div>
+
                                             <LazyImage
                                                 src={cover}
                                                 alt={title}

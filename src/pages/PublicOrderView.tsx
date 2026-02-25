@@ -5,8 +5,9 @@ import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { db, auth } from "@/lib/firebase";
 import { SEO } from "@/components/SEO";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Music, Disc, Lock, Clock, Eye, ChevronDown, Share2, ChevronRight } from "lucide-react";
+import { ChevronLeft, Music, Disc, Lock, Clock, Eye, ChevronDown, Share2, ChevronRight, Plus, Check, ShoppingBag } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useLote } from "@/context/LoteContext";
 import { useLoading } from "@/context/LoadingContext";
 import { formatDate, getReadableDate } from "@/utils/date";
 import { TEXTS } from "@/constants/texts";
@@ -21,6 +22,7 @@ export default function PublicOrderView() {
     const [order, setOrder] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [isItemsExpanded, setIsItemsExpanded] = useState(false);
+    const { addItemFromInventory, isInLote } = useLote();
 
     const isOwner = user?.uid === order?.user_id;
     const isAdminOrder = order?.user_id === "oldiebutgoldie" || order?.user_email === "admin@discography.ai";
@@ -570,12 +572,28 @@ export default function PublicOrderView() {
                                                     </button>
                                                 </div>
                                             ) : (
-                                                <button
-                                                    onClick={() => setShowOfferInput(true)}
-                                                    className="px-4 md:px-6 py-3 md:py-4 rounded-2xl border border-yellow-500/30 text-yellow-500 font-black uppercase tracking-widest text-[9px] md:text-[10px] hover:bg-yellow-500/10 transition-all text-center flex-1 md:flex-none whitespace-nowrap"
-                                                >
-                                                    Regatear
-                                                </button>
+                                                <div className="flex gap-2 flex-grow">
+                                                    <button
+                                                        onClick={() => addItemFromInventory(order)}
+                                                        className={`px-4 md:px-6 py-3 md:py-4 rounded-2xl border transition-all text-center flex-1 md:flex-none whitespace-nowrap flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[9px] md:text-[10px] ${isInLote(order.id)
+                                                            ? 'bg-primary border-primary text-black'
+                                                            : 'border-primary/30 text-primary hover:bg-primary/10'
+                                                            }`}
+                                                    >
+                                                        {isInLote(order.id) ? (
+                                                            <><Check className="w-4 h-4" /> En el Lote</>
+                                                        ) : (
+                                                            <><Plus className="w-4 h-4" /> Añadir al Lote</>
+                                                        )}
+                                                    </button>
+
+                                                    <button
+                                                        onClick={() => setShowOfferInput(true)}
+                                                        className="px-4 md:px-6 py-3 md:py-4 rounded-2xl border border-yellow-500/30 text-yellow-500 font-black uppercase tracking-widest text-[9px] md:text-[10px] hover:bg-yellow-500/10 transition-all text-center flex-1 md:flex-none whitespace-nowrap"
+                                                    >
+                                                        Regatear
+                                                    </button>
+                                                </div>
                                             )}
 
                                             <button
