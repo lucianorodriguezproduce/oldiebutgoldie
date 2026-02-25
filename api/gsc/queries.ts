@@ -16,11 +16,13 @@ if (!getApps().length) {
     }
 
     // INTEGRIDAD DE SALTO (Jump Integrity)
-    // LECTURA AS-IS (Raw Injection Support)
-    const privateKey = rawKey?.trim();
+    // BYPASS: BASE64-IDENTITY-DECODE
+    const privateKey = (rawKey || '').startsWith('LS0t')
+        ? Buffer.from(rawKey || '', 'base64').toString('utf-8')
+        : (rawKey || '').replace(/\\n/g, '\n');
 
     if (privateKey && !privateKey.includes('\n')) {
-        console.warn('PEM_STRUCTURE_WARNING (Queries): No real line jumps detected. Verify raw injection.');
+        console.warn('PEM_STRUCTURE_WARNING (Queries): No real line jumps detected after decode.');
     }
 
     if (projectId && clientEmail && privateKey) {

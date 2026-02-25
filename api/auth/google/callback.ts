@@ -18,12 +18,14 @@ if (!getApps().length) {
 
     // INTEGRIDAD DE SALTO (Jump Integrity)
     // Asegura que cada '\n' se convierta en un salto de línea real y limpia comillas incidentales
-    // LECTURA AS-IS (Raw Injection Support)
-    // Se toma el valor sin filtros de escape, confiando en la estructura multilínea inyectada.
-    const privateKey = rawKey?.trim();
+    // BYPASS: BASE64-IDENTITY-DECODE
+    // Detectar si es Base64 (si empieza con LS0t -> '---') o si necesita limpieza de escapes
+    const privateKey = (rawKey || '').startsWith('LS0t')
+        ? Buffer.from(rawKey || '', 'base64').toString('utf-8')
+        : (rawKey || '').replace(/\\n/g, '\n');
 
     if (privateKey && !privateKey.includes('\n')) {
-        console.warn('PEM_STRUCTURE_WARNING: No real line jumps detected in privateKey. Verify raw injection.');
+        console.warn('PEM_STRUCTURE_WARNING: No real line jumps detected after Base64/Escape decode.');
     }
 
     if (projectId && clientEmail && privateKey) {
