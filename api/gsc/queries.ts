@@ -3,42 +3,42 @@ import { google } from 'googleapis';
 import { initializeApp, getApps, cert, getApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
-// PROTOCOLO: PEM-REWRAP-STABILIZER (Architectural Identity Reset)
+// PROTOCOLO: NUCLEAR-PEM-RECONSTRUCTION (V20-Stabilized)
 const getAdminConfig = () => {
     const credentials = process.env.GOOGLE_APPLICATION_CREDENTIALS;
     if (!credentials) throw new Error('GOOGLE_APPLICATION_CREDENTIALS missing');
-    let serviceAccount;
+    let sa;
     try {
-        serviceAccount = typeof credentials === 'string' && credentials.trim().startsWith('{')
+        sa = typeof credentials === 'string' && credentials.trim().startsWith('{')
             ? JSON.parse(credentials)
             : null;
-    } catch (e) {
-        console.error('JSON Parse failed for GOOGLE_APPLICATION_CREDENTIALS');
-    }
+    } catch (e) { console.error('JSON Parse failed'); }
 
-    if (!serviceAccount) {
-        serviceAccount = {
+    if (!sa) {
+        sa = {
             project_id: process.env.FIREBASE_PROJECT_ID,
             client_email: process.env.FIREBASE_CLIENT_EMAIL,
             private_key: process.env.FIREBASE_PRIVATE_KEY
         };
     }
 
-    const rawKey = (serviceAccount.private_key || serviceAccount.privateKey || '').trim();
-    let decodedKey = rawKey.includes('LS0t')
-        ? Buffer.from(rawKey.replace(/^["']|["']$/g, ''), 'base64').toString('utf-8')
-        : rawKey;
+    const raw = (sa.private_key || sa.privateKey || '').trim();
+    let decoded = raw.includes('LS0t')
+        ? Buffer.from(raw.replace(/^["']|["']$/g, ''), 'base64').toString('utf-8')
+        : raw;
 
-    decodedKey = decodedKey.replace(/\\n/g, '\n').replace(/\\r/g, '').replace(/\r/g, '').replace(/\\ /g, ' ');
-    const header = '-----BEGIN PRIVATE KEY-----';
-    const footer = '-----END PRIVATE KEY-----';
-    let cleanBase64 = decodedKey.replace(header, '').replace(footer, '').replace(/\s/g, '');
+    decoded = decoded.replace(/\\n/g, '\n').replace(/\\r/g, '').replace(/\r/g, '');
+
+    const match = decoded.match(/-----BEGIN[^-]*PRIVATE KEY-----([\s\S]*?)-----END[^-]*PRIVATE KEY-----/);
+    const cleanBase64 = match ? match[1].replace(/\s/g, '') : decoded.replace(/-----[^-]*-----/g, '').replace(/\s/g, '');
+
     const lines = cleanBase64.match(/.{1,64}/g) || [];
+    const finalKey = `-----BEGIN PRIVATE KEY-----\n${lines.join('\n')}\n-----END PRIVATE KEY-----`;
 
     return {
-        projectId: (serviceAccount.project_id || serviceAccount.projectId || '').trim().replace(/^["']|["']$/g, ''),
-        clientEmail: (serviceAccount.client_email || serviceAccount.clientEmail || '').trim().replace(/^["']|["']$/g, ''),
-        privateKey: `${header}\n${lines.join('\n')}\n${footer}`,
+        projectId: (sa.project_id || sa.projectId || '').trim().replace(/^["']|["']$/g, ''),
+        clientEmail: (sa.client_email || sa.clientEmail || '').trim().replace(/^["']|["']$/g, ''),
+        privateKey: finalKey,
     };
 };
 
