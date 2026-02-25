@@ -62,8 +62,12 @@ export default function RevisarLote() {
         validateInventoryItems();
     }, []);
 
-    const calculatedTotal = loteItems.reduce((acc, item) => acc + (item.price || 0), 0);
+    const totalInventory = loteItems.filter(i => i.source === 'INVENTORY').reduce((acc, item) => acc + (item.price || 0), 0);
+    const totalEstimated = loteItems.filter(i => i.source === 'DISCOGS').reduce((acc, item) => acc + (item.price || 0), 0);
+    const calculatedTotal = totalInventory + totalEstimated;
+
     const hasInventoryItems = loteItems.some(item => item.source === 'INVENTORY');
+    const hasDiscogsItems = loteItems.some(item => item.source === 'DISCOGS');
 
     const generateOrderNumber = () => {
         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -307,11 +311,11 @@ export default function RevisarLote() {
                                 <div className="flex-1 min-w-0">
                                     <h4 className="text-white font-bold truncate leading-tight">{item.title}</h4>
                                     <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                        <div className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest border ${item.source === 'INVENTORY'
-                                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                                        <div className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest border transition-all ${item.source === 'INVENTORY'
+                                            ? 'bg-gradient-to-r from-emerald-500/20 to-emerald-700/20 border-emerald-500/50 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.1)]'
                                             : 'bg-blue-500/10 border-blue-500/20 text-blue-400'
                                             }`}>
-                                            {item.source === 'INVENTORY' ? 'ENTREGA INMEDIATA' : 'PEDIDO INTERNACIONAL'}
+                                            {item.source === 'INVENTORY' ? '🟢 ENTREGA INMEDIATA' : '🔵 PEDIDO'}
                                         </div>
                                         <span className="text-xs text-gray-500 font-bold">{item.format} • {item.condition}</span>
                                         {item.price && (
@@ -345,18 +349,50 @@ export default function RevisarLote() {
                             </div>
 
                             {/* Total Summary for Hybrid Items */}
-                            <div className="bg-primary/5 border border-primary/20 p-4 rounded-2xl flex items-center justify-between">
-                                <div className="space-y-1">
-                                    <span className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em]">Resumen del Lote</span>
-                                    <p className="text-[10px] text-white/60 leading-tight">
-                                        {loteItems.length} {loteItems.length === 1 ? 'Ítem' : 'Ítems'} registrados
-                                    </p>
+                            <div className="bg-white/[0.03] border border-white/10 rounded-2xl overflow-hidden divide-y divide-white/5">
+                                <div className="p-4 space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Resumen del Lote</span>
+                                        <span className="text-[10px] font-black text-gray-400 bg-white/5 px-2 py-0.5 rounded italic">
+                                            {loteItems.length} {loteItems.length === 1 ? 'Ítem' : 'Ítems'}
+                                        </span>
+                                    </div>
+
+                                    {hasInventoryItems && (
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-[10px] font-black text-emerald-400/80 uppercase tracking-widest flex items-center gap-1.5">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                                En Stock
+                                            </span>
+                                            <span className="text-xs font-mono text-white/90">
+                                                ${totalInventory.toLocaleString()}
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    {hasDiscogsItems && (
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-[10px] font-black text-blue-400/80 uppercase tracking-widest flex items-center gap-1.5">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                                                Pedidos (Est.)
+                                            </span>
+                                            <span className="text-xs font-mono text-white/90">
+                                                ${totalEstimated.toLocaleString()}
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
-                                <div className="text-right">
-                                    <span className="text-[8px] font-black text-primary uppercase tracking-widest block mb-1">Total Estimado</span>
-                                    <span className="text-2xl font-display font-black text-white">
-                                        ${calculatedTotal.toLocaleString()}
-                                    </span>
+
+                                <div className="p-4 bg-primary/5 flex items-center justify-between">
+                                    <div className="flex flex-col">
+                                        <span className="text-[8px] font-black text-primary uppercase tracking-[0.2em] mb-1">Total Final del Lote</span>
+                                        <span className="text-xs text-white/40 font-bold uppercase tracking-widest leading-none">A Confirmar</span>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="text-2xl font-display font-black text-white drop-shadow-2xl">
+                                            ${calculatedTotal.toLocaleString()}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         </div>

@@ -587,12 +587,15 @@ export default function PublicOrderView() {
                                                         )}
                                                     </button>
 
-                                                    <button
-                                                        onClick={() => setShowOfferInput(true)}
-                                                        className="px-4 md:px-6 py-3 md:py-4 rounded-2xl border border-yellow-500/30 text-yellow-500 font-black uppercase tracking-widest text-[9px] md:text-[10px] hover:bg-yellow-500/10 transition-all text-center flex-1 md:flex-none whitespace-nowrap"
-                                                    >
-                                                        Regatear
-                                                    </button>
+                                                    {/* Haggle feature deactivated/latent */}
+                                                    {null && (
+                                                        <button
+                                                            onClick={() => setShowOfferInput(true)}
+                                                            className="px-4 md:px-6 py-3 md:py-4 rounded-2xl border border-yellow-500/30 text-yellow-500 font-black uppercase tracking-widest text-[9px] md:text-[10px] hover:bg-yellow-500/10 transition-all text-center flex-1 md:flex-none whitespace-nowrap"
+                                                        >
+                                                            Regatear
+                                                        </button>
+                                                    )}
                                                 </div>
                                             )}
 

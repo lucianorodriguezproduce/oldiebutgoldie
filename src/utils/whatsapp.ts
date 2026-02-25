@@ -33,8 +33,8 @@ export interface OrderData {
 export const WHATSAPP_CONFIG = {
     phoneNumber: "5492974188914",
     templates: {
-        purchase: "¡Hola Oldie But Goldie! 📀\n\nHe seleccionado estas piezas para mi colección:\n\n{itemsList}\n\nOrden: #{orderId}\n\nLink: {canonicalUrl}",
-        sale: "¡Hola! Me interesa comprar este lote por {adminPriceDisplay}. Detalle:\n\n{itemsList}\n\nReferencia: #{orderId}\n\nLink de seguimiento: {canonicalUrl}",
+        purchase: "¡Hola Oldie But Goldie! 📀\n\nQuiero comprar este lote de discos:\n\n{itemsList}\n\nOrden: #{orderId}\n\nLink: {canonicalUrl}",
+        sale: "¡Hola! Quiero ofrecerte estos discos para que los revises:\n\n{itemsList}\n\nPrecio pretendido total: {adminPriceDisplay}\n\nReferencia: #{orderId}\n\nLink: {canonicalUrl}",
         acceptDeal: "Hola! Acepté el trato por el lote {orderId}. Coordinemos el pago y el envío.",
         adminContact: "Hola {name}, te contacto desde la administración de Oldie But Goldie por tu gestión de {intent}. ¿Cómo procedemos con la logística de entrega?"
     }
@@ -43,32 +43,42 @@ export const WHATSAPP_CONFIG = {
 export const generateWhatsAppLink = (order: OrderData): string => {
     const { phoneNumber, templates } = WHATSAPP_CONFIG;
     const orderId = order.order_number || order.id || "";
-    const isPurchase = order.is_admin_offer || order.details?.intent?.toUpperCase() === "COMPRAR" || order.type?.toUpperCase() === "COMPRAR";
+    // Priority: order.details.intent (used for Lot review) -> order.is_admin_offer (single items)
+    const rawIntent = order.details?.intent || (order.is_admin_offer ? "COMPRAR" : order.type);
+    const isPurchase = rawIntent?.toUpperCase() === "COMPRAR";
     const canonicalUrl = `https://www.oldiebutgoldie.com.ar/orden/${order.id}`;
 
     const getItemsList = () => {
         if (order.isBatch && order.items && order.items.length > 0) {
             return order.items.map((item, idx) => {
+                const prefix = item.source === 'INVENTORY' ? '🟢 [DISCO EN STOCK] ' : '🔵 [PEDIDO] ';
                 const artist = item.artist?.trim() || 'Artista';
                 const album = item.album?.trim() || 'Álbum';
                 const format = item.format?.trim() || 'N/A';
                 const condition = item.condition?.trim() || 'N/A';
                 const label = item.label?.trim() ? ` [${item.label.trim()}]` : '';
-                return `${idx + 1}. ${artist} - ${album} (${format} | ${condition})${label}`;
+                return `${idx + 1}. ${prefix}${artist} - ${album} (${format} | ${condition})${label}`;
             }).join('\n');
         } else {
+            const prefix = order.is_admin_offer ? '🟢 [DISCO EN STOCK] ' : '🔵 [PEDIDO] ';
             const art = (order.details?.artist || order.artist || "Artista").trim();
             const alb = (order.details?.album || order.title || "Álbum").trim();
             const fmt = (order.details?.format || order.format || "N/A").trim();
             const cnd = (order.details?.condition || order.condition || "N/A").trim();
             const lbl = (order.details?.label || order.label)?.trim();
             const labelStr = lbl ? ` [${lbl}]` : '';
-            return `- ${art} - ${alb} (${fmt} | ${cnd})${labelStr}`;
+            return `- ${prefix}${art} - ${alb} (${fmt} | ${cnd})${labelStr}`;
         }
     };
 
     const itemsList = getItemsList();
     let message = "";
+
+    const adminPriceDisplay = order.adminPrice
+        ? `${order.adminCurrency === "USD" ? "US$" : "$"} ${order.adminPrice.toLocaleString()}`
+        : order.totalPrice
+            ? `${order.currency === "USD" ? "US$" : "$"} ${order.totalPrice.toLocaleString()}`
+            : "A confirmar";
 
     if (isPurchase) {
         message = templates.purchase
@@ -76,12 +86,6 @@ export const generateWhatsAppLink = (order: OrderData): string => {
             .replace("{orderId}", orderId)
             .replace("{canonicalUrl}", canonicalUrl);
     } else {
-        const adminPriceDisplay = order.adminPrice
-            ? `${order.adminCurrency === "USD" ? "US$" : "$"} ${order.adminPrice.toLocaleString()}`
-            : order.totalPrice
-                ? `${order.currency === "USD" ? "US$" : "$"} ${order.totalPrice.toLocaleString()}`
-                : "A confirmar";
-
         message = templates.sale
             .replace("{adminPriceDisplay}", adminPriceDisplay)
             .replace("{itemsList}", itemsList)
