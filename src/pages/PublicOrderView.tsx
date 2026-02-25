@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, Link, useSearchParams } from "react-router-dom";
+import { useParams, Link, useSearchParams, useNavigate } from "react-router-dom";
 import { doc, getDoc, updateDoc, increment, arrayUnion, serverTimestamp, addDoc, collection } from "firebase/firestore";
 import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { db, auth } from "@/lib/firebase";
@@ -19,6 +19,7 @@ export default function PublicOrderView() {
     const [searchParams] = useSearchParams();
     const { user, isAdmin } = useAuth();
     const { showLoading, hideLoading } = useLoading();
+    const navigate = useNavigate();
     const [order, setOrder] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [isItemsExpanded, setIsItemsExpanded] = useState(false);
@@ -152,6 +153,15 @@ export default function PublicOrderView() {
         } finally {
             hideLoading();
         }
+    };
+
+    const handleQuickBuy = () => {
+        if (!user) {
+            setShowLoginDrawer(true);
+            return;
+        }
+        addItemFromInventory(order);
+        navigate('/revisar-lote');
     };
 
     const handleMakeOffer = async () => {
@@ -599,7 +609,7 @@ export default function PublicOrderView() {
                                             )}
 
                                             <button
-                                                onClick={handleBuyNow}
+                                                onClick={handleQuickBuy}
                                                 className="px-4 md:px-8 py-3 md:py-4 rounded-2xl bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-black font-black uppercase tracking-widest text-[10px] md:text-xs shadow-xl shadow-orange-500/20 hover:shadow-orange-500/40 transition-all text-center flex-1 md:flex-none transform hover:-translate-y-1 whitespace-nowrap"
                                             >
                                                 ¡Comprar Ahora!
@@ -612,7 +622,10 @@ export default function PublicOrderView() {
                                             </div>
 
                                             <button
-                                                onClick={() => setShowLoginDrawer(true)}
+                                                onClick={() => {
+                                                    // This will trigger the logic in handleQuickBuy which shows login drawer
+                                                    handleQuickBuy();
+                                                }}
                                                 className="w-full md:w-auto px-4 md:px-8 py-3 md:py-4 rounded-2xl bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-black font-black uppercase tracking-widest text-[10px] md:text-xs shadow-xl shadow-orange-500/20 hover:shadow-orange-500/40 transition-all text-center flex-1 md:flex-none transform hover:-translate-y-1 whitespace-nowrap"
                                             >
                                                 ¡Comprar Ahora!
