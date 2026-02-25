@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { TEXTS } from "@/constants/texts";
 import { db } from "@/lib/firebase";
@@ -30,9 +30,9 @@ import {
     TrendingUp,
     Send,
     BadgeDollarSign,
-    Hash,
-    ChevronRight,
-    Disc
+    Disc,
+    Search,
+    Trash2
 } from "lucide-react";
 import { SEO } from '@/components/SEO';
 import OrderCard from '@/components/OrderCard';
@@ -103,7 +103,6 @@ const STATUS_OPTIONS = [
 ];
 
 import { Link } from "react-router-dom";
-import { Trash2 } from "lucide-react";
 import { formatDate, getReadableDate } from "@/utils/date";
 
 export default function AdminOrders() {
@@ -118,6 +117,7 @@ export default function AdminOrders() {
     const [showCelebration, setShowCelebration] = useState(false);
     const prevOrdersRef = useRef<OrderDoc[]>([]);
     const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+    const [searchTerm, setSearchTerm] = useState("");
     const [updatingId, setUpdatingId] = useState<string | null>(null);
 
     // Quote form state
@@ -166,6 +166,64 @@ export default function AdminOrders() {
     // (This was accidentally applied to AdminOrders.tsx instead of AnalyticsDashboard.tsx)
     // I will remove it if it was added. Let me check the file content first.
 
+    const updateOrderPrice = async (order: OrderDoc, price: number, currency: string = "ARS") => {
+        if (!price || price <= 0) return;
+
+        const confirm = window.confirm(TEXTS.admin.confirmSetPrice(price, currency));
+        if (!confirm) return;
+
+        trackEvent('update_order_price', {
+            order_id: order.id,
+            price: price,
+            currency: currency
+        });
+
+        showLoading("Actualizando precio...");
+        setQuotingId(order.id);
+        try {
+            await updateDoc(doc(db, "orders", order.id), {
+                adminPrice: price,
+                adminCurrency: currency,
+                admin_offer_price: price, // Unify both fields
+                admin_offer_currency: currency,
+                status: "quoted",
+                negotiationHistory: arrayUnion({
+                    price: price,
+                    currency: currency,
+                    sender: 'admin',
+                    timestamp: new Date()
+                })
+            });
+
+            const currSymbol = currency === "USD" ? "US$" : "$";
+            await addDoc(collection(db, "notifications"), {
+                user_id: order.buyer_uid || order.user_id,
+                title: "Nueva Oferta Recibida",
+                message: `Oldie but Goldie ha definido un precio de ${currSymbol} ${price.toLocaleString()} para tu pedido.`,
+                read: false,
+                timestamp: serverTimestamp(),
+                order_id: order.id
+            });
+
+            setSelectedOrder(prev => prev ? {
+                ...prev,
+                adminPrice: price,
+                adminCurrency: currency,
+                admin_offer_price: price,
+                admin_offer_currency: currency,
+                status: "quoted"
+            } : null);
+
+            setQuotePrice("");
+        } catch (error) {
+            console.error("Error updating order price:", error);
+            alert("Hubo un error al comunicar el precio al cliente.");
+        } finally {
+            setQuotingId(null);
+            hideLoading();
+        }
+    };
+
     const handleStatusChange = async (orderId: string, newStatus: string) => {
         showLoading(TEXTS.admin.updatingStatus);
         setUpdatingId(orderId);
@@ -186,7 +244,6 @@ export default function AdminOrders() {
                     order_id: order.id
                 });
             }
-            // Update selectedOrder if same
             if (selectedOrder?.id === orderId) {
                 setSelectedOrder(prev => prev ? { ...prev, status: newStatus } : null);
             }
@@ -196,65 +253,6 @@ export default function AdminOrders() {
             setUpdatingId(null);
             setActiveDropdown(null);
             hideLoading();
-        }
-    };
-
-    const handleSetAdminPrice = async (order: OrderDoc) => {
-        const priceVal = parseFloat(quotePrice || "0");
-        const currencyVal = quoteCurrency || "ARS";
-        if (!priceVal || priceVal <= 0) return;
-
-        const confirm = window.confirm(TEXTS.admin.confirmSetPrice(priceVal, currencyVal));
-        if (confirm) {
-            trackEvent('send_counter_offer', {
-                order_id: order.id,
-                price: priceVal,
-                currency: currencyVal
-            });
-            showLoading(TEXTS.admin.settingPrice);
-            setQuotingId(order.id);
-            try {
-                await updateDoc(doc(db, "orders", order.id), {
-                    adminPrice: priceVal,
-                    adminCurrency: currencyVal,
-                    status: "counteroffered",
-                    negotiationHistory: arrayUnion({
-                        price: priceVal,
-                        currency: currencyVal,
-                        sender: 'admin',
-                        timestamp: new Date()
-                    })
-                });
-
-                const currSymbol = currencyVal === "USD" ? "US$" : "$";
-                await addDoc(collection(db, "notifications"), {
-                    user_id: order.buyer_uid || order.user_id,
-                    title: "Contraoferta Recibida",
-                    message: `Oldie but Goldie ha definido un precio de ${currSymbol} ${priceVal.toLocaleString()} para tu lote/disco.`,
-                    read: false,
-                    timestamp: serverTimestamp(),
-                    order_id: order.id
-                });
-
-                setSelectedOrder(prev => prev ? {
-                    ...prev,
-                    adminPrice: priceVal,
-                    adminCurrency: currencyVal,
-                    status: "counteroffered"
-                } : null);
-
-                setQuotePrice("");
-                // Add success message and error alert as per diff
-                // Assuming setSuccessMessage and alert are available or need to be added.
-                // For now, I'll just add the console.log for success and alert for error.
-                console.log(`${TEXTS.admin.orderUpdate}: ${TEXTS.admin.priceSaved}`);
-            } catch (error) {
-                console.error("Error setting admin price:", error);
-                alert("Hubo un error al comunicar el precio al cliente.");
-            } finally {
-                setQuotingId(null);
-                hideLoading();
-            }
         }
     };
 
@@ -290,60 +288,12 @@ export default function AdminOrders() {
                 });
 
                 setSelectedOrder(prev => prev ? { ...prev, status: "venta_finalizada" } : null);
-                console.log("Oferta del usuario aceptada exitosamente.");
             } catch (error) {
                 console.error("Error accepting user offer:", error);
                 alert("Error crítico al intentar aceptar la orden.");
             } finally {
                 hideLoading();
             }
-        }
-    };
-
-    const handleSendQuote = async (order: OrderDoc) => {
-        const priceVal = parseFloat(quotePrice || "0");
-        const currencyVal = quoteCurrency || "ARS";
-        if (!priceVal || priceVal <= 0) return;
-
-        showLoading("Enviando cotización...");
-        setQuotingId(order.id);
-        try {
-            await updateDoc(doc(db, "orders", order.id), {
-                admin_offer_price: priceVal,
-                admin_offer_currency: currencyVal,
-                status: "quoted",
-                negotiationHistory: arrayUnion({
-                    price: priceVal,
-                    currency: currencyVal,
-                    sender: 'admin',
-                    timestamp: new Date()
-                })
-            });
-
-            const currSymbol = currencyVal === "USD" ? "US$" : "$";
-            await addDoc(collection(db, "notifications"), {
-                user_id: order.buyer_uid || order.user_id,
-                title: "Oferta Recibida",
-                message: `Oldie but Goldie ha cotizado tu pedido ${order.order_number || ""} por ${currSymbol} ${priceVal.toLocaleString()}`,
-                read: false,
-                timestamp: serverTimestamp(),
-                order_id: order.id
-            });
-
-            // Update selectedOrder to reflect change
-            setSelectedOrder(prev => prev ? {
-                ...prev,
-                admin_offer_price: priceVal,
-                admin_offer_currency: currencyVal,
-                status: "quoted"
-            } : null);
-
-            setQuotePrice("");
-        } catch (error) {
-            console.error("Error sending quote:", error);
-        } finally {
-            setQuotingId(null);
-            hideLoading();
         }
     };
 
@@ -367,11 +317,29 @@ export default function AdminOrders() {
     const getStatusConfig = (status: string) =>
         STATUS_OPTIONS.find(s => s.value === status) || STATUS_OPTIONS[0];
 
-    const filteredOrders = statusFilter === "all"
-        ? orders
-        : orders.filter(o => o.status === statusFilter);
+    const searchFilteredOrders = useMemo(() => {
+        let list = statusFilter === "all" ? orders : orders.filter(o => o.status === statusFilter);
 
-    const sortedOrders = [...filteredOrders].sort((a, b) => {
+        if (searchTerm) {
+            const lowSearch = searchTerm.toLowerCase();
+            list = list.filter(o => {
+                const orderIdMatch = o.id.toLowerCase().includes(lowSearch);
+                const emailMatch = (o.user_email || "").toLowerCase().includes(lowSearch);
+                const nameMatch = (o.user_name || "").toLowerCase().includes(lowSearch);
+
+                // Artist search in items or details
+                const artistInDetails = (o.details?.artist || "").toLowerCase().includes(lowSearch);
+                const artistInItems = o.items?.some((it: any) => (it.artist || "").toLowerCase().includes(lowSearch));
+                const albumInDetails = (o.details?.album || "").toLowerCase().includes(lowSearch);
+                const albumInItems = o.items?.some((it: any) => (it.title || "").toLowerCase().includes(lowSearch));
+
+                return orderIdMatch || emailMatch || nameMatch || artistInDetails || artistInItems || albumInDetails || albumInItems;
+            });
+        }
+        return list;
+    }, [orders, statusFilter, searchTerm]);
+
+    const sortedOrders = [...searchFilteredOrders].sort((a, b) => {
         if (sortBy === "popularity") {
             const aViews = a.view_count || 0;
             const bViews = b.view_count || 0;
@@ -413,10 +381,16 @@ export default function AdminOrders() {
                         <h2 className="text-4xl md:text-6xl font-display font-black text-white uppercase tracking-tighter">{TEXTS.admin.managementTitle}</h2>
                         <p className="text-gray-500 font-medium text-lg">{TEXTS.admin.managementDesc}</p>
                     </div>
-                    <Link to="/admin/purge" className="text-[10px] font-black uppercase tracking-widest text-gray-700 hover:text-red-500 transition-colors flex items-center gap-2 group">
-                        <Trash2 className="h-3 w-3" />
-                        {TEXTS.admin.purgeData}
-                    </Link>
+                    <div className="flex bg-white/5 border border-white/10 rounded-2xl px-4 py-3 flex-1 max-w-md">
+                        <Search className="h-4 w-4 text-gray-500 mt-1" />
+                        <input
+                            type="text"
+                            placeholder="Buscar por ID, Email, Artista..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="bg-transparent border-none outline-none text-sm text-white px-3 w-full"
+                        />
+                    </div>
                 </div>
             </div>
 
@@ -477,7 +451,7 @@ export default function AdminOrders() {
                         <div className="h-12 w-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
                         <span className="text-xs font-black uppercase tracking-[0.3em] text-gray-500">{TEXTS.admin.syncingOrders}</span>
                     </div>
-                ) : filteredOrders.length === 0 ? (
+                ) : searchFilteredOrders.length === 0 ? (
                     <div className="py-32 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[2rem] space-y-4 text-center">
                         <ShoppingBag className="h-12 w-12 text-gray-700" />
                         <p className="text-xl font-display font-medium text-gray-500">
@@ -662,24 +636,12 @@ export default function AdminOrders() {
                                                     />
                                                 </div>
                                                 <button
-                                                    onClick={() => handleSetAdminPrice(selectedOrder)}
-                                                    disabled={quotingId === selectedOrder.id || !quotePrice || selectedOrder.adminPrice === parseFloat(quotePrice)}
-                                                    className={`px-4 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-40 ${selectedOrder.adminPrice && selectedOrder.adminPrice === parseFloat(quotePrice)
-                                                        ? "bg-green-600 text-white"
-                                                        : "bg-orange-600 text-white hover:bg-orange-500"
-                                                        }`}
+                                                    onClick={() => updateOrderPrice(selectedOrder, parseFloat(quotePrice), quoteCurrency)}
+                                                    disabled={quotingId === selectedOrder.id || !quotePrice}
+                                                    className="px-4 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all bg-orange-600 text-white hover:bg-orange-500 disabled:opacity-40"
                                                 >
-                                                    {selectedOrder.adminPrice && selectedOrder.adminPrice === parseFloat(quotePrice) ? (
-                                                        <CheckCircle2 className="h-3.5 w-3.5" />
-                                                    ) : (
-                                                        <Send className="h-3.5 w-3.5" />
-                                                    )}
+                                                    <Send className="h-3.5 w-3.5" />
                                                 </button>
-                                                {selectedOrder.adminPrice && selectedOrder.adminPrice === parseFloat(quotePrice) && (
-                                                    <span className="absolute -top-6 right-0 text-[8px] font-black text-green-500 uppercase tracking-widest animate-pulse">
-                                                        Precio Guardado ✓
-                                                    </span>
-                                                )}
                                             </div>
                                         </div>
                                     )}
@@ -699,7 +661,7 @@ export default function AdminOrders() {
                                                     />
                                                 </div>
                                                 <button
-                                                    onClick={() => handleSendQuote(selectedOrder)}
+                                                    onClick={() => updateOrderPrice(selectedOrder, parseFloat(quotePrice), quoteCurrency)}
                                                     className="bg-primary text-black px-6 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white transition-all shadow-lg shadow-primary/10"
                                                 >
                                                     {TEXTS.common.save}
@@ -707,6 +669,14 @@ export default function AdminOrders() {
                                             </div>
                                         </div>
                                     )}
+
+                                    {/* Dangerous Zone */}
+                                    <div className="pt-8 mt-8 border-t border-white/5">
+                                        <Link to="/admin/purge" className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-700 hover:text-red-500 hover:bg-red-500/5 transition-all">
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                            {TEXTS.admin.purgeData}
+                                        </Link>
+                                    </div>
 
                                     {/* WhatsApp */}
                                     <button

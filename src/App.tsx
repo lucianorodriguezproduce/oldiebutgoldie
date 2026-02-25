@@ -19,14 +19,13 @@ import Eventos from "@/pages/Eventos";
 import Profile from "@/pages/Profile";
 import RevisarLote from "@/pages/RevisarLote";
 import AdminLayout from "@/components/Admin/AdminLayout";
-import AnalyticsDashboard from "@/pages/Admin/AnalyticsDashboard";
+import AdminAnalytics from "@/pages/Admin/AdminAnalytics";
 import EditorialManager from "@/pages/Admin/EditorialManager";
 import CommunityManager from "@/pages/Admin/CommunityManager";
 import AdminOrders from "@/pages/AdminOrders";
 import DatabasePurge from "@/pages/Admin/DatabasePurge";
 import BulkUpload from "@/pages/Admin/BulkUpload";
 import { ProtectedRoute } from "@/components/Guard/ProtectedRoute";
-import AdminDashboard from "@/pages/AdminDashboard";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -65,10 +64,8 @@ function AppContent() {
           {/* Nested Admin Routes */}
           <Route element={<ProtectedRoute adminOnly={true} />}>
             <Route path="/admin" element={<AdminLayout><Outlet /></AdminLayout>}>
-              <Route index element={<AnalyticsDashboard />} />
-              <Route path="analytics" element={<AnalyticsDashboard />} />
-              <Route path="dashboard" element={<AdminDashboard />} />
-              <Route path="community" element={<CommunityManager />} />
+              <Route index element={<AdminAnalytics />} />
+              <Route path="analytics" element={<AdminAnalytics />} />
               <Route path="editorial" element={<EditorialManager />} />
               <Route path="orders" element={<AdminOrders />} />
               <Route path="bulk-upload" element={<BulkUpload />} />
