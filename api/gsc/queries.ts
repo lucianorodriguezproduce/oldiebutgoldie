@@ -16,16 +16,32 @@ if (!getApps().length) {
 }
 
 const db = getFirestore();
+const CACHE_DOC_PATH = 'system_cache/gsc_top_keywords';
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 /**
  * Endpoint to fetch GSC search analytics.
- * Uses refresh_token from Firestore to access the API.
+ * Checks Firestore cache first, then calls Google API if stale or missing.
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
+        // 0. Check Firestore Cache
+        const cacheRef = db.doc(CACHE_DOC_PATH);
+        const cacheSnap = await cacheRef.get();
+        const now = Date.now();
+
+        if (cacheSnap.exists) {
+            const cacheData = cacheSnap.data();
+            const lastUpdated = cacheData?.timestamp?.toDate()?.getTime() || 0;
+            if (now - lastUpdated < CACHE_TTL_MS) {
+                console.log("Serving GSC data from Firestore cache");
+                return res.status(200).json(cacheData?.keywords || []);
+            }
+        }
+
         // 1. Get Refresh Token
         const gscConfig = await db.collection('system_config').doc('gsc_auth').get();
-        if (!gscConfig.exists() || !gscConfig.data()?.refresh_token) {
+        if (!gscConfig.exists || !gscConfig.data()?.refresh_token) {
             return res.status(401).json({ error: 'GSC not connected', needs_auth: true });
         }
 
@@ -43,7 +59,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const searchconsole = google.searchconsole({ version: 'v1', auth: oauth2Client });
 
         // 3. Query Analytics
-        const siteUrl = process.env.VITE_SITE_URL || 'https://tudominio.com/'; // Ensure this matches GSC property
+        const siteUrl = process.env.VITE_SITE_URL || 'https://oldiebutgoldie.com.ar/';
 
         const response = await searchconsole.searchanalytics.query({
             siteUrl,
@@ -58,7 +74,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         const rows = response.data.rows || [];
 
-        // 4. Transform and Filter (Logic: Low CTR / High Impressions)
+        // 4. Transform and Filter
         const keywords = rows.map(row => ({
             query: row.keys?.[0] || 'Unknown',
             clicks: row.clicks || 0,
@@ -66,6 +82,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             ctr: (row.ctr || 0) * 100, // Scale to percentage
             position: row.position || 0
         }));
+
+        // 5. Update cache in Firestore
+        await cacheRef.set({
+            keywords,
+            timestamp: new Date(),
+            siteUrl
+        });
 
         res.status(200).json(keywords);
     } catch (error: any) {
