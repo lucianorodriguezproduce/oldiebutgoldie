@@ -14,14 +14,15 @@ if (!getApps().length) {
         throw new Error('KEY_TRUNCATED');
     }
 
-    // INTEGRIDAD DE SALTO (Jump Integrity)
-    // BYPASS: BASE64-IDENTITY-DECODE
-    const privateKey = (rawKey || '').startsWith('LS0t')
-        ? Buffer.from(rawKey || '', 'base64').toString('utf-8')
-        : (rawKey || '').replace(/\\n/g, '\n');
+    // MODULACIÓN: BASE64-RUNTIME-DECODE
+    const privateKey = (rawKey || '').includes('-----BEGIN PRIVATE KEY-----')
+        ? (rawKey || '').replace(/\\n/g, '\n').replace(/\\ /g, ' ').trim()
+        : Buffer.from(rawKey || '', 'base64').toString('utf-8').trim();
+
+    console.log(`Sitemap: Identity Key Size = ${privateKey.length} bytes.`);
 
     if (privateKey && !privateKey.includes('\n')) {
-        console.warn('PEM_STRUCTURE_WARNING (Sitemap): No real line jumps detected after decode.');
+        console.warn('PEM_STRUCTURE_WARNING (Sitemap): No real line jumps detected after modulation.');
     }
 
     if (projectId && clientEmail && privateKey) {
@@ -33,7 +34,7 @@ if (!getApps().length) {
                     privateKey
                 })
             });
-            console.log('Firebase Admin: Ignición manual exitosa (Sitemap+Raw).');
+            console.log('Firebase Admin: Ignición manual exitosa (Sitemap+Modulated).');
         } catch (error: any) {
             console.error('CRITICAL: Firebase Init Failed (Sitemap). PEM Prefix:', privateKey.substring(0, 50));
             throw error;

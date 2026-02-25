@@ -16,16 +16,18 @@ if (!getApps().length) {
         throw new Error('KEY_TRUNCATED');
     }
 
-    // INTEGRIDAD DE SALTO (Jump Integrity)
-    // Asegura que cada '\n' se convierta en un salto de línea real y limpia comillas incidentales
-    // BYPASS: BASE64-IDENTITY-DECODE
-    // Detectar si es Base64 (si empieza con LS0t -> '---') o si necesita limpieza de escapes
-    const privateKey = (rawKey || '').startsWith('LS0t')
-        ? Buffer.from(rawKey || '', 'base64').toString('utf-8')
-        : (rawKey || '').replace(/\\n/g, '\n');
+    // MODULACIÓN: BASE64-RUNTIME-DECODE
+    // Si llega como bloque sólido (sin headers PEM), se trata como Base64.
+    // De lo contrario, se aplica el fallback de limpieza de escapes robusto.
+    const privateKey = (rawKey || '').includes('-----BEGIN PRIVATE KEY-----')
+        ? (rawKey || '').replace(/\\n/g, '\n').replace(/\\ /g, ' ').trim()
+        : Buffer.from(rawKey || '', 'base64').toString('utf-8').trim();
+
+    // LOG DE SEGURIDAD: Verificación de acople (~1600-1700 bytes)
+    console.log(`Firebase Identity: Key Size = ${privateKey.length} bytes. Prefix: ${privateKey.substring(0, 30)}`);
 
     if (privateKey && !privateKey.includes('\n')) {
-        console.warn('PEM_STRUCTURE_WARNING: No real line jumps detected after Base64/Escape decode.');
+        console.warn('PEM_STRUCTURE_WARNING: No real line jumps detected after modulation.');
     }
 
     if (projectId && clientEmail && privateKey) {
@@ -37,7 +39,7 @@ if (!getApps().length) {
                     privateKey
                 })
             });
-            console.log('Firebase Admin: Ignición manual exitosa (Raw).');
+            console.log('Firebase Admin: Ignición manual exitosa (Modulated).');
         } catch (error: any) {
             // VERIFICACIÓN DE PREFIJO: Log de diagnóstico si el parseo falla
             console.error('CRITICAL: Firebase Init Failed. PEM Prefix:', privateKey.substring(0, 50));
