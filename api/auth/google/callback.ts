@@ -3,26 +3,38 @@ import { google } from 'googleapis';
 import { initializeApp, getApps, cert, getApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
-// PROTOCOLO: CRITICAL-DEBUG-AUTONOMY (Forensic Cleanup)
-let rawKey = process.env.FIREBASE_PRIVATE_KEY || '';
+// PROTOCOLO: NUCLEAR-PEM-RECONSTRUCTION
+let rawKey = (process.env.FIREBASE_PRIVATE_KEY || '').trim();
 
-// 1. Detección Base64 y Decodificación
+// 1. Detección y Limpieza Prematura de Comores e Inyecciones
+rawKey = rawKey.replace(/^["']|["']$/g, '');
+
+// 2. Decodificación Base64 si aplica
 let privateKey = rawKey.includes('LS0t')
-    ? Buffer.from(rawKey.trim(), 'base64').toString('utf-8')
+    ? Buffer.from(rawKey, 'base64').toString('utf-8')
     : rawKey;
 
-// 2. Limpieza Quirúrgica Profunda
+// 3. Normalización Física de PEM
 privateKey = privateKey
-    .replace(/^["']|["']$/g, '') // Quitar comillas externas (dobles o simples)
-    .replace(/\\n/g, '\n')       // Convertir escapes literales \n a saltos reales
-    .replace(/\r/g, '')          // Eliminar retornos de carro
-    .replace(/ +/g, ' ')         // Colapsar espacios múltiples (posibles copypaste bugs)
+    .replace(/\\n/g, '\n') // Normalizar escapes literales
+    .replace(/\\r/g, '')   // Quitar retornos literales
+    .replace(/\r/g, '')    // Quitar retornos reales
+    .replace(/\\ /g, ' ')  // Corregir espacios escapados (saboteadores comunes)
     .trim();
 
-// 3. Diagnóstico Forense: Mapeo ASCII para encontrar "saboteadores" invisibles
+// 4. Extracción Estructural: Filtrar solo el bloque PEM puro
+const header = '-----BEGIN PRIVATE KEY-----';
+const footer = '-----END PRIVATE KEY-----';
+if (privateKey.includes(header) && privateKey.includes(footer)) {
+    const startIndex = privateKey.indexOf(header);
+    const endIndex = privateKey.indexOf(footer) + footer.length;
+    privateKey = privateKey.substring(startIndex, endIndex);
+}
+
+// 5. Diagnóstico Final
 if (privateKey.length > 0) {
-    const chars = privateKey.substring(0, 50).split('').map(c => c.charCodeAt(0)).join(',');
-    console.log(`FORENSIC ANALYTICS: Size=${privateKey.length} bytes. ASCII(0-50)=[${chars}]`);
+    const map = privateKey.substring(0, 50).split('').map(c => c.charCodeAt(0)).join(',');
+    console.log(`NUCLEAR RECONSTRUCTION: Coupled=${privateKey.length} bytes. ASCII=[${map}]`);
 }
 
 const adminConfig = {

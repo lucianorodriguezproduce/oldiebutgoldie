@@ -2,21 +2,29 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { initializeApp, getApps, cert, getApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
-// PROTOCOLO: CRITICAL-DEBUG-AUTONOMY (Forensic Cleanup)
-let rawKey = process.env.FIREBASE_PRIVATE_KEY || '';
+// PROTOCOLO: NUCLEAR-PEM-RECONSTRUCTION
+let rawKey = (process.env.FIREBASE_PRIVATE_KEY || '').trim().replace(/^["']|["']$/g, '');
 let privateKey = rawKey.includes('LS0t')
-    ? Buffer.from(rawKey.trim(), 'base64').toString('utf-8')
+    ? Buffer.from(rawKey, 'base64').toString('utf-8')
     : rawKey;
 
 privateKey = privateKey
-    .replace(/^["']|["']$/g, '')
     .replace(/\\n/g, '\n')
+    .replace(/\\r/g, '')
     .replace(/\r/g, '')
-    .replace(/ +/g, ' ')
+    .replace(/\\ /g, ' ')
     .trim();
 
+const header = '-----BEGIN PRIVATE KEY-----';
+const footer = '-----END PRIVATE KEY-----';
+if (privateKey.includes(header) && privateKey.includes(footer)) {
+    const startIndex = privateKey.indexOf(header);
+    const endIndex = privateKey.indexOf(footer) + footer.length;
+    privateKey = privateKey.substring(startIndex, endIndex);
+}
+
 if (privateKey.length > 0) {
-    console.log(`FORENSIC (Sitemap): Size=${privateKey.length}. ASCII(0-20)=[${privateKey.substring(0, 20).split('').map(c => c.charCodeAt(0)).join(',')}]`);
+    console.log(`NUCLEAR (Sitemap): Size=${privateKey.length}. ASCII=[${privateKey.substring(0, 20).split('').map(c => c.charCodeAt(0)).join(',')}]`);
 }
 
 const adminConfig = {
