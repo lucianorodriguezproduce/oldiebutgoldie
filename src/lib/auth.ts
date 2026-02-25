@@ -5,7 +5,7 @@ import {
     createUserWithEmailAndPassword,
     onAuthStateChanged
 } from "firebase/auth";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp, increment } from "firebase/firestore";
 import { auth, db } from "./firebase";
 
 export const googleProvider = new GoogleAuthProvider();
@@ -67,6 +67,8 @@ export const syncUserToFirestore = async (user: any) => {
         email: user.email,
         display_name: user.displayName || user.email?.split('@')[0] || 'User',
         last_login: serverTimestamp(),
+        "stats.lastLogin": serverTimestamp(),
+        "stats.sessionCount": increment(1)
     }, { merge: true });
 };
 

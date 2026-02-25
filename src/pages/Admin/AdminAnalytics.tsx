@@ -64,6 +64,7 @@ export default function AdminAnalytics() {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedKeyword, setSelectedKeyword] = useState<string | null>(null);
     const [isTrafficLoading, setIsTrafficLoading] = useState(true);
+    const [isKeywordsLoading, setIsKeywordsLoading] = useState(false);
 
     useEffect(() => {
         const fetchAllData = async () => {
@@ -118,13 +119,10 @@ export default function AdminAnalytics() {
                 const gaData = await runReport();
                 setChartData(gaData);
 
-                // Mock keywords for now
-                const mockKeywords: SearchConsoleData[] = [
-                    { query: "comprar vinilos rock", clicks: 340, impressions: 2100, ctr: 16.1, position: 3.2 },
-                    { query: "oldie but goldie discos", clicks: 215, impressions: 450, ctr: 47.7, position: 1.1 },
-                    { query: "cotizador de discos", clicks: 180, impressions: 1200, ctr: 15.0, position: 4.5 }
-                ];
-                setKeywords(mockKeywords);
+                // Traffic Metrics should come from GA4 API (analyticsService)
+                // Search Console integration is pending, so we clear the mock keywords
+                setKeywords([]);
+                setIsKeywordsLoading(false);
 
             } catch (error) {
                 console.error("Critical Analytics Error:", error);
@@ -255,8 +253,8 @@ export default function AdminAnalytics() {
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                             <KPIBlock icon={Users} label="Active Now" value="24" sub="Conexiones vivas" color="emerald-400" />
                             <KPIBlock icon={Activity} label="Traffic Flow" value={isTrafficLoading ? '-' : chartData.reduce((acc, curr) => acc + curr.sessions, 0).toLocaleString()} sub="Sesiones (7d)" color="blue-400" />
-                            <KPIBlock icon={Clock} label="Retention" value="01:24" sub="Tiempo lectura" color="orange-400" />
-                            <KPIBlock icon={TrendingUp} label="Conversion" value="3.8%" sub="Tasa de Cierre" color="purple-400" />
+                            <KPIBlock icon={Clock} label="Retention" value="--" sub="Conectando API..." color="orange-400" />
+                            <KPIBlock icon={TrendingUp} label="Conversion" value="--" sub="Tasa de Cierre" color="purple-400" />
                         </div>
 
                         {/* Volume Chart */}
@@ -315,15 +313,23 @@ export default function AdminAnalytics() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-white/5 text-sm">
-                                        {filteredKeywords.map((kw, i) => (
-                                            <tr key={i} className="hover:bg-white/5 transition-colors group cursor-pointer" onClick={() => setSelectedKeyword(kw.query)}>
-                                                <td className="p-6 font-bold text-white group-hover:text-primary transition-colors uppercase">{kw.query}</td>
-                                                <td className="p-6 text-primary font-mono">{kw.clicks}</td>
-                                                <td className="p-6 text-blue-400 font-mono">{kw.impressions}</td>
-                                                <td className="p-6 text-green-400 font-mono">{kw.ctr}%</td>
-                                                <td className="p-6 text-purple-400 font-mono">#{kw.position}</td>
+                                        {filteredKeywords.length > 0 ? (
+                                            filteredKeywords.map((kw, i) => (
+                                                <tr key={i} className="hover:bg-white/5 transition-colors group cursor-pointer" onClick={() => setSelectedKeyword(kw.query)}>
+                                                    <td className="p-6 font-bold text-white group-hover:text-primary transition-colors uppercase">{kw.query}</td>
+                                                    <td className="p-6 text-primary font-mono">{kw.clicks}</td>
+                                                    <td className="p-6 text-blue-400 font-mono">{kw.impressions}</td>
+                                                    <td className="p-6 text-green-400 font-mono">{kw.ctr}%</td>
+                                                    <td className="p-6 text-purple-400 font-mono">#{kw.position}</td>
+                                                </tr>
+                                            ))
+                                        ) : (
+                                            <tr>
+                                                <td colSpan={5} className="p-12 text-center text-gray-500 font-bold uppercase tracking-widest text-[10px]">
+                                                    {isKeywordsLoading ? "Sincronizando con Search Console..." : "Sin datos de búsqueda disponibles"}
+                                                </td>
                                             </tr>
-                                        ))}
+                                        )}
                                     </tbody>
                                 </table>
                             </div>

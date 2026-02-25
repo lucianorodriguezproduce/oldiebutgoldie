@@ -308,10 +308,24 @@ export default function Home() {
                         pagination = response.pagination;
                     }
 
-                    if (results) {
+                    if (results && results.length > 0) {
                         setSearchResults(results);
                         setHasMore(pagination.page < pagination.pages);
                         setCurrentPage(1);
+                    } else {
+                        // TRACK MISSED SEARCHES: Log when no results are found for a valid query
+                        setSearchResults([]);
+                        setHasMore(false);
+                        try {
+                            await addDoc(collection(db, "missed_searches"), {
+                                query: debouncedQuery,
+                                timestamp: serverTimestamp(),
+                                uid: user?.uid || "anonymous",
+                                filter: selectedArtist ? "artist_context" : searchFilter
+                            });
+                        } catch (err) {
+                            console.error("Failed to log missed search:", err);
+                        }
                     }
                 } catch (error) {
                     console.error("Search error:", error);
