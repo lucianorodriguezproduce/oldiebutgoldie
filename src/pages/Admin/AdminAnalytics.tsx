@@ -265,29 +265,38 @@ export default function AdminAnalytics() {
                         </div>
 
                         {/* Volume Chart */}
-                        <div className="bg-[#0a0a0a] border border-white/10 rounded-[2.5rem] p-8">
+                        <div className="bg-[#0a0a0a] border border-white/10 rounded-[2.5rem] p-8 min-h-[450px]">
                             <h2 className="text-sm font-black text-white uppercase tracking-[0.2em] mb-8 flex items-center justify-between">
                                 <span>Volumen de Visitantes (GA4 Hub)</span>
                                 {selectedKeyword && (
                                     <Badge className="bg-primary/10 text-primary border-primary/20">Ref: "{selectedKeyword}"</Badge>
                                 )}
                             </h2>
-                            <div className="h-[350px] w-full">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                        <defs>
-                                            <linearGradient id="colorTraffic" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#8884d8" stopOpacity={0.3} />
-                                                <stop offset="95%" stopColor="#8884d8" stopOpacity={0} />
-                                            </linearGradient>
-                                        </defs>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                                        <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#444', fontSize: 10, fontWeight: 'bold' }} />
-                                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#444', fontSize: 10, fontWeight: 'bold' }} />
-                                        <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #222', borderRadius: '12px' }} />
-                                        <Area type="monotone" dataKey="sessions" stroke="#8884d8" strokeWidth={4} fillOpacity={1} fill="url(#colorTraffic)" />
-                                    </AreaChart>
-                                </ResponsiveContainer>
+                            <div className="h-[350px] w-full flex items-center justify-center">
+                                {!isTrafficLoading && chartData.length > 0 ? (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                            <defs>
+                                                <linearGradient id="colorTraffic" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor="#8884d8" stopOpacity={0.3} />
+                                                    <stop offset="95%" stopColor="#8884d8" stopOpacity={0} />
+                                                </linearGradient>
+                                            </defs>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                                            <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#444', fontSize: 10, fontWeight: 'bold' }} />
+                                            <YAxis axisLine={false} tickLine={false} tick={{ fill: '#444', fontSize: 10, fontWeight: 'bold' }} />
+                                            <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #222', borderRadius: '12px' }} />
+                                            <Area type="monotone" dataKey="sessions" stroke="#8884d8" strokeWidth={4} fillOpacity={1} fill="url(#colorTraffic)" />
+                                        </AreaChart>
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <div className="flex flex-col items-center gap-4">
+                                        <Activity className="w-8 h-8 text-white/10 animate-pulse" />
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-600">
+                                            {isTrafficLoading ? "Sincronizando Stream de GA4..." : "Sin señales de tráfico suficientes"}
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         </div>
 

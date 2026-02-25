@@ -32,7 +32,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         if (cacheSnap.exists) {
             const cacheData = cacheSnap.data();
-            const lastUpdated = cacheData?.timestamp?.toDate()?.getTime() || 0;
+            const ts = cacheData?.timestamp;
+
+            // Robust Timestamp to Date conversion
+            let lastUpdated = 0;
+            if (ts) {
+                if (typeof ts.toDate === 'function') {
+                    lastUpdated = ts.toDate().getTime();
+                } else if (ts instanceof Date) {
+                    lastUpdated = ts.getTime();
+                } else if (ts.seconds) { // Plain object from some clients
+                    lastUpdated = ts.seconds * 1000;
+                }
+            }
+
             if (now - lastUpdated < CACHE_TTL_MS) {
                 console.log("Serving GSC data from Firestore cache");
                 return res.status(200).json(cacheData?.keywords || []);
@@ -55,10 +68,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         );
 
         oauth2Client.setCredentials({ refresh_token: refreshToken });
-
         const searchconsole = google.searchconsole({ version: 'v1', auth: oauth2Client });
 
         // 3. Query Analytics
+        // GSC Property URL MUST be exact. Usually https://example.com/ or sc-domain:example.com
         const siteUrl = process.env.VITE_SITE_URL || 'https://oldiebutgoldie.com.ar/';
 
         const response = await searchconsole.searchanalytics.query({
@@ -74,25 +87,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         const rows = response.data.rows || [];
 
-        // 4. Transform and Filter
+        // 4. Transform
         const keywords = rows.map(row => ({
             query: row.keys?.[0] || 'Unknown',
             clicks: row.clicks || 0,
             impressions: row.impressions || 0,
-            ctr: (row.ctr || 0) * 100, // Scale to percentage
+            ctr: (row.ctr || 0) * 100,
             position: row.position || 0
         }));
 
         // 5. Update cache in Firestore
         await cacheRef.set({
             keywords,
-            timestamp: new Date(),
+            timestamp: new Date(), // Stored as Timestamp in Admin SDK
             siteUrl
-        });
+        }, { merge: true });
 
         res.status(200).json(keywords);
     } catch (error: any) {
         console.error('GSC Query Error:', error);
-        res.status(500).json({ error: 'Failed to fetch GSC data', details: error.message });
+        // Return a JSON error even if it's a 500 to avoid response.json() failing on frontend
+        res.status(500).json({
+            error: 'Failed to fetch GSC data',
+            details: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
     }
 }
