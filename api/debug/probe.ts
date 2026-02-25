@@ -50,7 +50,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         };
         report.project_id = config.project_id;
 
-        report.version_sig = "BUNKER-OMEGA-2.0.1";
+        report.version_sig = "BUNKER-OMEGA-2.1";
         report.steps.push("3. Initializing Admin SDK (Bunker Code)");
         const tempApp = initializeApp({
             credential: cert(config as any)
