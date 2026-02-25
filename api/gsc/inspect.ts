@@ -1,52 +1,22 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { google } from 'googleapis';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import * as admin from 'firebase-admin';
 
-// Initialize Firebase Admin (Manual Identity Override with Safeguards)
-if (!getApps().length) {
-    const projectId = process.env.FIREBASE_PROJECT_ID;
-    const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-    const rawKey = process.env.FIREBASE_PRIVATE_KEY;
-
-    // VERIFICACIÓN DE LONGITUD (Safeguard)
-    if (rawKey && rawKey.length < 1600) {
-        console.error('CRITICAL: FIREBASE_PRIVATE_KEY is truncated (KEY_TRUNCATED). Length:', rawKey.length);
-        throw new Error('KEY_TRUNCATED');
-    }
-
-    // MODULACIÓN: BASE64-RUNTIME-DECODE
-    const privateKey = (rawKey || '').includes('-----BEGIN PRIVATE KEY-----')
-        ? (rawKey || '').replace(/\\n/g, '\n').replace(/\\ /g, ' ').trim()
-        : Buffer.from(rawKey || '', 'base64').toString('utf-8').trim();
-
-    console.log(`GSC Inspect: Identity Key Size = ${privateKey.length} bytes.`);
-
-    if (privateKey && !privateKey.includes('\n')) {
-        console.warn('PEM_STRUCTURE_WARNING (Inspect): No real line jumps detected after modulation.');
-    }
-
-    if (projectId && clientEmail && privateKey) {
-        try {
-            initializeApp({
-                credential: cert({
-                    projectId,
-                    clientEmail,
-                    privateKey
-                })
-            });
-            console.log('Firebase Admin: Ignición manual exitosa (Inspect+Modulated).');
-        } catch (error: any) {
-            console.error('CRITICAL: Firebase Init Failed (Inspect). PEM Prefix:', privateKey.substring(0, 50));
-            throw error;
-        }
-    } else {
-        console.warn("Manual Firebase Admin config missing (Inspect). Falling back to default.");
-        initializeApp();
-    }
+// PROTOCOLO: FIREBASE-SINGLETON-ENFORCEMENT
+if (!admin.apps.length) {
+    admin.initializeApp({
+        credential: admin.credential.cert({
+            projectId: process.env.FIREBASE_PROJECT_ID,
+            clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+            privateKey: process.env.FIREBASE_PRIVATE_KEY?.includes('LS0t')
+                ? Buffer.from(process.env.FIREBASE_PRIVATE_KEY, 'base64').toString('utf-8')
+                : process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+        }),
+    });
+    console.log(`GSC Inspect: Identity Key Coupled (${process.env.FIREBASE_PRIVATE_KEY?.length || 0} bytes).`);
 }
 
-const db = getFirestore();
+const db = admin.firestore();
 
 /**
  * Handler for URL Inspection.
