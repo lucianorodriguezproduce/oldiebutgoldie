@@ -2,10 +2,49 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { google } from 'googleapis';
 import { Readable } from 'stream';
 
+import { initializeApp, getApps, cert, getApp } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+
+// PROTOCOLO: PEM-REWRAP-STABILIZER (Architectural Identity Reset)
+const getAdminConfig = () => {
+    const credentials = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+    if (!credentials) throw new Error('GOOGLE_APPLICATION_CREDENTIALS missing');
+    let serviceAccount;
+    try {
+        serviceAccount = typeof credentials === 'string' && credentials.trim().startsWith('{')
+            ? JSON.parse(credentials)
+            : null;
+    } catch (e) {
+        console.error('JSON Parse failed for GOOGLE_APPLICATION_CREDENTIALS');
+    }
+    if (!serviceAccount) {
+        serviceAccount = {
+            project_id: process.env.FIREBASE_PROJECT_ID,
+            client_email: process.env.FIREBASE_CLIENT_EMAIL,
+            private_key: process.env.FIREBASE_PRIVATE_KEY
+        };
+    }
+    const rawKey = (serviceAccount.private_key || serviceAccount.privateKey || '').trim();
+    let decodedKey = rawKey.includes('LS0t')
+        ? Buffer.from(rawKey.replace(/^["']|["']$/g, ''), 'base64').toString('utf-8')
+        : rawKey;
+    decodedKey = decodedKey.replace(/\\n/g, '\n').replace(/\\r/g, '').replace(/\r/g, '').replace(/\\ /g, ' ');
+    const header = '-----BEGIN PRIVATE KEY-----', footer = '-----END PRIVATE KEY-----';
+    let cleanBase64 = decodedKey.replace(header, '').replace(footer, '').replace(/\s/g, '');
+    const lines = cleanBase64.match(/.{1,64}/g) || [];
+    return {
+        projectId: (serviceAccount.project_id || serviceAccount.projectId || '').trim().replace(/^["']|["']$/g, ''),
+        clientEmail: (serviceAccount.client_email || serviceAccount.clientEmail || '').trim().replace(/^["']|["']$/g, ''),
+        privateKey: `${header}\n${lines.join('\n')}\n${footer}`,
+    };
+};
+
+const app = getApps().length === 0 ? initializeApp({ credential: cert(getAdminConfig()) }) : getApp();
+const db = getFirestore(app);
+
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID?.trim().replace(/^=/, '');
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET?.trim().replace(/^=/, '');
 const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI?.trim().replace(/^=/, '');
-const GOOGLE_REFRESH_TOKEN = process.env.GOOGLE_REFRESH_TOKEN?.trim().replace(/^=/, '');
 const DRIVE_FOLDER_ID = process.env.DRIVE_FOLDER_ID?.trim().replace(/^=/, '');
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -24,16 +63,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         hasClientId: !!GOOGLE_CLIENT_ID,
         clientIdStart: GOOGLE_CLIENT_ID?.substring(0, 10) + '...',
         hasClientSecret: !!GOOGLE_CLIENT_SECRET,
-        hasRefreshToken: !!GOOGLE_REFRESH_TOKEN,
-        refreshTokenStart: GOOGLE_REFRESH_TOKEN?.substring(0, 5) + '...',
         hasFolderId: !!DRIVE_FOLDER_ID
     });
 
-    // Verify environment variables
+    // Verify environment variables (Exclude REFRESH_TOKEN check as we fetch it from DB)
     const missingVars = [];
     if (!GOOGLE_CLIENT_ID) missingVars.push('GOOGLE_CLIENT_ID');
     if (!GOOGLE_CLIENT_SECRET) missingVars.push('GOOGLE_CLIENT_SECRET');
-    if (!GOOGLE_REFRESH_TOKEN) missingVars.push('GOOGLE_REFRESH_TOKEN');
 
     if (missingVars.length > 0) {
         console.error('CRITICAL: Missing environment variables:', missingVars);
@@ -43,12 +79,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
     }
 
+    let dynamicRefreshToken = 'NOT_FETCHED';
     try {
         const { file, fileName, fileType } = req.body;
 
         if (!file) {
             console.error('Upload Error: No file content received');
             return res.status(400).json({ error: 'File content (base64) is required' });
+        }
+
+        // 1. Fetch Dynamic Token from Firestore
+        const gscConfig = await db.collection('system_config').doc('gsc_auth').get();
+        dynamicRefreshToken = gscConfig.data()?.refresh_token;
+
+        if (!dynamicRefreshToken) {
+            console.error('[DriveSync] Refresh Token missing in Firestore');
+            return res.status(500).json({ error: 'Google Auth missing in DB' });
         }
 
         console.log(`[DriveSync] Processing upload: ${fileName} (${fileType})`);
@@ -59,7 +105,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             GOOGLE_REDIRECT_URI
         );
 
-        auth.setCredentials({ refresh_token: GOOGLE_REFRESH_TOKEN });
+        auth.setCredentials({ refresh_token: dynamicRefreshToken });
+
+        // Force token refresh
+        await auth.getAccessToken();
+
         const drive = google.drive({ version: 'v3', auth });
 
         // Convert base64 to stream
@@ -137,7 +187,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const redactedCheck = {
             clientId: GOOGLE_CLIENT_ID ? `${GOOGLE_CLIENT_ID.substring(0, 10)}...${GOOGLE_CLIENT_ID.slice(-5)}` : 'MISSING',
             clientSecret: GOOGLE_CLIENT_SECRET ? `${GOOGLE_CLIENT_SECRET.substring(0, 5)}...` : 'MISSING',
-            refreshToken: GOOGLE_REFRESH_TOKEN ? `${GOOGLE_REFRESH_TOKEN.substring(0, 10)}...${GOOGLE_REFRESH_TOKEN.slice(-5)}` : 'MISSING',
+            hasDynamicRefreshToken: !!dynamicRefreshToken,
             redirectUri: GOOGLE_REDIRECT_URI,
             folderId: DRIVE_FOLDER_ID
         };

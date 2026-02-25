@@ -3,43 +3,51 @@ import { google } from 'googleapis';
 import { initializeApp, getApps, cert, getApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
-// PROTOCOLO: PEM-REWRAP-STABILIZER (Definitive Fix)
-const normalizeEnvVar = (val: string | undefined) => (val || '').trim().replace(/^["']|["']$/g, '');
+// PROTOCOLO: PEM-REWRAP-STABILIZER (Architectural Identity Reset)
+const getAdminConfig = () => {
+    const credentials = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+    if (!credentials) throw new Error('GOOGLE_APPLICATION_CREDENTIALS missing');
 
-const rawKey = normalizeEnvVar(process.env.FIREBASE_PRIVATE_KEY);
-let decodedKey = rawKey.includes('LS0t')
-    ? Buffer.from(rawKey, 'base64').toString('utf-8')
-    : rawKey;
+    // Parse JSON if it's a string (standard Vercel/Env behavior)
+    let serviceAccount;
+    try {
+        serviceAccount = typeof credentials === 'string' && credentials.trim().startsWith('{')
+            ? JSON.parse(credentials)
+            : null;
+    } catch (e) {
+        console.error('JSON Parse failed for GOOGLE_APPLICATION_CREDENTIALS');
+    }
 
-// 1. Normalización de Escapes
-decodedKey = decodedKey
-    .replace(/\\n/g, '\n')
-    .replace(/\\r/g, '')
-    .replace(/\r/g, '')
-    .replace(/\\ /g, ' ');
+    if (!serviceAccount) {
+        serviceAccount = {
+            project_id: process.env.FIREBASE_PROJECT_ID,
+            client_email: process.env.FIREBASE_CLIENT_EMAIL,
+            private_key: process.env.FIREBASE_PRIVATE_KEY
+        };
+    }
 
-// 2. Re-envoltorio Estricto (Nuclear PEM Reset)
-const header = '-----BEGIN PRIVATE KEY-----';
-const footer = '-----END PRIVATE KEY-----';
+    const rawKey = (serviceAccount.private_key || serviceAccount.privateKey || '').trim();
+    let decodedKey = rawKey.includes('LS0t')
+        ? Buffer.from(rawKey.replace(/^["']|["']$/g, ''), 'base64').toString('utf-8')
+        : rawKey;
 
-// Extraer solo la data base64, eliminando cualquier espacio o marker previo
-let cleanBase64 = decodedKey
-    .replace(header, '')
-    .replace(footer, '')
-    .replace(/\s/g, '');
+    decodedKey = decodedKey.replace(/\\n/g, '\n').replace(/\\r/g, '').replace(/\r/g, '').replace(/\\ /g, ' ');
 
-// Re-envolver cada 64 caracteres (estándar RFC 7468 / OpenSSL)
-const lines = cleanBase64.match(/.{1,64}/g) || [];
-const finalKey = `${header}\n${lines.join('\n')}\n${footer}`;
+    const header = '-----BEGIN PRIVATE KEY-----';
+    const footer = '-----END PRIVATE KEY-----';
+    let cleanBase64 = decodedKey.replace(header, '').replace(footer, '').replace(/\s/g, '');
+    const lines = cleanBase64.match(/.{1,64}/g) || [];
+    const finalKey = `${header}\n${lines.join('\n')}\n${footer}`;
 
-const adminConfig = {
-    projectId: normalizeEnvVar(process.env.FIREBASE_PROJECT_ID),
-    clientEmail: normalizeEnvVar(process.env.FIREBASE_CLIENT_EMAIL),
-    privateKey: finalKey,
+    return {
+        projectId: (serviceAccount.project_id || serviceAccount.projectId || '').trim().replace(/^["']|["']$/g, ''),
+        clientEmail: (serviceAccount.client_email || serviceAccount.clientEmail || '').trim().replace(/^["']|["']$/g, ''),
+        privateKey: finalKey,
+    };
 };
 
 const app = getApps().length === 0
-    ? initializeApp({ credential: cert(adminConfig) })
+    ? initializeApp({ credential: cert(getAdminConfig()) })
     : getApp();
 
 const db = getFirestore(app);

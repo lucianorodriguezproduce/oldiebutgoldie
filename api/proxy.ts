@@ -21,9 +21,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ error: 'Path is required' });
     }
 
-    // Use the provided token directly to ensure it works on Vercel 
-    // without needing manual env configuration in the dashboard
-    const DISCOGS_TOKEN = process.env.DISCOGS_API_TOKEN || "cWbHttScejgMgzHxjMXNUcZGRTqjVYhouCGxMMVt";
+    // STRICTOR: Consume strictly from Env Var per CLEAN-SWEEP protocol
+    const DISCOGS_TOKEN = process.env.DISCOGS_API_TOKEN;
+    if (!DISCOGS_TOKEN) {
+        console.error('CRITICAL: DISCOGS_API_TOKEN missing in Environment');
+        return res.status(500).json({ error: 'Discogs API Token not configured' });
+    }
     const discogsUrl = new URL(`https://api.discogs.com${path}`);
     discogsUrl.searchParams.append('token', DISCOGS_TOKEN);
 
