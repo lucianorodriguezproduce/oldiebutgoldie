@@ -2,28 +2,29 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { initializeApp, getApps, cert, getApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
-// PROTOCOLO: ANTIGRAVITY-ATOMIC-FIX (Filtro de Vacío)
+// PROTOCOLO: ANTIGRAVITY-ATOMIC-FIX (Filtro de Vacío V2)
 const getAdminConfig = () => {
     const creds = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-    if (!creds) throw new Error('GOOGLE_APPLICATION_CREDENTIALS missing');
-
-    let sa;
-    try {
-        sa = typeof creds === 'string' && creds.trim().startsWith('{')
-            ? JSON.parse(creds)
-            : creds;
-    } catch (e) {
-        console.error('Initial Parse failed');
-        sa = creds;
+    let sa: any = {};
+    if (creds && creds.trim().startsWith('{')) {
+        try { sa = JSON.parse(creds); } catch (e) { console.error('JSON Parse failed'); }
+    } else {
+        sa = {
+            project_id: process.env.FIREBASE_PROJECT_ID,
+            client_email: process.env.FIREBASE_CLIENT_EMAIL,
+            private_key: process.env.FIREBASE_PRIVATE_KEY
+        };
     }
 
-    let rawKey = (typeof sa === 'object' ? (sa.private_key || sa.privateKey) : sa) || '';
+    let raw = (sa.private_key || sa.privateKey || sa.private_key_id || '').trim();
+    if (raw.startsWith('{')) {
+        try { raw = JSON.parse(raw).private_key || raw; } catch (e) { }
+    }
 
-    // FILTRO DE VACÍO: Aislamiento total del cuerpo (Sin espacios ni saltos)
-    const body = rawKey
+    // ATOMIC VACUUM: Aislamiento total del cuerpo (Sin espacios ni marcadores previos)
+    const body = raw
         .replace(/\\n/g, '\n')
-        .replace('-----BEGIN PRIVATE KEY-----', '')
-        .replace('-----END PRIVATE KEY-----', '')
+        .replace(/-----[^-]*-----/g, '') // Strip ALL headers/footers
         .replace(/\s/g, '') // ELIMINACIÓN TOTAL (Vacuum)
         .trim();
 
