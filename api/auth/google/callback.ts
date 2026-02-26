@@ -1,9 +1,14 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { google } from 'googleapis';
-import { initializeApp, getApps, cert, getApp } from 'firebase-admin/app';
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-
 import { SecretManagerServiceClient } from '@google-cloud/secret-manager';
+
+// NEUTRALIZACIÓN DIFERIDA DE INFRAESTRUCTURA (Búnker)
+if (process.env.GOOGLE_APPLICATION_CREDENTIALS && !process.env.GOOGLE_APPLICATION_CREDENTIALS.includes('/')) {
+    process.env.GOOGLE_APPLICATION_CREDENTIALS = "";
+    delete process.env.GOOGLE_APPLICATION_CREDENTIALS;
+}
 
 const secretClient = new SecretManagerServiceClient();
 
@@ -16,10 +21,6 @@ async function initBunkerIdentity() {
 
     const payload = version.payload?.data?.toString();
     if (!payload) throw new Error('CRITICAL_IDENTITY_FAILURE: Secret payload empty');
-
-    // NEUTRALIZACIÓN AGRESIVA (Prevenir fallback al entorno envenenado de Vercel)
-    process.env.GOOGLE_APPLICATION_CREDENTIALS = "";
-    delete process.env.GOOGLE_APPLICATION_CREDENTIALS;
 
     const sa = JSON.parse(payload);
     const rawKey = (sa.private_key || sa.privateKey || sa.private_key_id || '').trim();
@@ -49,30 +50,23 @@ async function initBunkerIdentity() {
     return getFirestore();
 }
 
-/**
- * Callback handler for GSC OAuth2.
- * Interchanges the code for tokens and stores the refresh_token.
- */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-    const db = await initBunkerIdentity();
-    const { code } = req.query;
-
-    console.log(process.env.GOOGLE_CLIENT_ID ? 'Callback: GOOGLE_CLIENT_ID Detectado' : 'Callback: GOOGLE_CLIENT_ID Faltante');
-
-    if (!code) {
-        return res.status(400).send('No code provided');
-    }
-
-    const oauth2Client = new google.auth.OAuth2(
-        process.env.GOOGLE_CLIENT_ID,
-        process.env.GOOGLE_CLIENT_SECRET,
-        'https://www.oldiebutgoldie.com.ar/api/auth/google/callback'
-    );
-
     try {
+        const db = await initBunkerIdentity();
+        const { code } = req.query;
+
+        if (!code) {
+            return res.status(400).send('No code provided');
+        }
+
+        const oauth2Client = new google.auth.OAuth2(
+            process.env.GOOGLE_CLIENT_ID,
+            process.env.GOOGLE_CLIENT_SECRET,
+            'https://www.oldiebutgoldie.com.ar/api/auth/google/callback'
+        );
+
         const { tokens } = await oauth2Client.getToken(code as string);
 
-        // Persist the refresh token in Firestore
         if (tokens.refresh_token) {
             await db.collection('system_config').doc('gsc_auth').set({
                 refresh_token: tokens.refresh_token,
@@ -80,13 +74,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 status: 'active'
             }, { merge: true });
 
-            // Redirect back to the Admin Dashboard
             res.redirect('/admin/analytics?gsc=success');
         } else {
-            console.warn('GSC Callback: No refresh_token returned. User might need to re-consent.');
             res.redirect('/admin/analytics?gsc=partial');
         }
-    } catch (error) {
+    } catch (error: any) {
         console.error('GSC OAuth Callback Error:', error);
         res.redirect('/admin/analytics?gsc=error');
     }

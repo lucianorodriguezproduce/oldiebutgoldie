@@ -1,9 +1,14 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { google } from 'googleapis';
-import { initializeApp, getApps, cert, getApp } from 'firebase-admin/app';
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-
 import { SecretManagerServiceClient } from '@google-cloud/secret-manager';
+
+// NEUTRALIZACIÓN DIFERIDA DE INFRAESTRUCTURA (Búnker)
+if (process.env.GOOGLE_APPLICATION_CREDENTIALS && !process.env.GOOGLE_APPLICATION_CREDENTIALS.includes('/')) {
+    process.env.GOOGLE_APPLICATION_CREDENTIALS = "";
+    delete process.env.GOOGLE_APPLICATION_CREDENTIALS;
+}
 
 const secretClient = new SecretManagerServiceClient();
 
@@ -16,10 +21,6 @@ async function initBunkerIdentity() {
 
     const payload = version.payload?.data?.toString();
     if (!payload) throw new Error('CRITICAL_IDENTITY_FAILURE: Secret payload empty');
-
-    // NEUTRALIZACIÓN AGRESIVA (Prevenir fallback al entorno envenenado de Vercel)
-    process.env.GOOGLE_APPLICATION_CREDENTIALS = "";
-    delete process.env.GOOGLE_APPLICATION_CREDENTIALS;
 
     const sa = JSON.parse(payload);
     const rawKey = (sa.private_key || sa.privateKey || sa.private_key_id || '').trim();
@@ -49,19 +50,15 @@ async function initBunkerIdentity() {
     return getFirestore();
 }
 
-/**
- * Handler for URL Inspection.
- * Checks indexing status and canonicalization for a specific URL.
- */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-    const db = await initBunkerIdentity();
-    const { url } = req.body;
-
-    if (!url) {
-        return res.status(400).json({ error: 'URL is required' });
-    }
-
     try {
+        const db = await initBunkerIdentity();
+        const { url } = req.body;
+
+        if (!url) {
+            return res.status(400).json({ error: 'URL is required' });
+        }
+
         const gscConfig = await db.collection('system_config').doc('gsc_auth').get();
         if (!gscConfig.exists || !gscConfig.data()?.refresh_token) {
             return res.status(401).json({ error: 'GSC not connected' });
@@ -77,62 +74,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         );
 
         oauth2Client.setCredentials({ refresh_token: gscConfig.data()?.refresh_token });
-
-        // Force token exchange
         await oauth2Client.getAccessToken();
 
         const searchconsole = google.searchconsole({ version: 'v1', auth: oauth2Client });
 
-        const request = {
-            inspectionUrl: url,
-            siteUrl: siteUrl,
-            languageCode: 'es'
-        };
-
         const result = await searchconsole.urlInspection.index.inspect({
-            requestBody: request
+            requestBody: { inspectionUrl: url, siteUrl: siteUrl, languageCode: 'es' }
         });
 
         const inspectionResult = result.data.inspectionResult;
         const indexStatus = inspectionResult?.indexStatusResult;
 
-        // Log discrepancies if canonical is different from our target
-        const googleCanonical = indexStatus?.googleCanonical;
-        const userCanonical = indexStatus?.userCanonical;
-
-        if (googleCanonical && userCanonical && googleCanonical !== userCanonical) {
-            await db.collection('system_errors').add({
-                type: 'CANONICAL_MISMATCH',
-                url: url,
-                googleCanonical,
-                userCanonical,
-                timestamp: new Date().toISOString()
-            });
-        }
-
-        // Detect 404 or NoIndexed
-        const verdict = indexStatus?.verdict; // "PASS", "FAIL", "NEUTRAL"
-        const coverageState = indexStatus?.coverageState;
-
-        if (verdict === 'FAIL' || coverageState?.includes('noindex')) {
-            await db.collection('system_errors').add({
-                type: 'CRAWL_ERROR',
-                url: url,
-                verdict,
-                coverageState,
-                timestamp: new Date().toISOString()
-            });
-        }
-
         res.status(200).json({
             url,
-            verdict,
-            googleCanonical,
-            coverageState
+            verdict: indexStatus?.verdict,
+            googleCanonical: indexStatus?.googleCanonical,
+            coverageState: indexStatus?.coverageState
         });
 
     } catch (error: any) {
         console.error('URL Inspection Error:', error);
-        res.status(500).json({ error: 'Failed to inspect URL', details: error.message });
+        // REDACCIÓN DE SEGURIDAD (Búnker)
+        const safeMessage = (error.message || "")
+            .replace(/\{"type": "service_account".*?\}/g, "[SERVICE_ACCOUNT_REDACTED]")
+            .replace(/-----BEGIN PRIVATE KEY-----.*?-----END PRIVATE KEY-----/gs, "[PRIVATE_KEY_REDACTED]");
+
+        res.status(500).json({ error: 'Failed to inspect URL', details: safeMessage });
     }
 }

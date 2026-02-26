@@ -3,12 +3,18 @@ import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { SecretManagerServiceClient } from '@google-cloud/secret-manager';
 
+// NEUTRALIZACIÓN DIFERIDA DE INFRAESTRUCTURA (Búnker)
+if (process.env.GOOGLE_APPLICATION_CREDENTIALS && !process.env.GOOGLE_APPLICATION_CREDENTIALS.includes('/')) {
+    process.env.GOOGLE_APPLICATION_CREDENTIALS = "";
+    delete process.env.GOOGLE_APPLICATION_CREDENTIALS;
+}
+
 const secretClient = new SecretManagerServiceClient();
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     const report: any = {
         timestamp: new Date().toISOString(),
-        version_sig: "BUNKER-OMEGA-4.0",
+        version_sig: "BUNKER-STABILIZED",
         steps: []
     };
 
@@ -20,12 +26,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         const payload = version.payload?.data?.toString();
         if (!payload) throw new Error('Secret payload empty');
-        report.steps.push("2. Payload Retried");
-
-        // NEUTRALIZACIÓN AGRESIVA (Prevenir fallback al entorno envenenado de Vercel)
-        report.steps.push("2.5. Neutralizing GOOGLE_APPLICATION_CREDENTIALS");
-        process.env.GOOGLE_APPLICATION_CREDENTIALS = "";
-        delete process.env.GOOGLE_APPLICATION_CREDENTIALS;
 
         const sa = JSON.parse(payload);
 
@@ -45,23 +45,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             private_key: finalKey
         };
 
-        report.steps.push("3. Initializing Admin SDK (Direct Inject)");
+        report.steps.push("2. Initializing Admin SDK (Direct Inject)");
         const tempApp = initializeApp({
             credential: cert(config as any)
         }, 'probe-bunker-' + Date.now());
 
-        report.steps.push("4. Testing Firestore Connectivity");
+        report.steps.push("3. Testing Firestore Connectivity");
         const db = getFirestore(tempApp);
         const collections = await db.listCollections();
         report.collections_count = collections.length;
 
-        report.status = "SUCCESS: Bunker Identity Stabilized Omega-4.0.";
+        report.status = "SUCCESS: Bunker Identity Stabilized.";
 
     } catch (e: any) {
         report.status = "FAILURE";
         report.error_name = e.name;
-        report.error_message = e.message;
-        report.error_stack = e.stack;
+        // REDACCIÓN DE SEGURIDAD (Búnker)
+        const safeMessage = (e.message || "")
+            .replace(/\{"type": "service_account".*?\}/g, "[SERVICE_ACCOUNT_REDACTED]")
+            .replace(/-----BEGIN PRIVATE KEY-----.*?-----END PRIVATE KEY-----/gs, "[PRIVATE_KEY_REDACTED]");
+        report.error_message = safeMessage;
+        report.error_stack = e.stack?.includes("service_account") ? "Stack redacted for security" : e.stack;
     }
 
     return res.status(200).json(report);
