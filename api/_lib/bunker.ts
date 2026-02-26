@@ -129,4 +129,40 @@ export async function uploadToDrive(base64: string, fileName: string, mimeType: 
     };
 }
 
+/**
+ * Shared helper to upload a Base64 file to Firebase Storage (Bunker) and return a public link.
+ */
+export async function uploadToBunker(base64: string, path: string, mimeType: string) {
+    await initBunkerIdentity();
+    const bucket = admin.storage().bucket(); // Default bucket
+
+    // 1. Clean Base64
+    const cleanBase64 = base64.includes('base64,') ? base64.split('base64,')[1] : base64;
+    const buffer = Buffer.from(cleanBase64, 'base64');
+
+    console.log(`Bunker Storage: Uploading to ${path} (${mimeType})...`);
+
+    const file = bucket.file(path);
+
+    // 2. Save file and make public
+    await file.save(buffer, {
+        metadata: {
+            contentType: mimeType,
+            cacheControl: 'public, max-age=31536000'
+        },
+        public: true,
+        resumable: false // Better for small serverless payloads
+    });
+
+    // 3. Construct Public URL (Standard GCS format)
+    const publicUrl = `https://storage.googleapis.com/${bucket.name}/${file.name}`;
+
+    console.log(`Bunker Storage: Upload successful. URL: ${publicUrl}`);
+
+    return {
+        url: publicUrl,
+        name: file.name
+    };
+}
+
 export { secretClient };

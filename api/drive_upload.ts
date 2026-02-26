@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { uploadToDrive } from './_lib/bunker.js';
+import { uploadToBunker } from './_lib/bunker.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
@@ -11,18 +11,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(400).json({ error: 'Missing file data' });
         }
 
-        console.log(`Editorial: Processing upload for ${fileName}...`);
+        console.log(`Editorial: Centralizing upload for ${fileName} to Firebase Storage...`);
 
-        const result = await uploadToDrive(file, fileName, fileType || 'image/jpeg');
+        // Use the new Bunker Storage logic for Editorial
+        const storagePath = `editorial/${Date.now()}_${fileName}`;
+        const result = await uploadToBunker(file, storagePath, fileType || 'image/jpeg');
 
         return res.status(200).json({
             success: true,
             directLink: result.url,
-            fileId: result.fileId
+            fileId: result.name
         });
 
     } catch (error: any) {
-        console.error('Editorial Upload Error:', error.message);
+        console.error('Editorial Storage Error:', error.message);
         return res.status(500).json({
             error: 'Editorial upload failed',
             details: error.message

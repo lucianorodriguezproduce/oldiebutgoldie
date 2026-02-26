@@ -7,7 +7,7 @@ export const config = {
 };
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { initBunkerIdentity, uploadToDrive } from '../_lib/bunker.js';
+import { initBunkerIdentity, uploadToBunker } from '../_lib/bunker.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
@@ -25,30 +25,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         const db = await initBunkerIdentity();
 
-        console.log(`Branding: Aligned upload for ${type}...`);
+        console.log(`Branding: Centralizing upload for ${type} to Firebase Storage...`);
 
-        // Use the Standard Editorial-Bunker Upload logic
-        const result = await uploadToDrive(base64, fileName, mimeType || 'image/png');
+        // Use the new Bunker Storage logic
+        const extension = mimeType?.split('/')[1] || 'png';
+        const storagePath = `branding/${type}_${Date.now()}.${extension}`;
+
+        const result = await uploadToBunker(base64, storagePath, mimeType || 'image/png');
 
         // 6. Sync Firestore
-        console.log('Branding: Syncing with site_config...');
+        console.log('Branding: Syncing with site_config in Firestore...');
         await db.collection('settings').doc('site_config').set({
             [type]: {
                 url: result.url,
-                fileId: result.fileId,
+                fileId: result.name, // Path in storage
                 updatedAt: new Date().toISOString()
             }
         }, { merge: true });
 
-        console.log('Branding: Alignment success.');
+        console.log('Branding: Migration success.');
         return res.status(200).json({ status: 'SUCCESS', url: result.url, type });
 
     } catch (error: any) {
-        console.error('Branding Aligned Error:', error.message);
+        console.error('Branding Migration Error:', error.message);
         return res.status(500).json({
             error: 'Branding operation failed',
             details: error.message,
-            code: error.code || 'BUNKER_ALIGN_FAULT'
+            code: error.code || 'BUNKER_STORAGE_FAULT'
         });
     }
 }
