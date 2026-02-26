@@ -10,8 +10,8 @@ async function getDiscogsToken() {
         });
         return version.payload?.data?.toString();
     } catch (e) {
-        console.warn('Discogs token fetch from Secret Manager failed, falling back to env');
-        return process.env.DISCOGS_API_TOKEN;
+        console.warn('CRITICAL_SECRET_FETCH_FAILURE: Discogs token fetch from Secret Manager failed.');
+        return undefined;
     }
 }
 

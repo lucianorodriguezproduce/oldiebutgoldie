@@ -22,10 +22,10 @@ async function initBunkerIdentity() {
     const payload = version.payload?.data?.toString();
     if (!payload) throw new Error('CRITICAL_IDENTITY_FAILURE: Secret payload empty');
 
-    const secretData = JSON.parse(payload);
+    const serviceAccount = JSON.parse(payload);
 
     if (getApps().length === 0) {
-        initializeApp({ credential: cert(secretData) });
+        initializeApp({ credential: cert(serviceAccount) });
         console.log('Bunker: Firebase Initialized Successfully.');
     }
     return getFirestore();
@@ -38,7 +38,7 @@ async function getSecret(name: string) {
         });
         return version.payload?.data?.toString();
     } catch (e) {
-        console.warn(`Secret ${name} fetch failed from Bunker.`);
+        console.warn(`CRITICAL_SECRET_FETCH_FAILURE: ${name} not found in Bunker.`);
         return undefined;
     }
 }

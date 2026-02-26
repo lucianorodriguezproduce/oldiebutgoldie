@@ -14,13 +14,13 @@ async function initBunkerIdentity() {
     });
     const payload = version.payload?.data?.toString();
     if (!payload) throw new Error('CRITICAL_IDENTITY_FAILURE: Secret payload empty');
-    const secretData = JSON.parse(payload);
+    const serviceAccount = JSON.parse(payload);
     if (getApps().length === 0) {
-        initializeApp({ credential: cert(secretData) });
+        initializeApp({ credential: cert(serviceAccount) });
     }
     return {
         db: getFirestore(),
-        projectId: secretData.project_id || 'buscador-discogs-11425'
+        projectId: serviceAccount.project_id || 'buscador-discogs-11425'
     };
 }
 
@@ -31,8 +31,8 @@ async function getDiscogsToken() {
         });
         return version.payload?.data?.toString();
     } catch (e) {
-        console.warn('Discogs token fetch from Secret Manager failed, falling back to env for safety during transition');
-        return process.env.DISCOGS_API_TOKEN;
+        console.warn('CRITICAL_SECRET_FETCH_FAILURE: Discogs token fetch from Secret Manager failed.');
+        return undefined;
     }
 }
 

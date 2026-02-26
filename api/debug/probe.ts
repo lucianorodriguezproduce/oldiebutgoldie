@@ -27,11 +27,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const payload = version.payload?.data?.toString();
         if (!payload) throw new Error('Secret payload empty');
 
-        const secretData = JSON.parse(payload);
+        const serviceAccount = JSON.parse(payload);
 
         report.steps.push("2. Initializing Admin SDK (Direct Inject)");
         const tempApp = initializeApp({
-            credential: cert(secretData)
+            credential: cert(serviceAccount)
         }, 'probe-bunker-' + Date.now());
 
         report.steps.push("3. Testing Firestore Connectivity");

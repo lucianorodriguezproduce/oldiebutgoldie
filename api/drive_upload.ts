@@ -21,10 +21,10 @@ async function initBunkerIdentity() {
     const payload = version.payload?.data?.toString();
     if (!payload) throw new Error('CRITICAL_IDENTITY_FAILURE: Secret payload empty');
 
-    const secretData = JSON.parse(payload);
+    const serviceAccount = JSON.parse(payload);
 
     if (getApps().length === 0) {
-        initializeApp({ credential: cert(secretData) });
+        initializeApp({ credential: cert(serviceAccount) });
         console.log('Bunker: Firebase Initialized Successfully.');
     }
     return getFirestore();

@@ -11,8 +11,8 @@ async function getSecret(name: string) {
         });
         return version.payload?.data?.toString();
     } catch (e) {
-        console.warn(`Secret ${name} fetch failed, falling back to env`);
-        return process.env[name];
+        console.warn(`CRITICAL_SECRET_FETCH_FAILURE: ${name} not found in Bunker.`);
+        return undefined;
     }
 }
 
