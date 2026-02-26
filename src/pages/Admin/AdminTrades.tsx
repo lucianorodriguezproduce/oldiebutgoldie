@@ -65,13 +65,13 @@ export default function AdminTrades() {
             const allItemIds = new Set<string>();
             fetchedTrades.forEach(t => {
                 if (t.manifest) {
-                    t.manifest.offeredItems.forEach(id => allItemIds.add(id));
-                    t.manifest.requestedItems.forEach(id => allItemIds.add(id));
+                    t.manifest.offeredItems.forEach((id: string) => allItemIds.add(id));
+                    t.manifest.requestedItems.forEach((id: string) => allItemIds.add(id));
                 }
             });
 
             const details: Record<string, InventoryItem> = { ...itemDetails };
-            await Promise.all(Array.from(allItemIds).map(async id => {
+            await Promise.all(Array.from(allItemIds).map(async (id: string) => {
                 if (!details[id]) {
                     const item = await inventoryService.getItemById(id);
                     if (item) details[id] = item;
