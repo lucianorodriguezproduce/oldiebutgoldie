@@ -13,6 +13,7 @@ import { formatDate, getReadableDate } from "@/utils/date";
 import { TEXTS } from "@/constants/texts";
 import { pushViewItemFromOrder, pushHotOrderDetected } from "@/utils/analytics";
 import { getCleanOrderMetadata } from "@/utils/orderMetadata";
+import { tradeService } from "@/services/tradeService";
 
 export default function PublicOrderView() {
     const { id } = useParams<{ id: string }>();
@@ -40,7 +41,7 @@ export default function PublicOrderView() {
                 return;
             }
 
-            // Anti-Timeout 3s (Tarea 4 de Fase 2)
+            // Anti-Timeout 3s
             const timeout = setTimeout(() => {
                 if (loading) {
                     console.warn("Safety Timeout Triggered: 3s reached.");
@@ -51,20 +52,23 @@ export default function PublicOrderView() {
 
             showLoading(TEXTS.common.locatingBatch);
             try {
-                const docRef = doc(db, "orders", id);
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists()) {
-                    const orderData = { id: docSnap.id, ...docSnap.data() } as any;
-                    setOrder(orderData);
+                // 1. Intentar buscar en el motor de Trades (Búnker)
+                let orderData = await tradeService.getTradeById(id);
 
-                    // GA4 Tracking
-                    pushViewItemFromOrder(orderData);
-
-                    if (orderData.view_count === 4) {
-                        pushHotOrderDetected(orderData, 5);
+                // 2. Fallback al sistema Legacy de Orders
+                if (!orderData) {
+                    const docSnap = await getDoc(doc(db, "orders", id));
+                    if (docSnap.exists()) {
+                        orderData = { id: docSnap.id, ...docSnap.data() } as any;
                     }
+                }
 
-                    // Tracker de vistas
+                if (orderData) {
+                    setOrder(orderData);
+                    pushViewItemFromOrder(orderData);
+                    if (orderData.view_count === 4) pushHotOrderDetected(orderData, 5);
+
+                    // Tracker de vistas (Compatible con ambos motores)
                     try {
                         const visitorId = user?.uid || (() => {
                             let stored = localStorage.getItem('visitor_id');
@@ -74,6 +78,11 @@ export default function PublicOrderView() {
                             }
                             return stored;
                         })();
+
+                        const docRef = orderData.is_bunker_data
+                            ? doc(db, "trades", id)
+                            : doc(db, "orders", id);
+
                         await updateDoc(docRef, {
                             view_count: increment(1),
                             unique_visitors: arrayUnion(visitorId),
@@ -84,7 +93,7 @@ export default function PublicOrderView() {
                     }
                 }
             } catch (error) {
-                console.error("Error fetching order:", error);
+                console.error("Error fetching order via hybrid engine:", error);
             } finally {
                 clearTimeout(timeout);
                 setLoading(false);

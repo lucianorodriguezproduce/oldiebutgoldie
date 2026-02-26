@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, getDocs } from 'firebase/firestore';
 import { Link } from 'react-router-dom';
 import { Clock, ShoppingBag, Music, ShieldCheck, BadgeDollarSign, Disc } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { SEO } from '@/components/SEO';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TEXTS } from '@/constants/texts';
+import { tradeService } from '@/services/tradeService';
 
 import OrderCard from '@/components/OrderCard';
 
@@ -15,22 +16,44 @@ export default function PublicOrders() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        const fetchPublicFeed = async () => {
+            try {
+                // Sincronización con el nuevo motor de Trades (Soberanía de Datos)
+                const trades = await tradeService.getTrades();
+
+                // Mantenemos compatibilidad con el feed híbrido (Legacy + Bunker)
+                // Filter out empty invalid routes or crash-ready docs.
+                const validOrders = trades.filter((o: any) => o.item_id || o.isBatch || o.is_batch || (o.items && o.items.length > 0));
+                setOrders(validOrders);
+            } catch (error) {
+                console.error("Error fetching public activity feed via TradeService", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchPublicFeed();
+
+        // Listener de tiempo real para la colección de orders (Legacy compatibility)
         const ordersRef = collection(db, 'orders');
         const q = query(ordersRef, orderBy('timestamp', 'desc'));
 
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            const publicOrdersData = querySnapshot.docs.map(doc => {
-                const data = doc.data();
-                return { id: doc.id, ...data };
-            });
+            const publicOrdersData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-            // Filter out empty invalid routes or crash-ready docs.
-            const validOrders = publicOrdersData.filter((o: any) => o.item_id || o.isBatch || o.is_batch || (o.items && o.items.length > 0));
-            setOrders(validOrders);
-            setLoading(false);
-        }, (error) => {
-            console.error("Error fetching public activity feed", error);
-            setLoading(false);
+            setOrders(prev => {
+                const combined = [...prev];
+                publicOrdersData.forEach(newOrder => {
+                    if (!combined.find(o => o.id === newOrder.id)) {
+                        combined.push(newOrder);
+                    }
+                });
+                return combined.sort((a, b) => {
+                    const timeA = a.timestamp?.seconds || a.createdAt?.seconds || 0;
+                    const timeB = b.timestamp?.seconds || b.createdAt?.seconds || 0;
+                    return timeB - timeA;
+                });
+            });
         });
 
         return () => unsubscribe();

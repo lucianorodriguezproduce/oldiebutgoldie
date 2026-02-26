@@ -1,8 +1,10 @@
 /**
  * Centralizes the logic for extracting artist, album, and image from an order.
- * Handles the different data schemas present in Firestore (Legacy, Individual User, Batch Admin).
+ * Handles the different data schemas present in Firestore (Legacy, Individual User, Batch Admin, and Bunker Trade).
  */
 export const getCleanOrderMetadata = (order: any) => {
+    if (!order) return { artist: '', album: '', format: 'Vinyl', condition: 'N/A', image: '', isBatch: false, itemsCount: 0 };
+
     const items = Array.isArray(order.items) ? order.items : [];
     const isBatch = items.length > 1;
 
@@ -11,6 +13,21 @@ export const getCleanOrderMetadata = (order: any) => {
         if (!str) return '';
         return str.replace(/UNKNOWN ARTIST\s*[-—–]*\s*/gi, '').trim();
     };
+
+    // 0. BUNKER PRIORITIZATION (Data Sovereignty)
+    if (order.is_bunker_data && items.length > 0) {
+        console.log(`[Bunker-Sync] Processing sovereign data for ID: ${order.id}`);
+        const first = items[0];
+        return {
+            artist: first.artist || '',
+            album: first.album || first.title || (isBatch ? `Lote de ${items.length} discos` : 'Detalle del Disco'),
+            format: first.format || 'Vinyl',
+            condition: first.condition || 'N/A',
+            image: first.cover_image || first.thumb || "https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png",
+            isBatch,
+            itemsCount: items.length
+        };
+    }
 
     // 1. EXTRACT RAW DATA (Priority: items[0] > details > root)
     const rawArtist = cleanString(
