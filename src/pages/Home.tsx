@@ -112,6 +112,7 @@ export default function Home() {
     const [searchFilter, setSearchFilter] = useState<"todo" | "artistas" | "álbumes">("todo");
     const [searchResults, setSearchResults] = useState<DiscogsSearchResult[]>([]);
     const [isLoadingSearch, setIsLoadingSearch] = useState(false);
+    const [searchError, setSearchError] = useState<string | null>(null);
     const [selectedItem, setSelectedItem] = useState<DiscogsSearchResult | null>(null);
     const [recommendations, setRecommendations] = useState<DiscogsSearchResult[]>([]);
     const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
@@ -291,6 +292,7 @@ export default function Home() {
                 // Use a local loading state for internal search to avoid the global heavy overlay
                 // which might be causing the "stuck" feeling due to race conditions.
                 setIsLoadingSearch(true);
+                setSearchError(null);
                 try {
                     let results, pagination;
 
@@ -329,8 +331,9 @@ export default function Home() {
                             console.error("Failed to log missed search:", err);
                         }
                     }
-                } catch (error) {
+                } catch (error: any) {
                     console.error("Search error:", error);
+                    setSearchError(error.details?.error || error.message || "Error de conexión con Discogs");
                 } finally {
                     setIsLoadingSearch(false);
                 }
@@ -1029,8 +1032,31 @@ export default function Home() {
                                             ))}
                                         </div>
 
+                                        {/* Error State */}
+                                        {searchError && (
+                                            <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+                                                <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center">
+                                                    <X className="w-6 h-6 text-red-500" />
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-xl font-display font-black text-white uppercase tracking-widest leading-none">
+                                                        Falla de Radar
+                                                    </h3>
+                                                    <p className="text-xs text-gray-500 font-bold mt-2 uppercase tracking-widest">
+                                                        {searchError}
+                                                    </p>
+                                                    <button
+                                                        onClick={() => setQuery(query)} // Retry
+                                                        className="mt-6 px-6 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-[10px] font-black uppercase tracking-widest transition-all"
+                                                    >
+                                                        Reintentar Conexión
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+
                                         {/* No Results Case */}
-                                        {!isLoadingSearch && searchResults.length === 0 && query.trim().length >= 3 && (
+                                        {!isLoadingSearch && !searchError && searchResults.length === 0 && query.trim().length >= 3 && (
                                             <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
                                                 <Search className="w-12 h-12 text-white/10" />
                                                 <div>

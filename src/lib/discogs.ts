@@ -9,12 +9,16 @@ async function fetchFromDiscogs(endpoint: string, params: Record<string, string>
     }
 
     const response = await fetch(url.toString());
+    const data = await response.json();
 
     if (!response.ok) {
-        throw new Error(`Discogs API error: ${response.statusText}`);
+        const error = new Error(`Discogs API error: ${response.statusText}`);
+        (error as any).status = response.status;
+        (error as any).details = data;
+        throw error;
     }
 
-    return response.json();
+    return data;
 }
 
 export interface DiscogsSearchResult {
