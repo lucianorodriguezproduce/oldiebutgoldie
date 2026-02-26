@@ -13,11 +13,20 @@ async function initBunkerIdentity() {
     const payload = version.payload?.data?.toString();
     if (!payload) throw new Error('CRITICAL_IDENTITY_FAILURE: Secret payload empty');
 
-    const serviceAccount = JSON.parse(payload); // <--- OBLIGATORIO
+    let serviceAccount;
+    try {
+        serviceAccount = typeof payload === 'string' ? JSON.parse(payload) : payload;
+    } catch (e) {
+        throw new Error("ERROR_CRITICO: El secreto del búnker no es un JSON válido.");
+    }
+
+    if (!serviceAccount.project_id || !serviceAccount.private_key) {
+        throw new Error("ERROR_CRITICO: Objeto de identidad incompleto tras el parseo.");
+    }
 
     if (!admin.apps.length) {
         admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount) // <--- OBJETO
+            credential: admin.credential.cert(serviceAccount)
         });
         console.log('Bunker: Firebase Initialized Successfully.');
     }

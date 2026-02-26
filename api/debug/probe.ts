@@ -19,11 +19,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const payload = version.payload?.data?.toString();
         if (!payload) throw new Error('Secret payload empty');
 
-        const serviceAccount = JSON.parse(payload); // <--- OBLIGATORIO
+        let serviceAccount;
+        try {
+            serviceAccount = typeof payload === 'string' ? JSON.parse(payload) : payload;
+        } catch (e) {
+            throw new Error("ERROR_CRITICO: El secreto del búnker no es un JSON válido.");
+        }
+
+        if (!serviceAccount.project_id || !serviceAccount.private_key) {
+            throw new Error("ERROR_CRITICO: Objeto de identidad incompleto tras el parseo.");
+        }
 
         report.steps.push("2. Initializing Admin SDK (Direct Inject)");
         const tempApp = admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount) // <--- OBJETO
+            credential: admin.credential.cert(serviceAccount)
         }, 'probe-bunker-' + Date.now());
 
         report.steps.push("3. Testing Firestore Connectivity");
