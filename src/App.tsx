@@ -1,5 +1,8 @@
 import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { db } from "@/lib/firebase";
+import { doc, onSnapshot } from "firebase/firestore";
 import { AuthProvider } from "@/context/AuthContext";
 import { TelemetryProvider } from "@/context/TelemetryContext";
 import { LoteProvider } from "@/context/LoteContext";
@@ -25,6 +28,7 @@ import CommunityManager from "@/pages/Admin/CommunityManager";
 import AdminOrders from "@/pages/AdminOrders";
 import DatabasePurge from "@/pages/Admin/DatabasePurge";
 import BulkUpload from "@/pages/Admin/BulkUpload";
+import BrandingPage from "@/pages/Admin/BrandingPage";
 import { ProtectedRoute } from "@/components/Guard/ProtectedRoute";
 
 const queryClient = new QueryClient({
@@ -38,6 +42,25 @@ const queryClient = new QueryClient({
 });
 
 function AppContent() {
+  // Real-time Favicon sync
+  useEffect(() => {
+    const unsubscribe = onSnapshot(doc(db, "settings", "site_config"), (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        if (data.favicon?.url) {
+          let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+          if (!link) {
+            link = document.createElement('link');
+            link.rel = 'icon';
+            document.getElementsByTagName('head')[0].appendChild(link);
+          }
+          link.href = data.favicon.url;
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
   return (
     <BrowserRouter>
       <AnalyticsProvider>
@@ -69,6 +92,7 @@ function AppContent() {
               <Route path="editorial" element={<EditorialManager />} />
               <Route path="orders" element={<AdminOrders />} />
               <Route path="bulk-upload" element={<BulkUpload />} />
+              <Route path="branding" element={<BrandingPage />} />
               <Route path="purge" element={<DatabasePurge />} />
             </Route>
           </Route>

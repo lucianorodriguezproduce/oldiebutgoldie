@@ -1,4 +1,5 @@
 import admin from 'firebase-admin';
+import { google } from 'googleapis';
 import { SecretManagerServiceClient } from '@google-cloud/secret-manager';
 
 // IMPORTANTE: En Vercel, asegúrese de que esta variable sea exactamente el JSON de su Service Account
@@ -51,6 +52,28 @@ export async function getSecret(name: string) {
 
 export async function getDiscogsToken() {
     return getSecret('DISCOGS_API_TOKEN');
+}
+
+/**
+ * Initializes and returns a Google Drive API client using credentials from the Bunker.
+ */
+export async function initDriveIdentity() {
+    const [version] = await secretClient.accessSecretVersion({
+        name: 'projects/344484307950/secrets/FIREBASE_ADMIN_SDK_JSON/versions/latest',
+    });
+
+    const payload = version.payload?.data?.toString();
+    if (!payload) throw new Error('BUNKER_EMPTY');
+    const credentials = JSON.parse(payload);
+
+    const auth = new google.auth.JWT(
+        credentials.client_email,
+        undefined,
+        credentials.private_key,
+        ['https://www.googleapis.com/auth/drive.file']
+    );
+
+    return google.drive({ version: 'v3', auth });
 }
 
 export { secretClient };

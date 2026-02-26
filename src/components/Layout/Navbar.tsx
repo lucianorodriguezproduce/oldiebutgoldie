@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import NotificationBell from "@/components/NotificationBell";
 import { db } from "@/lib/firebase";
+import { doc, onSnapshot } from "firebase/firestore";
 import { useOrderNotifications } from "@/hooks/useOrderNotifications";
 
 export const Navbar = () => {
@@ -13,6 +14,17 @@ export const Navbar = () => {
     const { user, logout } = useAuth();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const { hasActiveOffer } = useOrderNotifications();
+    const [branding, setBranding] = useState<{ logo?: { url: string } }>({});
+
+    // Real-time branding sync
+    useEffect(() => {
+        const unsubscribe = onSnapshot(doc(db, "settings", "site_config"), (snapshot) => {
+            if (snapshot.exists()) {
+                setBranding(snapshot.data());
+            }
+        });
+        return () => unsubscribe();
+    }, []);
 
     const navItems = [
         { path: "/", label: TEXTS.navigation.home, icon: Search },
@@ -43,8 +55,18 @@ export const Navbar = () => {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between h-20">
                     <Link to="/" className="flex items-center gap-3 group">
-                        <Disc className="h-8 w-8 text-primary group-hover:rotate-180 transition-transform duration-700" />
-                        <span className="text-xl font-display font-bold text-white tracking-tightest group-hover:text-primary transition-colors">{TEXTS.navigation.brand}</span>
+                        {branding.logo?.url ? (
+                            <img
+                                src={branding.logo.url}
+                                alt={TEXTS.navigation.brand}
+                                className="h-10 w-auto object-contain max-w-[180px] group-hover:scale-105 transition-transform duration-500"
+                            />
+                        ) : (
+                            <Disc className="h-8 w-8 text-primary group-hover:rotate-180 transition-transform duration-700" />
+                        )}
+                        <span className="text-xl font-display font-bold text-white tracking-tightest group-hover:text-primary transition-colors">
+                            {TEXTS.navigation.brand}
+                        </span>
                     </Link>
 
                     {/* Desktop Navigation */}

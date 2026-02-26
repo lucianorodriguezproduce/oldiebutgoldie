@@ -15,6 +15,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     const navItems = [
         { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
         { label: "🚀 Ingesta Masiva", href: "/admin/bulk-upload", icon: UploadCloud },
+        { label: "Identidad Marca", href: "/admin/branding", icon: Shield },
         { label: "Gestión de Órdenes", href: "/admin/orders", icon: ShoppingBag },
         { label: "Editorial Hub", href: "/admin/editorial", icon: Newspaper },
     ];
