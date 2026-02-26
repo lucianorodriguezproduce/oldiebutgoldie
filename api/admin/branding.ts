@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { initBunkerIdentity, initDriveIdentity, getSecret } from '../_lib/bunker';
+import { initBunkerIdentity, initDriveIdentity, getSecret } from '../_lib/bunker.js';
 import { Readable } from 'stream';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {

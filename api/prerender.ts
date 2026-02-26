@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { initBunkerIdentity, getDiscogsToken } from './_lib/bunker';
+import { initBunkerIdentity, getDiscogsToken } from './_lib/bunker.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     const CACHE_CONTROL = 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800';

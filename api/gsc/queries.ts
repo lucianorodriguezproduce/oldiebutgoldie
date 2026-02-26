@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { google } from 'googleapis';
-import { initBunkerIdentity, getSecret } from '../_lib/bunker';
+import { initBunkerIdentity, getSecret } from '../_lib/bunker.js';
 
 const CACHE_DOC_PATH = 'system_cache/gsc_top_keywords';
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours

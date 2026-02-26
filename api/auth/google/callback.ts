@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { google } from 'googleapis';
-import { initBunkerIdentity, getSecret } from '../../_lib/bunker';
+import { initBunkerIdentity, getSecret } from '../../_lib/bunker.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
