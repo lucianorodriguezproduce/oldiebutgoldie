@@ -1,67 +1,67 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Telemetry - anyone can create, anyone can read
+    
+    // Branding & Config - Lectura pública, escritura Admin
+    match /settings/{document=**} {
+      allow read: if true;
+      allow write: if request.auth != null; 
+    }
+
+    // Telemetry - Creación libre, borrado Admin
     match /interactions/{document=**} {
       allow create, read: if true;
       allow delete: if request.auth != null;
     }
     
-    // User data - only the owner
+    // User data - Privacidad absoluta del dueño
     match /users/{userId}/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Editorial - public read, authenticated write
+    // Editorial - Lectura pública, gestión Admin
     match /editorial/{document=**} {
       allow read: if true;
       allow create, update, delete: if request.auth != null;
     }
 
-    // Subscribers - anyone can subscribe, authenticated can read/delete
+    // Subscribers - Suscripción libre, gestión Admin
     match /subscribers/{document=**} {
       allow create: if true;
       allow read, delete: if request.auth != null;
     }
 
-    // Leads - authenticated only
+    // Leads - Solo personal autenticado
     match /leads/{document=**} {
       allow read, write: if request.auth != null;
     }
 
-    // Orders - public read, authenticated write/update, unauthenticated create
+    // Orders - Pedidos públicos, gestión Admin
     match /orders/{document=**} {
       allow read, create: if true;
       allow update, delete: if request.auth != null;
     }
 
-    // Notifications - authenticated only
+    // Notifications - Solo personal autenticado
     match /notifications/{document=**} {
       allow read, write, delete: if request.auth != null;
     }
 
-    // Inventory - public read, authenticated write
+    // Inventory - El Búnker: Lectura pública, ingreso y gestión Admin
     match /inventory/{document=**} {
       allow read: if true;
       allow create, update, delete: if request.auth != null;
     }
 
-    // Trades - authenticated only
+    // Trades - Negociaciones: Solo personal autenticado
     match /trades/{document=**} {
       allow read, write: if request.auth != null;
     }
 
-    // Settings - public read, authenticated write
-    match /settings/{document=**} {
-      allow read: if true;
-      allow write: if request.auth != null;
-    }
-
-    // Analytics - anyone can log missed searches
+    // Analytics - Registro de búsquedas sin resultados
     match /missed_searches/{document=**} {
       allow create: if true;
       allow read: if request.auth != null;
     }
   }
 }
-
