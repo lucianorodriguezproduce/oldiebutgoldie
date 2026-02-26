@@ -305,9 +305,13 @@ export default function BulkUpload() {
             setRows(newRows);
             pushBulkUploadCompleted(publishCount);
             alert(TEXTS.bulk.operationFinished);
-        } catch (error) {
+        } catch (error: any) {
             console.error("Publish error", error);
-            alert("Error al procesar el búnker: " + (error as Error).message);
+            const isPermissionError = error.code === 'permission-denied' || error.message?.includes('permissions');
+            const errorMsg = isPermissionError
+                ? "Error de permisos en Firebase. Asegúrate de que las reglas de Firestore estén actualizadas."
+                : (error.message || "Error desconocido");
+            alert("Error al procesar el búnker: " + errorMsg);
         } finally {
             hideLoading();
             setBatchPrice(0);

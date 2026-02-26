@@ -61,7 +61,8 @@ export default function AdminInventory() {
             setItems(fetchedItems);
             setAuditStats(stats);
         } catch (error) {
-            console.error("Error fetching inventory:", error);
+            console.error("Error fetching inventory (Items or Stats):", error);
+            alert("Error al sincronizar el inventario. Verifica los permisos de Firebase.");
         } finally {
             setLoading(false);
             hideLoading();
