@@ -25,7 +25,6 @@ import AdminLayout from "@/components/Admin/AdminLayout";
 import AdminAnalytics from "@/pages/Admin/AdminAnalytics";
 import EditorialManager from "@/pages/Admin/EditorialManager";
 import CommunityManager from "@/pages/Admin/CommunityManager";
-import AdminOrders from "@/pages/AdminOrders";
 import DatabasePurge from "@/pages/Admin/DatabasePurge";
 import BulkUpload from "@/pages/Admin/BulkUpload";
 import BrandingPage from "@/pages/Admin/BrandingPage";
@@ -96,7 +95,6 @@ function AppContent() {
               <Route path="trades" element={<AdminTrades />} />
               <Route path="editorial" element={<EditorialManager />} />
 
-              <Route path="orders" element={<AdminOrders />} />
               <Route path="bulk-upload" element={<BulkUpload />} />
               <Route path="branding" element={<BrandingPage />} />
               <Route path="purge" element={<DatabasePurge />} />

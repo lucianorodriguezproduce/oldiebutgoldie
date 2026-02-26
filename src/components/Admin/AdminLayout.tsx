@@ -19,7 +19,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         { label: "📦 Inventario Pro", href: "/admin/inventory", icon: Package },
         { label: "🤝 Intercambios", href: "/admin/trades", icon: Handshake },
         { label: "Identidad Marca", href: "/admin/branding", icon: Shield },
-        { label: "Gestión de Órdenes", href: "/admin/orders", icon: ShoppingBag },
         { label: "Editorial Hub", href: "/admin/editorial", icon: Newspaper },
     ];
 

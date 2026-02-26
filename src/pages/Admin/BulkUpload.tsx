@@ -18,8 +18,7 @@ import { TEXTS } from "@/constants/texts";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { discogsService, type DiscogsSearchResult } from "@/lib/discogs";
-import { addDoc, collection, serverTimestamp, getDocs, query, where, updateDoc, doc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { serverTimestamp } from "firebase/firestore";
 import { useLoading } from "@/context/LoadingContext";
 import { pushBulkUploadCompleted } from "@/utils/analytics";
 
@@ -271,226 +270,36 @@ export default function BulkUpload() {
         return { artist, title };
     };
 
-    const handleSanitizeDatabase = async () => {
-        if (!window.confirm("¿Seguro que deseas sanitizar los títulos de la base de datos eliminando 'UNKNOWN ARTIST'?")) return;
 
-        setIsSanitizing(true);
-        showLoading("Sanitizando base de datos global...");
-        try {
-            // Se quitó el where("status", "==", "store_offer") para ser más agresivo (TAREA 3)
-            const q = query(collection(db, "orders"));
-            const snapshot = await getDocs(q);
-            let updatedCount = 0;
 
-            for (const document of snapshot.docs) {
-                const data = document.data();
-                let needsUpdate = false;
-                let newTitle = data.title || "";
-                const newItems = [...(data.items || [])];
-                const newDetails = { ...(data.details || {}) };
-                const hasIntent = data.intent || data.details?.intent;
-
-                // Check order title
-                if (typeof newTitle === 'string' && /unknown artist/i.test(newTitle)) {
-                    // Replace "unknown artist" literally with empty string, then cleanup leftover dashes/spaces
-                    newTitle = newTitle.replace(/unknown artist/ig, '').replace(/^[-—–\s]+|[-—–\s]+$/g, '').trim();
-                    needsUpdate = true;
-                }
-
-                // Force Data Integrity (TAREA 3)
-                if (!hasIntent) {
-                    newDetails.intent = "VENDER";
-                    needsUpdate = true;
-                }
-
-                // Check items array
-                newItems.forEach((item, index) => {
-                    if (typeof item.title === 'string' && /unknown artist/i.test(item.title)) {
-                        newItems[index].title = item.title.replace(/unknown artist/ig, '').replace(/^[-—–\s]+|[-—–\s]+$/g, '').trim();
-                        needsUpdate = true;
-                    }
-                    if (item.artist && /unknown artist/i.test(item.artist)) {
-                        newItems[index].artist = item.artist.replace(/unknown artist/ig, '').trim();
-                        if (newItems[index].artist === '') newItems[index].artist = 'Desconocido';
-                        needsUpdate = true;
-                    }
-                });
-
-                if (needsUpdate) {
-                    const updatePayload: any = {
-                        title: newTitle,
-                        items: newItems,
-                    };
-                    if (!hasIntent) {
-                        updatePayload.details = newDetails;
-                        updatePayload.intent = "VENDER";
-                    }
-
-                    await updateDoc(doc(db, "orders", document.id), updatePayload);
-                    updatedCount++;
-                }
-            }
-            alert(`${TEXTS.bulk.operationFinished} ${updatedCount} órdenes.`);
-        } catch (error) {
-            console.error("Sanitize error", error);
-            alert(TEXTS.bulk.operationFinished);
-        } finally {
-            setIsSanitizing(false);
-            hideLoading();
-        }
-    };
-
-    const handlePublishStrategy = async (strategy: "INDIVIDUAL" | "BUNDLE") => {
+    const handlePublishStrategy = async () => {
         const batchItems = rows.filter(r => r.inBatch && r.status === "MATCH_FOUND" && r.selectedMatch && !r.published);
         if (batchItems.length === 0) return;
 
         setShowBatchModal(false);
-        showLoading(`Ingresando al Búnker y Publicando ${batchItems.length} discos...`);
+        showLoading(`Ingresando al Búnker ${batchItems.length} discos...`);
         let newRows = [...rows];
         let publishCount = 0;
 
         try {
-            if (strategy === "INDIVIDUAL") {
-                for (const row of batchItems) {
-                    const match = row.selectedMatch!;
-                    const parsed = parseDiscogsTitle(match.title);
+            for (const row of batchItems) {
+                const match = row.selectedMatch!;
 
-                    const finalArtist = (row.originalArtist && row.originalArtist.trim() !== '')
-                        ? row.originalArtist
-                        : (match as any).artist || parsed.artist;
+                // 1. Ingreso al Búnker (Sovereignty Snapshot)
+                await inventoryService.importFromDiscogs(
+                    match,
+                    {
+                        stock: 1,
+                        price: row.originalPrice,
+                        condition: `${row.originalMedia} / ${row.originalCover}`,
+                        status: "active"
+                    }
+                );
 
-                    const finalTitle = (row.originalTitle && row.originalTitle.trim() !== '')
-                        ? row.originalTitle
-                        : (match as any).title || parsed.title;
-
-                    // 1. Ingreso al Búnker (Sovereignty Snapshot)
-                    const inventoryId = await inventoryService.importFromDiscogs(
-                        match,
-                        {
-                            stock: 1,
-                            price: row.originalPrice,
-                            condition: `${row.originalMedia} / ${row.originalCover}`,
-                            status: "active"
-                        }
-                    );
-
-                    const orderData = {
-                        title: finalTitle,
-                        artist: finalArtist,
-                        album: finalTitle,
-                        item_id: inventoryId,
-                        inventory_id: inventoryId,
-                        discogs_id: match.id, // Store for reference
-                        cover_image: match.cover_image,
-                        totalPrice: row.originalPrice,
-                        status: "store_offer",
-                        is_admin_offer: true,
-                        type: "VENDER",
-                        intent: "VENDER",
-                        user_id: "oldiebutgoldie",
-                        user_email: "admin@discography.ai",
-                        user_name: "Stitch Admin",
-                        view_count: 0,
-                        currency: row.originalCurrency || "ARS",
-                        details: {
-                            ...match,
-                            inventory_id: inventoryId,
-                            format: row.originalFormat
-                        },
-                        timestamp: serverTimestamp(),
-                        createdAt: serverTimestamp(),
-                        items: [{
-                            id: inventoryId,
-                            inventory_id: inventoryId,
-                            discogs_id: match.id,
-                            title: finalTitle,
-                            artist: finalArtist,
-                            format: row.originalFormat,
-                            condition: `${row.originalMedia} / ${row.originalCover}`,
-                            image: match.cover_image,
-                            price: row.originalPrice,
-                            source: 'INVENTORY',
-                            timestamp: new Date()
-                        }]
-                    };
-
-                    await addDoc(collection(db, "orders"), orderData);
-                    const rIndex = newRows.findIndex(r => r.id === row.id);
-                    newRows[rIndex].published = true;
-                    newRows[rIndex].inBatch = false;
-                    publishCount++;
-                }
-            } else {
-                const itemsWithInventory = [];
-                for (const row of batchItems) {
-                    const match = row.selectedMatch!;
-                    const inventoryId = await inventoryService.importFromDiscogs(
-                        match,
-                        {
-                            stock: 1,
-                            price: row.originalPrice,
-                            condition: `${row.originalMedia} / ${row.originalCover}`,
-                            status: "active"
-                        }
-                    );
-                    itemsWithInventory.push({ ...row, inventoryId });
-                }
-
-                const finalBatchPrice = batchPrice || itemsWithInventory.reduce((acc, curr) => acc + curr.originalPrice, 0);
-                const firstMatch = itemsWithInventory[0].selectedMatch!;
-
-                const orderData = {
-                    title: `Lote de ${itemsWithInventory.length} Discos`,
-                    cover_image: firstMatch.cover_image,
-                    totalPrice: finalBatchPrice,
-                    status: "store_offer",
-                    is_admin_offer: true,
-                    is_batch: true,
-                    isBatch: true,
-                    type: "VENDER",
-                    intent: "VENDER",
-                    user_id: "oldiebutgoldie",
-                    user_email: "admin@discography.ai",
-                    user_name: "Stitch Admin",
-                    view_count: 0,
-                    currency: "ARS",
-                    timestamp: serverTimestamp(),
-                    createdAt: serverTimestamp(),
-                    items: itemsWithInventory.map(item => {
-                        const match = item.selectedMatch!;
-                        const parsed = parseDiscogsTitle(match.title);
-
-                        const finalArtist = (item.originalArtist && item.originalArtist.trim() !== '')
-                            ? item.originalArtist
-                            : (match as any).artist || parsed.artist;
-
-                        const finalTitle = (item.originalTitle && item.originalTitle.trim() !== '')
-                            ? item.originalTitle
-                            : (match as any).title || parsed.title;
-
-                        return {
-                            id: item.inventoryId,
-                            inventory_id: item.inventoryId,
-                            discogs_id: match.id,
-                            title: finalTitle,
-                            artist: finalArtist,
-                            format: item.originalFormat,
-                            condition: `${item.originalMedia} / ${item.originalCover}`,
-                            image: match.cover_image,
-                            price: item.originalPrice,
-                            source: 'INVENTORY',
-                            timestamp: new Date()
-                        };
-                    })
-                };
-
-                await addDoc(collection(db, "orders"), orderData);
-                itemsWithInventory.forEach(item => {
-                    const rIndex = newRows.findIndex(r => r.id === item.id);
-                    newRows[rIndex].published = true;
-                    newRows[rIndex].inBatch = false;
-                    publishCount++;
-                });
+                const rIndex = newRows.findIndex(r => r.id === row.id);
+                newRows[rIndex].published = true;
+                newRows[rIndex].inBatch = false;
+                publishCount++;
             }
 
             setRows(newRows);
@@ -498,7 +307,7 @@ export default function BulkUpload() {
             alert(TEXTS.bulk.operationFinished);
         } catch (error) {
             console.error("Publish error", error);
-            alert("Error al procesar el búnker o publicar: " + (error as Error).message);
+            alert("Error al procesar el búnker: " + (error as Error).message);
         } finally {
             hideLoading();
             setBatchPrice(0);
@@ -541,14 +350,7 @@ export default function BulkUpload() {
                             <Download className="w-4 h-4" /> Plantilla XLSX
                         </button>
                     )}
-                    <button
-                        onClick={handleSanitizeDatabase}
-                        disabled={isSanitizing}
-                        className="px-6 py-4 rounded-2xl border border-orange-500/20 text-orange-400 hover:bg-orange-500/10 font-bold uppercase tracking-widest text-[10px] transition-all flex items-center gap-2"
-                        title="Eliminar prefijos 'UNKNOWN ARTIST' de las publicaciones"
-                    >
-                        Sanitizar BD
-                    </button>
+
                 </div>
             </header>
 
@@ -778,7 +580,7 @@ export default function BulkUpload() {
                 </div>
             )}
 
-            {/* Publish Strategy Modal */}
+            {/* Unified Ingestion Modal */}
             {showBatchModal && (
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in">
                     <div className="w-full max-w-lg bg-gray-900 border border-white/10 rounded-3xl p-8 space-y-8 relative shadow-2xl">
@@ -788,46 +590,24 @@ export default function BulkUpload() {
 
                         <div>
                             <h3 className="text-2xl font-black text-white uppercase flex items-center gap-3 tracking-tight">
-                                {TEXTS.bulk.strategyTitle}
+                                Confirmar Ingesta al Búnker
                             </h3>
-                            <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-2">{rows.filter(r => r.inBatch).length} {TEXTS.bulk.registeredOfficially}</p>
+                            <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-2">{rows.filter(r => r.inBatch).length} Discos listos para procesar</p>
                         </div>
 
-                        <div className="space-y-4">
-                            <button
-                                onClick={() => handlePublishStrategy("INDIVIDUAL")}
-                                className="w-full text-left p-6 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 transition-all group"
-                            >
-                                <h4 className="flex items-center gap-2 text-white font-black uppercase tracking-tight group-hover:text-primary transition-colors">
-                                    {TEXTS.bulk.individualMode}
-                                </h4>
-                                <p className="text-xs text-gray-500 font-bold mt-2">{TEXTS.bulk.individualModeDesc}</p>
-                            </button>
-
-                            <div className="w-full text-left p-6 rounded-2xl border border-primary/30 bg-primary/5 transition-all space-y-4">
-                                <div>
-                                    <h4 className="text-primary font-black uppercase tracking-tight">{TEXTS.bulk.bundleMode}</h4>
-                                    <p className="text-xs text-primary/70 font-bold mt-1 max-w-[90%]">{TEXTS.bulk.bundleModeDesc}</p>
-                                </div>
-                                <div className="space-y-2 pt-2 border-t border-primary/20">
-                                    <label className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{TEXTS.bulk.priceAdjustment}</label>
-                                    <div className="flex items-center gap-2 bg-black/50 border border-white/10 rounded-xl px-4 py-2 focus-within:border-primary transition-colors">
-                                        <span className="text-white font-mono">$</span>
-                                        <input
-                                            type="number"
-                                            value={batchPrice || rows.filter(r => r.inBatch).reduce((acc, curr) => acc + curr.originalPrice, 0)}
-                                            onChange={(e) => setBatchPrice(parseFloat(e.target.value))}
-                                            className="flex-1 bg-transparent text-white font-mono outline-none w-full"
-                                        />
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={() => handlePublishStrategy("BUNDLE")}
-                                    className="w-full mt-4 py-4 rounded-xl bg-primary text-black font-black uppercase text-xs tracking-widest transition-all hover:bg-white shadow-xl shadow-primary/20"
-                                >
-                                    {TEXTS.bulk.publishBundle} ({rows.filter(r => r.inBatch).length})
-                                </button>
+                        <div className="space-y-6">
+                            <div className="bg-white/5 border border-white/10 p-6 rounded-2xl">
+                                <p className="text-sm text-gray-400 leading-relaxed">
+                                    Se crearán registros individuales en el <span className="text-white font-bold">Inventario Pro</span> para cada disco seleccionado. Se clonarán los metadatos de Discogs y se subirán las imágenes al Storage.
+                                </p>
                             </div>
+
+                            <button
+                                onClick={handlePublishStrategy}
+                                className="w-full py-6 rounded-2xl bg-primary text-black font-black uppercase tracking-[0.2em] transition-all hover:brightness-110 shadow-xl shadow-primary/20"
+                            >
+                                Registrar en Inventario
+                            </button>
                         </div>
                     </div>
                 </div>

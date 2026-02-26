@@ -7,15 +7,18 @@ import {
     Save,
     X,
     AlertTriangle,
-    CheckCircle2,
-    Archive,
-    ChevronRight,
-    TrendingUp,
     Package,
     DollarSign,
-    Disc
+    CheckCircle2,
+    Archive,
+    Disc,
+    Plus,
+    PlusCircle,
+    LayoutGrid,
+    Search as SearchIcon
 } from "lucide-react";
 import { inventoryService } from "@/services/inventoryService";
+import { discogsService } from "@/lib/discogs";
 import type { InventoryItem } from "@/types/inventory";
 import { useLoading } from "@/context/LoadingContext";
 import { LazyImage } from "@/components/ui/LazyImage";
@@ -29,6 +32,19 @@ export default function AdminInventory() {
     const [editData, setEditData] = useState<{ price?: number, stock?: number, condition?: string }>({});
     const [filter, setFilter] = useState<"all" | "low_stock" | "sold_out">("all");
     const [auditStats, setAuditStats] = useState<any>(null);
+
+    // Ingestion Modal State
+    const [showIngestionModal, setShowIngestionModal] = useState(false);
+    const [ingestionMode, setIngestionMode] = useState<"discogs" | "manual">("discogs");
+    const [discogsId, setDiscogsId] = useState("");
+    const [manualData, setManualData] = useState({
+        title: "",
+        artist: "",
+        price: 0,
+        stock: 1,
+        condition: "M/NM",
+        format: "Vinyl"
+    });
 
     useEffect(() => {
         fetchInventory();
@@ -80,6 +96,68 @@ export default function AdminInventory() {
         }
     };
 
+    const handleIngestDiscogs = async () => {
+        if (!discogsId) return;
+        showLoading("Importando desde Discogs al Búnker...");
+        try {
+            const release = await discogsService.getReleaseDetails(discogsId);
+            await inventoryService.importFromDiscogs(release, {
+                price: manualData.price || 0,
+                stock: manualData.stock || 1,
+                condition: manualData.condition,
+                status: "active"
+            });
+            setShowIngestionModal(false);
+            setDiscogsId("");
+            fetchInventory();
+        } catch (error) {
+            console.error("Error importing from Discogs:", error);
+            alert("No se pudo importar. Verifica el ID.");
+        } finally {
+            hideLoading();
+        }
+    };
+
+    const handleIngestManual = async () => {
+        showLoading("Creando registro manual...");
+        try {
+            const newItem: Omit<InventoryItem, 'id'> = {
+                metadata: {
+                    title: manualData.title,
+                    artist: manualData.artist,
+                    year: new Date().getFullYear(),
+                    country: "Unknown",
+                    genres: [],
+                    styles: [],
+                    format_description: manualData.format
+                },
+                media: {
+                    thumbnail: "",
+                    full_res_image_url: ""
+                },
+                reference: {
+                    originalDiscogsId: 0,
+                    originalDiscogsUrl: ""
+                },
+                logistics: {
+                    price: manualData.price,
+                    stock: manualData.stock,
+                    condition: manualData.condition,
+                    status: "active"
+                }
+            };
+            await inventoryService.createItem(newItem);
+            setShowIngestionModal(false);
+            setManualData({ title: "", artist: "", price: 0, stock: 1, condition: "M/NM", format: "Vinyl" });
+            fetchInventory();
+        } catch (error) {
+            console.error("Error creating manual item:", error);
+            alert("Error al crear el registro.");
+        } finally {
+            hideLoading();
+        }
+    };
+
     const filteredItems = useMemo(() => {
         let list = items;
 
@@ -112,7 +190,15 @@ export default function AdminInventory() {
         <div className="space-y-10">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div className="space-y-1">
-                    <h2 className="text-4xl md:text-6xl font-display font-black text-white uppercase tracking-tighter">Explorador de Inventario</h2>
+                    <div className="flex items-center gap-4">
+                        <h2 className="text-4xl md:text-6xl font-display font-black text-white uppercase tracking-tighter">Inventario Pro</h2>
+                        <button
+                            onClick={() => setShowIngestionModal(true)}
+                            className="p-3 bg-primary text-black rounded-2xl hover:bg-white transition-all shadow-xl shadow-primary/20 group translate-y-1"
+                        >
+                            <Plus className="h-6 w-6 group-hover:rotate-90 transition-transform" />
+                        </button>
+                    </div>
                     <p className="text-gray-500 font-medium text-lg">Gestión avanzada de la base de datos soberana.</p>
                 </div>
                 <div className="flex bg-white/5 border border-white/10 rounded-2xl px-4 py-3 flex-1 max-w-md">
@@ -275,6 +361,134 @@ export default function AdminInventory() {
                     </table>
                 </div>
             </div>
+            {/* Ingestion Modal */}
+            <AnimatePresence>
+                {showIngestionModal && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+                            onClick={() => setShowIngestionModal(false)}
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="relative w-full max-w-lg bg-[#0a0a0a] border border-white/10 rounded-[3rem] p-8 shadow-2xl space-y-8"
+                        >
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Nueva Ingesta</h3>
+                                <div className="flex bg-white/5 p-1 rounded-xl">
+                                    <button
+                                        onClick={() => setIngestionMode("discogs")}
+                                        className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${ingestionMode === "discogs" ? "bg-primary text-black" : "text-gray-500 hover:text-white"}`}
+                                    >
+                                        Discogs
+                                    </button>
+                                    <button
+                                        onClick={() => setIngestionMode("manual")}
+                                        className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${ingestionMode === "manual" ? "bg-primary text-black" : "text-gray-500 hover:text-white"}`}
+                                    >
+                                        Manual
+                                    </button>
+                                </div>
+                            </div>
+
+                            {ingestionMode === "discogs" ? (
+                                <div className="space-y-6">
+                                    <div className="space-y-4">
+                                        <label className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Release ID (Discogs)</label>
+                                        <input
+                                            type="text"
+                                            placeholder="Ej: 2453678"
+                                            value={discogsId}
+                                            onChange={e => setDiscogsId(e.target.value)}
+                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-primary/40 focus:outline-none transition-all"
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Precio (ARS)</label>
+                                            <input
+                                                type="number"
+                                                value={manualData.price}
+                                                onChange={e => setManualData({ ...manualData, price: parseFloat(e.target.value) })}
+                                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-primary/40 focus:outline-none transition-all"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Stock Inicial</label>
+                                            <input
+                                                type="number"
+                                                value={manualData.stock}
+                                                onChange={e => setManualData({ ...manualData, stock: parseInt(e.target.value) })}
+                                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-primary/40 focus:outline-none transition-all"
+                                            />
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={handleIngestDiscogs}
+                                        className="w-full py-6 bg-primary text-black rounded-2xl font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/20 hover:brightness-110 transition-all"
+                                    >
+                                        Importar al Búnker
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="space-y-6">
+                                    <div className="space-y-4">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Título del Disco</label>
+                                            <input
+                                                type="text"
+                                                value={manualData.title}
+                                                onChange={e => setManualData({ ...manualData, title: e.target.value })}
+                                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-primary/40 focus:outline-none transition-all"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Artista / Banda</label>
+                                            <input
+                                                type="text"
+                                                value={manualData.artist}
+                                                onChange={e => setManualData({ ...manualData, artist: e.target.value })}
+                                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-primary/40 focus:outline-none transition-all"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Precio (ARS)</label>
+                                            <input
+                                                type="number"
+                                                value={manualData.price}
+                                                onChange={e => setManualData({ ...manualData, price: parseFloat(e.target.value) })}
+                                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-primary/40 focus:outline-none transition-all"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Stock</label>
+                                            <input
+                                                type="number"
+                                                value={manualData.stock}
+                                                onChange={e => setManualData({ ...manualData, stock: parseInt(e.target.value) })}
+                                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-primary/40 focus:outline-none transition-all"
+                                            />
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={handleIngestManual}
+                                        className="w-full py-6 bg-primary text-black rounded-2xl font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/20 hover:brightness-110 transition-all"
+                                    >
+                                        Crear Registro Manual
+                                    </button>
+                                </div>
+                            )}
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

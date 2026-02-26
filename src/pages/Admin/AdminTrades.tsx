@@ -11,10 +11,12 @@ import {
     ShoppingBag,
     DollarSign,
     AlertCircle,
-    Package,
     Disc,
     Edit2,
-    ChevronRight
+    ChevronRight,
+    Plus,
+    PlusCircle,
+    Search
 } from "lucide-react";
 
 import { tradeService } from "@/services/tradeService";
@@ -37,6 +39,16 @@ export default function AdminTrades() {
     // Negotiation state
     const [isEditing, setIsEditing] = useState(false);
     const [editedManifest, setEditedManifest] = useState<TradeManifest | null>(null);
+
+    // Wizard State
+    const [isWizardOpen, setIsWizardOpen] = useState(false);
+    const [wizardStep, setWizardStep] = useState<1 | 2>(1);
+    const [targetUserEmail, setTargetUserEmail] = useState("");
+    const [wizardManifest, setWizardManifest] = useState<TradeManifest>({
+        offeredItems: [],
+        requestedItems: [],
+        cashAdjustment: 0
+    });
 
     useEffect(() => {
         fetchTrades();
@@ -141,6 +153,30 @@ export default function AdminTrades() {
         }
     };
 
+    const handleCreateTrade = async () => {
+        if (!targetUserEmail) return alert("Debes ingresar el email/ID del usuario.");
+        showLoading("Generando propuesta...");
+        try {
+            await tradeService.createTrade({
+                participants: {
+                    senderId: user?.uid || "admin",
+                    receiverId: targetUserEmail // For now using email as proxy for ID if not found, or ideally a real ID
+                },
+                manifest: wizardManifest,
+            });
+            setIsWizardOpen(false);
+            setWizardStep(1);
+            setWizardManifest({ offeredItems: [], requestedItems: [], cashAdjustment: 0 });
+            setTargetUserEmail("");
+            fetchTrades();
+        } catch (error) {
+            console.error("Error creating trade:", error);
+            alert("Error al crear la propuesta.");
+        } finally {
+            hideLoading();
+        }
+    };
+
     const getStatusBadge = (status: Trade['status']) => {
         switch (status) {
             case 'pending':
@@ -184,9 +220,17 @@ export default function AdminTrades() {
 
     return (
         <div className="space-y-10">
-            <div className="space-y-1">
-                <h2 className="text-4xl md:text-6xl font-display font-black text-white uppercase tracking-tighter">Dashboard de Trading</h2>
-                <p className="text-gray-500 font-medium text-lg">Resolución de intercambios y conflictos de stock.</p>
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                <div className="space-y-1">
+                    <h2 className="text-4xl md:text-6xl font-display font-black text-white uppercase tracking-tighter">Intercambios</h2>
+                    <p className="text-gray-500 font-medium text-lg">Resolución de intercambios y conflictos de stock.</p>
+                </div>
+                <button
+                    onClick={() => setIsWizardOpen(true)}
+                    className="flex items-center gap-3 px-8 py-4 bg-primary text-black rounded-2xl font-black uppercase tracking-widest hover:bg-white transition-all shadow-xl shadow-primary/20"
+                >
+                    <Handshake className="h-5 w-5" /> Iniciar Propuesta
+                </button>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
@@ -360,6 +404,108 @@ export default function AdminTrades() {
                                         </div>
                                     </div>
                                 )}
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+            {/* Wizard de Nueva Propuesta */}
+            <AnimatePresence>
+                {isWizardOpen && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setIsWizardOpen(false)}
+                            className="absolute inset-0 bg-black/80 backdrop-blur-xl"
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="relative w-full max-w-5xl bg-[#0a0a0a] border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl max-h-[90vh] flex flex-col"
+                        >
+                            <div className="p-8 border-b border-white/10 flex items-center justify-between shrink-0">
+                                <div className="space-y-1">
+                                    <h3 className="text-2xl font-black text-white uppercase tracking-tighter">
+                                        Paso {wizardStep}: {wizardStep === 1 ? "Destinatario y Mis Discos" : "Discos Solicitados y Ajuste"}
+                                    </h3>
+                                    <div className="flex gap-2">
+                                        <div className={`h-1 w-12 rounded-full transition-all ${wizardStep === 1 ? 'bg-primary' : 'bg-white/10'}`} />
+                                        <div className={`h-1 w-12 rounded-full transition-all ${wizardStep === 2 ? 'bg-primary' : 'bg-white/10'}`} />
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setIsWizardOpen(false)}
+                                    className="p-3 bg-white/5 text-gray-400 rounded-2xl hover:bg-white/10 transition-all"
+                                >
+                                    <XCircle className="h-6 w-6" />
+                                </button>
+                            </div>
+
+                            <div className="p-8 overflow-y-auto flex-1 space-y-8">
+                                {wizardStep === 1 ? (
+                                    <div className="space-y-8">
+                                        <div className="space-y-4">
+                                            <label className="text-[10px] text-gray-400 font-bold uppercase tracking-widest flex items-center gap-2">
+                                                <User className="h-3 w-3" /> Email o ID del Cliente
+                                            </label>
+                                            <input
+                                                type="text"
+                                                placeholder="Ej: coleccionista@gmail.com"
+                                                value={targetUserEmail}
+                                                onChange={e => setTargetUserEmail(e.target.value)}
+                                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-primary/40 focus:outline-none transition-all font-bold"
+                                            />
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            <label className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Discos que Ofreces (Mis Discos)</label>
+                                            <ManifestEditor
+                                                manifest={wizardManifest}
+                                                onChange={(m) => setWizardManifest(m)}
+                                                isLocked={false}
+                                                // En este paso solo mostramos el lado de ofrecidos
+                                                myItems={[]}
+                                                theirItems={[]}
+                                            />
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-8">
+                                        <div className="space-y-4">
+                                            <label className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Discos que Pides (Sus Discos)</label>
+                                            <ManifestEditor
+                                                manifest={wizardManifest}
+                                                onChange={(m) => setWizardManifest(m)}
+                                                isLocked={false}
+                                                myItems={[]}
+                                                theirItems={[]}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="p-8 border-t border-white/10 bg-white/[0.01] flex gap-4 shrink-0">
+                                {wizardStep === 2 && (
+                                    <button
+                                        onClick={() => setWizardStep(1)}
+                                        className="px-8 py-4 bg-white/5 text-gray-400 rounded-2xl font-black uppercase tracking-widest hover:bg-white/10 transition-all"
+                                    >
+                                        Atrás
+                                    </button>
+                                )}
+                                <button
+                                    onClick={() => {
+                                        if (wizardStep === 1) setWizardStep(2);
+                                        else handleCreateTrade();
+                                    }}
+                                    className="flex-1 py-4 bg-primary text-black rounded-2xl font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/20 hover:brightness-110 transition-all"
+                                >
+                                    {wizardStep === 1 ? "Siguiente: Elegir Pedidos" : "Lanzar Propuesta Unilateral"}
+                                </button>
                             </div>
                         </motion.div>
                     </div>
