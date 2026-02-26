@@ -31,7 +31,8 @@ export async function initBunkerIdentity() {
     }
 
     admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
+        credential: admin.credential.cert(serviceAccount),
+        storageBucket: 'buscador-discogs-11425.firebasestorage.app'
     });
 
     console.log('Bunker: Firebase Initialized (Centralized).');
@@ -134,7 +135,7 @@ export async function uploadToDrive(base64: string, fileName: string, mimeType: 
  */
 export async function uploadToBunker(base64: string, path: string, mimeType: string) {
     await initBunkerIdentity();
-    const bucket = admin.storage().bucket(); // Default bucket
+    const bucket = admin.storage().bucket('buscador-discogs-11425.firebasestorage.app');
 
     // 1. Clean Base64
     const cleanBase64 = base64.includes('base64,') ? base64.split('base64,')[1] : base64;
