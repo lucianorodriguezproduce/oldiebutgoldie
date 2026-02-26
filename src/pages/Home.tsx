@@ -18,7 +18,9 @@ import { pushViewItem, pushViewItemFromOrder, pushWhatsAppContactFromOrder } fro
 import { SEO } from "@/components/SEO";
 import { useLote } from "@/context/LoteContext";
 import { PremiumShowcase } from "@/components/PremiumShowcase";
+import { inventoryService } from "@/services/inventoryService";
 import React, { memo } from "react";
+
 
 // --- COMPACT SEARCH CARD (MOBILE OPTIMIZED) ---
 const CompactSearchCard = memo(({ result, idx, onClick }: { result: DiscogsSearchResult, idx: number, onClick: () => void }) => {
@@ -551,11 +553,9 @@ export default function Home() {
         return `#ORD-${result}`;
     };
 
-    const buildOrderPayload = (uid: string, intentOverride?: Intent) => {
+    const buildOrderPayload = (uid: string, intentOverride?: Intent, inventoryId?: string) => {
         const resolvedIntent = intentOverride || intent;
         if (!selectedItem || !format || !condition || !resolvedIntent) return null;
-
-        const currentUser = auth.currentUser;
 
         const artistData = (selectedItem as any).normalizedArtist || "Varios";
         const albumData = (selectedItem as any).normalizedAlbum || selectedItem.title;
@@ -566,8 +566,9 @@ export default function Home() {
             user_id: user?.uid || "anonymous",
             user_email: user?.email || "anonymous@oldiebutgoldie.com.ar",
             status: "pending",
-            item_id: discogsId,
+            item_id: inventoryId || discogsId,
             discogs_id: discogsId,
+            inventory_id: inventoryId,
             artist: artistData,
             title: albumData,
             album: albumData,
@@ -579,6 +580,7 @@ export default function Home() {
                 price: price ? parseFloat(price) : null,
                 currency: currency,
                 discogs_id: discogsId,
+                inventory_id: inventoryId,
                 artist: artistData,
                 album: albumData,
                 market_price: marketPrice,
@@ -586,11 +588,15 @@ export default function Home() {
             },
             items: [
                 {
-                    id: discogsId,
+                    id: inventoryId || discogsId.toString(),
                     discogs_id: discogsId,
+                    inventory_id: inventoryId,
                     title: albumData,
                     artist: artistData,
                     album: albumData,
+                    format: format,
+                    condition: condition,
+                    source: inventoryId ? 'INVENTORY' : 'DISCOGS',
                     cover_image: selectedItem.cover_image || selectedItem.thumb
                 }
             ]
@@ -625,23 +631,35 @@ export default function Home() {
     };
 
     const performSubmission = async (uid: string, intentOverride?: Intent) => {
-        const payload = buildOrderPayload(uid, intentOverride);
-        if (!payload) return;
+        if (!selectedItem) return;
 
-        if (!payload.type) {
-            alert("Error del Sistema: No se pudo determinar el tipo de transacción.");
-            return;
-        }
-
+        showLoading("Ingresando al Búnker...");
         try {
+            // 1. Ingreso al Búnker (Sovereignty Snapshot)
+            const inventoryId = await inventoryService.importFromDiscogs(
+                selectedItem,
+                {
+                    stock: 1,
+                    price: price ? parseFloat(price) : 0,
+                    condition: `${condition || "N/A"} (${format || "N/A"})`,
+                    status: "active"
+                }
+            );
+
+            // 2. Build Order Payload with Inventory UUID
+            const payload = buildOrderPayload(uid, intentOverride, inventoryId);
+            if (!payload) return;
+
             // Save order to Firebase
             const docRef = await addDoc(collection(db, "orders"), payload);
 
             const completeOrder = { id: docRef.id, ...payload };
             setSubmittedOrder(completeOrder as OrderData);
         } catch (error) {
-            console.error("Error creating order:", error);
+            console.error("Error creating order/inventory:", error);
             alert(TEXTS.profile.genericError || "Error al procesar el pedido.");
+        } finally {
+            hideLoading();
         }
     };
 

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Activity, Terminal, Shield, LogOut, Disc, Newspaper, ShoppingBag, BarChart3, UploadCloud } from "lucide-react";
+import { LayoutDashboard, Activity, Terminal, Shield, LogOut, Disc, Newspaper, ShoppingBag, BarChart3, UploadCloud, Handshake, Package } from "lucide-react";
+
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
 
@@ -15,10 +16,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     const navItems = [
         { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
         { label: "🚀 Ingesta Masiva", href: "/admin/bulk-upload", icon: UploadCloud },
+        { label: "📦 Inventario Pro", href: "/admin/inventory", icon: Package },
+        { label: "🤝 Intercambios", href: "/admin/trades", icon: Handshake },
         { label: "Identidad Marca", href: "/admin/branding", icon: Shield },
         { label: "Gestión de Órdenes", href: "/admin/orders", icon: ShoppingBag },
         { label: "Editorial Hub", href: "/admin/editorial", icon: Newspaper },
     ];
+
 
     return (
         <div className="flex h-screen bg-[#050505] text-white font-sans selection:bg-primary/30">

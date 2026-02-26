@@ -39,5 +39,17 @@ service cloud.firestore {
     match /notifications/{document=**} {
       allow read, write, delete: if request.auth != null;
     }
+
+    // Inventory - public read, authenticated write
+    match /inventory/{document=**} {
+      allow read: if true;
+      allow create, update, delete: if request.auth != null;
+    }
+
+    // Trades - authenticated only
+    match /trades/{document=**} {
+      allow read, write: if request.auth != null;
+    }
   }
 }
+

@@ -29,7 +29,10 @@ import AdminOrders from "@/pages/AdminOrders";
 import DatabasePurge from "@/pages/Admin/DatabasePurge";
 import BulkUpload from "@/pages/Admin/BulkUpload";
 import BrandingPage from "@/pages/Admin/BrandingPage";
+import AdminInventory from "@/pages/Admin/AdminInventory";
+import AdminTrades from "@/pages/Admin/AdminTrades";
 import { ProtectedRoute } from "@/components/Guard/ProtectedRoute";
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -89,7 +92,10 @@ function AppContent() {
             <Route path="/admin" element={<AdminLayout><Outlet /></AdminLayout>}>
               <Route index element={<AdminAnalytics />} />
               <Route path="analytics" element={<AdminAnalytics />} />
+              <Route path="inventory" element={<AdminInventory />} />
+              <Route path="trades" element={<AdminTrades />} />
               <Route path="editorial" element={<EditorialManager />} />
+
               <Route path="orders" element={<AdminOrders />} />
               <Route path="bulk-upload" element={<BulkUpload />} />
               <Route path="branding" element={<BrandingPage />} />

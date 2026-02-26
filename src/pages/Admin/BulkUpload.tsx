@@ -1,5 +1,19 @@
 import { useState, useEffect } from "react";
-import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2, ChevronDown, Search, PlusCircle, LayoutGrid, List, Lock, Download, Trash2 } from "lucide-react";
+import { inventoryService } from "@/services/inventoryService";
+import {
+    Upload,
+    FileSpreadsheet,
+    AlertCircle,
+    CheckCircle2,
+    ChevronDown,
+    Search,
+    PlusCircle,
+    LayoutGrid,
+    List,
+    Lock,
+    Download,
+    Trash2
+} from "lucide-react";
 import { TEXTS } from "@/constants/texts";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
@@ -331,7 +345,7 @@ export default function BulkUpload() {
         if (batchItems.length === 0) return;
 
         setShowBatchModal(false);
-        showLoading(`Publicando ${batchItems.length} discos...`);
+        showLoading(`Ingresando al Búnker y Publicando ${batchItems.length} discos...`);
         let newRows = [...rows];
         let publishCount = 0;
 
@@ -343,17 +357,30 @@ export default function BulkUpload() {
 
                     const finalArtist = (row.originalArtist && row.originalArtist.trim() !== '')
                         ? row.originalArtist
-                        : parsed.artist;
+                        : (match as any).artist || parsed.artist;
 
                     const finalTitle = (row.originalTitle && row.originalTitle.trim() !== '')
                         ? row.originalTitle
-                        : parsed.title;
+                        : (match as any).title || parsed.title;
+
+                    // 1. Ingreso al Búnker (Sovereignty Snapshot)
+                    const inventoryId = await inventoryService.importFromDiscogs(
+                        match,
+                        {
+                            stock: 1,
+                            price: row.originalPrice,
+                            condition: `${row.originalMedia} / ${row.originalCover}`,
+                            status: "active"
+                        }
+                    );
 
                     const orderData = {
                         title: finalTitle,
                         artist: finalArtist,
                         album: finalTitle,
-                        item_id: match.id,
+                        item_id: inventoryId,
+                        inventory_id: inventoryId,
+                        discogs_id: match.id, // Store for reference
                         cover_image: match.cover_image,
                         totalPrice: row.originalPrice,
                         status: "store_offer",
@@ -367,18 +394,22 @@ export default function BulkUpload() {
                         currency: row.originalCurrency || "ARS",
                         details: {
                             ...match,
+                            inventory_id: inventoryId,
                             format: row.originalFormat
                         },
                         timestamp: serverTimestamp(),
                         createdAt: serverTimestamp(),
                         items: [{
-                            id: match.id.toString(),
+                            id: inventoryId,
+                            inventory_id: inventoryId,
+                            discogs_id: match.id,
                             title: finalTitle,
                             artist: finalArtist,
                             format: row.originalFormat,
                             condition: `${row.originalMedia} / ${row.originalCover}`,
                             image: match.cover_image,
                             price: row.originalPrice,
+                            source: 'INVENTORY',
                             timestamp: new Date()
                         }]
                     };
@@ -390,10 +421,26 @@ export default function BulkUpload() {
                     publishCount++;
                 }
             } else {
-                const finalBatchPrice = batchPrice || batchItems.reduce((acc, curr) => acc + curr.originalPrice, 0);
-                const firstMatch = batchItems[0].selectedMatch!;
+                const itemsWithInventory = [];
+                for (const row of batchItems) {
+                    const match = row.selectedMatch!;
+                    const inventoryId = await inventoryService.importFromDiscogs(
+                        match,
+                        {
+                            stock: 1,
+                            price: row.originalPrice,
+                            condition: `${row.originalMedia} / ${row.originalCover}`,
+                            status: "active"
+                        }
+                    );
+                    itemsWithInventory.push({ ...row, inventoryId });
+                }
+
+                const finalBatchPrice = batchPrice || itemsWithInventory.reduce((acc, curr) => acc + curr.originalPrice, 0);
+                const firstMatch = itemsWithInventory[0].selectedMatch!;
+
                 const orderData = {
-                    title: `Lote de ${batchItems.length} Discos`,
+                    title: `Lote de ${itemsWithInventory.length} Discos`,
                     cover_image: firstMatch.cover_image,
                     totalPrice: finalBatchPrice,
                     status: "store_offer",
@@ -409,34 +456,37 @@ export default function BulkUpload() {
                     currency: "ARS",
                     timestamp: serverTimestamp(),
                     createdAt: serverTimestamp(),
-                    items: batchItems.map(row => {
-                        const match = row.selectedMatch!;
+                    items: itemsWithInventory.map(item => {
+                        const match = item.selectedMatch!;
                         const parsed = parseDiscogsTitle(match.title);
 
-                        const finalArtist = (row.originalArtist && row.originalArtist.trim() !== '')
-                            ? row.originalArtist
-                            : parsed.artist;
+                        const finalArtist = (item.originalArtist && item.originalArtist.trim() !== '')
+                            ? item.originalArtist
+                            : (match as any).artist || parsed.artist;
 
-                        const finalTitle = (row.originalTitle && row.originalTitle.trim() !== '')
-                            ? row.originalTitle
-                            : parsed.title;
+                        const finalTitle = (item.originalTitle && item.originalTitle.trim() !== '')
+                            ? item.originalTitle
+                            : (match as any).title || parsed.title;
 
                         return {
-                            id: match.id.toString(),
+                            id: item.inventoryId,
+                            inventory_id: item.inventoryId,
+                            discogs_id: match.id,
                             title: finalTitle,
                             artist: finalArtist,
-                            format: row.originalFormat,
-                            condition: `${row.originalMedia} / ${row.originalCover}`,
+                            format: item.originalFormat,
+                            condition: `${item.originalMedia} / ${item.originalCover}`,
                             image: match.cover_image,
-                            price: row.originalPrice,
+                            price: item.originalPrice,
+                            source: 'INVENTORY',
                             timestamp: new Date()
                         };
                     })
                 };
 
                 await addDoc(collection(db, "orders"), orderData);
-                batchItems.forEach(row => {
-                    const rIndex = newRows.findIndex(r => r.id === row.id);
+                itemsWithInventory.forEach(item => {
+                    const rIndex = newRows.findIndex(r => r.id === item.id);
                     newRows[rIndex].published = true;
                     newRows[rIndex].inBatch = false;
                     publishCount++;
@@ -448,12 +498,13 @@ export default function BulkUpload() {
             alert(TEXTS.bulk.operationFinished);
         } catch (error) {
             console.error("Publish error", error);
-            alert(TEXTS.bulk.operationFinished);
+            alert("Error al procesar el búnker o publicar: " + (error as Error).message);
         } finally {
             hideLoading();
             setBatchPrice(0);
         }
     };
+
 
     return (
         <div className="space-y-8 pb-32">
