@@ -62,11 +62,13 @@ export const Navbar = () => {
                                 className="h-10 w-auto object-contain max-w-[180px] group-hover:scale-105 transition-transform duration-500"
                             />
                         ) : (
-                            <Disc className="h-8 w-8 text-primary group-hover:rotate-180 transition-transform duration-700" />
+                            <>
+                                <Disc className="h-8 w-8 text-primary group-hover:rotate-180 transition-transform duration-700" />
+                                <span className="text-xl font-display font-bold text-white tracking-tightest group-hover:text-primary transition-colors">
+                                    {TEXTS.navigation.brand}
+                                </span>
+                            </>
                         )}
-                        <span className="text-xl font-display font-bold text-white tracking-tightest group-hover:text-primary transition-colors">
-                            {TEXTS.navigation.brand}
-                        </span>
                     </Link>
 
                     {/* Desktop Navigation */}
