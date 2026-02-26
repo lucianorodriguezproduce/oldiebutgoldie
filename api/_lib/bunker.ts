@@ -32,7 +32,7 @@ export async function initBunkerIdentity() {
 
     admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
-        storageBucket: 'buscador-discogs-11425.firebasestorage.app'
+        storageBucket: 'buscador-discogs-11425.appspot.com'
     });
 
     console.log('Bunker: Firebase Initialized (Centralized).');
