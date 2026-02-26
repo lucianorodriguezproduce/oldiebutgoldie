@@ -1,9 +1,11 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { initBunkerIdentity } from './lib/bunker';
+import { initBunkerIdentity } from './_lib/bunker.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
+        // 1. Iniciamos la conexión al búnker (Centralizado)
         const db = await initBunkerIdentity();
+
         res.setHeader('Content-Type', 'text/xml; charset=utf-8');
         res.setHeader('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=43200');
 
@@ -11,7 +13,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const protocol = host.includes('localhost') ? 'http' : 'https';
         const baseUrl = `${protocol}://${host}`;
 
-        // Static Pages
+        // 2. Definición de Páginas Estáticas
         let urls = `
             <url>
                 <loc>${baseUrl}/</loc>
@@ -28,14 +30,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 <changefreq>daily</changefreq>
                 <priority>0.9</priority>
             </url>
-            <url>
-                <loc>${baseUrl}/eventos</loc>
-                <changefreq>daily</changefreq>
-                <priority>0.8</priority>
-            </url>
         `;
 
-        // Fetch Orders (Active Public Orders)
+        // 3. Extracción de Órdenes Activas
         const ordersSnap = await db.collection('orders')
             .where('status', '!=', 'venta_finalizada')
             .limit(1000)
@@ -43,47 +40,51 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         ordersSnap.forEach(doc => {
             const data = doc.data();
-            const updatedAt = data.updatedAt?.toDate()?.toISOString() || data.timestamp?.toDate()?.toISOString() || new Date().toISOString();
+            // Fallback de fecha seguro
+            const updatedAt = data.updatedAt?.toDate()?.toISOString()
+                || data.timestamp?.toDate()?.toISOString()
+                || new Date().toISOString();
+
             urls += `
-        <url>
-            <loc>${baseUrl}/orden/${doc.id}</loc>
-            <lastmod>${updatedAt}</lastmod>
-            <changefreq>daily</changefreq>
-            <priority>0.8</priority>
-        </url>`;
+            <url>
+                <loc>${baseUrl}/orden/${doc.id}</loc>
+                <lastmod>${updatedAt}</lastmod>
+                <changefreq>daily</changefreq>
+                <priority>0.8</priority>
+            </url>`;
         });
 
-        // Fetch Editorial Articles
-        const articlesSnap = await db.collection('articles')
-            .limit(100)
-            .get();
+        // 4. Extracción de Artículos Editoriales
+        const articlesSnap = await db.collection('articles').limit(100).get();
 
         articlesSnap.forEach(doc => {
             const data = doc.data();
-            const updatedAt = data.updatedAt?.toDate()?.toISOString() || data.timestamp?.toDate()?.toISOString() || new Date().toISOString();
+            const updatedAt = data.updatedAt?.toDate()?.toISOString() || new Date().toISOString();
             urls += `
-        <url>
-            <loc>${baseUrl}/editorial/${doc.id}</loc>
-            <lastmod>${updatedAt}</lastmod>
-            <changefreq>daily</changefreq>
-            <priority>0.8</priority>
-        </url>`;
+            <url>
+                <loc>${baseUrl}/editorial/${doc.id}</loc>
+                <lastmod>${updatedAt}</lastmod>
+                <changefreq>daily</changefreq>
+                <priority>0.8</priority>
+            </url>`;
         });
 
+        // 5. Construcción Final del XML
         const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     ${urls}
 </urlset>`;
 
-        res.status(200).send(sitemap);
+        return res.status(200).send(sitemap);
 
     } catch (error: any) {
-        console.error('Sitemap Error:', error);
-        // REDACCIÓN DE SEGURIDAD (Búnker)
+        console.error('Sitemap Critical Failure:', error.message);
+
+        // Redacción de seguridad en caso de error expuesto
         const safeMessage = (error.message || "")
             .replace(/\{"type": "service_account".*?\}/g, "[SERVICE_ACCOUNT_REDACTED]")
             .replace(/-----BEGIN PRIVATE KEY-----.*?-----END PRIVATE KEY-----/gs, "[PRIVATE_KEY_REDACTED]");
 
-        res.status(500).end(`Sitemap generation failed: ${safeMessage}`);
+        return res.status(500).end(`Sitemap generation failed: ${safeMessage}`);
     }
 }

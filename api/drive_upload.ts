@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { initBunkerIdentity } from './lib/bunker';
+import { initBunkerIdentity } from './_lib/bunker';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
