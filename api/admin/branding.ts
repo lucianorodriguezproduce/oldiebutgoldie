@@ -7,7 +7,7 @@ export const config = {
 };
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { initBunkerIdentity, initDriveIdentity } from '../_lib/bunker.js';
+import { initBunkerIdentity, initDriveIdentity } from '../_lib/bunker';
 import { Readable } from 'stream';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
