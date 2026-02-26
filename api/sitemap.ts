@@ -16,13 +16,12 @@ async function initBunkerIdentity() {
     const payload = version.payload?.data?.toString();
     if (!payload) throw new Error('CRITICAL_IDENTITY_FAILURE: Secret payload empty');
 
-    // PREVENCIÓN DE INFERENCIA DE RUTA (Solo tras recuperar el secreto del Búnker)
-    if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-        delete process.env.GOOGLE_APPLICATION_CREDENTIALS;
-    }
+    // NEUTRALIZACIÓN AGRESIVA (Prevenir fallback al entorno envenenado de Vercel)
+    process.env.GOOGLE_APPLICATION_CREDENTIALS = "";
+    delete process.env.GOOGLE_APPLICATION_CREDENTIALS;
 
     const sa = JSON.parse(payload);
-    const rawKey = (sa.private_key || sa.privateKey || '').trim();
+    const rawKey = (sa.private_key || sa.privateKey || sa.private_key_id || '').trim();
 
     // FILTRO DE VACÍO (Seguridad Bunker)
     const body = rawKey
