@@ -63,7 +63,11 @@ export const BrandingManager: React.FC = () => {
             });
 
             const result = await response.json();
-            if (!response.ok) throw new Error(result.error || result.details || 'Upload failed');
+            if (!response.ok) {
+                const errorDetail = result.details ? `: ${result.details}` : '';
+                const errorCode = result.code ? ` [${result.code}]` : '';
+                throw new Error(`${result.error || 'Upload failed'}${errorDetail}${errorCode}`);
+            }
 
             setStatus({ loading: false, error: null, success: true });
 

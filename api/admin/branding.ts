@@ -20,9 +20,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(400).json({ error: 'Invalid branding type' });
         }
 
+        console.log('Branding: Initializing identities...');
         const db = await initBunkerIdentity();
         const drive = await initDriveIdentity();
         const folderId = '1djP4_hmGCbzgH-WMNSrek46VySg-gVs4'.trim();
+        console.log('Branding: Identities OK. Folder ID:', folderId);
 
         const cleanBase64 = base64.includes('base64,') ? base64.split('base64,')[1] : base64;
         const buffer = Buffer.from(cleanBase64, 'base64');
@@ -30,6 +32,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         stream.push(buffer);
         stream.push(null);
 
+        console.log(`Branding: Starting Drive upload for ${fileName} (${mimeType})...`);
         // 4. Subida a Drive con bypass de cuota
         const driveRes = await drive.files.create({
             requestBody: {
@@ -46,9 +49,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         } as any); // Usamos 'as any' para evitar fricciones de tipos con el SDK
 
         const fileId = driveRes.data.id;
+        console.log('Branding: Drive upload success. File ID:', fileId);
         if (!fileId) throw new Error('Drive no devolvió ID');
 
         // 5. Permisos
+        console.log('Branding: Setting public permissions...');
         await drive.permissions.create({
             fileId: fileId,
             requestBody: { role: 'reader', type: 'anyone' },
@@ -58,6 +63,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const publicUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
 
         // 6. Firestore
+        console.log('Branding: Updating Firestore...');
         await db.collection('settings').doc('site_config').set({
             [type]: {
                 url: publicUrl,
@@ -66,13 +72,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
         }, { merge: true });
 
+        console.log('Branding: Operation complete.');
         return res.status(200).json({ status: 'SUCCESS', url: publicUrl, type });
 
     } catch (error: any) {
-        console.error('Branding API Error:', error.message);
+        console.error('Branding API Error (FULL):', error);
         return res.status(500).json({
             error: 'Branding operation failed',
-            details: error.message
+            details: error.message,
+            code: error.code || 'UNKNOWN_ERROR',
+            step: 'diagnosing'
         });
     }
 }

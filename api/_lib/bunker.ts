@@ -70,7 +70,7 @@ export async function initDriveIdentity() {
         credentials.client_email,
         undefined,
         credentials.private_key,
-        ['https://www.googleapis.com/auth/drive.file']
+        ['https://www.googleapis.com/auth/drive']
     );
 
     return google.drive({ version: 'v3', auth });
