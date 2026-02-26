@@ -76,4 +76,57 @@ export async function initDriveIdentity() {
     return google.drive({ version: 'v3', auth });
 }
 
+/**
+ * Shared helper to upload a Base64 file to Google Drive and return a public link.
+ * Folder: Oldie_Assets (1djP4_hmGCbzgH-WMNSrek46VySg-gVs4)
+ */
+export async function uploadToDrive(base64: string, fileName: string, mimeType: string) {
+    const drive = await initDriveIdentity();
+    const folderId = '1djP4_hmGCbzgH-WMNSrek46VySg-gVs4';
+
+    // 1. Clean Base64
+    const cleanBase64 = base64.includes('base64,') ? base64.split('base64,')[1] : base64;
+    const buffer = Buffer.from(cleanBase64, 'base64');
+
+    // 2. Prepare Stream
+    const { Readable } = await import('stream');
+    const stream = new Readable();
+    stream.push(buffer);
+    stream.push(null);
+
+    console.log(`Bunker: Uploading ${fileName} to Drive Folder ${folderId}...`);
+
+    // 3. Upload File
+    const driveRes = await drive.files.create({
+        requestBody: {
+            name: fileName,
+            parents: [folderId],
+        },
+        media: {
+            mimeType: mimeType,
+            body: stream,
+        },
+        supportsAllDrives: true,
+        fields: 'id',
+    } as any);
+
+    const fileId = driveRes.data.id;
+    if (!fileId) throw new Error('Drive upload failed: No ID returned');
+
+    // 4. Set Public Permissions
+    await drive.permissions.create({
+        fileId: fileId,
+        requestBody: { role: 'reader', type: 'anyone' },
+        supportsAllDrives: true,
+    });
+
+    // 5. Standard Public URL (UC direct view)
+    const publicUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+
+    return {
+        fileId,
+        url: publicUrl
+    };
+}
+
 export { secretClient };

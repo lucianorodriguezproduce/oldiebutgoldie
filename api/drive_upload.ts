@@ -1,20 +1,31 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { initBunkerIdentity } from './_lib/bunker.js';
+import { uploadToDrive } from './_lib/bunker.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-    try {
-        const db = await initBunkerIdentity();
+    if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
-        // Simular verificación de drive o lógica de upload
-        res.status(200).json({ status: 'OK', bunker: 'STABILIZED' });
+    try {
+        const { file, fileName, fileType } = req.body;
+
+        if (!file || !fileName) {
+            return res.status(400).json({ error: 'Missing file data' });
+        }
+
+        console.log(`Editorial: Processing upload for ${fileName}...`);
+
+        const result = await uploadToDrive(file, fileName, fileType || 'image/jpeg');
+
+        return res.status(200).json({
+            success: true,
+            directLink: result.url,
+            fileId: result.fileId
+        });
 
     } catch (error: any) {
-        console.error('Drive Upload Error:', error);
-        // REDACCIÓN DE SEGURIDAD (Búnker)
-        const safeMessage = (error.message || "")
-            .replace(/\{"type": "service_account".*?\}/g, "[SERVICE_ACCOUNT_REDACTED]")
-            .replace(/-----BEGIN PRIVATE KEY-----.*?-----END PRIVATE KEY-----/gs, "[PRIVATE_KEY_REDACTED]");
-
-        res.status(500).json({ error: 'Drive verification failed', details: safeMessage });
+        console.error('Editorial Upload Error:', error.message);
+        return res.status(500).json({
+            error: 'Editorial upload failed',
+            details: error.message
+        });
     }
 }
