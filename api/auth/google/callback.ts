@@ -22,29 +22,10 @@ async function initBunkerIdentity() {
     const payload = version.payload?.data?.toString();
     if (!payload) throw new Error('CRITICAL_IDENTITY_FAILURE: Secret payload empty');
 
-    const sa = JSON.parse(payload);
-    const rawKey = (sa.private_key || sa.privateKey || sa.private_key_id || '').trim();
-
-    // FILTRO DE VACÍO (Seguridad Bunker)
-    const body = rawKey
-        .replace(/\\n/g, '\n')
-        .replace(/-----[^-]*-----/g, '')
-        .replace(/\s/g, '')
-        .trim();
-
-    if (body.length < 1500) throw new Error("CRITICAL_INTEGRITY_FAILURE: Key body too short in Bunker.");
-
-    const finalKey = `-----BEGIN PRIVATE KEY-----\n${body}\n-----END PRIVATE KEY-----\n`;
-
-    // SCHEMA SNAKE_CASE
-    const config = {
-        project_id: (sa.project_id || sa.projectId || 'buscador-discogs-11425').trim(),
-        client_email: (sa.client_email || sa.clientEmail || '').trim(),
-        private_key: finalKey,
-    };
+    const secretData = JSON.parse(payload);
 
     if (getApps().length === 0) {
-        initializeApp({ credential: cert(config as any) });
+        initializeApp({ credential: cert(secretData) });
         console.log('Bunker: Firebase Initialized Successfully.');
     }
     return getFirestore();

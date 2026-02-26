@@ -27,27 +27,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const payload = version.payload?.data?.toString();
         if (!payload) throw new Error('Secret payload empty');
 
-        const sa = JSON.parse(payload);
-
-        // RECONSTRUCCIÓN CUALIFICADA (Garantizar compatibilidad total)
-        const rawKey = (sa.private_key || sa.privateKey || '').trim();
-        const body = rawKey
-            .replace(/\\n/g, '\n')
-            .replace(/-----[^-]*-----/g, '')
-            .replace(/\s/g, '')
-            .trim();
-
-        const finalKey = `-----BEGIN PRIVATE KEY-----\n${body}\n-----END PRIVATE KEY-----\n`;
-
-        const config = {
-            project_id: (sa.project_id || sa.projectId || 'buscador-discogs-11425').trim(),
-            client_email: (sa.client_email || sa.clientEmail || '').trim(),
-            private_key: finalKey
-        };
+        const secretData = JSON.parse(payload);
 
         report.steps.push("2. Initializing Admin SDK (Direct Inject)");
         const tempApp = initializeApp({
-            credential: cert(config as any)
+            credential: cert(secretData)
         }, 'probe-bunker-' + Date.now());
 
         report.steps.push("3. Testing Firestore Connectivity");
