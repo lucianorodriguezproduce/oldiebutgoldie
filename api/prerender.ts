@@ -1,51 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { SecretManagerServiceClient } from '@google-cloud/secret-manager';
-import admin from 'firebase-admin';
-const secretClient = new SecretManagerServiceClient();
-
-async function initBunkerIdentity() {
-    console.log('Bunker: Accessing Secret Manager...');
-    const [version] = await secretClient.accessSecretVersion({
-        name: 'projects/344484307950/secrets/FIREBASE_ADMIN_SDK_JSON/versions/latest',
-    });
-    const payload = version.payload?.data?.toString();
-    if (!payload) throw new Error('CRITICAL_IDENTITY_FAILURE: Secret payload empty');
-
-    let serviceAccount;
-    try {
-        serviceAccount = typeof payload === 'string' ? JSON.parse(payload) : payload;
-    } catch (e) {
-        throw new Error("ERROR_CRITICO: El secreto del búnker no es un JSON válido.");
-    }
-
-    if (!serviceAccount.project_id || !serviceAccount.private_key) {
-        throw new Error("ERROR_CRITICO: Objeto de identidad incompleto tras el parseo.");
-    }
-
-    if (!admin.apps.length) {
-        admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount)
-        });
-    }
-    return {
-        db: admin.firestore(),
-        projectId: serviceAccount.project_id || 'buscador-discogs-11425'
-    };
-}
-
-async function getDiscogsToken() {
-    try {
-        const [version] = await secretClient.accessSecretVersion({
-            name: 'projects/344484307950/secrets/DISCOGS_API_TOKEN/versions/latest',
-        });
-        return version.payload?.data?.toString();
-    } catch (e) {
-        console.warn('CRITICAL_SECRET_FETCH_FAILURE: Discogs token fetch from Secret Manager failed.');
-        return undefined;
-    }
-}
+import { initBunkerIdentity, getDiscogsToken } from './lib/bunker';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     const CACHE_CONTROL = 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800';
@@ -78,7 +34,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     try {
         const url = `https://${req.headers.host || 'localhost'}/${targetType === 'orden' ? 'orden' : 'item/' + targetType}/${targetId}`;
-        const { db } = await initBunkerIdentity();
+        const db = await initBunkerIdentity();
 
         if (targetType === 'orden') {
             try {

@@ -1,50 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { google } from 'googleapis';
-import { SecretManagerServiceClient } from '@google-cloud/secret-manager';
-import admin from 'firebase-admin';
-const secretClient = new SecretManagerServiceClient();
-
-async function initBunkerIdentity() {
-    console.log('Bunker: Accessing Secret Manager...');
-
-    const [version] = await secretClient.accessSecretVersion({
-        name: 'projects/344484307950/secrets/FIREBASE_ADMIN_SDK_JSON/versions/latest',
-    });
-
-    const payload = version.payload?.data?.toString();
-    if (!payload) throw new Error('CRITICAL_IDENTITY_FAILURE: Secret payload empty');
-
-    let serviceAccount;
-    try {
-        serviceAccount = typeof payload === 'string' ? JSON.parse(payload) : payload;
-    } catch (e) {
-        throw new Error("ERROR_CRITICO: El secreto del búnker no es un JSON válido.");
-    }
-
-    if (!serviceAccount.project_id || !serviceAccount.private_key) {
-        throw new Error("ERROR_CRITICO: Objeto de identidad incompleto tras el parseo.");
-    }
-
-    if (!admin.apps.length) {
-        admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount)
-        });
-        console.log('Bunker: Firebase Initialized Successfully.');
-    }
-    return admin.firestore();
-}
-
-async function getSecret(name: string) {
-    try {
-        const [version] = await secretClient.accessSecretVersion({
-            name: `projects/344484307950/secrets/${name}/versions/latest`,
-        });
-        return version.payload?.data?.toString();
-    } catch (e) {
-        console.warn(`CRITICAL_SECRET_FETCH_FAILURE: ${name} not found in Bunker.`);
-        return undefined;
-    }
-}
+import { initBunkerIdentity, getSecret } from '../../lib/bunker';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
