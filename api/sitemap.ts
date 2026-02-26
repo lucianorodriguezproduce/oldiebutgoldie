@@ -41,7 +41,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         ordersSnap.forEach(doc => {
             const data = doc.data();
-            // Fallback de fecha seguroconst updatedAt = safeDate(data.updatedAt || data.timestamp);
+            // Fallback de fecha seguro
+            const updatedAt = safeDate(data.updatedAt || data.timestamp);
 
             urls += `
             <url>
