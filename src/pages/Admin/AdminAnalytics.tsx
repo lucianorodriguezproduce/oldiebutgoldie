@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import {
     MapPin, Activity, Globe, Search, ShoppingBag, PieChart,
     DollarSign, TrendingUp, BadgeDollarSign, UploadCloud,
-    Users, Clock, ArrowUpRight, BarChart3, LineChart
+    Users, Clock, ArrowUpRight, BarChart3, LineChart, Trash2
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useLoading } from "@/context/LoadingContext";
@@ -156,19 +156,31 @@ export default function AdminAnalytics() {
                     <p className="text-gray-500 mt-2 font-bold uppercase tracking-widest text-sm">Central de Telemetría y Control de Mercado</p>
                 </div>
 
-                <div className="flex bg-white/5 p-1.5 rounded-2xl border border-white/10">
-                    <button
-                        onClick={() => setActiveTab('business')}
-                        className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'business' ? 'bg-primary text-black' : 'text-gray-500 hover:text-white'}`}
-                    >
-                        Negocio
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('traffic')}
-                        className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'traffic' ? 'bg-primary text-black' : 'text-gray-500 hover:text-white'}`}
-                    >
-                        Tráfico
-                    </button>
+                <div className="flex flex-wrap items-center gap-4">
+                    <Link to="/admin/bulk-upload" className="flex items-center gap-3 bg-white/5 border border-white/10 px-6 py-2.5 rounded-xl hover:bg-white/10 hover:border-primary/50 transition-all group">
+                        <UploadCloud className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-white">Stock Masivo</span>
+                    </Link>
+
+                    <Link to="/admin/purge" className="flex items-center gap-3 bg-white/5 border border-white/10 px-6 py-2.5 rounded-xl hover:bg-red-500 hover:border-red-500 hover:text-black group transition-all">
+                        <Trash2 className="h-4 w-4 text-red-500 group-hover:text-black group-hover:scale-110 transition-all" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-white group-hover:text-black">Purgar</span>
+                    </Link>
+
+                    <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10">
+                        <button
+                            onClick={() => setActiveTab('business')}
+                            className={`px-6 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'business' ? 'bg-primary text-black' : 'text-gray-500 hover:text-white'}`}
+                        >
+                            Negocio
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('traffic')}
+                            className={`px-6 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'traffic' ? 'bg-primary text-black' : 'text-gray-500 hover:text-white'}`}
+                        >
+                            Tráfico
+                        </button>
+                    </div>
                 </div>
             </header>
 
