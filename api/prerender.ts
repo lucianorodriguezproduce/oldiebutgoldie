@@ -1,11 +1,42 @@
 import fs from 'fs';
 import path from 'path';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+import { SecretManagerServiceClient } from '@google-cloud/secret-manager';
 
-// This function intercepts requests to /item/:type/:id to inject SEO tags before serving the SPA index.html
+const secretClient = new SecretManagerServiceClient();
+
+async function initBunkerIdentity() {
+    console.log('Bunker: Accessing Secret Manager...');
+    const [version] = await secretClient.accessSecretVersion({
+        name: 'projects/344484307950/secrets/FIREBASE_ADMIN_SDK_JSON/versions/latest',
+    });
+    const payload = version.payload?.data?.toString();
+    if (!payload) throw new Error('CRITICAL_IDENTITY_FAILURE: Secret payload empty');
+    const secretData = JSON.parse(payload);
+    if (getApps().length === 0) {
+        initializeApp({ credential: cert(secretData) });
+    }
+    return {
+        db: getFirestore(),
+        projectId: secretData.project_id || 'buscador-discogs-11425'
+    };
+}
+
+async function getDiscogsToken() {
+    try {
+        const [version] = await secretClient.accessSecretVersion({
+            name: 'projects/344484307950/secrets/DISCOGS_API_TOKEN/versions/latest',
+        });
+        return version.payload?.data?.toString();
+    } catch (e) {
+        console.warn('Discogs token fetch from Secret Manager failed, falling back to env for safety during transition');
+        return process.env.DISCOGS_API_TOKEN;
+    }
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-    // 1. Aggressive Caching for Edge
     const CACHE_CONTROL = 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800';
     res.setHeader('Cache-Control', CACHE_CONTROL);
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -18,7 +49,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const defaultTitle = 'Oldie but Goldie';
     const defaultDescription = 'Comprar/Vender formato físico. Consultar disponibilidad vía WhatsApp.';
 
-    // URL Parsing
     const urlObj = new URL(req.url || '', `https://${req.headers.host || 'localhost'}`);
     const pathSegments = urlObj.pathname.split('/').filter(Boolean);
 
@@ -37,141 +67,108 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     try {
         const url = `https://${req.headers.host || 'localhost'}/${targetType === 'orden' ? 'orden' : 'item/' + targetType}/${targetId}`;
+        const { db } = await initBunkerIdentity();
 
         if (targetType === 'orden') {
             try {
-                const projectId = process.env.FIREBASE_PROJECT_ID || process.env.VITE_FIREBASE_PROJECT_ID || 'buscador-discogs-11425';
-                const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/orders/${targetId}`;
-
-                const fbResponse = await fetch(firestoreUrl, {
-                    method: 'GET',
-                    signal: AbortSignal.timeout(2000)
-                });
-
-                if (fbResponse.ok) {
-                    const fbData = await fbResponse.json();
-                    const fields = fbData.fields || {};
-                    // [STRICT-EXTRACT-EDGE] Sync with getCleanOrderMetadata logic
-                    const itemsArray = fields.items?.arrayValue?.values || [];
-                    const isBatch = fields.isBatch?.booleanValue || itemsArray.length > 1;
+                const orderDoc = await db.collection('orders').doc(targetId).get();
+                if (orderDoc.exists) {
+                    const data = orderDoc.data() || {};
+                    const itemsArray = data.items || [];
+                    const isBatch = data.isBatch || itemsArray.length > 1;
 
                     const cleanStr = (s: string | undefined | null) => s ? s.replace(/UNKNOWN ARTIST\s*[-—–]*\s*/gi, '').trim() : '';
 
                     const rawArtist = cleanStr(
-                        fields.artist?.stringValue ||
-                        itemsArray[0]?.mapValue?.fields?.artist?.stringValue ||
-                        fields.details?.mapValue?.fields?.artist?.stringValue ||
+                        data.artist ||
+                        itemsArray[0]?.artist ||
+                        data.details?.artist ||
                         ""
                     );
 
                     const rawAlbum = cleanStr(
-                        fields.title?.stringValue ||
-                        fields.album?.stringValue ||
-                        fields.details?.mapValue?.fields?.album?.stringValue ||
-                        itemsArray[0]?.mapValue?.fields?.title?.stringValue ||
-                        itemsArray[0]?.mapValue?.fields?.album?.stringValue ||
+                        data.title ||
+                        data.album ||
+                        data.details?.album ||
+                        itemsArray[0]?.title ||
+                        itemsArray[0]?.album ||
                         "Detalle del Disco"
                     );
 
                     let displayArtist = rawArtist;
                     let displayAlbum = rawAlbum;
 
-                    const status = (fields.status?.stringValue || 'PENDIENTE').toUpperCase();
-                    const intent = (fields.details?.mapValue?.fields?.intent?.stringValue || fields.intent?.stringValue || 'CONSULTAR').toUpperCase();
+                    const status = (data.status || 'PENDIENTE').toUpperCase();
+                    const intent = (data.details?.intent || data.intent || 'CONSULTAR').toUpperCase();
                     const intentStr = intent === 'VENDER' ? 'En Venta' : 'En Compra';
 
                     const isNegotiating = ['PENDING', 'QUOTED', 'COUNTEROFFERED'].includes(status);
 
-                    // [STRICT-TACTICAL] Deduplication for zero-error visual parity
                     if (!isBatch && displayArtist && displayAlbum && displayArtist.toLowerCase() === displayAlbum.toLowerCase()) {
                         displayAlbum = "";
                     }
 
                     if (!displayArtist) displayArtist = isBatch ? "Varios Artistas" : "";
 
-                    const thumbUrl = fields.thumbnailUrl?.stringValue;
-                    const coverImage = fields.details?.mapValue?.fields?.cover_image?.stringValue || fields.details?.mapValue?.fields?.thumb?.stringValue;
-                    const firstItemCover = itemsArray[0]?.mapValue?.fields?.cover_image?.stringValue || itemsArray[0]?.mapValue?.fields?.thumb?.stringValue;
+                    const thumbUrl = data.thumbnailUrl;
+                    const coverImage = data.details?.cover_image || data.details?.thumb;
+                    const firstItemCover = itemsArray[0]?.cover_image || itemsArray[0]?.thumb;
 
                     let image = thumbUrl || coverImage || firstItemCover || defaultImage;
                     if (image.startsWith('http://')) {
                         image = image.replace('http://', 'https://');
                     }
 
-                    // Hierarchy Elevation for Title
                     let title = defaultTitle;
                     if (isBatch) {
                         title = `Lote de ${itemsArray.length > 0 ? itemsArray.length : 'varios'} discos | Oldie but Goldie`;
                     } else {
-                        // Priority: Display Artist - Display Album. If album was deduplicated, it will be empty.
                         title = displayArtist
                             ? (displayAlbum ? `${displayArtist} - ${displayAlbum} | Oldie but Goldie` : `${displayArtist} | Oldie but Goldie`)
                             : `${displayAlbum || "Disco Registrado"} | Oldie but Goldie`;
                     }
 
                     const description = `Orden de ${intentStr}: estado ${status}. ${isNegotiating ? "¡Participa en la negociación abierta!" : ""}`;
-
                     return serveFallback(res, title, description, image, url);
                 }
             } catch (e) {
-                console.error("Firebase prerender orden fetch failed: ", e);
+                console.error("Bunker prerender orden fetch failed: ", e);
             }
             return serveFallback(res, defaultTitle, defaultDescription, defaultImage, url);
         }
 
-        // FIREBASE CROSS-REFERENCE FOR DYNAMIC SEO [LEGACY /item/type/id]
         let orderStatusStr = "";
         let orderIntentStr = "SOLICITUD";
         try {
-            const projectId = process.env.FIREBASE_PROJECT_ID || process.env.VITE_FIREBASE_PROJECT_ID || 'buscador-discogs-11425';
-            const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery`;
+            const orderSnap = await db.collection('orders')
+                .where('item_id', '==', parseInt(targetId))
+                .limit(1)
+                .get();
 
-            const fbResponse = await fetch(firestoreUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    structuredQuery: {
-                        from: [{ collectionId: "orders" }],
-                        where: {
-                            fieldFilter: {
-                                field: { fieldPath: "item_id" },
-                                op: "EQUAL",
-                                value: { integerValue: parseInt(targetId) }
-                            }
-                        },
-                        limit: 1
-                    }
-                }),
-                signal: AbortSignal.timeout(1000)
-            });
+            if (!orderSnap.empty) {
+                const orderData = orderSnap.docs[0].data();
+                const status = orderData.status;
+                const intent = orderData.details?.intent || orderData.intent;
 
-            if (fbResponse.ok) {
-                const fbData = await fbResponse.json();
-                if (fbData && fbData.length > 0 && fbData[0].document) {
-                    const status = fbData[0].document.fields?.status?.stringValue;
-                    const detailsMap = fbData[0].document.fields?.details?.mapValue?.fields;
-                    const intent = detailsMap?.intent?.stringValue;
-
-                    if (status) orderStatusStr = status.toUpperCase();
-                    if (intent) {
-                        orderIntentStr = intent === 'VENDER' ? 'EN VENTA' : 'EN COMPRA';
-                    }
+                if (status) orderStatusStr = status.toUpperCase();
+                if (intent) {
+                    orderIntentStr = intent === 'VENDER' ? 'EN VENTA' : 'EN COMPRA';
                 }
             }
         } catch (e) {
-            console.error("Firebase prerender cross-ref failed: ", e);
+            console.error("Bunker prerender cross-ref failed: ", e);
         }
 
-        // 2. Fetch with Strict Timeout
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 seconds strict timeout
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
 
         const fetchHeaders: Record<string, string> = {
             'User-Agent': `OldieButGoldieBot/1.0 +${siteUrlBase}`
         };
 
-        if (process.env.DISCOGS_API_TOKEN) {
-            fetchHeaders['Authorization'] = `Discogs token=${process.env.DISCOGS_API_TOKEN}`;
+        const discogsToken = await getDiscogsToken();
+        if (discogsToken) {
+            fetchHeaders['Authorization'] = `Discogs token=${discogsToken}`;
         }
 
         const DISCOGS_URL = `https://api.discogs.com/${targetType}s/${targetId}`;
@@ -187,17 +184,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         const discogsData = await discogsRes.json();
-
-        // 3. Precise Meta Tags per User Instructions
         const title = discogsData.title ? `${discogsData.title} | Oldie but Goldie` : defaultTitle;
-
-        // Generate description based on whether an order exists in Firebase
         const description = orderStatusStr
             ? `Orden de ${orderIntentStr}: ${title} en Oldie but Goldie. Estado: ${orderStatusStr}.`
             : defaultDescription;
 
-        // Ensure image is absolute and HTTPS. Discogs sometimes returns HTTP or missing images.
-        // Also fallback to higher resolution image first.
         let image = discogsData.images?.[0]?.resource_url || discogsData.images?.[0]?.uri || discogsData.thumb || defaultImage;
         if (image.startsWith('http://')) {
             image = image.replace('http://', 'https://');
@@ -207,7 +198,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     } catch (error) {
         console.error('Prerender API Error/Timeout:', (error as Error).message);
-        // 4. Bulletproof Fallback
         return serveFallback(res, defaultTitle, defaultDescription, defaultImage, urlObj.href);
     }
 }
@@ -243,8 +233,6 @@ function serveFallback(res: VercelResponse, title: string, description: string, 
         html = html.replace('</head>', `${injection}</head>`);
         res.status(200).send(html);
     } catch (e) {
-        // Absolute worst case: dist/index.html is missing (Vercel deployment issue)
-        // Return a valid minimalist HTML document just for the bots
         res.status(200).send(`
             <!DOCTYPE html>
             <html lang="es">

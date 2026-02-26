@@ -12,33 +12,39 @@ if (process.env.GOOGLE_APPLICATION_CREDENTIALS && !process.env.GOOGLE_APPLICATIO
 
 const secretClient = new SecretManagerServiceClient();
 
+const CACHE_DOC_PATH = 'system_cache/gsc_top_keywords';
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
 async function initBunkerIdentity() {
     console.log('Bunker: Accessing Secret Manager...');
-
     const [version] = await secretClient.accessSecretVersion({
         name: 'projects/344484307950/secrets/FIREBASE_ADMIN_SDK_JSON/versions/latest',
     });
-
     const payload = version.payload?.data?.toString();
     if (!payload) throw new Error('CRITICAL_IDENTITY_FAILURE: Secret payload empty');
-
     const secretData = JSON.parse(payload);
-
     if (getApps().length === 0) {
         initializeApp({ credential: cert(secretData) });
-        console.log('Bunker: Firebase Initialized Successfully.');
     }
     return getFirestore();
 }
 
-const CACHE_DOC_PATH = 'system_cache/gsc_top_keywords';
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+async function getSecret(name: string) {
+    try {
+        const [version] = await secretClient.accessSecretVersion({
+            name: `projects/344484307950/secrets/${name}/versions/latest`,
+        });
+        return version.payload?.data?.toString();
+    } catch (e) {
+        console.warn(`Secret ${name} fetch failed from Bunker.`);
+        return undefined;
+    }
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
         const db = await initBunkerIdentity();
-
-        // Check Firestore Cache
+        // ... existing cache logic ...
         const cacheRef = db.doc(CACHE_DOC_PATH);
         const cacheSnap = await cacheRef.get();
         const now = Date.now();
@@ -58,21 +64,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
         }
 
-        // Get Refresh Token
         const gscConfig = await db.collection('system_config').doc('gsc_auth').get();
+        // ... existing config check ...
         if (!gscConfig.exists || !gscConfig.data()?.refresh_token) {
             return res.status(401).json({ error: 'GSC not connected', needs_auth: true, redirect: '/api/auth/gsc-init' });
         }
 
         const refreshToken = gscConfig.data()?.refresh_token;
 
-        // Setup Google Client
         const siteUrl = process.env.VITE_SITE_URL || `https://${req.headers.host}` || 'https://oldiebutgoldie.com.ar/';
         const redirectUri = `${siteUrl.replace(/\/$/, '')}/api/auth/google/callback`;
 
+        const clientId = await getSecret('GOOGLE_CLIENT_ID');
+        const clientSecret = await getSecret('GOOGLE_CLIENT_SECRET');
+
         const oauth2Client = new google.auth.OAuth2(
-            process.env.GOOGLE_CLIENT_ID,
-            process.env.GOOGLE_CLIENT_SECRET,
+            clientId,
+            clientSecret,
             redirectUri
         );
 

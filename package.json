@@ -33,7 +33,8 @@
     "recharts": "^3.7.0",
     "tailwind-merge": "^3.4.0",
     "tailwindcss-animate": "^1.0.7",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "firebase-admin": "^13.6.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
@@ -45,7 +46,6 @@
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
-    "firebase-admin": "^13.6.1",
     "firebase-tools": "^15.5.1",
     "globals": "^16.5.0",
     "postcss": "^8.5.6",

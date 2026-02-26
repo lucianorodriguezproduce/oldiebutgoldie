@@ -31,6 +31,18 @@ async function initBunkerIdentity() {
     return getFirestore();
 }
 
+async function getSecret(name: string) {
+    try {
+        const [version] = await secretClient.accessSecretVersion({
+            name: `projects/344484307950/secrets/${name}/versions/latest`,
+        });
+        return version.payload?.data?.toString();
+    } catch (e) {
+        console.warn(`Secret ${name} fetch failed from Bunker.`);
+        return undefined;
+    }
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
         const db = await initBunkerIdentity();
@@ -48,9 +60,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const siteUrl = process.env.VITE_SITE_URL || `https://${req.headers.host}` || 'https://oldiebutgoldie.com.ar/';
         const redirectUri = `${siteUrl.replace(/\/$/, '')}/api/auth/google/callback`;
 
+        const clientId = await getSecret('GOOGLE_CLIENT_ID');
+        const clientSecret = await getSecret('GOOGLE_CLIENT_SECRET');
+
         const oauth2Client = new google.auth.OAuth2(
-            process.env.GOOGLE_CLIENT_ID,
-            process.env.GOOGLE_CLIENT_SECRET,
+            clientId,
+            clientSecret,
             redirectUri
         );
 
