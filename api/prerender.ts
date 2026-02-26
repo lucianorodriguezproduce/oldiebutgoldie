@@ -1,10 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
 import { SecretManagerServiceClient } from '@google-cloud/secret-manager';
-
+import admin from 'firebase-admin';
 const secretClient = new SecretManagerServiceClient();
 
 async function initBunkerIdentity() {
@@ -14,12 +12,14 @@ async function initBunkerIdentity() {
     });
     const payload = version.payload?.data?.toString();
     if (!payload) throw new Error('CRITICAL_IDENTITY_FAILURE: Secret payload empty');
-    const serviceAccount = JSON.parse(payload);
-    if (getApps().length === 0) {
-        initializeApp({ credential: cert(serviceAccount) });
+    const serviceAccount = JSON.parse(payload); // <--- OBLIGATORIO
+    if (!admin.apps.length) {
+        admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount) // <--- OBJETO
+        });
     }
     return {
-        db: getFirestore(),
+        db: admin.firestore(),
         projectId: serviceAccount.project_id || 'buscador-discogs-11425'
     };
 }

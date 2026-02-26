@@ -1,15 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { google } from 'googleapis';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
 import { SecretManagerServiceClient } from '@google-cloud/secret-manager';
-
-// NEUTRALIZACIÓN DIFERIDA DE INFRAESTRUCTURA (Búnker)
-if (process.env.GOOGLE_APPLICATION_CREDENTIALS && !process.env.GOOGLE_APPLICATION_CREDENTIALS.includes('/')) {
-    process.env.GOOGLE_APPLICATION_CREDENTIALS = "";
-    delete process.env.GOOGLE_APPLICATION_CREDENTIALS;
-}
-
+import admin from 'firebase-admin';
 const secretClient = new SecretManagerServiceClient();
 
 const CACHE_DOC_PATH = 'system_cache/gsc_top_keywords';
@@ -22,11 +14,13 @@ async function initBunkerIdentity() {
     });
     const payload = version.payload?.data?.toString();
     if (!payload) throw new Error('CRITICAL_IDENTITY_FAILURE: Secret payload empty');
-    const serviceAccount = JSON.parse(payload);
-    if (getApps().length === 0) {
-        initializeApp({ credential: cert(serviceAccount) });
+    const serviceAccount = JSON.parse(payload); // <--- OBLIGATORIO
+    if (!admin.apps.length) {
+        admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount) // <--- OBJETO
+        });
     }
-    return getFirestore();
+    return admin.firestore();
 }
 
 async function getSecret(name: string) {

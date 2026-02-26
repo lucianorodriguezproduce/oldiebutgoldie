@@ -1,20 +1,12 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
 import { SecretManagerServiceClient } from '@google-cloud/secret-manager';
-
-// NEUTRALIZACIÓN DIFERIDA DE INFRAESTRUCTURA (Búnker)
-if (process.env.GOOGLE_APPLICATION_CREDENTIALS && !process.env.GOOGLE_APPLICATION_CREDENTIALS.includes('/')) {
-    process.env.GOOGLE_APPLICATION_CREDENTIALS = "";
-    delete process.env.GOOGLE_APPLICATION_CREDENTIALS;
-}
-
+import admin from 'firebase-admin';
 const secretClient = new SecretManagerServiceClient();
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     const report: any = {
         timestamp: new Date().toISOString(),
-        version_sig: "BUNKER-STABILIZED",
+        version_sig: "BUNKER-STABILIZED-V3",
         steps: []
     };
 
@@ -27,15 +19,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const payload = version.payload?.data?.toString();
         if (!payload) throw new Error('Secret payload empty');
 
-        const serviceAccount = JSON.parse(payload);
+        const serviceAccount = JSON.parse(payload); // <--- OBLIGATORIO
 
         report.steps.push("2. Initializing Admin SDK (Direct Inject)");
-        const tempApp = initializeApp({
-            credential: cert(serviceAccount)
+        const tempApp = admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount) // <--- OBJETO
         }, 'probe-bunker-' + Date.now());
 
         report.steps.push("3. Testing Firestore Connectivity");
-        const db = getFirestore(tempApp);
+        const db = admin.firestore(tempApp);
         const collections = await db.listCollections();
         report.collections_count = collections.length;
 
