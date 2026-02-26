@@ -12,16 +12,19 @@ import {
     DollarSign,
     AlertCircle,
     Package,
-    Disc
+    Disc,
+    Edit2,
+    ChevronRight
 } from "lucide-react";
 
 import { tradeService } from "@/services/tradeService";
 import { inventoryService } from "@/services/inventoryService";
-import type { Trade, InventoryItem } from "@/types/inventory";
+import type { Trade, InventoryItem, TradeManifest } from "@/types/inventory";
 import { useLoading } from "@/context/LoadingContext";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
+import ManifestEditor from "@/components/Trade/ManifestEditor";
 
 export default function AdminTrades() {
     const { showLoading, hideLoading } = useLoading();
@@ -30,6 +33,10 @@ export default function AdminTrades() {
     const [loading, setLoading] = useState(true);
     const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
     const [itemDetails, setItemDetails] = useState<Record<string, InventoryItem>>({});
+
+    // Negotiation state
+    const [isEditing, setIsEditing] = useState(false);
+    const [editedManifest, setEditedManifest] = useState<TradeManifest | null>(null);
 
     useEffect(() => {
         fetchTrades();
@@ -45,14 +52,18 @@ export default function AdminTrades() {
             // Resolve item details for all trades
             const allItemIds = new Set<string>();
             fetchedTrades.forEach(t => {
-                t.manifest.offeredItems.forEach(id => allItemIds.add(id));
-                t.manifest.requestedItems.forEach(id => allItemIds.add(id));
+                if (t.manifest) {
+                    t.manifest.offeredItems.forEach(id => allItemIds.add(id));
+                    t.manifest.requestedItems.forEach(id => allItemIds.add(id));
+                }
             });
 
-            const details: Record<string, InventoryItem> = {};
+            const details: Record<string, InventoryItem> = { ...itemDetails };
             await Promise.all(Array.from(allItemIds).map(async id => {
-                const item = await inventoryService.getItemById(id);
-                if (item) details[id] = item;
+                if (!details[id]) {
+                    const item = await inventoryService.getItemById(id);
+                    if (item) details[id] = item;
+                }
             }));
             setItemDetails(details);
         } catch (error) {
@@ -64,31 +75,18 @@ export default function AdminTrades() {
     };
 
     const handleAcceptTrade = async (trade: Trade) => {
-        if (!trade.id) return;
+        if (!trade.id || !user) return;
+        if (trade.currentTurn !== user.uid) {
+            alert("No es tu turno para aceptar.");
+            return;
+        }
+
         const confirm = window.confirm("¿Confirmar resolución de Trade? Esto descontará stock automáticamente.");
         if (!confirm) return;
 
         showLoading("Resolviendo conflicto de stock...");
         try {
-            // 1. Discount stock for requested items (Admin's items being sent)
-            for (const itemId of trade.manifest.requestedItems) {
-                const response = await fetch('/api/inventory/reserve', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ itemId, quantity: 1 })
-                });
-
-                if (!response.ok) {
-                    const err = await response.json();
-                    throw new Error(`Error en reserva de ítem ${itemId}: ${err.error}`);
-                }
-            }
-
-            // 2. Update trade status
-            await tradeService.updateTradeStatus(trade.id, 'accepted');
-
-            // 3. Optional: Logic to register offered items into admin inventory? 
-            // For now, only the stock reduction is automated as per mission.
+            await tradeService.resolveTrade(trade.id, trade.manifest);
 
             alert("Trade aceptado y stock actualizado correctamente.");
             fetchTrades();
@@ -98,6 +96,32 @@ export default function AdminTrades() {
             alert(`Error crítico: ${error.message}`);
         } finally {
             hideLoading();
+        }
+    };
+
+
+    const handleCounterOffer = async () => {
+        if (!selectedTrade?.id || !editedManifest || !user) return;
+
+        showLoading("Enviando contra-oferta...");
+        try {
+            await tradeService.counterTrade(selectedTrade.id, editedManifest, user.uid);
+            alert("Contra-oferta enviada correctamente.");
+            setIsEditing(false);
+            fetchTrades();
+            setSelectedTrade(null);
+        } catch (error: any) {
+            console.error("Error sending counter offer:", error);
+            alert(`Error: ${error.message}`);
+        } finally {
+            hideLoading();
+        }
+    };
+
+    const startEditing = () => {
+        if (selectedTrade) {
+            setEditedManifest(selectedTrade.manifest);
+            setIsEditing(true);
         }
     };
 
@@ -120,13 +144,13 @@ export default function AdminTrades() {
     const getStatusBadge = (status: Trade['status']) => {
         switch (status) {
             case 'pending':
-                return <span className="bg-amber-500/10 text-amber-500 border border-amber-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 animate-pulse"><Clock className="h-3 w-3" /> PENDING_ACTION</span>;
+                return <span className="bg-amber-500/10 text-amber-500 border border-amber-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 animate-pulse"><Clock className="h-3 w-3" /> PENDING_INIT</span>;
             case 'accepted':
                 return <span className="bg-green-500/10 text-green-500 border border-green-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5"><CheckCircle2 className="h-3 w-3" /> COMPLETED</span>;
             case 'cancelled':
                 return <span className="bg-red-500/10 text-red-500 border border-red-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5"><XCircle className="h-3 w-3" /> CANCELLED</span>;
             case 'counter_offer':
-                return <span className="bg-blue-500/10 text-blue-500 border border-blue-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5"><ArrowRightLeft className="h-3 w-3" /> COUNTER_OFFER</span>;
+                return <span className="bg-blue-500/10 text-blue-500 border border-blue-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5"><ArrowRightLeft className="h-3 w-3" /> NEGOTIATING</span>;
             default:
                 return status;
         }
@@ -183,7 +207,8 @@ export default function AdminTrades() {
                                 key={trade.id}
                                 layoutId={trade.id}
                                 onClick={() => setSelectedTrade(trade)}
-                                className="group relative bg-white/[0.02] border border-white/5 rounded-[2rem] overflow-hidden hover:border-primary/30 transition-all cursor-pointer p-6 space-y-6"
+                                className={`group relative bg-white/[0.02] border rounded-[2rem] overflow-hidden transition-all cursor-pointer p-6 space-y-6 ${selectedTrade?.id === trade.id ? 'border-primary border-2 shadow-lg shadow-primary/10' : 'border-white/5 hover:border-primary/30'
+                                    }`}
                             >
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
@@ -223,6 +248,17 @@ export default function AdminTrades() {
                                         </span>
                                     </div>
                                 )}
+
+                                <div className="flex items-center justify-between pt-2">
+                                    <div className="text-[9px] font-black text-gray-600 uppercase tracking-widest flex items-center gap-1">
+                                        {trade.currentTurn === user?.uid ? (
+                                            <span className="text-primary flex items-center gap-1"><AlertCircle className="h-3 w-3" /> TU TURNO</span>
+                                        ) : (
+                                            <span>TURNO DEL CLIENTE</span>
+                                        )}
+                                    </div>
+                                    <ChevronRight className="h-4 w-4 text-gray-700 group-hover:text-primary transition-colors" />
+                                </div>
                             </motion.div>
                         ))}
                     </div>
@@ -237,57 +273,79 @@ export default function AdminTrades() {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            onClick={() => setSelectedTrade(null)}
+                            onClick={() => { setSelectedTrade(null); setIsEditing(false); }}
                             className="absolute inset-0 bg-black/80 backdrop-blur-xl"
                         />
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="relative w-full max-w-2xl bg-[#0a0a0a] border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl"
+                            className="relative w-full max-w-4xl bg-[#0a0a0a] border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl max-h-[90vh] flex flex-col"
                         >
-                            <div className="p-8 space-y-8">
+                            <div className="p-8 space-y-8 overflow-y-auto flex-1">
                                 <div className="flex items-center justify-between">
-                                    <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Detalle de Propuesta</h3>
-                                    {getStatusBadge(selectedTrade.status)}
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    {renderTradeItems(selectedTrade.manifest.offeredItems, "El Cliente Ofrece", "text-blue-400")}
-                                    {renderTradeItems(selectedTrade.manifest.requestedItems, "El Cliente Solicita", "text-orange-400")}
-                                </div>
-
-                                {selectedTrade.manifest.cashAdjustment !== 0 && (
-                                    <div className="bg-white/5 border border-white/5 p-6 rounded-[2rem] flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-3 bg-green-500/10 rounded-2xl">
-                                                <DollarSign className="h-5 w-5 text-green-500" />
-                                            </div>
-                                            <div>
-                                                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Compensación Económica</p>
-                                                <p className="text-lg font-black text-white">
-                                                    {selectedTrade.manifest.cashAdjustment > 0 ? "A tu favor: " : "A pagar: "}
-                                                    ${Math.abs(selectedTrade.manifest.cashAdjustment).toLocaleString()}
-                                                </p>
-                                            </div>
-                                        </div>
+                                    <div className="flex items-center gap-4">
+                                        <h3 className="text-2xl font-black text-white uppercase tracking-tighter">
+                                            {isEditing ? "Editando Propuesta" : "Detalle de Propuesta"}
+                                        </h3>
+                                        {getStatusBadge(selectedTrade.status)}
                                     </div>
-                                )}
+                                    <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest bg-white/5 px-3 py-1.5 rounded-xl">
+                                        Turno: {selectedTrade.currentTurn === user?.uid ? "Tú" : "Cliente"}
+                                    </div>
+                                </div>
 
-                                {selectedTrade.status === 'pending' && (
-                                    <div className="flex gap-4">
-                                        <button
-                                            onClick={() => handleAcceptTrade(selectedTrade)}
-                                            className="flex-1 flex items-center justify-center gap-3 py-4 bg-primary text-black rounded-2xl font-black uppercase tracking-widest hover:bg-white transition-all shadow-lg shadow-primary/20"
-                                        >
-                                            <CheckCircle2 className="h-5 w-5" /> Aceptar Propuesta
-                                        </button>
-                                        <button
-                                            onClick={() => handleDeclineTrade(selectedTrade)}
-                                            className="flex-1 flex items-center justify-center gap-3 py-4 bg-white/5 text-red-500 border border-red-500/20 rounded-2xl font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all"
-                                        >
-                                            <XCircle className="h-5 w-5" /> Rechazar
-                                        </button>
+                                <ManifestEditor
+                                    manifest={isEditing ? (editedManifest as TradeManifest) : selectedTrade.manifest}
+                                    onChange={(m) => setEditedManifest(m)}
+                                    isLocked={!isEditing}
+                                    myItems={[]} // TBD: Resolution of ownership
+                                    theirItems={[]}
+                                />
+
+                                {selectedTrade.status !== 'accepted' && selectedTrade.status !== 'cancelled' && (
+                                    <div className="flex gap-4 pt-8">
+                                        {isEditing ? (
+                                            <>
+                                                <button
+                                                    onClick={handleCounterOffer}
+                                                    className="flex-1 flex items-center justify-center gap-3 py-4 bg-primary text-black rounded-2xl font-black uppercase tracking-widest hover:bg-white transition-all shadow-lg shadow-primary/20"
+                                                >
+                                                    <ArrowRightLeft className="h-5 w-5" /> Enviar Contra-Oferta
+                                                </button>
+                                                <button
+                                                    onClick={() => setIsEditing(false)}
+                                                    className="px-8 py-4 bg-white/5 text-gray-400 rounded-2xl font-black uppercase tracking-widest hover:bg-white/10 transition-all"
+                                                >
+                                                    Cancelar
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <>
+                                                {selectedTrade.currentTurn === user?.uid && (
+                                                    <button
+                                                        onClick={() => handleAcceptTrade(selectedTrade)}
+                                                        className="flex-1 flex items-center justify-center gap-3 py-4 bg-primary text-black rounded-2xl font-black uppercase tracking-widest hover:bg-white transition-all shadow-lg shadow-primary/20"
+                                                    >
+                                                        <CheckCircle2 className="h-5 w-5" /> Aceptar Propuesta
+                                                    </button>
+                                                )}
+                                                {selectedTrade.currentTurn === user?.uid && (
+                                                    <button
+                                                        onClick={startEditing}
+                                                        className="flex-1 flex items-center justify-center gap-3 py-4 bg-white/5 text-white border border-white/10 rounded-2xl font-black uppercase tracking-widest hover:bg-primary hover:text-black transition-all"
+                                                    >
+                                                        <Edit2 className="h-5 w-5" /> Regatear
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={() => handleDeclineTrade(selectedTrade)}
+                                                    className="flex-1 flex items-center justify-center gap-3 py-4 bg-white/5 text-red-500 border border-red-500/20 rounded-2xl font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all"
+                                                >
+                                                    <XCircle className="h-5 w-5" /> Rechazar
+                                                </button>
+                                            </>
+                                        )}
                                     </div>
                                 )}
 

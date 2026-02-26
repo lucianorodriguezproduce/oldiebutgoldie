@@ -25,17 +25,22 @@ export interface InventoryItem {
     };
 }
 
+export interface TradeManifest {
+    offeredItems: string[]; // Inventory IDs
+    requestedItems: string[]; // Inventory IDs
+    cashAdjustment: number;
+}
+
 export interface Trade {
     id?: string;
     participants: {
         senderId: string;
         receiverId: string; // Default to Admin
     };
-    manifest: {
-        offeredItems: string[]; // Inventory IDs
-        requestedItems: string[]; // Inventory IDs
-        cashAdjustment: number;
-    };
+    manifest: TradeManifest;
     status: "pending" | "accepted" | "counter_offer" | "completed" | "cancelled";
+    currentTurn: string; // UID of the user who must decide
+    negotiationHistory: TradeManifest[]; // Previous versions of the manifest
     timestamp: any;
 }
+

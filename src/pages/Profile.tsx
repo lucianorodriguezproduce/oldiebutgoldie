@@ -25,6 +25,7 @@ import {
     Globe,
     Handshake,
     CheckCircle2,
+    ArrowRightLeft,
     X,
     FileText,
     Download,
@@ -92,6 +93,11 @@ interface OrderItem {
     unique_visitors?: string[];
 }
 
+import { tradeService } from "@/services/tradeService";
+import { inventoryService } from "@/services/inventoryService";
+import type { Trade, InventoryItem, TradeManifest } from "@/types/inventory";
+import ManifestEditor from "@/components/Trade/ManifestEditor";
+
 export default function Profile() {
     const { user, isAdmin } = useAuth();
     const { showLoading, hideLoading, isLoading } = useLoading();
@@ -99,12 +105,22 @@ export default function Profile() {
     const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
     const [ordersLoading, setOrdersLoading] = useState(true);
     const [selectedOrder, setSelectedOrder] = useState<OrderItem | null>(null);
-    const [searchParams, setSearchParams] = useSearchParams();
+
+    // Trades State
+    const [trades, setTrades] = useState<Trade[]>([]);
+    const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
+    const [activeTab, setActiveTab] = useState<"orders" | "trades">("orders");
+    const [itemDetails, setItemDetails] = useState<Record<string, InventoryItem>>({});
 
     // Negotiation State
+    const [isEditing, setIsEditing] = useState(false);
+    const [editedManifest, setEditedManifest] = useState<TradeManifest | null>(null);
+
+    const [searchParams, setSearchParams] = useSearchParams();
     const [counterOfferPrice, setCounterOfferPrice] = useState("");
     const [isNegotiating, setIsNegotiating] = useState(false);
     const [showCounterInput, setShowCounterInput] = useState(false);
+
 
     const handleAcceptOffer = async () => {
         if (!selectedOrder || isLoading) return;
@@ -175,7 +191,7 @@ export default function Profile() {
 
         showLoading("Sincronizando Perfil de Coleccionista...");
 
-        // Fetch Orders (from the global orders collection, filtered by user_id)
+        // Fetch Orders
         const qOrders = query(
             collection(db, "orders"),
             where("user_id", "==", user.uid),
@@ -189,15 +205,36 @@ export default function Profile() {
             setOrdersLoading(false);
         });
 
+        fetchTrades();
+
         return () => unsubOrders();
     }, [user]);
 
-    // Unified Global Loader Management for Profile fetching
-    useEffect(() => {
-        if (!ordersLoading) {
-            hideLoading();
+    const fetchTrades = async () => {
+        if (!user) return;
+        try {
+            const fetchedTrades = await tradeService.getUserTrades(user.uid);
+            setTrades(fetchedTrades);
+
+            // Resolve item details
+            const allItemIds = new Set<string>();
+            fetchedTrades.forEach(t => {
+                t.manifest.offeredItems.forEach(id => allItemIds.add(id));
+                t.manifest.requestedItems.forEach(id => allItemIds.add(id));
+            });
+
+            const details: Record<string, InventoryItem> = { ...itemDetails };
+            await Promise.all(Array.from(allItemIds).map(async id => {
+                if (!details[id]) {
+                    const item = await inventoryService.getItemById(id);
+                    if (item) details[id] = item;
+                }
+            }));
+            setItemDetails(details);
+        } catch (error) {
+            console.error("Error fetching user trades:", error);
         }
-    }, [ordersLoading]);
+    };
 
     const handleAcceptProposal = async (order: OrderItem) => {
         if (!user) return;
@@ -208,9 +245,8 @@ export default function Profile() {
                 status: "venta_finalizada"
             });
 
-            // Notify Admin
             await addDoc(collection(db, "notifications"), {
-                user_id: "admin", // Special flag for administrative notifications
+                user_id: "admin",
                 title: "Venta Finalizada 🎉",
                 message: `${user.displayName || 'Un cliente'} ha ACEPTADO el trato por el pedido ${order.order_number || order.id}.`,
                 read: false,
@@ -248,7 +284,6 @@ export default function Profile() {
                 })
             });
 
-            // Notify Admin
             await addDoc(collection(db, "notifications"), {
                 user_id: "admin",
                 title: "Nueva Contraoferta del Usuario",
@@ -270,6 +305,49 @@ export default function Profile() {
             hideLoading();
         }
     };
+
+    const handleAcceptTrade = async (trade: Trade) => {
+        if (!trade.id || !user) return;
+        if (trade.currentTurn !== user.uid) return;
+
+        if (confirm("¿Aceptar esta propuesta de intercambio?")) {
+            showLoading("Finalizando negociación...");
+            try {
+                // If the user has requested items from the Admin (receiver), 
+                // typically the Admin's stock should be checked.
+                // But in symmetric P2P/B2C, we should ensure the turn is correct.
+
+                await tradeService.resolveTrade(trade.id, trade.manifest);
+                alert("¡Trato hecho! El intercambio ha sido aceptado.");
+                fetchTrades();
+                setSelectedTrade(null);
+            } catch (error) {
+                console.error("Error accepting trade:", error);
+                alert("Error al aceptar el intercambio.");
+            } finally {
+                hideLoading();
+            }
+        }
+    };
+
+    const handleCounterOfferTrade = async () => {
+        if (!selectedTrade?.id || !editedManifest || !user) return;
+
+        showLoading("Enviando contraoferta...");
+        try {
+            await tradeService.counterTrade(selectedTrade.id, editedManifest, user.uid);
+            alert("Contraoferta enviada con éxito.");
+            setIsEditing(false);
+            fetchTrades();
+            setSelectedTrade(null);
+        } catch (error: any) {
+            console.error("Error counter offering trade:", error);
+            alert(`Error: ${error.message}`);
+        } finally {
+            hideLoading();
+        }
+    };
+
 
     const downloadReceipt = (order: OrderItem) => {
         const content = `
@@ -374,58 +452,131 @@ export default function Profile() {
                 </div>
             </header>
 
-            {/* Content Area - Centered Activity Feed */}
+            {/* Content Area - Tabbed View */}
             <div className="max-w-4xl mx-auto w-full py-12 md:py-20">
                 <div className="space-y-10">
-                    <div className="flex items-end justify-between border-b border-white/5 pb-8">
-                        <div>
+                    <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-white/5 pb-8 gap-6">
+                        <div className="space-y-4">
                             <h2 className="text-4xl font-display font-black text-white tracking-tightest leading-none uppercase">
-                                Mis <span className="text-primary">Pedidos</span>
+                                Actividad de <span className="text-primary">Coleccionista</span>
                             </h2>
-                            <p className="text-gray-500 mt-4 text-lg font-medium">
-                                Historial de intenciones de compra y venta registradas.
-                            </p>
+                            <div className="flex bg-white/5 p-1 rounded-2xl w-fit">
+                                <button
+                                    onClick={() => setActiveTab("orders")}
+                                    className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === "orders" ? "bg-primary text-black" : "text-gray-500 hover:text-white"}`}
+                                >
+                                    Pedidos
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab("trades")}
+                                    className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === "trades" ? "bg-primary text-black" : "text-gray-500 hover:text-white"}`}
+                                >
+                                    Intercambios
+                                </button>
+                            </div>
                         </div>
                         <Badge className="bg-white/5 text-gray-500 border-white/10 px-4 py-2 rounded-xl font-bold">
-                            {(orderItems || []).length} ARCHIVOS
+                            {activeTab === "orders" ? (orderItems || []).length : trades.length} {activeTab === "orders" ? "ARCHIVOS" : "NEGOCIACIONES"}
                         </Badge>
                     </div>
 
-                    {ordersLoading ? (
-                        <div className="space-y-4">
-                            {Array.from({ length: 4 }).map((_, i) => (
-                                <div key={i} className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 h-32 animate-pulse" />
-                            ))}
-                        </div>
-                    ) : (orderItems || []).length === 0 ? (
-                        <div className="py-20 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[3rem] space-y-6 text-center">
-                            <ShoppingBag className="h-12 w-12 text-gray-700" />
-                            <div className="space-y-2">
-                                <p className="text-xl font-display font-medium text-gray-500">¿Buscando tu primer disco?</p>
-                                <Link to="/" className="text-primary font-black uppercase tracking-widest text-[10px] hover:underline underline-offset-8">Iniciar Búsqueda</Link>
-                            </div>
-                        </div>
+                    {activeTab === "orders" ? (
+                        <>
+                            {ordersLoading ? (
+                                <div className="space-y-4">
+                                    {Array.from({ length: 4 }).map((_, i) => (
+                                        <div key={i} className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 h-32 animate-pulse" />
+                                    ))}
+                                </div>
+                            ) : (orderItems || []).length === 0 ? (
+                                <div className="py-20 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[3rem] space-y-6 text-center">
+                                    <ShoppingBag className="h-12 w-12 text-gray-700" />
+                                    <div className="space-y-2">
+                                        <p className="text-xl font-display font-medium text-gray-500">¿Buscando tu primer disco?</p>
+                                        <Link to="/" className="text-primary font-black uppercase tracking-widest text-[10px] hover:underline underline-offset-8">Iniciar Búsqueda</Link>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-5">
+                                    {(orderItems || []).map((order, i) => (
+                                        <motion.div
+                                            key={order.id}
+                                            initial={{ opacity: 0, y: 15 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: i * 0.04 }}
+                                        >
+                                            <OrderCard
+                                                key={`${order.id}-${order.items?.length || 0}-${order.status}`}
+                                                order={order}
+                                                context="profile"
+                                                onClick={() => setSelectedOrder(order)}
+                                            />
+                                        </motion.div>
+                                    ))}
+                                </div>
+                            )}
+                        </>
                     ) : (
                         <div className="space-y-5">
-                            {(orderItems || []).map((order, i) => (
-                                <motion.div
-                                    key={order.id}
-                                    initial={{ opacity: 0, y: 15 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: i * 0.04 }}
-                                >
-                                    <OrderCard
-                                        key={`${order.id}-${order.items?.length || 0}-${order.status}`}
-                                        order={order}
-                                        context="profile"
-                                        onClick={() => setSelectedOrder(order)}
-                                    />
-                                </motion.div>
-                            ))}
+                            {trades.length === 0 ? (
+                                <div className="py-20 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[3rem] space-y-6 text-center">
+                                    <Handshake className="h-12 w-12 text-gray-700" />
+                                    <p className="text-xl font-display font-medium text-gray-500">No tienes propuestas de canje activas.</p>
+                                </div>
+                            ) : (
+                                trades.map((trade, i) => (
+                                    <motion.div
+                                        key={trade.id}
+                                        initial={{ opacity: 0, y: 15 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: i * 0.04 }}
+                                        onClick={() => setSelectedTrade(trade)}
+                                        className="group relative bg-white/[0.02] border border-white/5 rounded-[2rem] p-6 space-y-6 cursor-pointer hover:border-primary/30 transition-all"
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2.5 bg-white/5 rounded-xl">
+                                                    <ArrowRightLeft className="h-4 w-4 text-gray-400" />
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest leading-none">Canje ID</span>
+                                                    <span className="text-xs font-bold text-white">#{trade.id?.slice(-6).toUpperCase()}</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-4">
+                                                <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest bg-white/5 px-3 py-1.5 rounded-xl">
+                                                    Turno: {trade.currentTurn === user?.uid ? <span className="text-primary">TUYO</span> : "ESPERANDO"}
+                                                </div>
+                                                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${trade.status === 'accepted' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
+                                                    trade.status === 'cancelled' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                                                        'bg-blue-500/10 text-blue-500 border-blue-500/20'
+                                                    }`}>
+                                                    {trade.status}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center justify-between text-white">
+                                            <div className="flex gap-8">
+                                                <div className="space-y-1">
+                                                    <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Entregas</p>
+                                                    <p className="text-sm font-black">{trade.manifest.offeredItems.length} Discos</p>
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Recibes</p>
+                                                    <p className="text-sm font-black">{trade.manifest.requestedItems.length} Discos</p>
+                                                </div>
+                                            </div>
+                                            <ChevronDown className="h-5 w-5 text-gray-700 -rotate-90 group-hover:text-primary transition-all" />
+                                        </div>
+                                    </motion.div>
+                                ))
+                            )}
                         </div>
                     )}
                 </div>
             </div>
+
 
             {/* Order Details Drawer */}
             <OrderDetailsDrawer
@@ -800,6 +951,113 @@ export default function Profile() {
                     </div>
                 )}
             </OrderDetailsDrawer>
+            {/* Trade Details Modal */}
+            <AnimatePresence>
+                {selectedTrade && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => { setSelectedTrade(null); setIsEditing(false); }}
+                            className="absolute inset-0 bg-black/80 backdrop-blur-xl"
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="relative w-full max-w-4xl bg-[#0a0a0a] border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl max-h-[90vh] flex flex-col"
+                        >
+                            <div className="p-8 space-y-8 overflow-y-auto flex-1">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-4">
+                                        <h3 className="text-2xl font-black text-white uppercase tracking-tighter">
+                                            {isEditing ? "Editando Propuesta" : "Detalle de Canje"}
+                                        </h3>
+                                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${selectedTrade.status === 'accepted' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
+                                            'bg-blue-500/10 text-blue-500 border-blue-500/20'
+                                            }`}>
+                                            {selectedTrade.status}
+                                        </span>
+                                    </div>
+                                    <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest bg-white/5 px-3 py-1.5 rounded-xl">
+                                        Turno: {selectedTrade.currentTurn === user?.uid ? <span className="text-primary">Tu Turno</span> : "Oldie but Goldie"}
+                                    </div>
+                                </div>
+
+                                <ManifestEditor
+                                    manifest={isEditing ? (editedManifest as TradeManifest) : selectedTrade.manifest}
+                                    onChange={(m) => setEditedManifest(m)}
+                                    isLocked={!isEditing}
+                                    myItems={[]} // TBD in Phase Delta
+                                    theirItems={[]}
+                                />
+
+                                {selectedTrade.status !== 'accepted' && selectedTrade.status !== 'cancelled' && (
+                                    <div className="flex gap-4 pt-8">
+                                        {isEditing ? (
+                                            <>
+                                                <button
+                                                    onClick={handleCounterOfferTrade}
+                                                    className="flex-1 flex items-center justify-center gap-3 py-4 bg-primary text-black rounded-2xl font-black uppercase tracking-widest hover:bg-white transition-all shadow-lg shadow-primary/20"
+                                                >
+                                                    <ArrowRightLeft className="h-5 w-5" /> Enviar Contraoferta
+                                                </button>
+                                                <button
+                                                    onClick={() => setIsEditing(false)}
+                                                    className="px-8 py-4 bg-white/5 text-gray-400 rounded-2xl font-black uppercase tracking-widest hover:bg-white/10 transition-all"
+                                                >
+                                                    Cancelar
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <>
+                                                {selectedTrade.currentTurn === user?.uid && (
+                                                    <button
+                                                        onClick={() => handleAcceptTrade(selectedTrade)}
+                                                        className="flex-1 flex items-center justify-center gap-3 py-4 bg-primary text-black rounded-2xl font-black uppercase tracking-widest hover:bg-white transition-all shadow-lg shadow-primary/20"
+                                                    >
+                                                        <CheckCircle2 className="h-5 w-5" /> Aceptar Canje
+                                                    </button>
+                                                )}
+                                                {selectedTrade.currentTurn === user?.uid && (
+                                                    <button
+                                                        onClick={() => {
+                                                            setEditedManifest(selectedTrade.manifest);
+                                                            setIsEditing(true);
+                                                        }}
+                                                        className="flex-1 flex items-center justify-center gap-3 py-4 bg-white/5 text-white border border-white/10 rounded-2xl font-black uppercase tracking-widest hover:bg-primary hover:text-black transition-all"
+                                                    >
+                                                        <Edit3 className="h-5 w-5" /> Mejorar Oferta
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={() => setSelectedTrade(null)}
+                                                    className="flex-1 flex items-center justify-center gap-3 py-4 bg-white/5 text-gray-500 border border-white/10 rounded-2xl font-black uppercase tracking-widest hover:bg-white/10 transition-all"
+                                                >
+                                                    Cerrar
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
+                                )}
+
+                                {selectedTrade.status === 'accepted' && (
+                                    <div className="p-6 bg-green-500/10 border border-green-500/20 rounded-[2rem] flex items-center gap-4">
+                                        <div className="p-3 bg-green-500 rounded-2xl">
+                                            <CheckCircle2 className="h-6 w-6 text-black" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="text-[10px] font-black text-green-500 uppercase tracking-widest">Canje Realizado</p>
+                                            <p className="text-sm font-bold text-white">El intercambio ha sido confirmado. Coordina la entrega por WhatsApp.</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div >
     );
 }
