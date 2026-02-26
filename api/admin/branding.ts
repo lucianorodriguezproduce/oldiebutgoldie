@@ -7,7 +7,7 @@ export const config = {
 };
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { initBunkerIdentity, initDriveIdentity } from '../_lib/bunker.js';
+import { initBunkerIdentity, initDriveIdentity } from '../_lib/bunker';
 import { Readable } from 'stream';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -31,7 +31,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const drive = await initDriveIdentity();
 
         // 2. ID de Carpeta (Hardcoded para evitar fallos de Secret Manager)
-        const folderId = '1djP4_hmGCbzgH-WMNSrek46VySg-gVs4';
+        const folderId = '1djP4_hmGCbzgH-WMNSrek46VySg-gVs4'.trim();
 
         // 3. Limpieza de Base64 y preparación de Buffer
         // Eliminamos el prefijo "data:image/...;base64," si existe
