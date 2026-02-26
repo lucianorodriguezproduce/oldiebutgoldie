@@ -125,12 +125,12 @@ export const Navbar = () => {
                                                         repeat: Infinity,
                                                         ease: "easeInOut"
                                                     }}
-                                                    className="absolute inset-0 w-3 h-3 bg-[#CCFF00] rounded-full blur-[2px]"
+                                                    className="absolute inset-0 w-3 h-3 bg-secondary rounded-full blur-[2px]"
                                                 />
                                                 <motion.span
                                                     initial={{ scale: 0 }}
                                                     animate={{ scale: 1 }}
-                                                    className="relative block w-3 h-3 bg-[#CCFF00] rounded-full border-2 border-black shadow-[0_0_10px_rgba(204,255,0,0.8)]"
+                                                    className="relative block w-3 h-3 bg-secondary rounded-full border-2 border-black shadow-[0_0_10px_rgba(255,77,0,0.8)]"
                                                 />
                                             </div>
                                         )}
@@ -210,12 +210,12 @@ export const Navbar = () => {
                                                         repeat: Infinity,
                                                         ease: "easeInOut"
                                                     }}
-                                                    className="absolute inset-0 w-4 h-4 bg-[#CCFF00] rounded-full blur-[4px]"
+                                                    className="absolute inset-0 w-4 h-4 bg-secondary rounded-full blur-[4px]"
                                                 />
                                                 <motion.span
                                                     initial={{ scale: 0 }}
                                                     animate={{ scale: 1 }}
-                                                    className="relative block w-4 h-4 bg-[#CCFF00] rounded-full border-2 border-[#0A0A0A] shadow-[0_0_15px_rgba(204,255,0,0.8)]"
+                                                    className="relative block w-4 h-4 bg-secondary rounded-full border-2 border-[#0A0A0A] shadow-[0_0_15px_rgba(255,77,0,0.8)]"
                                                 />
                                             </div>
                                         )}

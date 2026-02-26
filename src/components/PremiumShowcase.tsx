@@ -60,8 +60,8 @@ export function PremiumShowcase() {
                 <div className="space-y-1">
                     {TEXTS.showcase.subtitle && (
                         <div className="flex items-center justify-center gap-2">
-                            <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
-                            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-500/80">
+                            <Star className="h-3 w-3 text-primary fill-primary" />
+                            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/80">
                                 {TEXTS.showcase.subtitle}
                             </span>
                         </div>
@@ -108,10 +108,10 @@ export function PremiumShowcase() {
                                     key={order.id}
                                     whileTap={{ scale: 0.95 }}
                                     onClick={() => navigate(`/orden/${order.id}?action=buy`)}
-                                    className="flex-none w-[280px] md:w-[350px] snap-center group relative overflow-hidden rounded-[2.5rem] bg-white/5 border border-white/10 backdrop-blur-xl shadow-2xl transition-all hover:border-yellow-500/30 text-left"
+                                    className="flex-none w-[280px] md:w-[350px] snap-center group relative overflow-hidden rounded-[2.5rem] bg-white/5 border border-white/10 backdrop-blur-xl shadow-2xl transition-all hover:border-primary/30 text-left"
                                 >
                                     {/* Card Background Accent */}
-                                    <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                                    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
 
                                     <div className="p-6 space-y-6">
                                         {/* Cover Image Container */}
@@ -146,7 +146,7 @@ export function PremiumShowcase() {
                                                 <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] block truncate">
                                                     {artist}
                                                 </span>
-                                                <h3 className="text-xl font-display font-black text-white uppercase tracking-tight leading-none line-clamp-2 group-hover:text-yellow-400 transition-colors">
+                                                <h3 className="text-xl font-display font-black text-white uppercase tracking-tight leading-none line-clamp-2 group-hover:text-primary transition-colors">
                                                     {title}
                                                 </h3>
                                             </div>
@@ -158,7 +158,7 @@ export function PremiumShowcase() {
                                                         {currency === "USD" ? "US$" : "$"} {price?.toLocaleString()}
                                                     </span>
                                                 </div>
-                                                <div className="p-3 bg-white/5 group-hover:bg-yellow-500 group-hover:text-black rounded-full transition-all border border-white/5 group-hover:border-yellow-500 shadow-xl">
+                                                <div className="p-3 bg-white/5 group-hover:bg-primary group-hover:text-black rounded-full transition-all border border-white/5 group-hover:border-primary shadow-xl">
                                                     <ChevronRight className="h-5 w-5" />
                                                 </div>
                                             </div>
@@ -167,9 +167,9 @@ export function PremiumShowcase() {
 
                                     {/* Corner Badges */}
                                     <div className="absolute top-4 right-4 flex flex-col items-end gap-2">
-                                        <div className="px-3 py-1 bg-yellow-500/10 border border-yellow-500/20 backdrop-blur-md rounded-lg flex items-center gap-1.5">
-                                            <Disc className="h-3 w-3 text-yellow-500" />
-                                            <span className="text-[9px] font-black text-yellow-500 uppercase tracking-widest">
+                                        <div className="px-3 py-1 bg-primary/10 border border-primary/20 backdrop-blur-md rounded-lg flex items-center gap-1.5">
+                                            <Disc className="h-3 w-3 text-primary" />
+                                            <span className="text-[9px] font-black text-primary uppercase tracking-widest">
                                                 {TEXTS.showcase.officialStore}
                                             </span>
                                         </div>
@@ -196,7 +196,7 @@ export function PremiumShowcase() {
                 {orders.map((_, idx) => (
                     <div
                         key={idx}
-                        className={`h-1 rounded-full transition-all duration-300 ${idx === activeIndex ? 'w-4 bg-yellow-500' : 'w-1 bg-white/20'}`}
+                        className={`h-1 rounded-full transition-all duration-300 ${idx === activeIndex ? 'w-4 bg-primary' : 'w-1 bg-white/20'}`}
                     />
                 ))}
             </div>

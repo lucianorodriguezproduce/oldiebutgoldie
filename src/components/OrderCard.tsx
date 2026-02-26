@@ -139,9 +139,9 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
             case 'pending':
             default:
                 return (
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-yellow-500/10 border border-yellow-500/20 backdrop-blur-md">
-                        <Clock className="w-3.5 h-3.5 text-yellow-500" />
-                        <span className="text-[10px] uppercase tracking-widest font-black text-yellow-500">{statusLabel}</span>
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 backdrop-blur-md">
+                        <Clock className="w-3.5 h-3.5 text-primary" />
+                        <span className="text-[10px] uppercase tracking-widest font-black text-primary">{statusLabel}</span>
                     </div>
                 );
         }
@@ -183,8 +183,8 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
         return (
             <div className="flex flex-col gap-2 w-full mt-4">
                 {(isSellOrder && latestUserPrice) && (
-                    <div className={`bg-orange-500/10 border border-orange-500/20 px-3 py-2 rounded-xl flex flex-col items-end shadow-sm shadow-orange-500/5 ${context === 'admin' ? "mr-4" : ""}`}>
-                        <span className="text-[9px] font-black uppercase tracking-widest text-orange-400">
+                    <div className={`bg-secondary/10 border border-secondary/20 px-3 py-2 rounded-xl flex flex-col items-end shadow-sm shadow-secondary/5 ${context === 'admin' ? "mr-4" : ""}`}>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-secondary">
                             {historyUserOffer ? "Última Contraoferta Cliente" : "Oferta del Vendedor"}
                         </span>
                         <span className="text-sm font-black text-white">
@@ -233,7 +233,7 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
             className={`
                 group relative bg-white/[0.02] border rounded-[1.5rem] overflow-hidden transition-all duration-300
                 ${context !== 'public' ? 'cursor-pointer hover:border-primary/30' : 'hover:border-white/10'}
-                ${isHot ? "border-orange-500/50 shadow-[0_0_15px_rgba(249,115,22,0.15)]" : (order.admin_offer_price ? "border-purple-500/20" : "border-white/5")}
+                ${isHot ? "border-secondary/50 shadow-[0_0_15px_rgba(255,77,0,0.15)]" : (order.admin_offer_price ? "border-purple-500/20" : "border-white/5")}
             `}
         >
             {/* Context Badge Corner - Floating Island to prevent overlaps */}
@@ -310,7 +310,7 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                         )}
                         {(isBatch || order.is_admin_offer) && (
                             order.is_admin_offer || order.user_id === 'oldiebutgoldie' || order.user_email === 'admin@discography.ai' ? (
-                                <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-yellow-500/20 to-yellow-700/20 border border-yellow-500/50 text-yellow-500 text-[9px] font-black uppercase tracking-widest shadow-[0_0_10px_rgba(234,179,8,0.2)]">
+                                <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-primary/20 to-primary/40 border border-primary/50 text-primary text-[9px] font-black uppercase tracking-widest shadow-[0_0_10px_rgba(255,184,0,0.2)]">
                                     {TEXTS.badges.storeObg}
                                 </span>
                             ) : (
@@ -338,7 +338,7 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 md:gap-3 mt-1">
-                        <span className={`px-2 md:px-3 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest border ${intent.includes("COMPRAR") ? "bg-green-500/10 text-green-400 border-green-500/20" : "bg-orange-500/10 text-orange-400 border-orange-500/20"
+                        <span className={`px-2 md:px-3 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest border ${intent.includes("COMPRAR") ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-secondary/10 text-secondary border-secondary/20"
                             }`}>
                             {intent}
                         </span>
@@ -395,7 +395,7 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                         <Link
                             to={`/orden/${order.id}?action=buy`}
                             onClick={(e) => e.stopPropagation()}
-                            className="w-full px-6 py-4 bg-gradient-to-r from-yellow-500 to-orange-500 text-black font-black uppercase tracking-widest text-[11px] md:text-sm rounded-xl shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 hover:-translate-y-0.5 transition-all text-center lg:mt-auto"
+                            className="w-full px-6 py-4 bg-gradient-to-r from-primary to-secondary text-black font-black uppercase tracking-widest text-[11px] md:text-sm rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all text-center lg:mt-auto"
                         >
                             ¡COMPRAR!
                         </Link>

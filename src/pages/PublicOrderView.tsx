@@ -310,7 +310,7 @@ export default function PublicOrderView() {
                                     <ChevronRight className="h-5 w-5 md:h-6 md:w-6 rotate-180 group-hover:-translate-x-1 transition-transform" />
                                     <span className="text-[10px] md:text-xs font-black uppercase tracking-widest">{TEXTS.navigation.activity}</span>
                                 </Link>
-                                <span className="bg-yellow-500/10 text-yellow-500 text-[8px] md:text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded shadow-lg shadow-yellow-500/10 border border-yellow-500/20">
+                                <span className="bg-primary/10 text-primary text-[8px] md:text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded shadow-lg shadow-primary/10 border border-primary/20">
                                     {TEXTS.activity.availableNow}
                                 </span>
                             </div>
@@ -318,7 +318,7 @@ export default function PublicOrderView() {
 
                         <div className="flex items-center gap-4 flex-wrap">
                             <div className="flex flex-col gap-1 items-start">
-                                <h1 className={`text-4xl md:text-5xl font-display font-black tracking-tightest leading-none transition-colors ${isAdminOrder ? 'bg-gradient-to-r from-yellow-200 via-yellow-500 to-yellow-700 bg-clip-text text-transparent drop-shadow-xl' : 'text-white hover:text-primary'}`}>
+                                <h1 className={`text-4xl md:text-5xl font-display font-black tracking-tightest leading-none transition-colors ${isAdminOrder ? 'bg-gradient-to-r from-primary/60 via-primary to-secondary bg-clip-text text-transparent drop-shadow-xl' : 'text-white hover:text-primary'}`}>
                                     {displayArtist || displayAlbum}
                                 </h1>
                                 {displayAlbum && (displayArtist || isBatch) && (
@@ -328,7 +328,7 @@ export default function PublicOrderView() {
                                 )}
                             </div>
                             {isAdminOrder ? (
-                                <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-yellow-500/20 to-yellow-700/20 border border-yellow-500/50 text-yellow-500 text-[9px] font-black uppercase tracking-widest shadow-[0_0_10px_rgba(234,179,8,0.2)]">
+                                <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-primary/20 to-primary/40 border border-primary/50 text-primary text-[9px] font-black uppercase tracking-widest shadow-[0_0_10px_rgba(255,184,0,0.2)]">
                                     {TEXTS.badges.storeObg}
                                 </span>
                             ) : (
@@ -375,7 +375,7 @@ export default function PublicOrderView() {
                     </div>
 
                     {order.thumbnailUrl && (
-                        <div className={`w-24 h-24 md:w-32 md:h-32 rounded-2xl overflow-hidden bg-white/5 border shadow-2xl flex-shrink-0 ${isAdminOrder ? 'border-yellow-500/50 shadow-yellow-500/20 scale-110 md:w-48 md:h-48' : 'border-white/10'}`}>
+                        <div className={`w-24 h-24 md:w-32 md:h-32 rounded-2xl overflow-hidden bg-white/5 border shadow-2xl flex-shrink-0 ${isAdminOrder ? 'border-primary/50 shadow-primary/20 scale-110 md:w-48 md:h-48' : 'border-white/10'}`}>
                             <img
                                 src={isAdminOrder ? (order.imageUrl || order.details?.cover_image || order.thumbnailUrl) : order.thumbnailUrl}
                                 alt="Lote reference"
@@ -417,9 +417,9 @@ export default function PublicOrderView() {
 
                                             {isAdminOrder && item.condition && (
                                                 <div className="mt-1 flex items-center gap-2 text-[10px] font-mono text-gray-400">
-                                                    <span className="text-yellow-500/70">Media: {item.condition.split('/')[0] || item.condition}</span>
+                                                    <span className="text-primary/70">Media: {item.condition.split('/')[0] || item.condition}</span>
                                                     {item.condition.includes('/') && <span className="text-gray-600">|</span>}
-                                                    {item.condition.includes('/') && <span className="text-yellow-500/70">Cover: {item.condition.split('/')[1]}</span>}
+                                                    {item.condition.includes('/') && <span className="text-primary/70">Cover: {item.condition.split('/')[1]}</span>}
                                                 </div>
                                             )}
 
@@ -481,8 +481,8 @@ export default function PublicOrderView() {
                             if (!userPrice) return null;
 
                             return (
-                                <div className="p-8 rounded-[2.5rem] bg-orange-500/5 border border-orange-500/10 flex flex-col justify-between group hover:bg-orange-500/10 transition-all">
-                                    <p className="text-[10px] uppercase tracking-[0.2em] font-black text-orange-400/70 mb-4">
+                                <div className="p-8 rounded-[2.5rem] bg-secondary/5 border border-secondary/10 flex flex-col justify-between group hover:bg-secondary/10 transition-all">
+                                    <p className="text-[10px] uppercase tracking-[0.2em] font-black text-secondary/70 mb-4">
                                         {historyUserOffer ? TEXTS.common.latestUserOffer : TEXTS.common.initialUserOffer}
                                     </p>
                                     <div className="flex items-baseline gap-2">
@@ -548,7 +548,7 @@ export default function PublicOrderView() {
 
                         if (!['cancelled'].includes(order.status)) {
                             return (
-                                <div className="fixed bottom-0 left-0 right-0 z-[100] md:static mt-0 md:mt-8 p-4 md:p-8 bg-black/90 md:bg-gradient-to-br md:from-yellow-500/10 md:to-orange-600/10 border-t md:border border-white/10 md:border-yellow-500/30 md:rounded-[2.5rem] flex flex-col md:flex-row items-center gap-4 md:gap-6 justify-between shadow-[0_-20px_40px_rgba(0,0,0,0.5)] md:shadow-[0_0_30px_rgba(234,179,8,0.1)] backdrop-blur-md md:backdrop-blur-none transition-all">
+                                <div className="fixed bottom-0 left-0 right-0 z-[100] md:static mt-0 md:mt-8 p-4 md:p-8 bg-black/90 md:bg-gradient-to-br md:from-primary/10 md:to-secondary/10 border-t md:border border-white/10 md:border-primary/30 md:rounded-[2.5rem] flex flex-col md:flex-row items-center gap-4 md:gap-6 justify-between shadow-[0_-20px_40px_rgba(0,0,0,0.5)] md:shadow-[0_0_30px_rgba(255,184,0,0.1)] backdrop-blur-md md:backdrop-blur-none transition-all">
                                     <div className="hidden md:block space-y-2 text-left">
                                         <h4 className="text-xl font-display font-black text-white uppercase tracking-tight">Adquirir Coleccionable</h4>
                                         <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Asegura esta pieza antes que otro coleccionista</p>
@@ -570,7 +570,7 @@ export default function PublicOrderView() {
                                                     <button
                                                         onClick={handleMakeOffer}
                                                         disabled={!offerAmount}
-                                                        className="px-3 md:px-4 py-2 bg-orange-500 hover:bg-orange-400 disabled:opacity-50 text-black font-black uppercase tracking-widest text-[9px] md:text-[10px] rounded-xl transition-all"
+                                                        className="px-3 md:px-4 py-2 bg-secondary hover:bg-secondary/80 disabled:opacity-50 text-black font-black uppercase tracking-widest text-[9px] md:text-[10px] rounded-xl transition-all"
                                                     >
                                                         Enviar
                                                     </button>
@@ -610,7 +610,7 @@ export default function PublicOrderView() {
 
                                             <button
                                                 onClick={handleQuickBuy}
-                                                className="px-4 md:px-8 py-3 md:py-4 rounded-2xl bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-black font-black uppercase tracking-widest text-[10px] md:text-xs shadow-xl shadow-orange-500/20 hover:shadow-orange-500/40 transition-all text-center flex-1 md:flex-none transform hover:-translate-y-1 whitespace-nowrap"
+                                                className="px-4 md:px-8 py-3 md:py-4 rounded-2xl bg-gradient-to-r from-primary to-secondary hover:from-primary/80 hover:to-secondary/80 text-black font-black uppercase tracking-widest text-[10px] md:text-xs shadow-xl shadow-secondary/20 hover:shadow-secondary/40 transition-all text-center flex-1 md:flex-none transform hover:-translate-y-1 whitespace-nowrap"
                                             >
                                                 ¡Comprar Ahora!
                                             </button>
@@ -626,7 +626,7 @@ export default function PublicOrderView() {
                                                     // This will trigger the logic in handleQuickBuy which shows login drawer
                                                     handleQuickBuy();
                                                 }}
-                                                className="w-full md:w-auto px-4 md:px-8 py-3 md:py-4 rounded-2xl bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-black font-black uppercase tracking-widest text-[10px] md:text-xs shadow-xl shadow-orange-500/20 hover:shadow-orange-500/40 transition-all text-center flex-1 md:flex-none transform hover:-translate-y-1 whitespace-nowrap"
+                                                className="w-full md:w-auto px-4 md:px-8 py-3 md:py-4 rounded-2xl bg-gradient-to-r from-primary to-secondary hover:from-primary/80 hover:to-secondary/80 text-black font-black uppercase tracking-widest text-[10px] md:text-xs shadow-xl shadow-secondary/20 hover:shadow-secondary/40 transition-all text-center flex-1 md:flex-none transform hover:-translate-y-1 whitespace-nowrap"
                                             >
                                                 ¡Comprar Ahora!
                                             </button>
@@ -654,7 +654,7 @@ export default function PublicOrderView() {
                             <div className="flex flex-col md:items-end">
                                 <p className="text-[10px] uppercase tracking-widest font-black text-gray-600 mb-2">{TEXTS.common.orderStatus}</p>
                                 <span className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] border transition-all ${order.status === 'pending_acceptance'
-                                    ? 'bg-orange-500/10 border-orange-500/20 text-orange-400'
+                                    ? 'bg-secondary/10 border-secondary/20 text-secondary'
                                     : 'bg-white/5 border-white/10 text-white'
                                     }`}>
                                     {order.status === 'pending_acceptance' ? TEXTS.common.waitingAcceptance : (TEXTS.admin.statusOptions[order.status as keyof typeof TEXTS.admin.statusOptions] || order.status)}

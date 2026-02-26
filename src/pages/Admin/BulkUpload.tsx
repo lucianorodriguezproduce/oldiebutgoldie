@@ -532,11 +532,11 @@ export default function BulkUpload() {
             )}
 
             {rows.length === 0 && !isProcessing && (
-                <div className="max-w-4xl p-6 rounded-3xl bg-orange-500/5 border border-orange-500/20 flex flex-col sm:flex-row items-start gap-4 shadow-inner">
-                    <AlertCircle className="w-6 h-6 text-orange-400 shrink-0 mt-0.5" />
+                <div className="max-w-4xl p-6 rounded-3xl bg-secondary/5 border border-secondary/20 flex flex-col sm:flex-row items-start gap-4 shadow-inner">
+                    <AlertCircle className="w-6 h-6 text-secondary shrink-0 mt-0.5" />
                     <div className="space-y-2">
-                        <h4 className="text-sm font-black text-orange-400 uppercase tracking-widest">{TEXTS.bulk.columnRequirements}</h4>
-                        <p className="text-xs text-orange-400/80 font-bold leading-relaxed">
+                        <h4 className="text-sm font-black text-secondary uppercase tracking-widest">{TEXTS.bulk.columnRequirements}</h4>
+                        <p className="text-xs text-secondary/80 font-bold leading-relaxed">
                             {TEXTS.bulk.columnRequirementsDesc}
                         </p>
                     </div>

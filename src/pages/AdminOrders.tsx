@@ -91,11 +91,11 @@ type StatusFilter = "all" | "pending" | "negotiating" | "completed" | "cancelled
 type SortOption = "default" | "popularity";
 
 const STATUS_OPTIONS = [
-    { value: "pending", label: "Pendiente", icon: Clock, color: "text-yellow-500", bg: "bg-yellow-500/10 border-yellow-500/20" },
+    { value: "pending", label: "Pendiente", icon: Clock, color: "text-primary", bg: "bg-primary/10 border-primary/20" },
     { value: "quoted", label: "Cotizado", icon: BadgeDollarSign, color: "text-purple-400", bg: "bg-purple-500/10 border-purple-500/20" },
-    { value: "negotiating", label: "En Negociación", icon: Handshake, color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/20" },
-    { value: "counteroffered", label: "Precio Definido", icon: Send, color: "text-orange-400", bg: "bg-orange-500/10 border-orange-500/20" },
-    { value: "pending_acceptance", label: "Esperando Cliente", icon: Clock, color: "text-orange-400", bg: "bg-orange-400/10 border-orange-400/20" },
+    { value: "negotiating", label: "En Negociación", icon: Handshake, color: "text-accent", bg: "bg-accent/10 border-accent/20" },
+    { value: "counteroffered", label: "Precio Definido", icon: Send, color: "text-secondary", bg: "bg-secondary/10 border-secondary/20" },
+    { value: "pending_acceptance", label: "Esperando Cliente", icon: Clock, color: "text-secondary", bg: "bg-secondary/10 border-secondary/20" },
     { value: "offer_sent", label: "Oferta Enviada", icon: Send, color: "text-primary", bg: "bg-primary/10 border-primary/20" },
     { value: "venta_finalizada", label: "Venta Finalizada", icon: CheckCircle2, color: "text-primary", bg: "bg-primary/10 border-primary/20" },
     { value: "completed", label: "Completado", icon: CheckCircle2, color: "text-green-500", bg: "bg-green-500/10 border-green-500/20" },
@@ -397,20 +397,20 @@ export default function AdminOrders() {
             {/* Stats Cards */}
             <div className="grid grid-cols-2 md:grid-5 gap-4">
                 {[
-                    { label: "Pendientes", count: pendingCount, color: "yellow-500", icon: Clock },
-                    { label: "Cotizados", count: quotedCount, color: "purple-400", icon: BadgeDollarSign },
-                    { label: "Negociando", count: negotiatingCount, color: "blue-400", icon: Handshake },
+                    { label: "Pendientes", count: pendingCount, color: "primary", icon: Clock },
+                    { label: "Cotizados", count: quotedCount, color: "[#A855F7]", icon: BadgeDollarSign },
+                    { label: "Negociando", count: negotiatingCount, color: "accent", icon: Handshake },
                     { label: "Finalizados", count: itemsCount, color: "primary", icon: CheckCircle2 },
-                    { label: "Completados", count: completedCount, color: "green-500", icon: CheckCircle2 },
+                    { label: "Completados", count: completedCount, color: "[#22C55E]", icon: CheckCircle2 },
                     { label: "Total", count: orders.length, color: "primary", icon: ShoppingBag },
                 ].map(stat => (
-                    <div key={stat.label} className={`bg-${stat.color}/5 border border-${stat.color}/10 rounded-2xl p-5 hover:border-${stat.color}/20 transition-all`}>
+                    <div key={stat.label} className={`bg-${stat.color === 'primary' ? 'primary' : stat.color === 'accent' ? 'accent' : stat.color}/5 border border-${stat.color === 'primary' ? 'primary' : stat.color === 'accent' ? 'accent' : stat.color}/10 rounded-2xl p-5 hover:border-${stat.color === 'primary' ? 'primary' : stat.color === 'accent' ? 'accent' : stat.color}/20 transition-all`}>
                         <div className="flex items-center justify-between mb-3">
-                            <div className={`p-2.5 bg-${stat.color}/10 rounded-xl`}>
-                                <stat.icon className={`h-4 w-4 text-${stat.color}`} />
+                            <div className={`p-2.5 bg-${stat.color === 'primary' ? 'primary' : stat.color === 'accent' ? 'accent' : stat.color}/10 rounded-xl`}>
+                                <stat.icon className={`h-4 w-4 text-${stat.color === 'primary' ? 'primary' : stat.color === 'accent' ? 'accent' : stat.color}`} />
                             </div>
                         </div>
-                        <div className={`text-3xl font-black text-${stat.color} tracking-tighter`}>{stat.count}</div>
+                        <div className={`text-3xl font-black text-${stat.color === 'primary' ? 'primary' : stat.color === 'accent' ? 'accent' : stat.color} tracking-tighter`}>{stat.count}</div>
                         <div className="text-gray-600 text-[9px] font-bold uppercase tracking-widest mt-1">{stat.label}</div>
                     </div>
                 ))}
@@ -506,7 +506,7 @@ export default function AdminOrders() {
                                                 {i !== (selectedOrder.negotiationHistory || []).length - 1 && (
                                                     <div className="absolute left-1 top-4 bottom-0 w-px bg-white/5" />
                                                 )}
-                                                <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${h.sender === 'admin' ? 'bg-primary' : 'bg-blue-500'}`} />
+                                                <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${h.sender === 'admin' ? 'bg-primary' : 'bg-accent'}`} />
                                                 <div className="space-y-1">
                                                     <div className="flex items-center gap-3">
                                                         <span className="text-[10px] font-black uppercase tracking-widest text-white">
@@ -584,9 +584,9 @@ export default function AdminOrders() {
                                     {/* Action Buttons based on status */}
                                     {selectedOrder.status === "contraoferta_usuario" ? (
                                         <div className="pt-2 border-t border-white/5 space-y-3">
-                                            <div className="bg-orange-500/10 border border-orange-500/20 p-4 rounded-xl flex items-center justify-between">
+                                            <div className="bg-secondary/10 border border-secondary/20 p-4 rounded-xl flex items-center justify-between">
                                                 <div>
-                                                    <p className="text-[10px] font-black uppercase tracking-widest text-orange-400">Oferta del Cliente</p>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-secondary">Oferta del Cliente</p>
                                                     <p className="text-xl font-bold text-white mt-1">
                                                         {selectedOrder.currency === "USD" ? "US$" : "$"} {(selectedOrder.totalPrice || selectedOrder.details?.price || 0).toLocaleString()}
                                                     </p>
@@ -610,7 +610,7 @@ export default function AdminOrders() {
                                     {/* Counter-offer / Quote Form */}
                                     {(selectedOrder.details?.intent === "VENDER" || selectedOrder.intent === "VENDER" || selectedOrder.adminPrice || selectedOrder.status === "contraoferta_usuario") && selectedOrder.status !== "venta_finalizada" && selectedOrder.status !== "completed" && (
                                         <div className="space-y-3 pt-2">
-                                            <span className="text-[9px] font-black uppercase tracking-widest text-orange-400/70 flex items-center gap-1.5">
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-secondary/70 flex items-center gap-1.5">
                                                 <BadgeDollarSign className="h-3.5 w-3.5" />
                                                 Definir Precio de Venta/Lote
                                             </span>
@@ -632,13 +632,13 @@ export default function AdminOrders() {
                                                         placeholder="Precio contraoferta..."
                                                         value={quotePrice}
                                                         onChange={e => setQuotePrice(e.target.value)}
-                                                        className="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 pl-9 pr-4 text-white text-sm font-bold focus:border-orange-400/40 focus:outline-none"
+                                                        className="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 pl-9 pr-4 text-white text-sm font-bold focus:border-secondary/40 focus:outline-none"
                                                     />
                                                 </div>
                                                 <button
                                                     onClick={() => updateOrderPrice(selectedOrder, parseFloat(quotePrice), quoteCurrency)}
                                                     disabled={quotingId === selectedOrder.id || !quotePrice}
-                                                    className="px-4 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all bg-orange-600 text-white hover:bg-orange-500 disabled:opacity-40"
+                                                    className="px-4 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all bg-secondary text-black hover:bg-white disabled:opacity-40"
                                                 >
                                                     <Send className="h-3.5 w-3.5" />
                                                 </button>
@@ -711,7 +711,7 @@ export default function AdminOrders() {
                             </div>
 
                             <span className="text-[10px] text-gray-600 uppercase tracking-widest font-bold mt-2">
-                                Operación: <span className={selectedOrder.type === 'buy' ? 'text-green-400' : 'text-orange-400'}>
+                                Operación: <span className={selectedOrder.type === 'buy' ? 'text-accent' : 'text-secondary'}>
                                     {selectedOrder.type === 'buy' ? 'Compra' : 'Venta'}
                                 </span>
                             </span>
@@ -735,11 +735,11 @@ export default function AdminOrders() {
                                             </div>
                                             <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
                                                 <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">{TEXTS.admin.stats.quoted}</p>
-                                                <p className="text-2xl font-display font-black text-blue-400">{selectedOrder.items.filter((o: any) => o.status === 'quoted').length}</p>
+                                                <p className="text-2xl font-display font-black text-purple-400">{selectedOrder.items.filter((o: any) => o.status === 'quoted').length}</p>
                                             </div>
                                             <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
                                                 <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">{TEXTS.admin.stats.negotiating}</p>
-                                                <p className="text-2xl font-display font-black text-indigo-400">{selectedOrder.items.filter((o: any) => o.status === 'negotiating').length}</p>
+                                                <p className="text-2xl font-display font-black text-accent">{selectedOrder.items.filter((o: any) => o.status === 'negotiating').length}</p>
                                             </div>
                                             <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
                                                 <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">{TEXTS.admin.stats.finished}</p>
@@ -760,7 +760,7 @@ export default function AdminOrders() {
                                                 )}
                                                 <div className="flex flex-wrap gap-2 mt-2">
                                                     <span className="bg-gray-800 text-gray-300 px-2 py-1 text-[9px] font-black uppercase rounded">{item.format}</span>
-                                                    <span className="bg-blue-900/30 text-blue-400 px-2 py-1 text-[9px] font-black uppercase rounded border border-blue-500/20">{item.condition}</span>
+                                                    <span className="bg-accent/10 text-accent px-2 py-1 text-[9px] font-black uppercase rounded border border-accent/20">{item.condition}</span>
                                                 </div>
                                             </div>
                                             <div className="w-14 h-14 rounded-md overflow-hidden bg-white/5 border border-white/10 flex-shrink-0 shadow-sm">
@@ -785,7 +785,7 @@ export default function AdminOrders() {
                                     </div>
                                     <div className="flex flex-wrap gap-2 mt-1">
                                         <span className="bg-gray-800 text-gray-300 px-2 py-1 text-[9px] font-black uppercase rounded">{selectedOrder.details?.format}</span>
-                                        <span className="bg-blue-900/30 text-blue-400 px-2 py-1 text-[9px] font-black uppercase rounded border border-blue-500/20">{selectedOrder.details?.condition}</span>
+                                        <span className="bg-accent/10 text-accent px-2 py-1 text-[9px] font-black uppercase rounded border border-accent/20">{selectedOrder.details?.condition}</span>
                                     </div>
                                 </div>
                             ) : (
@@ -796,10 +796,10 @@ export default function AdminOrders() {
                         </div>
 
                         {/* User Offer Highlight */}
-                        <div className="bg-orange-500/5 border border-orange-500/20 rounded-2xl p-6 space-y-2 mb-4">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-orange-400">Oferta Inicial del Usuario</span>
+                        <div className="bg-secondary/5 border border-secondary/20 rounded-2xl p-6 space-y-2 mb-4">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-secondary">Oferta Inicial del Usuario</span>
                             <div className="flex items-center gap-3">
-                                <DollarSign className="h-6 w-6 text-orange-500" />
+                                <DollarSign className="h-6 w-6 text-secondary" />
                                 <span className="text-4xl font-display font-black text-white">
                                     {selectedOrder.totalPrice
                                         ? `${selectedOrder.currency === 'USD' ? 'US$' : '$'} ${selectedOrder.totalPrice.toLocaleString()}`

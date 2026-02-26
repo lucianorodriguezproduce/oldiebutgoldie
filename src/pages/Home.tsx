@@ -3,7 +3,7 @@ import { TEXTS } from "@/constants/texts";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { LazyImage } from "@/components/ui/LazyImage";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, ChevronRight, CheckCircle2, Mail, Layers, DollarSign, TrendingUp, MessageCircle, X, Share, ArrowLeft } from "lucide-react";
+import { Search, ChevronRight, CheckCircle2, Mail, Layers, DollarSign, TrendingUp, MessageCircle, X, Share, ArrowLeft, Star, Disc, Package } from "lucide-react";
 import { db, auth } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp, query as firestoreQuery, where, getDocs, limit } from "firebase/firestore";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -752,7 +752,7 @@ export default function Home() {
                 <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
-                    className="w-24 h-24 bg-primary rounded-full flex items-center justify-center shadow-[0_0_50px_rgba(204,255,0,0.3)]"
+                    className="w-24 h-24 retro-gradient rounded-full flex items-center justify-center shadow-[0_0_50px_rgba(255,184,0,0.3)]"
                 >
                     <CheckCircle2 className="h-12 w-12 text-black" />
                 </motion.div>
@@ -854,9 +854,11 @@ export default function Home() {
                                         exit={{ opacity: 0, y: -20, height: 0 }}
                                         className="space-y-4 overflow-hidden"
                                     >
-                                        <div className="flex items-center justify-center gap-3 mb-2">
-                                            <div className="h-2 w-2 bg-primary animate-pulse rounded-full" />
-                                            <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60">{TEXTS.home.systemVersion}</span>
+                                        <div className="flex items-center justify-center gap-2">
+                                            <Star className="h-3 w-3 text-primary fill-primary" />
+                                            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/80">
+                                                {TEXTS.showcase.subtitle}
+                                            </span>
                                         </div>
                                         <h1 className="text-4xl md:text-7xl font-display font-black text-white uppercase tracking-tightest leading-[0.85] px-4">
                                             {TEXTS.home.searchTitle.split(' ').slice(0, 2).join(' ')} <br />
@@ -1260,7 +1262,7 @@ export default function Home() {
                                             </button>
                                             <button
                                                 onClick={() => navigate('/revisar-lote')}
-                                                className="w-full bg-primary text-black py-6 rounded-2xl font-black uppercase text-sm tracking-widest shadow-[0_0_40px_rgba(204,255,0,0.2)] hover:scale-[1.02] active:scale-95 transition-all"
+                                                className="w-full bg-primary text-black py-6 rounded-2xl font-black uppercase text-sm tracking-widest shadow-[0_0_40px_rgba(255,184,0,0.2)] hover:scale-[1.02] active:scale-95 transition-all"
                                             >
                                                 {TEXTS.item.steps.finishOrder}
                                             </button>
@@ -1274,11 +1276,13 @@ export default function Home() {
                                                 </h4>
                                                 <div className="flex overflow-x-auto gap-4 md:gap-6 pb-6 hide-scrollbar snap-x snap-mandatory">
                                                     {recommendations.map((rec) => (
-                                                        <button
+                                                        <motion.button
                                                             key={`rec-${rec.id}`}
+                                                            whileTap={{ scale: 0.95 }}
                                                             onClick={() => navigate(`/item/${rec.type}/${rec.id}`)}
-                                                            className="w-[280px] md:w-[320px] flex-shrink-0 relative overflow-hidden bg-white/[0.03] border-2 border-white/5 hover:border-white/20 rounded-2xl md:rounded-[2rem] transition-all group snap-start text-left flex flex-col items-start p-4 hover:bg-white/[0.05]"
+                                                            className="flex-none w-[280px] md:w-[320px] snap-center group relative overflow-hidden rounded-[2.5rem] bg-white/5 border border-white/10 backdrop-blur-xl shadow-2xl transition-all hover:border-primary/30 text-left"
                                                         >
+                                                            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
                                                             <div className="w-full aspect-square rounded-xl overflow-hidden bg-black mb-4 relative shadow-lg">
                                                                 <img src={rec.cover_image || rec.thumb} alt={rec.title} className="w-full h-full object-cover grayscale-[0.3] group-hover:grayscale-0 transition-transform duration-700 group-hover:scale-105" />
                                                             </div>
@@ -1288,11 +1292,11 @@ export default function Home() {
                                                             <span className="text-xs font-black text-gray-500 uppercase tracking-widest leading-none truncate w-full mt-1">
                                                                 {(rec as any).normalizedArtist || (rec.title.includes(' - ') ? rec.title.split(' - ')[0] : rec.title)}
                                                             </span>
-                                                        </button>
+                                                        </motion.button>
                                                     ))}
-                                                    {isLoadingRecommendations && (
+                                                    {isLoadingSearch && (
                                                         <div className="w-[280px] md:w-[320px] flex-shrink-0 flex items-center justify-center snap-start">
-                                                            <div className="h-6 w-6 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                                                            <div className="h-8 w-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
                                                         </div>
                                                     )}
                                                 </div>
@@ -1318,13 +1322,13 @@ export default function Home() {
                                 {/* Market Price Anchor */}
                                 {isLoadingMarket ? (
                                     <div className="flex items-center justify-center gap-3 py-4 px-6 bg-white/[0.02] border border-white/5 rounded-xl">
-                                        <div className="h-3 w-3 border-2 border-yellow-500/40 border-t-yellow-500 rounded-full animate-spin" />
+                                        <div className="h-3 w-3 border-2 border-primary/40 border-t-primary rounded-full animate-spin" />
                                         <span className="text-[10px] font-mono font-bold text-gray-600 uppercase tracking-widest">{TEXTS.negotiation.consultingMarket}</span>
                                     </div>
                                 ) : marketPrice !== null && (
-                                    <div className="flex items-center gap-3 py-4 px-6 bg-yellow-500/[0.04] border border-yellow-500/10 rounded-xl">
-                                        <TrendingUp className="h-4 w-4 text-yellow-500/70 flex-shrink-0" />
-                                        <span className="text-[11px] font-mono font-bold text-yellow-500/80 uppercase tracking-wider">
+                                    <div className="flex items-center gap-3 py-4 px-6 bg-primary/[0.04] border border-primary/10 rounded-xl">
+                                        <TrendingUp className="h-4 w-4 text-primary/70 flex-shrink-0" />
+                                        <span className="text-[11px] font-mono font-bold text-primary/80 uppercase tracking-wider">
                                             {TEXTS.negotiation.marketRef} {marketPrice.toFixed(2)}
                                         </span>
                                     </div>
@@ -1370,7 +1374,7 @@ export default function Home() {
                                 <button
                                     onClick={handlePriceConfirm}
                                     disabled={!price}
-                                    className="w-full bg-primary text-black py-8 rounded-2xl font-black uppercase text-xs tracking-widest shadow-[0_0_40px_rgba(204,255,0,0.2)] hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
+                                    className="w-full bg-primary text-black py-8 rounded-2xl font-black uppercase text-xs tracking-widest shadow-[0_0_40px_rgba(255,184,0,0.2)] hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
                                 >
                                     {TEXTS.negotiation.addSellBatch}
                                 </button>
@@ -1436,7 +1440,7 @@ export default function Home() {
                                         <button
                                             type="submit"
                                             disabled={isSubmitting}
-                                            className="w-full bg-primary text-black py-8 rounded-2xl font-black uppercase text-xs tracking-widest shadow-[0_0_40px_rgba(204,255,0,0.2)] hover:scale-[1.02] active:scale-95 transition-all"
+                                            className="w-full bg-primary text-black py-8 rounded-2xl font-black uppercase text-xs tracking-widest shadow-[0_0_40px_rgba(255,184,0,0.2)] hover:scale-[1.02] active:scale-95 transition-all"
                                         >
                                             {isSubmitting ? TEXTS.auth.connecting : TEXTS.auth.registerAndLink}
                                         </button>
@@ -1446,7 +1450,6 @@ export default function Home() {
                                 </div>
                             </motion.div>
                         )}
-
                     </motion.div>
                 )}
             </AnimatePresence>

@@ -167,9 +167,9 @@ export default function AnalyticsDashboard() {
                 </Card>
 
                 <Card className="bg-white/[0.03] border-white/5 p-8 rounded-[2.5rem] relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 blur-[60px] rounded-full" />
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-secondary/10 blur-[60px] rounded-full" />
                     <div className="flex items-center gap-4 mb-4">
-                        <DollarSign className="h-6 w-6 text-orange-400" />
+                        <DollarSign className="h-6 w-6 text-secondary" />
                         <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500">Volumen Potencial</h3>
                     </div>
                     <p className="text-4xl font-black text-white">$ {stats.potentialVolumeARS.toLocaleString()}</p>
@@ -207,7 +207,7 @@ export default function AnalyticsDashboard() {
                             <>
                                 <div className="flex items-center justify-between text-sm font-bold uppercase tracking-wider">
                                     <span className="text-green-400">Total Compra: {stats.buyIntent}</span>
-                                    <span className="text-orange-400">Total Venta: {stats.sellIntent}</span>
+                                    <span className="text-secondary">Total Venta: {stats.sellIntent}</span>
                                 </div>
                                 <div className="h-4 w-full bg-white/5 rounded-full overflow-hidden flex">
                                     <div
@@ -215,7 +215,7 @@ export default function AnalyticsDashboard() {
                                         style={{ width: `${(stats.buyIntent / stats.activeOrdersCount) * 100}%` }}
                                     />
                                     <div
-                                        className="h-full bg-orange-500 transition-all duration-1000 shadow-[0_0_15px_rgba(249,115,22,0.3)]"
+                                        className="h-full bg-secondary transition-all duration-1000 shadow-[0_0_15px_rgba(255,77,0,0.3)]"
                                         style={{ width: `${(stats.sellIntent / stats.activeOrdersCount) * 100}%` }}
                                     />
                                 </div>
@@ -271,7 +271,7 @@ export default function AnalyticsDashboard() {
                     <div className="bg-white/[0.02] border border-white/5 rounded-[2rem] p-8 space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar">
                         {events.map((event) => (
                             <div key={event.id} className="flex items-start gap-4 p-4 rounded-xl hover:bg-white/5 transition-colors border border-transparent hover:border-white/5">
-                                <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${event.action === 'search' ? 'bg-blue-500' :
+                                <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${event.action === 'search' ? 'bg-accent' :
                                     event.action === 'view_release' ? 'bg-primary' :
                                         'bg-gray-500'
                                     }`} />

@@ -316,11 +316,11 @@ export default function Profile() {
 
     const getStatusBadge = (status: string) => {
         const map: Record<string, { label: string; color: string }> = {
-            pending: { label: "Pendiente", color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" },
+            pending: { label: "Pendiente", color: "bg-primary/10 text-primary border-primary/20" },
             quoted: { label: "Cotizado", color: "bg-purple-500/10 text-purple-400 border-purple-500/20" },
             negotiating: { label: "En Negociación", color: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
-            pending_acceptance: { label: "Esperando tu ok", color: "bg-orange-500/10 text-orange-400 border-orange-500/20" },
-            counteroffered: { label: "Esperando tu ok", color: "bg-orange-500/10 text-orange-400 border-orange-500/20" },
+            pending_acceptance: { label: "Esperando tu ok", color: "bg-secondary/10 text-secondary border-secondary/20" },
+            counteroffered: { label: "Esperando tu ok", color: "bg-secondary/10 text-secondary border-secondary/20" },
             contraoferta_usuario: { label: "En Revisión", color: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
             confirmed: { label: "Confirmado", color: "bg-primary/10 text-primary border-primary/20" },
             venta_finalizada: { label: "Trato Cerrado", color: "bg-primary/10 text-primary border-primary/20" },
@@ -662,16 +662,16 @@ export default function Profile() {
                                             <div key={i} className={`flex w-full items-center ${h.sender === 'admin' ? "justify-start" : "justify-end"}`}>
                                                 <div className={`relative w-[45%] p-3 rounded-xl border ${h.sender === 'admin'
                                                     ? "bg-primary/5 border-primary/20 text-left"
-                                                    : "bg-orange-500/5 border-orange-500/20 text-right"
+                                                    : "bg-secondary/5 border-secondary/20 text-right"
                                                     }`}>
                                                     {/* Connector Dot */}
                                                     <div className={`absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full border-2 bg-black z-10 ${h.sender === 'admin'
                                                         ? "left-[calc(100%+11px)] border-primary"
-                                                        : "right-[calc(100%+11px)] border-orange-500"
+                                                        : "right-[calc(100%+11px)] border-secondary"
                                                         }`} />
 
                                                     <div className="flex flex-col gap-0.5">
-                                                        <span className={`text-[8px] font-black uppercase tracking-tighter ${h.sender === 'admin' ? "text-primary" : "text-orange-400"
+                                                        <span className={`text-[8px] font-black uppercase tracking-tighter ${h.sender === 'admin' ? "text-primary" : "text-secondary"
                                                             }`}>
                                                             {h.sender === 'admin' ? "Oldie but Goldie" : "Tú (Cliente)"}
                                                         </span>
@@ -777,10 +777,10 @@ export default function Profile() {
                         </div>
 
                         {/* User Offer Highlight */}
-                        <div className="bg-orange-500/5 border border-orange-500/20 rounded-2xl p-5 space-y-2 mb-4">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-orange-400">Oferta Inicial</span>
+                        <div className="bg-secondary/5 border border-secondary/20 rounded-2xl p-5 space-y-2 mb-4">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-secondary">Oferta Inicial</span>
                             <div className="flex items-center gap-3">
-                                <DollarSign className="h-5 w-5 text-orange-500" />
+                                <DollarSign className="h-5 w-5 text-secondary" />
                                 <span className="text-3xl font-display font-black text-white">
                                     {selectedOrder.totalPrice
                                         ? `${selectedOrder.currency === 'USD' ? 'US$' : '$'} ${selectedOrder.totalPrice.toLocaleString()}`

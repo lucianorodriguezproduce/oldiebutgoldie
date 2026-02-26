@@ -115,7 +115,7 @@ export default function NotificationBell() {
                     <motion.span
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
-                        className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center px-1 shadow-lg shadow-red-500/30"
+                        className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-secondary text-black text-[9px] font-black rounded-full flex items-center justify-center px-1 shadow-lg shadow-secondary/30"
                     >
                         {unreadCount > 9 ? "9+" : unreadCount}
                     </motion.span>

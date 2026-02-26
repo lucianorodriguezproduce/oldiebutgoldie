@@ -6,14 +6,18 @@ export default {
         extend: {
             colors: {
                 primary: {
-                    DEFAULT: '#DFFF00', // Neon Yellow
+                    DEFAULT: '#FFB800', // Oldie But Goldie (Gold Top)
                     foreground: '#000000'
                 },
                 secondary: {
-                    DEFAULT: '#00FF94', // Neon Green
-                    foreground: '#000000'
+                    DEFAULT: '#FF4D00', // Retro Orange-Red
+                    foreground: '#FFFFFF'
                 },
-                'background-dark': '#050505',
+                accent: {
+                    DEFAULT: '#00D1FF', // Retro Cyan-Blue
+                    foreground: '#FFFFFF'
+                },
+                'background-dark': '#080808',
                 'surface-dark': '#121212',
                 border: "hsl(var(--border))",
                 input: "hsl(var(--input))",
