@@ -29,6 +29,20 @@ export const getCleanOrderMetadata = (order: any) => {
         };
     }
 
+    // 0.1 DIRECT INVENTORY ITEM SUPPORT (Raw Bunker Items)
+    if (order.metadata && order.logistics) {
+        return {
+            artist: order.metadata.artist || '',
+            album: order.metadata.title || 'Detalle del Disco',
+            format: order.metadata.format_description || 'Vinyl',
+            condition: order.logistics.condition || 'N/A',
+            image: order.media?.full_res_image_url || order.media?.thumbnail || "https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png",
+            isBatch: false,
+            itemsCount: 1,
+            isInventoryItem: true // Tag to identify local stock
+        };
+    }
+
     // 1. EXTRACT RAW DATA (Priority: items[0] > details > root)
     const rawArtist = cleanString(
         order.details?.artist ||

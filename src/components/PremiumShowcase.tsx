@@ -18,13 +18,37 @@ export function PremiumShowcase() {
 
     useEffect(() => {
         console.log("PremiumShowcase: Component mounted");
-        const q = query(
+
+        // 1. Listen to Featured Orders (Admin Offers)
+        const qOrders = query(
             collection(db, "orders"),
             where("is_admin_offer", "==", true)
         );
 
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const items = snapshot.docs
+        // 2. Listen to Active Inventory (The Bunker)
+        const qInventory = query(
+            collection(db, "inventory"),
+            where("logistics.status", "==", "active"),
+            limit(10)
+        );
+
+        let activeOrders: any[] = [];
+        let activeInventory: any[] = [];
+
+        const updateShowcase = () => {
+            const combined = [
+                ...activeInventory.map(item => ({ ...item, isFromInventory: true })),
+                ...activeOrders
+            ]
+                .sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0))
+                .slice(0, 10);
+
+            setOrders(combined);
+            setLoading(false);
+        };
+
+        const unsubOrders = onSnapshot(qOrders, (snapshot) => {
+            activeOrders = snapshot.docs
                 .map(doc => ({ id: doc.id, ...doc.data() } as any))
                 .filter(item => {
                     const isAdmin = item.is_admin_offer === true ||
@@ -34,18 +58,23 @@ export function PremiumShowcase() {
                     const isAvailable = !['sold', 'venta_finalizada', 'completed', 'cancelled', 'rejected'].includes(item.status);
 
                     return isAdmin && isAvailable;
-                })
-                .sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0))
-                .slice(0, 10);
-
-            setOrders(items);
-            setLoading(false);
+                });
+            updateShowcase();
         }, (error) => {
-            console.warn("Showcase fetch error:", error);
-            setLoading(false);
+            console.warn("Orders fetch error:", error);
         });
 
-        return () => unsubscribe();
+        const unsubInventory = onSnapshot(qInventory, (snapshot) => {
+            activeInventory = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+            updateShowcase();
+        }, (error) => {
+            console.warn("Inventory fetch error:", error);
+        });
+
+        return () => {
+            unsubOrders();
+            unsubInventory();
+        };
     }, []);
 
     if (loading) return null;

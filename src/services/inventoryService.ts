@@ -138,6 +138,20 @@ export const inventoryService = {
             soldOut: items.filter(item => item.logistics.stock === 0),
             totalValue: items.reduce((acc, item) => acc + (item.logistics.price * item.logistics.stock), 0)
         };
+    },
+
+    async searchItems(searchTerm: string) {
+        const q = query(collection(db, COLLECTION_NAME), where("logistics.status", "==", "active"));
+        const snapshot = await getDocs(q);
+        const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InventoryItem));
+
+        if (!searchTerm) return items;
+
+        const lowTerm = searchTerm.toLowerCase();
+        return items.filter(item =>
+            item.metadata.title.toLowerCase().includes(lowTerm) ||
+            item.metadata.artist.toLowerCase().includes(lowTerm)
+        );
     }
 };
 
