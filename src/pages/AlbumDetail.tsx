@@ -52,6 +52,8 @@ export default function AlbumDetail() {
                         tracklist: localItem.tracklist || [],
                         notes: localItem.metadata.format_description,
                         isLocal: true,
+                        isBatch: localItem.metadata.isBatch,
+                        items: localItem.items || [],
                         uri: localItem.reference.originalDiscogsUrl,
                         stock: localItem.logistics.stock,
                         raw: localItem // Pass the raw object for Lote compatibility
@@ -303,28 +305,64 @@ export default function AlbumDetail() {
                         animate={{ y: 0, opacity: 1 }}
                         transition={{ delay: 0.5 }}
                     >
-                        <div className="flex items-center justify-between mb-10 border-b border-white/[0.05] pb-6">
-                            <h3 className="text-4xl font-display font-bold text-white tracking-tightest">{TEXTS.common.tracklist}</h3>
-                            <span className="font-mono text-[11px] text-gray-700 uppercase font-black tracking-widest bg-white/5 px-4 py-2 rounded-xl">{album.tracklist?.length || 0} {TEXTS.common.totalTracks}</span>
-                        </div>
-                        <div className="grid grid-cols-1 gap-2">
-                            {album.tracklist?.map((track: any, index: number) => (
-                                <motion.div
-                                    key={index}
-                                    whileHover={{ x: 15, backgroundColor: "rgba(255,255,255,0.03)" }}
-                                    className="group flex items-center p-6 rounded-3xl transition-all cursor-pointer border border-transparent hover:border-white/5 group shadow-sm"
-                                >
-                                    <span className="w-12 text-gray-800 font-mono text-xs group-hover:text-primary transition-colors font-black tracking-tighter">{track.position || index + 1}</span>
-                                    <div className="flex-grow">
-                                        <div className="text-white font-bold text-lg tracking-tight group-hover:text-white transition-colors">{track.title}</div>
-                                    </div>
-                                    <span className="text-gray-700 font-mono text-[11px] mr-10 group-hover:text-gray-400 transition-colors">{track.duration || "--:--"}</span>
-                                    <div className="flex items-center gap-4 opacity-0 group-hover:opacity-100 transition-all duration-500 scale-90 group-hover:scale-100">
-                                        <PlayCircle className="text-primary h-12 w-12 hover:rotate-12 transition-all drop-shadow-[0_0_15px_rgba(223,255,0,0.3)]" />
-                                    </div>
-                                </motion.div>
-                            ))}
-                        </div>
+                        {album.isBatch ? (
+                            <div className="space-y-6">
+                                <div className="flex items-center justify-between mb-10 border-b border-white/[0.05] pb-6">
+                                    <h3 className="text-4xl font-display font-bold text-white tracking-tightest">Contenido del Lote</h3>
+                                    <span className="font-mono text-[11px] text-gray-700 uppercase font-black tracking-widest bg-white/5 px-4 py-2 rounded-xl">{album.items?.length || 0} DISCOS</span>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {album.items?.map((item: any, index: number) => (
+                                        <motion.div
+                                            key={index}
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: index * 0.1 }}
+                                            className="group relative bg-white/[0.03] border border-white/10 rounded-2xl p-5 hover:bg-white/[0.06] transition-all"
+                                        >
+                                            <div className="flex gap-4">
+                                                <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-black border border-white/10">
+                                                    <img src={item.thumb || item.cover_image} alt={item.title} className="w-full h-full object-cover" />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <h4 className="text-white font-bold truncate leading-tight group-hover:text-primary transition-colors">{item.title}</h4>
+                                                    <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest mt-1 truncate">{item.artist}</p>
+                                                    <div className="flex items-center gap-2 mt-2">
+                                                        <span className="text-[8px] font-black text-gray-400 border border-white/10 px-2 py-0.5 rounded uppercase">{item.format || "Vinyl"}</span>
+                                                        <span className="text-[8px] font-black text-secondary border border-secondary/20 px-2 py-0.5 rounded uppercase">{item.condition || "N/A"}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    ))}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="space-y-6">
+                                <div className="flex items-center justify-between mb-10 border-b border-white/[0.05] pb-6">
+                                    <h3 className="text-4xl font-display font-bold text-white tracking-tightest">{TEXTS.common.tracklist}</h3>
+                                    <span className="font-mono text-[11px] text-gray-700 uppercase font-black tracking-widest bg-white/5 px-4 py-2 rounded-xl">{album.tracklist?.length || 0} {TEXTS.common.totalTracks}</span>
+                                </div>
+                                <div className="grid grid-cols-1 gap-2">
+                                    {album.tracklist?.map((track: any, index: number) => (
+                                        <motion.div
+                                            key={index}
+                                            whileHover={{ x: 15, backgroundColor: "rgba(255,255,255,0.03)" }}
+                                            className="group flex items-center p-6 rounded-3xl transition-all cursor-pointer border border-transparent hover:border-white/5 group shadow-sm"
+                                        >
+                                            <span className="w-12 text-gray-800 font-mono text-xs group-hover:text-primary transition-colors font-black tracking-tighter">{track.position || index + 1}</span>
+                                            <div className="flex-grow">
+                                                <div className="text-white font-bold text-lg tracking-tight group-hover:text-white transition-colors">{track.title}</div>
+                                            </div>
+                                            <span className="text-gray-700 font-mono text-[11px] mr-10 group-hover:text-gray-400 transition-colors">{track.duration || "--:--"}</span>
+                                            <div className="flex items-center gap-4 opacity-0 group-hover:opacity-100 transition-all duration-500 scale-90 group-hover:scale-100">
+                                                <PlayCircle className="text-primary h-12 w-12 hover:rotate-12 transition-all drop-shadow-[0_0_15px_rgba(223,255,0,0.3)]" />
+                                            </div>
+                                        </motion.div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </motion.div>
 
                     <Separator className="bg-white/[0.04] my-20" />
