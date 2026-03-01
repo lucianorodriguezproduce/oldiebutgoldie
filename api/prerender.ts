@@ -28,13 +28,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     } else if (pathSegments.length >= 2 && pathSegments[0] === 'orden') {
         targetType = 'orden';
         targetId = pathSegments[1];
+    } else if (pathSegments.length >= 2 && (pathSegments[0] === 'album' || pathSegments[0] === 'disco')) {
+        targetType = 'inventory';
+        targetId = pathSegments[1];
     } else {
         return serveFallback(res, defaultTitle, defaultDescription, defaultImage, urlObj.href);
     }
 
     try {
-        const url = `https://${req.headers.host || 'localhost'}/${targetType === 'orden' ? 'orden' : 'item/' + targetType}/${targetId}`;
+        const url = `https://${req.headers.host || 'localhost'}/${targetType === 'orden' ? 'orden' : (targetType === 'inventory' ? 'album' : 'item/' + targetType)}/${targetId}`;
         const db = await initBunkerIdentity();
+
+        // 1. PRIORIDAD: Buscar en Inventario Soberano (Búnker)
+        if (targetType === 'inventory' || targetId.includes('-') || targetId.length > 15) {
+            try {
+                const invDoc = await db.collection('inventory').doc(targetId).get();
+                if (invDoc.exists) {
+                    const data = invDoc.data() || {};
+                    const title = `${data.metadata?.artist || 'Varios'} - ${data.metadata?.title || 'Detalle'} | Oldie but Goldie`;
+                    const description = `Disco en Stock Búnker. Condición: ${data.logistics?.condition || 'M'}. Precio: $${data.logistics?.price || 'Consultar'}.`;
+                    const image = data.media?.full_res_image_url || data.media?.thumbnail || defaultImage;
+                    return serveFallback(res, title, description, image, url);
+                }
+            } catch (e) {
+                console.warn("Bunker inventory fetch failed in prerender:", e);
+            }
+        }
 
         if (targetType === 'orden') {
             try {

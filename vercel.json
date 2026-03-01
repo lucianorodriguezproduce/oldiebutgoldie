@@ -14,6 +14,10 @@
             "destination": "/api/prerender"
         },
         {
+            "source": "/album/:id",
+            "destination": "/api/prerender"
+        },
+        {
             "source": "/orden/:id",
             "destination": "/api/prerender"
         },

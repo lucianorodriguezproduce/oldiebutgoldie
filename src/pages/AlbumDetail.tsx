@@ -13,6 +13,7 @@ import { useTelemetry } from "@/context/TelemetryContext";
 import { useEffect } from "react";
 import { useLoading } from "@/context/LoadingContext";
 import { LazyImage } from "@/components/ui/LazyImage";
+import { inventoryService } from "@/services/inventoryService";
 import { TEXTS } from "@/constants/texts";
 
 export default function AlbumDetail() {
@@ -25,7 +26,37 @@ export default function AlbumDetail() {
 
     const { data: album, isLoading, error } = useQuery({
         queryKey: ["release", id],
-        queryFn: () => id ? discogsService.getReleaseDetails(id) : Promise.reject("No ID"),
+        queryFn: async () => {
+            if (!id) throw new Error("No ID");
+
+            // 1. Check if it is a local UUID (Inventory Sovereign)
+            if (id.includes('-') || id.length > 15) {
+                const localItem = await inventoryService.getItemById(id);
+                if (localItem) {
+                    // Normalize to Discogs-like structure for the UI
+                    return {
+                        id: localItem.id,
+                        title: localItem.metadata.title,
+                        artists: [{ name: localItem.metadata.artist }],
+                        images: [{ uri: localItem.media.full_res_image_url || localItem.media.thumbnail }],
+                        thumb: localItem.media.thumbnail,
+                        lowest_price: localItem.logistics.price,
+                        year: localItem.metadata.year,
+                        country: localItem.metadata.country,
+                        genres: localItem.metadata.genres,
+                        styles: localItem.metadata.styles,
+                        labels: localItem.labels || [{ name: "Sovereign Asset", catno: "SA-001" }],
+                        tracklist: localItem.tracklist || [],
+                        notes: localItem.metadata.format_description,
+                        isLocal: true,
+                        uri: localItem.reference.originalDiscogsUrl
+                    };
+                }
+            }
+
+            // 2. Fallback to Discogs API
+            return discogsService.getReleaseDetails(id);
+        },
         enabled: !!id,
     });
 

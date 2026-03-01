@@ -33,6 +33,15 @@ export interface InventoryItem {
         format: string;
         thumb: string;
     }[];
+    tracklist?: {
+        position: string;
+        title: string;
+        duration: string;
+    }[];
+    labels?: {
+        name: string;
+        catno: string;
+    }[];
 }
 
 export interface TradeManifest {
