@@ -10,7 +10,8 @@ import {
     getDocs,
     serverTimestamp,
     orderBy,
-    limit
+    limit,
+    startAfter
 } from "firebase/firestore";
 import type { InventoryItem } from "@/types/inventory";
 
@@ -226,3 +227,31 @@ export const inventoryService = {
 
 
 
+export const getInventoryPaged = async (pageSize: number = 20, lastDoc?: any) => {
+    try {
+        let q = query(
+            collection(db, "inventory"),
+            where("logistics.status", "==", "active"),
+            orderBy("timestamp", "desc"),
+            limit(pageSize)
+        );
+
+        if (lastDoc) {
+            q = query(q, startAfter(lastDoc));
+        }
+
+        const snapshot = await getDocs(q);
+        const items = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        })) as any[];
+
+        return {
+            items,
+            lastDoc: snapshot.docs[snapshot.docs.length - 1]
+        };
+    } catch (error) {
+        console.error("Error fetching paged inventory:", error);
+        return { items: [], lastDoc: null };
+    }
+};

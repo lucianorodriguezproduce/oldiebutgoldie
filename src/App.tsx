@@ -21,6 +21,7 @@ import ArticleDetail from "@/pages/ArticleDetail";
 import Eventos from "@/pages/Eventos";
 import Profile from "@/pages/Profile";
 import RevisarLote from "@/pages/RevisarLote";
+import Store from "@/pages/Store";
 import AdminLayout from "@/components/Admin/AdminLayout";
 import AdminAnalytics from "@/pages/Admin/AdminAnalytics";
 import EditorialManager from "@/pages/Admin/EditorialManager";
@@ -71,6 +72,7 @@ function AppContent() {
         <Routes>
           <Route element={<Layout />}>
             <Route path="/" element={<Home />} />
+            <Route path="/tienda" element={<Store />} />
             <Route path="/actividad" element={<PublicOrders />} />
             <Route path="/orden/:id" element={<PublicOrderView />} />
             <Route path="/revisar-lote" element={<RevisarLote />} />
