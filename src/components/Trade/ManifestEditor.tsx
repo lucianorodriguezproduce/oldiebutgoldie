@@ -86,7 +86,6 @@ export default function ManifestEditor({
     }, [searchQuery]);
 
     const searchInventory = async () => {
-        // Simple local search for now, could be enhanced
         const all = await inventoryService.getItems();
         const results = all.filter(it =>
             it.metadata.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -113,21 +112,34 @@ export default function ManifestEditor({
                 {ids.map(id => {
                     const item = itemDetails[id];
                     return (
-                        <div key={id} className="bg-white/5 border border-white/5 rounded-2xl p-3 flex items-center gap-3 group">
-                            <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 border border-white/10">
-                                {item?.media.thumbnail && <img src={item.media.thumbnail} alt="" className="w-full h-full object-cover" />}
+                        <div key={id} className="flex flex-col gap-2">
+                            <div className="bg-white/5 border border-white/5 rounded-2xl p-3 flex items-center gap-3 group relative overflow-hidden">
+                                <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 border border-white/10">
+                                    {item?.media.thumbnail && <img src={item.media.thumbnail} alt="" className="w-full h-full object-cover" />}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-xs font-bold text-white truncate">{item?.metadata.title || "Cargando..."}</p>
+                                    <p className="text-[9px] text-gray-500 font-bold uppercase tracking-tighter truncate">{item?.metadata.artist}</p>
+                                </div>
+                                {!isLocked && (
+                                    <button
+                                        onClick={() => removeItem(id, type)}
+                                        className="p-2 text-gray-400 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100 bg-black/40 rounded-lg backdrop-blur-sm"
+                                    >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                    </button>
+                                )}
                             </div>
-                            <div className="min-w-0 flex-1">
-                                <p className="text-xs font-bold text-white truncate">{item?.metadata.title || "Cargando..."}</p>
-                                <p className="text-[9px] text-gray-500 font-bold uppercase tracking-tighter truncate">{item?.metadata.artist}</p>
-                            </div>
-                            {!isLocked && (
-                                <button
-                                    onClick={() => removeItem(id, type)}
-                                    className="p-2 text-gray-600 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100"
-                                >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                </button>
+                            {item?.metadata.isBatch && (
+                                <div className="ml-4 pl-4 border-l-2 border-primary/20 space-y-2 w-full mb-3">
+                                    <p className="text-[8px] font-black text-primary/40 uppercase tracking-widest mb-1">Contenido del Lote</p>
+                                    {item.items?.map((sub: any, i: number) => (
+                                        <div key={i} className="flex items-center gap-2 opacity-60 hover:opacity-100 transition-opacity">
+                                            <Disc className="h-2.5 w-2.5 text-primary" />
+                                            <span className="text-[9px] font-bold text-gray-400 truncate max-w-[150px]">{sub.artist} - {sub.title}</span>
+                                        </div>
+                                    ))}
+                                </div>
                             )}
                         </div>
                     );
@@ -143,7 +155,6 @@ export default function ManifestEditor({
                 {renderItemList(manifest.offeredItems, "offered", "Ítems Ofrecidos", "text-blue-400")}
                 {renderItemList(manifest.requestedItems, "requested", "Ítems Solicitados", "text-orange-400")}
             </div>
-
 
             {/* Cash Adjustment */}
             <div className="bg-white/5 border border-white/5 p-6 rounded-[2rem] space-y-4">

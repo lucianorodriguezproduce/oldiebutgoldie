@@ -10,7 +10,8 @@ import {
     doc,
     updateDoc,
     orderBy,
-    arrayUnion
+    arrayUnion,
+    runTransaction
 } from "firebase/firestore";
 
 
@@ -80,7 +81,9 @@ const bunkerToLegacy = async (trade: any) => {
         // Inyectar metadatos para OrderCard
         artist: firstItem.artist,
         album: firstItem.album,
-        thumbnailUrl: firstItem.cover_image
+        thumbnailUrl: firstItem.cover_image,
+        isBatch: cleanItems.length > 1,
+        itemsCount: cleanItems.length
     };
 };
 
@@ -166,22 +169,39 @@ export const tradeService = {
     },
 
     async resolveTrade(tradeId: string, manifest: Trade['manifest']) {
-        // 1. Reserve items from Admin stock (those requested by the user)
-        for (const itemId of manifest.requestedItems) {
-            const response = await fetch('/api/inventory/reserve', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ itemId, quantity: 1 })
-            });
+        const tradeRef = doc(db, COLLECTION_NAME, tradeId);
 
-            if (!response.ok) {
-                const err = await response.json();
-                throw new Error(`Error en reserva de ítem ${itemId}: ${err.error}`);
+        await runTransaction(db, async (transaction) => {
+            const tradeSnap = await transaction.get(tradeRef);
+            if (!tradeSnap.exists()) throw new Error("Trade no encontrado");
+
+            // Deducción de stock para cada ítem solicitado
+            for (const itemId of manifest.requestedItems) {
+                const itemRef = doc(db, "inventory", itemId);
+                const itemSnap = await transaction.get(itemRef);
+
+                if (!itemSnap.exists()) {
+                    console.warn(`Item ${itemId} no encontrado en el búnker.`);
+                    continue;
+                }
+
+                const data = itemSnap.data() as InventoryItem;
+                const currentStock = data.logistics.stock || 0;
+
+                if (currentStock <= 0) {
+                    throw new Error(`Stock insuficiente para: ${data.metadata.title}`);
+                }
+
+                const newStock = currentStock - 1;
+                transaction.update(itemRef, {
+                    "logistics.stock": newStock,
+                    "logistics.status": newStock === 0 ? "sold_out" : "active"
+                });
             }
-        }
 
-        // 2. Update status to accepted
-        await this.updateTradeStatus(tradeId, 'accepted');
+            // Actualizar estado del trade
+            transaction.update(tradeRef, { status: "accepted" });
+        });
     }
 
 };

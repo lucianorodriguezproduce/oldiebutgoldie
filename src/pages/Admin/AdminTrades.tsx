@@ -27,6 +27,7 @@ import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import ManifestEditor from "@/components/Trade/ManifestEditor";
+import TradeConsole from "@/components/Trade/TradeConsole";
 
 export default function AdminTrades() {
     const { showLoading, hideLoading } = useLoading();
@@ -35,10 +36,6 @@ export default function AdminTrades() {
     const [loading, setLoading] = useState(true);
     const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
     const [itemDetails, setItemDetails] = useState<Record<string, InventoryItem>>({});
-
-    // Negotiation state
-    const [isEditing, setIsEditing] = useState(false);
-    const [editedManifest, setEditedManifest] = useState<TradeManifest | null>(null);
 
     // Wizard State
     const [isWizardOpen, setIsWizardOpen] = useState(false);
@@ -86,72 +83,6 @@ export default function AdminTrades() {
         }
     };
 
-    const handleAcceptTrade = async (trade: Trade) => {
-        if (!trade.id || !user) return;
-        if (trade.currentTurn !== user.uid) {
-            alert("No es tu turno para aceptar.");
-            return;
-        }
-
-        const confirm = window.confirm("¿Confirmar resolución de Trade? Esto descontará stock automáticamente.");
-        if (!confirm) return;
-
-        showLoading("Resolviendo conflicto de stock...");
-        try {
-            await tradeService.resolveTrade(trade.id, trade.manifest);
-
-            alert("Trade aceptado y stock actualizado correctamente.");
-            fetchTrades();
-            setSelectedTrade(null);
-        } catch (error: any) {
-            console.error("Error accepting trade:", error);
-            alert(`Error crítico: ${error.message}`);
-        } finally {
-            hideLoading();
-        }
-    };
-
-
-    const handleCounterOffer = async () => {
-        if (!selectedTrade?.id || !editedManifest || !user) return;
-
-        showLoading("Enviando contra-oferta...");
-        try {
-            await tradeService.counterTrade(selectedTrade.id, editedManifest, user.uid);
-            alert("Contra-oferta enviada correctamente.");
-            setIsEditing(false);
-            fetchTrades();
-            setSelectedTrade(null);
-        } catch (error: any) {
-            console.error("Error sending counter offer:", error);
-            alert(`Error: ${error.message}`);
-        } finally {
-            hideLoading();
-        }
-    };
-
-    const startEditing = () => {
-        if (selectedTrade) {
-            setEditedManifest(selectedTrade.manifest);
-            setIsEditing(true);
-        }
-    };
-
-    const handleDeclineTrade = async (trade: Trade) => {
-        if (!trade.id) return;
-        if (!window.confirm("¿Rechazar esta propuesta de intercambio?")) return;
-
-        showLoading("Cancelando trade...");
-        try {
-            await tradeService.updateTradeStatus(trade.id, 'cancelled');
-            fetchTrades();
-            setSelectedTrade(null);
-        } catch (error) {
-            console.error("Error declining trade:", error);
-        } finally {
-            hideLoading();
-        }
-    };
 
     const handleCreateTrade = async () => {
         if (!targetUserEmail) return alert("Debes ingresar el email/ID del usuario.");
@@ -317,7 +248,7 @@ export default function AdminTrades() {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            onClick={() => { setSelectedTrade(null); setIsEditing(false); }}
+                            onClick={() => setSelectedTrade(null)}
                             className="absolute inset-0 bg-black/80 backdrop-blur-xl"
                         />
                         <motion.div
@@ -326,85 +257,11 @@ export default function AdminTrades() {
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
                             className="relative w-full max-w-4xl bg-[#0a0a0a] border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl max-h-[90vh] flex flex-col"
                         >
-                            <div className="p-8 space-y-8 overflow-y-auto flex-1">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-4">
-                                        <h3 className="text-2xl font-black text-white uppercase tracking-tighter">
-                                            {isEditing ? "Editando Propuesta" : "Detalle de Propuesta"}
-                                        </h3>
-                                        {getStatusBadge(selectedTrade.status)}
-                                    </div>
-                                    <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest bg-white/5 px-3 py-1.5 rounded-xl">
-                                        Turno: {selectedTrade.currentTurn === user?.uid ? "Tú" : "Cliente"}
-                                    </div>
-                                </div>
-
-                                <ManifestEditor
-                                    manifest={isEditing ? (editedManifest as TradeManifest) : selectedTrade.manifest}
-                                    onChange={(m) => setEditedManifest(m)}
-                                    isLocked={!isEditing}
-                                    myItems={[]} // TBD: Resolution of ownership
-                                    theirItems={[]}
-                                />
-
-                                {selectedTrade.status !== 'accepted' && selectedTrade.status !== 'cancelled' && (
-                                    <div className="flex gap-4 pt-8">
-                                        {isEditing ? (
-                                            <>
-                                                <button
-                                                    onClick={handleCounterOffer}
-                                                    className="flex-1 flex items-center justify-center gap-3 py-4 bg-primary text-black rounded-2xl font-black uppercase tracking-widest hover:bg-white transition-all shadow-lg shadow-primary/20"
-                                                >
-                                                    <ArrowRightLeft className="h-5 w-5" /> Enviar Contra-Oferta
-                                                </button>
-                                                <button
-                                                    onClick={() => setIsEditing(false)}
-                                                    className="px-8 py-4 bg-white/5 text-gray-400 rounded-2xl font-black uppercase tracking-widest hover:bg-white/10 transition-all"
-                                                >
-                                                    Cancelar
-                                                </button>
-                                            </>
-                                        ) : (
-                                            <>
-                                                {selectedTrade.currentTurn === user?.uid && (
-                                                    <button
-                                                        onClick={() => handleAcceptTrade(selectedTrade)}
-                                                        className="flex-1 flex items-center justify-center gap-3 py-4 bg-primary text-black rounded-2xl font-black uppercase tracking-widest hover:bg-white transition-all shadow-lg shadow-primary/20"
-                                                    >
-                                                        <CheckCircle2 className="h-5 w-5" /> Aceptar Propuesta
-                                                    </button>
-                                                )}
-                                                {selectedTrade.currentTurn === user?.uid && (
-                                                    <button
-                                                        onClick={startEditing}
-                                                        className="flex-1 flex items-center justify-center gap-3 py-4 bg-white/5 text-white border border-white/10 rounded-2xl font-black uppercase tracking-widest hover:bg-primary hover:text-black transition-all"
-                                                    >
-                                                        <Edit2 className="h-5 w-5" /> Regatear
-                                                    </button>
-                                                )}
-                                                <button
-                                                    onClick={() => handleDeclineTrade(selectedTrade)}
-                                                    className="flex-1 flex items-center justify-center gap-3 py-4 bg-white/5 text-red-500 border border-red-500/20 rounded-2xl font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all"
-                                                >
-                                                    <XCircle className="h-5 w-5" /> Rechazar
-                                                </button>
-                                            </>
-                                        )}
-                                    </div>
-                                )}
-
-                                {selectedTrade.status === 'accepted' && (
-                                    <div className="p-6 bg-green-500/10 border border-green-500/20 rounded-[2rem] flex items-center gap-4">
-                                        <div className="p-3 bg-green-500 rounded-2xl">
-                                            <CheckCircle2 className="h-6 w-6 text-black" />
-                                        </div>
-                                        <div className="flex-1">
-                                            <p className="text-[10px] font-black text-green-500 uppercase tracking-widest">Trato Cerrado</p>
-                                            <p className="text-sm font-bold text-white">El stock ha sido descontado atómicamente y la operación está completa.</p>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
+                            <TradeConsole
+                                trade={selectedTrade}
+                                onUpdate={fetchTrades}
+                                onClose={() => setSelectedTrade(null)}
+                            />
                         </motion.div>
                     </div>
                 )}
