@@ -1,10 +1,12 @@
 User-agent: *
 Allow: /
+# Abrimos el paso específico para el sitemap antes de bloquear la API
+Allow: /api/sitemap
 
-# Block sensitive administrative and private paths
+# Bloqueamos el resto del sector administrativo y privado
 Disallow: /admin/*
 Disallow: /checkout/*
 Disallow: /api/*
 
-# Sitemap reference
-Sitemap: https://oldiebutgoldie.com.ar/sitemap.xml
+# Referencia correcta al endpoint real del sitemap
+Sitemap: https://www.oldiebutgoldie.com.ar/api/sitemap
