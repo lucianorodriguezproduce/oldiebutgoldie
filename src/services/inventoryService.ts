@@ -41,6 +41,53 @@ export const inventoryService = {
         return id;
     },
 
+    async createBatch(batchData: {
+        title: string,
+        price: number,
+        stock: number,
+        items: any[]
+    }) {
+        const id = crypto.randomUUID();
+        const firstItem = batchData.items[0];
+
+        // Use the first item's image as batch thumbnail
+        const newItem: InventoryItem = {
+            id,
+            metadata: {
+                title: batchData.title,
+                artist: "Varios",
+                year: new Date().getFullYear(),
+                country: "Argentina",
+                genres: [],
+                styles: [],
+                format_description: "Lote Especial",
+                isBatch: true
+            },
+            media: {
+                thumbnail: firstItem.thumb || "",
+                full_res_image_url: firstItem.full_res_image_url || firstItem.thumb || ""
+            },
+            reference: {
+                originalDiscogsId: 0,
+                originalDiscogsUrl: ""
+            },
+            logistics: {
+                stock: batchData.stock,
+                price: batchData.price,
+                condition: "Mixed",
+                status: "active"
+            },
+            items: batchData.items
+        };
+
+        const docRef = doc(db, COLLECTION_NAME, id);
+        await setDoc(docRef, {
+            ...newItem,
+            timestamp: serverTimestamp()
+        });
+        return id;
+    },
+
     /**
      * Clones a Discogs release and persists it into the local inventory.
      * This is the "Bunker Entry" process.

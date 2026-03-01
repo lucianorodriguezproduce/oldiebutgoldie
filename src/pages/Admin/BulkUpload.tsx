@@ -54,6 +54,9 @@ export default function BulkUpload() {
     const [showBatchModal, setShowBatchModal] = useState(false);
     const [batchPrice, setBatchPrice] = useState<number>(0);
     const [isSanitizing, setIsSanitizing] = useState(false);
+    const [publishMode, setPublishMode] = useState<"individual" | "bundle">("individual");
+    const [batchTitle, setBatchTitle] = useState("");
+    const [batchStock, setBatchStock] = useState(1);
 
     // Initial Load from localStorage
     useEffect(() => {
@@ -277,6 +280,47 @@ export default function BulkUpload() {
         if (batchItems.length === 0) return;
 
         setShowBatchModal(false);
+
+        if (publishMode === "bundle") {
+            showLoading(`Creando Lote con ${batchItems.length} discos...`);
+            try {
+                const subItems = batchItems.map(row => ({
+                    id: row.selectedMatch!.id,
+                    title: row.selectedMatch!.title,
+                    artist: parseDiscogsTitle(row.selectedMatch!.title).artist,
+                    price: row.originalPrice,
+                    condition: `${row.originalMedia} / ${row.originalCover}`,
+                    format: row.originalFormat,
+                    thumb: row.selectedMatch!.thumb
+                }));
+
+                await inventoryService.createBatch({
+                    title: batchTitle || `Lote Especial ${new Date().toLocaleDateString()}`,
+                    price: batchPrice || subItems.reduce((acc, it) => acc + it.price, 0),
+                    stock: batchStock,
+                    items: subItems
+                });
+
+                let newRows = [...rows];
+                batchItems.forEach(row => {
+                    const rIndex = newRows.findIndex(r => r.id === row.id);
+                    newRows[rIndex].published = true;
+                    newRows[rIndex].inBatch = false;
+                });
+                setRows(newRows);
+                pushBulkUploadCompleted(batchItems.length);
+                alert(TEXTS.bulk.operationFinished);
+            } catch (error: any) {
+                console.error("Batch publish error", error);
+                alert("Error al crear el lote: " + (error.message || "Error desconocido"));
+            } finally {
+                hideLoading();
+                setBatchPrice(0);
+                setBatchTitle("");
+            }
+            return;
+        }
+
         showLoading(`Ingresando al Búnker ${batchItems.length} discos...`);
         let newRows = [...rows];
         let publishCount = 0;
@@ -600,17 +644,69 @@ export default function BulkUpload() {
                         </div>
 
                         <div className="space-y-6">
-                            <div className="bg-white/5 border border-white/10 p-6 rounded-2xl">
-                                <p className="text-sm text-gray-400 leading-relaxed">
-                                    Se crearán registros individuales en el <span className="text-white font-bold">Inventario Pro</span> para cada disco seleccionado. Se clonarán los metadatos de Discogs y se subirán las imágenes al Storage.
-                                </p>
+                            <div className="grid grid-cols-2 gap-4">
+                                <button
+                                    onClick={() => setPublishMode("individual")}
+                                    className={`p-4 rounded-2xl border transition-all text-left space-y-2 ${publishMode === "individual" ? "bg-primary/10 border-primary" : "bg-white/5 border-white/10 opacity-50"}`}
+                                >
+                                    <h4 className="text-white font-black uppercase text-[10px] tracking-widest">{TEXTS.bulk.individualMode}</h4>
+                                    <p className="text-[9px] text-gray-400 font-bold leading-tight">{TEXTS.bulk.individualModeDesc}</p>
+                                </button>
+                                <button
+                                    onClick={() => setPublishMode("bundle")}
+                                    className={`p-4 rounded-2xl border transition-all text-left space-y-2 ${publishMode === "bundle" ? "bg-primary/10 border-primary" : "bg-white/5 border-white/10 opacity-50"}`}
+                                >
+                                    <h4 className="text-white font-black uppercase text-[10px] tracking-widest">{TEXTS.bulk.bundleMode}</h4>
+                                    <p className="text-[9px] text-gray-400 font-bold leading-tight">{TEXTS.bulk.bundleModeDesc}</p>
+                                </button>
                             </div>
+
+                            {publishMode === "bundle" ? (
+                                <div className="space-y-4 animate-in slide-in-from-top duration-300">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Título del Lote</label>
+                                        <input
+                                            type="text"
+                                            value={batchTitle}
+                                            onChange={e => setBatchTitle(e.target.value)}
+                                            placeholder="Ej: Joyas del Rock Argentino"
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-primary/40 outline-none"
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">{TEXTS.bulk.priceAdjustment}</label>
+                                            <input
+                                                type="number"
+                                                value={batchPrice}
+                                                onChange={e => setBatchPrice(parseFloat(e.target.value))}
+                                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-primary/40 outline-none"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Stock</label>
+                                            <input
+                                                type="number"
+                                                value={batchStock}
+                                                onChange={e => setBatchStock(parseInt(e.target.value))}
+                                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-primary/40 outline-none"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="bg-white/5 border border-white/10 p-4 rounded-2xl">
+                                    <p className="text-[11px] text-gray-400 leading-relaxed font-bold italic">
+                                        Los discos se publicarán como ítems individuales, cada uno con su propio stock de 1 unidad.
+                                    </p>
+                                </div>
+                            )}
 
                             <button
                                 onClick={handlePublishStrategy}
                                 className="w-full py-6 rounded-2xl bg-primary text-black font-black uppercase tracking-[0.2em] transition-all hover:brightness-110 shadow-xl shadow-primary/20"
                             >
-                                Registrar en Inventario
+                                {publishMode === "bundle" ? TEXTS.bulk.publishBundle : "Registrar Individuales"}
                             </button>
                         </div>
                     </div>

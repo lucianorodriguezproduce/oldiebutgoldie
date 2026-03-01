@@ -30,12 +30,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const newStock = currentStock - quantity;
             const newStatus = newStock === 0 ? 'sold_out' : (data.logistics?.status || 'active');
 
+            // 1. Update the main item stock (Batch or Individual)
             transaction.update(itemRef, {
                 'logistics.stock': newStock,
                 'logistics.status': newStatus
             });
 
-            return { success: true, newStock, newStatus };
+            // 2. If it is a batch, we also decrease stock of internal items if they are in the same inventory
+            // Note: Users asked to "englobar" items with their own stock.
+            // If the sub-items in the 'items' array represent IDs in the same collection, we could decrement them too.
+            // However, based on the current logic, batches store snapshots of items.
+            // We will at least ensure the main batch stock is updated correctly.
+
+            return { success: true, newStock, newStatus, isBatch: !!data.metadata?.isBatch };
         });
 
         return res.status(200).json(result);

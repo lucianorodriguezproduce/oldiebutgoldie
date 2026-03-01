@@ -8,6 +8,7 @@ export interface InventoryItem {
         genres: string[];
         styles: string[];
         format_description: string;
+        isBatch?: boolean;
     };
     media: {
         thumbnail: string;
@@ -23,6 +24,15 @@ export interface InventoryItem {
         condition: string;
         status: "active" | "sold_out" | "archived";
     };
+    items?: {
+        id: string | number;
+        title: string;
+        artist: string;
+        price: number;
+        condition: string;
+        format: string;
+        thumb: string;
+    }[];
 }
 
 export interface TradeManifest {
