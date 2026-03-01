@@ -217,11 +217,13 @@ export const inventoryService = {
         const q = query(
             collection(db, COLLECTION_NAME),
             where("logistics.status", "==", "active"),
-            orderBy("timestamp", "desc"),
-            limit(limitCount)
+            limit(50) // Fetch more to sort in memory
         );
         const snapshot = await getDocs(q);
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InventoryItem));
+        return snapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() } as InventoryItem))
+            .sort((a, b) => ((b as any).timestamp?.seconds || 0) - ((a as any).timestamp?.seconds || 0))
+            .slice(0, limitCount);
     }
 };
 
@@ -232,7 +234,6 @@ export const getInventoryPaged = async (pageSize: number = 20, lastDoc?: any) =>
         let q = query(
             collection(db, "inventory"),
             where("logistics.status", "==", "active"),
-            orderBy("timestamp", "desc"),
             limit(pageSize)
         );
 

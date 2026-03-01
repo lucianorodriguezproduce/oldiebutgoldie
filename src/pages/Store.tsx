@@ -8,6 +8,8 @@ import { CompactSearchCard } from "@/components/ui/CompactSearchCard";
 import { SEO } from "@/components/SEO";
 import { useLoading } from "@/context/LoadingContext";
 
+import { getCleanOrderMetadata } from "@/utils/orderMetadata";
+
 export default function Store() {
     const navigate = useNavigate();
     const { showLoading, hideLoading } = useLoading();
@@ -67,10 +69,10 @@ export default function Store() {
     const filteredItems = items.filter(item => {
         if (!searchTerm) return true;
         const search = searchTerm.toLowerCase();
+        const { artist, album } = getCleanOrderMetadata(item);
         return (
-            item.title?.toLowerCase().includes(search) ||
-            item.artist?.toLowerCase().includes(search) ||
-            item.album?.toLowerCase().includes(search)
+            artist.toLowerCase().includes(search) ||
+            album.toLowerCase().includes(search)
         );
     });
 
@@ -120,22 +122,27 @@ export default function Store() {
 
                 {/* Grid */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-8">
-                    {filteredItems.map((item, idx) => (
-                        <div key={item.id} ref={idx === filteredItems.length - 1 ? lastItemRef : null}>
-                            <CompactSearchCard
-                                result={{
-                                    id: item.id,
-                                    title: item.title,
-                                    cover_image: item.cover_image || item.thumb,
-                                    thumb: item.thumb,
-                                    type: 'release', // Default for inventory
-                                    isLocal: true
-                                } as any}
-                                idx={idx}
-                                onClick={() => navigate(`/album/${item.id}`)}
-                            />
-                        </div>
-                    ))}
+                    {filteredItems.map((item, idx) => {
+                        const { artist, album, image } = getCleanOrderMetadata(item);
+                        return (
+                            <div key={item.id} ref={idx === filteredItems.length - 1 ? lastItemRef : null}>
+                                <CompactSearchCard
+                                    result={{
+                                        id: item.id,
+                                        title: album,
+                                        cover_image: image,
+                                        thumb: image,
+                                        type: 'release', // Default for inventory
+                                        isLocal: true,
+                                        normalizedAlbum: album,
+                                        normalizedArtist: artist
+                                    } as any}
+                                    idx={idx}
+                                    onClick={() => navigate(`/album/${item.id}`)}
+                                />
+                            </div>
+                        );
+                    })}
                 </div>
 
                 {/* Loading State for Infinite Scroll */}

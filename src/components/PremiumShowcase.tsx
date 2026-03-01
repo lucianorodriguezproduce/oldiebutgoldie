@@ -29,8 +29,7 @@ export function PremiumShowcase() {
         const qInventory = query(
             collection(db, "inventory"),
             where("logistics.status", "==", "active"),
-            orderBy("timestamp", "desc"),
-            limit(20)
+            limit(50)
         );
 
         let activeOrders: any[] = [];
