@@ -74,20 +74,22 @@ export function LoteProvider({ children }: { children: ReactNode }) {
     };
 
     const addItemFromInventory = (orderData: any) => {
-        if (['sold', 'venta_finalizada', 'completed'].includes(orderData.status)) {
+        if (!orderData) return;
+
+        if (['sold', 'venta_finalizada', 'completed'].includes(orderData.status || orderData.logistics?.status)) {
             alert("Atención: Este ítem ya fue vendido y no puede añadirse al lote.");
             return;
         }
 
         const newItem: BatchItem = {
             id: orderData.id,
-            title: orderData.album || orderData.title || "Sin Título",
-            artist: orderData.artist || "Varios",
-            album: orderData.album || orderData.title || "Sin Título",
-            cover_image: orderData.thumbnailUrl || orderData.cover_image || orderData.items?.[0]?.cover_image || "",
-            format: orderData.details?.format || orderData.format || "Vinilo",
-            condition: orderData.details?.condition || orderData.condition || "Usado",
-            price: orderData.adminPrice || orderData.totalPrice || 0,
+            title: orderData.metadata?.title || orderData.album || orderData.title || "Sin Título",
+            artist: orderData.metadata?.artist || orderData.artist || "Varios",
+            album: orderData.metadata?.title || orderData.album || orderData.title || "Sin Título",
+            cover_image: orderData.media?.thumbnail || orderData.thumbnailUrl || orderData.cover_image || orderData.items?.[0]?.cover_image || "",
+            format: orderData.metadata?.format_description || orderData.details?.format || orderData.format || "Vinilo",
+            condition: orderData.logistics?.condition || orderData.details?.condition || orderData.condition || "Usado",
+            price: orderData.logistics?.price || orderData.adminPrice || orderData.totalPrice || 0,
             currency: orderData.adminCurrency || orderData.currency || "ARS",
             source: 'INVENTORY'
         };

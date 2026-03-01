@@ -317,7 +317,7 @@ export default function RevisarLote() {
                                     />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <h4 className="text-white font-bold truncate leading-tight">{item.title}</h4>
+                                    <h4 className="text-white font-bold truncate leading-tight">{item.title || (item.artist && item.album ? `${item.artist} - ${item.album}` : (item.album || "Sin Título"))}</h4>
                                     <div className="flex items-center gap-2 mt-1 flex-wrap">
                                         <div className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest border transition-all ${item.source === 'INVENTORY'
                                             ? 'bg-gradient-to-r from-emerald-500/20 to-emerald-700/20 border-emerald-500/50 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.1)]'
