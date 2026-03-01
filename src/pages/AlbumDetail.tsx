@@ -15,6 +15,8 @@ import { useLoading } from "@/context/LoadingContext";
 import { LazyImage } from "@/components/ui/LazyImage";
 import { inventoryService } from "@/services/inventoryService";
 import { TEXTS } from "@/constants/texts";
+import { useLote } from "@/context/LoteContext";
+import { ShoppingBag, Check } from "lucide-react";
 
 export default function AlbumDetail() {
     const { id } = useParams<{ id: string }>();
@@ -23,6 +25,7 @@ export default function AlbumDetail() {
     const { hasItem: isInWantlist, toggleItem: toggleWantlist } = useUserCollection("wantlist");
     const { trackEvent } = useTelemetry();
     const { showLoading, hideLoading } = useLoading();
+    const { addItemFromInventory, isInLote } = useLote();
 
     const { data: album, isLoading, error } = useQuery({
         queryKey: ["release", id],
@@ -49,7 +52,9 @@ export default function AlbumDetail() {
                         tracklist: localItem.tracklist || [],
                         notes: localItem.metadata.format_description,
                         isLocal: true,
-                        uri: localItem.reference.originalDiscogsUrl
+                        uri: localItem.reference.originalDiscogsUrl,
+                        stock: localItem.logistics.stock,
+                        raw: localItem // Pass the raw object for Lote compatibility
                     };
                 }
             }
@@ -170,6 +175,34 @@ export default function AlbumDetail() {
                                 {isInWantlist(album.id.toString()) ? TEXTS.common.target : TEXTS.common.favorites}
                             </Button>
                         </div>
+
+                        {album.isLocal && (
+                            <Button
+                                onClick={() => {
+                                    if (album.stock > 0) {
+                                        addItemFromInventory(album.raw);
+                                    }
+                                }}
+                                disabled={album.stock <= 0 || isInLote(album.id)}
+                                className={`h-24 text-xl font-black transition-all transform hover:-translate-y-2 rounded-2xl shadow-2xl select-none overflow-hidden relative group ${isInLote(album.id)
+                                    ? "bg-green-500/20 text-green-400 border-2 border-green-500/50"
+                                    : "bg-gradient-to-r from-primary to-secondary text-black hover:scale-[1.02]"
+                                    }`}
+                            >
+                                {isInLote(album.id) ? (
+                                    <>
+                                        <Check className="mr-3 h-7 w-7" />
+                                        EN EL LOTE
+                                    </>
+                                ) : (
+                                    <>
+                                        <ShoppingBag className="mr-3 h-7 w-7" />
+                                        {album.stock > 0 ? "¡COMPRAR AHORA!" : "AGOTADO"}
+                                    </>
+                                )}
+                            </Button>
+                        )}
+
                         <Button variant="ghost" className="h-14 text-gray-500 hover:text-white hover:bg-white/5 rounded-2xl font-black uppercase tracking-[0.15em] text-[11px] border border-white/5 transition-all">
                             <Share2 className="mr-3 h-5 w-5" /> {TEXTS.common.transmissionLink}
                         </Button>

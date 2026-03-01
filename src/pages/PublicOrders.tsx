@@ -8,6 +8,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { TEXTS } from '@/constants/texts';
 import { tradeService } from '@/services/tradeService';
 
+import { inventoryService } from '@/services/inventoryService';
+
 import OrderCard from '@/components/OrderCard';
 
 // Fetch the clean generic OrderData
@@ -18,15 +20,24 @@ export default function PublicOrders() {
     useEffect(() => {
         const fetchPublicFeed = async () => {
             try {
-                // Sincronización con el nuevo motor de Trades (Soberanía de Datos)
+                // 1. Sincronización con el nuevo motor de Trades (Soberanía de Datos)
                 const trades = await tradeService.getTrades();
 
-                // Mantenemos compatibilidad con el feed híbrido (Legacy + Bunker)
-                // Filter out empty invalid routes or crash-ready docs.
+                // 2. Inyectamos nuevos ingresos del búnker para mantener el feed vivo
+                const inventoryItems = await inventoryService.getRecentAdditions(15);
+                const enrichedInventory = inventoryItems.map(item => ({
+                    ...item,
+                    is_admin_offer: true, // Forzar visibilidad de compra
+                    isInventoryItem: true,
+                    status: 'active'
+                }));
+
+                // Mantenemos compatibilidad con el feed híbrido (Legacy + Bunker + Soberanos)
                 const validOrders = trades.filter((o: any) => o.item_id || o.isBatch || o.is_batch || (o.items && o.items.length > 0));
-                setOrders(validOrders);
+
+                setOrders([...enrichedInventory, ...validOrders]);
             } catch (error) {
-                console.error("Error fetching public activity feed via TradeService", error);
+                console.error("Error fetching public activity feed", error);
             } finally {
                 setLoading(false);
             }

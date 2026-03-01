@@ -8,7 +8,9 @@ import {
     query,
     where,
     getDocs,
-    serverTimestamp
+    serverTimestamp,
+    orderBy,
+    limit
 } from "firebase/firestore";
 import type { InventoryItem } from "@/types/inventory";
 
@@ -208,6 +210,17 @@ export const inventoryService = {
             item.metadata.title.toLowerCase().includes(lowTerm) ||
             item.metadata.artist.toLowerCase().includes(lowTerm)
         );
+    },
+
+    async getRecentAdditions(limitCount: number = 20) {
+        const q = query(
+            collection(db, COLLECTION_NAME),
+            where("logistics.status", "==", "active"),
+            orderBy("timestamp", "desc"),
+            limit(limitCount)
+        );
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InventoryItem));
     }
 };
 

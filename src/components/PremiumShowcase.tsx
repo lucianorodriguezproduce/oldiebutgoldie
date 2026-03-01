@@ -136,7 +136,13 @@ export function PremiumShowcase() {
                                 <motion.button
                                     key={order.id}
                                     whileTap={{ scale: 0.95 }}
-                                    onClick={() => navigate(`/orden/${order.id}?action=buy`)}
+                                    onClick={() => {
+                                        if (order.isFromInventory) {
+                                            navigate(`/album/${order.id}`);
+                                        } else {
+                                            navigate(`/orden/${order.id}?action=buy`);
+                                        }
+                                    }}
                                     className="flex-none w-[280px] md:w-[350px] snap-center group relative overflow-hidden rounded-[2.5rem] bg-white/5 border border-white/10 backdrop-blur-xl shadow-2xl transition-all hover:border-primary/30 text-left"
                                 >
                                     {/* Card Background Accent */}

@@ -148,7 +148,9 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
     };
 
     // [STRICT-EXTRACT] Uso del helper centralizado para integridad de datos
-    const { artist, album, image, isBatch, itemsCount: itemsFromHelper } = getCleanOrderMetadata(order);
+    const meta = getCleanOrderMetadata(order);
+    const { artist, album, image, isBatch, itemsCount: itemsFromHelper } = meta;
+    const isInventoryItem = meta.isInventoryItem || order.isInventoryItem;
     const items = Array.isArray(order.items) ? order.items : [];
 
     const coverImage = image;
@@ -258,10 +260,10 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                             navigator.share({
                                 title: `Oldie But Goldie - ${title}`,
                                 text: '¡Mira esta joya que encontré en Oldie But Goldie!',
-                                url: `https://www.oldiebutgoldie.com.ar/orden/${order.id}`
+                                url: isInventoryItem ? `https://www.oldiebutgoldie.com.ar/album/${order.id}` : `https://www.oldiebutgoldie.com.ar/orden/${order.id}`
                             }).catch(console.error);
                         } else {
-                            navigator.clipboard.writeText(`https://www.oldiebutgoldie.com.ar/orden/${order.id}`);
+                            navigator.clipboard.writeText(isInventoryItem ? `https://www.oldiebutgoldie.com.ar/album/${order.id}` : `https://www.oldiebutgoldie.com.ar/orden/${order.id}`);
                             alert('Enlace copiado al portapapeles');
                         }
                     }}
@@ -373,13 +375,13 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                             <Clock className="w-3.5 h-3.5" /> {getReadableDate(order.createdAt || order.timestamp)}
                         </time>
                         <Link
-                            to={`/orden/${order.id}`}
+                            to={isInventoryItem ? `/album/${order.id}` : `/orden/${order.id}`}
                             onClick={(e) => e.stopPropagation()}
                             className={`px-3 py-1.5 border rounded-lg text-[9px] font-black uppercase tracking-widest transition-colors flex items-center gap-2
                                 ${context === 'public' ? 'bg-white/5 hover:bg-white/10 text-white border-white/10' : 'bg-transparent hover:bg-white/5 text-gray-400 border-transparent hover:border-white/10'}
                             `}
                         >
-                            <Search className="w-3 h-3" /> Ver Detalle Público
+                            <Search className="w-3 h-3" /> Ver Detalle {isInventoryItem ? "Automático" : "Público"}
                         </Link>
                     </div>
                 </div>
@@ -390,10 +392,9 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                         {getStatusBadge(status)}
                     </div>
 
-                    {/* Direct Buy Button for Public Feed */}
-                    {context === 'public' && order.is_admin_offer && status !== 'completed' && status !== 'venta_finalizada' && status !== 'cancelled' && (
+                    {context === 'public' && (order.is_admin_offer || isInventoryItem) && status !== 'completed' && status !== 'venta_finalizada' && status !== 'cancelled' && (
                         <Link
-                            to={`/orden/${order.id}?action=buy`}
+                            to={isInventoryItem ? `/album/${order.id}` : `/orden/${order.id}?action=buy`}
                             onClick={(e) => e.stopPropagation()}
                             className="w-full px-6 py-4 bg-gradient-to-r from-primary to-secondary text-black font-black uppercase tracking-widest text-[11px] md:text-sm rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all text-center lg:mt-auto"
                         >
