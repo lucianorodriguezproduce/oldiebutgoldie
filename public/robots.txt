@@ -1,12 +1,13 @@
 User-agent: *
 Allow: /
-# Abrimos el paso específico para el sitemap antes de bloquear la API
+# Abrimos el acceso a la ruta del rewrite
+Allow: /sitemap.xml
 Allow: /api/sitemap
 
-# Bloqueamos el resto del sector administrativo y privado
+# Bloqueos de seguridad
 Disallow: /admin/*
 Disallow: /checkout/*
 Disallow: /api/*
 
-# Referencia correcta al endpoint real del sitemap
-Sitemap: https://www.oldiebutgoldie.com.ar/api/sitemap
+# Referencia al sitemap con el dominio exacto
+Sitemap: https://www.oldiebutgoldie.com.ar/sitemap.xml
