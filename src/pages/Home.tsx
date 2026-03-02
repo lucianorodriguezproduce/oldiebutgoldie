@@ -76,6 +76,7 @@ export default function Home() {
     const [isSearchActive, setIsSearchActive] = useState(false);
     const [searchFilter, setSearchFilter] = useState<"todo" | "artistas" | "álbumes">("todo");
     const [searchResults, setSearchResults] = useState<DiscogsSearchResult[]>([]);
+    const [blockedAssetIds, setBlockedAssetIds] = useState<string[]>([]);
     const [isLoadingSearch, setIsLoadingSearch] = useState(false);
     const [searchError, setSearchError] = useState<string | null>(null);
     const [selectedItem, setSelectedItem] = useState<DiscogsSearchResult | null>(null);
@@ -96,6 +97,15 @@ export default function Home() {
     // Local Auth UI states (only for the manual form)
     const debouncedQuery = useDebounce(query, 300);
     const resultsContainerRef = useRef<HTMLDivElement>(null);
+
+    // Listener para Asset Locking Visual
+    useEffect(() => {
+        const unsubscribe = tradeService.onSnapshotBlockedAssets((ids) => {
+            setBlockedAssetIds(ids);
+        });
+        return () => unsubscribe();
+    }, []);
+
     const conditionRef = useRef<HTMLDivElement>(null);
     const actionsRef = useRef<HTMLDivElement>(null);
     const priceInputRef = useRef<HTMLInputElement>(null);
@@ -293,17 +303,19 @@ export default function Home() {
                     let localResults: any[] = [];
                     if (!selectedArtist && (searchFilter === "todo" || searchFilter === "álbumes")) {
                         const localItems = await inventoryService.searchItems(debouncedQuery);
-                        localResults = localItems.map(item => ({
-                            id: item.id,
-                            title: `${item.metadata.artist} - ${item.metadata.title}`,
-                            cover_image: item.media.full_res_image_url || item.media.thumbnail,
-                            thumb: item.media.thumbnail,
-                            type: "release",
-                            isLocal: true,
-                            inventoryItem: item,
-                            normalizedArtist: item.metadata.artist,
-                            normalizedAlbum: item.metadata.title
-                        }));
+                        localResults = localItems
+                            .filter(item => !blockedAssetIds.includes(item.id))
+                            .map(item => ({
+                                id: item.id,
+                                title: `${item.metadata.artist} - ${item.metadata.title}`,
+                                cover_image: item.media.full_res_image_url || item.media.thumbnail,
+                                thumb: item.media.thumbnail,
+                                type: "release",
+                                isLocal: true,
+                                inventoryItem: item,
+                                normalizedArtist: item.metadata.artist,
+                                normalizedAlbum: item.metadata.title
+                            }));
                     }
 
                     // 2. BUSQUEDA EXTERNA (DISCOGS)

@@ -30,20 +30,28 @@ export default function Store() {
         format: ""
     });
 
+    const [blockedAssetIds, setBlockedAssetIds] = useState<string[]>([]);
     const observer = useRef<IntersectionObserver | null>(null);
 
     const loadItemsRef = useRef<(() => void) | null>(null);
 
     useEffect(() => {
         showLoading(TEXTS.common.loadingGeneric);
-        const unsubscribe = inventoryService.onSnapshotInventory((updatedItems: InventoryItem[]) => {
+        const unsubscribeInv = inventoryService.onSnapshotInventory((updatedItems: InventoryItem[]) => {
             setItems(updatedItems);
             setLoading(false);
             hideLoading();
             setHasMore(false); // In real-time mode, we load the full active set for now
         });
 
-        return () => unsubscribe();
+        const unsubscribeTrades = tradeService.onSnapshotBlockedAssets((ids) => {
+            setBlockedAssetIds(ids);
+        });
+
+        return () => {
+            unsubscribeInv();
+            unsubscribeTrades();
+        };
     }, [showLoading, hideLoading]);
 
     const lastItemRef = useCallback((node: HTMLDivElement) => {
@@ -52,6 +60,9 @@ export default function Store() {
 
     const filteredItems = useMemo(() => {
         return items.filter(item => {
+            // Asset Locking Visual: Filter out items in active trades
+            if (blockedAssetIds.includes(item.id)) return false;
+
             const { artist, album } = getCleanOrderMetadata(item);
             const metadata = item.metadata || {};
 

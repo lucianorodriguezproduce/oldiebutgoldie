@@ -11,7 +11,8 @@ import {
     updateDoc,
     orderBy,
     arrayUnion,
-    runTransaction
+    runTransaction,
+    onSnapshot
 } from "firebase/firestore";
 
 
@@ -189,6 +190,30 @@ export const tradeService = {
         await updateDoc(docRef, { status });
     },
 
+    /**
+     * Escucha en tiempo real los activos bloqueados por negociaciones activas.
+     */
+    onSnapshotBlockedAssets(callback: (assetIds: string[]) => void) {
+        const q = query(
+            collection(db, COLLECTION_NAME),
+            where("status", "in", ["pending", "counter_offer", "accepted"])
+        );
+
+        return onSnapshot(q, (snapshot) => {
+            const blockedIds = new Set<string>();
+            snapshot.docs.forEach(doc => {
+                const data = doc.data() as Trade;
+                if (data.manifest?.requestedItems) {
+                    data.manifest.requestedItems.forEach(id => blockedIds.add(String(id)));
+                }
+                if (data.manifest?.offeredItems) {
+                    data.manifest.offeredItems.forEach(id => blockedIds.add(String(id)));
+                }
+            });
+            callback(Array.from(blockedIds));
+        });
+    },
+
     async resolveTrade(tradeId: string, manifest: Trade['manifest']) {
         const tradeRef = doc(db, COLLECTION_NAME, tradeId);
 
@@ -208,7 +233,7 @@ export const tradeService = {
             // --- 1. PROCESAR ITEMS SOLICITADOS (Receiver -> Sender) ---
             for (const itemId of manifest.requestedItems) {
                 if (receiverId === ADMIN_UID) {
-                    const itemRef = doc(db, "inventory", itemId);
+                    const itemRef = doc(db, "inventory", String(itemId));
                     const itemSnap = await transaction.get(itemRef);
 
                     if (itemSnap.exists()) {
@@ -236,7 +261,7 @@ export const tradeService = {
                     }
                 } else {
                     // --- PROTECCIÓN P2P: Check de Integridad Transaccional ---
-                    const assetRef = doc(db, "user_assets", itemId);
+                    const assetRef = doc(db, "user_assets", String(itemId));
                     const assetSnap = await transaction.get(assetRef);
 
                     if (!assetSnap.exists()) throw new Error(`Activo no encontrado: ${itemId}`);
@@ -264,7 +289,7 @@ export const tradeService = {
 
             // --- 2. PROCESAR ITEMS OFRECIDOS (Sender -> Receiver) ---
             for (const itemId of manifest.offeredItems) {
-                const assetRef = doc(db, "user_assets", itemId);
+                const assetRef = doc(db, "user_assets", String(itemId));
                 const assetSnap = await transaction.get(assetRef);
 
                 if (!assetSnap.exists()) throw new Error(`Activo ofrecido no encontrado: ${itemId}`);
