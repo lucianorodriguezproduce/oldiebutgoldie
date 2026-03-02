@@ -183,6 +183,8 @@ export const TEXTS = {
         },
         recentOrders: "Ordenes Recientes",
         noOrders: "No tienes ordenes aún.",
+        noActivity: "No hay actividad reciente",
+        noActivitySub: "Explora la tienda para iniciar tu primera operación o intercambio.",
         searchFirst: "Buscar tu primer vinilo/cd/cassette",
         myOrders: "Mis Ordenes",
         historyDesc: "Historial de ordenes de compra y venta registradas.",

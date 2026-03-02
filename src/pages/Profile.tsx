@@ -215,7 +215,7 @@ export default function Profile() {
                 order_id: order.id
             });
 
-            setSelectedOrder(prev => prev ? { ...prev, status: "venta_finalizada" } : null);
+            setSelectedOrder((prev: any) => prev ? { ...prev, status: "venta_finalizada" } : null);
             alert("¡Felicidades! Has finalizado la venta. Coordina el pago por WhatsApp.");
         } catch (error) {
             console.error("Error accepting proposal:", error);
@@ -233,7 +233,7 @@ export default function Profile() {
         showLoading(TEXTS.profile.sendingCounterOffer);
         setIsNegotiating(true);
         try {
-            await updateDoc(doc(db, "orders", order.id), {
+            await updateDoc(doc(db, "trades", order.id), {
                 totalPrice: priceVal,
                 status: "contraoferta_usuario",
                 negotiationHistory: arrayUnion({
@@ -254,7 +254,7 @@ export default function Profile() {
                 order_id: order.id
             });
 
-            setSelectedOrder(prev => prev ? { ...prev, totalPrice: priceVal, status: "contraoferta_usuario" } : null);
+            setSelectedOrder((prev: any) => prev ? { ...prev, totalPrice: priceVal, status: "contraoferta_usuario" } : null);
             setCounterOfferPrice("");
             setShowCounterInput(false);
             setSuccessMessage(TEXTS.profile.counterOfferSent);
