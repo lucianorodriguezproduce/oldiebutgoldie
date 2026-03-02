@@ -15,7 +15,7 @@ import {
 } from "firebase/firestore";
 
 
-import type { Trade, InventoryItem } from "@/types/inventory";
+import type { Trade, InventoryItem, UserAsset } from "@/types/inventory";
 
 const COLLECTION_NAME = "trades";
 const ADMIN_UID = "oldiebutgoldie"; // Internal reference for B2C
