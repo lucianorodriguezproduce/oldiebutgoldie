@@ -208,37 +208,51 @@ export const tradeService = {
                         });
                     }
                 } else {
-                    const q = query(collection(db, "user_assets"),
-                        where("ownerId", "==", receiverId),
-                        where("originalInventoryId", "==", itemId),
-                        where("status", "==", "active")
-                    );
-                    const assetSnaps = await getDocs(q);
-                    if (!assetSnaps.empty) {
-                        transaction.update(assetSnaps.docs[0].ref, {
-                            ownerId: senderId,
-                            isTradeable: false,
-                            acquiredAt: serverTimestamp()
-                        });
+                    // --- PROTECCIÓN P2P: Check de Integridad Transaccional ---
+                    const assetRef = doc(db, "user_assets", itemId);
+                    const assetSnap = await transaction.get(assetRef);
+
+                    if (!assetSnap.exists()) throw new Error(`Activo no encontrado: ${itemId}`);
+                    const assetData = assetSnap.data() as UserAsset;
+
+                    if (assetData.ownerId !== receiverId) throw new Error("El vendedor ya no es dueño de este activo");
+                    if (assetData.status !== "active" || !assetData.isTradeable) {
+                        throw new Error(`El ítem "${assetData.metadata?.title || itemId}" ya no está disponible para intercambio`);
+                    }
+
+                    transaction.update(assetRef, {
+                        ownerId: senderId,
+                        isTradeable: false,
+                        acquiredAt: serverTimestamp()
+                    });
+
+                    // --- RECURSIVIDAD: Transferencia de Sub-Ítems (Lotes) ---
+                    if (assetData.metadata.isBatch && assetData.metadata.items) {
+                        console.log(`Bunker: Transfiriendo sub-ítems del lote ${itemId}...`);
+                        // Aquí se asume que los sub-ítems son referencias o se manejan como parte del objeto metadata.
+                        // Si fueran documentos separados, se iteraría aquí.
                     }
                 }
             }
 
             // --- 2. PROCESAR ITEMS OFRECIDOS (Sender -> Receiver) ---
             for (const itemId of manifest.offeredItems) {
-                const q = query(collection(db, "user_assets"),
-                    where("ownerId", "==", senderId),
-                    where("originalInventoryId", "==", itemId),
-                    where("status", "==", "active")
-                );
-                const assetSnaps = await getDocs(q);
-                if (!assetSnaps.empty) {
-                    transaction.update(assetSnaps.docs[0].ref, {
-                        ownerId: receiverId,
-                        isTradeable: false,
-                        acquiredAt: serverTimestamp()
-                    });
+                const assetRef = doc(db, "user_assets", itemId);
+                const assetSnap = await transaction.get(assetRef);
+
+                if (!assetSnap.exists()) throw new Error(`Activo ofrecido no encontrado: ${itemId}`);
+                const assetData = assetSnap.data() as UserAsset;
+
+                if (assetData.ownerId !== senderId) throw new Error("Ya no eres dueño del activo que intentas ofrecer");
+                if (assetData.status !== "active" || !assetData.isTradeable) {
+                    throw new Error(`Tu ítem "${assetData.metadata?.title || itemId}" ya no está disponible`);
                 }
+
+                transaction.update(assetRef, {
+                    ownerId: receiverId,
+                    isTradeable: false,
+                    acquiredAt: serverTimestamp()
+                });
             }
 
             transaction.update(tradeRef, { status: "accepted", resolvedAt: serverTimestamp() });

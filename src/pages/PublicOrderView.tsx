@@ -109,9 +109,12 @@ export default function PublicOrderView() {
             }
 
             setOrder((prev: any) => ({ ...prev, status: "venta_finalizada" }));
-        } catch (error) {
+        } catch (error: any) {
             console.error("Buy error:", error);
-            alert("Hubo un error al procesar tu compra. Por favor intenta nuevamente o contáctanos por WhatsApp.");
+            const errorMessage = error.message?.includes("disponible")
+                ? error.message
+                : "Hubo un error al procesar tu compra. Por favor intenta nuevamente o contáctanos por WhatsApp.";
+            alert(errorMessage);
         } finally {
             hideLoading();
         }
