@@ -36,7 +36,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         const refreshToken = gscConfig.data()?.refresh_token;
 
-        const siteUrl = process.env.VITE_SITE_URL || `https://${req.headers.host}` || 'https://oldiebutgoldie.com.ar/';
+        let siteUrl = (process.env.VITE_SITE_URL || `https://${req.headers.host}` || 'https://www.oldiebutgoldie.com.ar/').trim();
+        if (!siteUrl.endsWith('/')) siteUrl += '/';
+
         const redirectUri = `${siteUrl.replace(/\/$/, '')}/api/auth/google/callback`;
 
         const clientId = await getSecret('GOOGLE_CLIENT_ID');
@@ -79,6 +81,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     } catch (error: any) {
         console.error('GSC Query Error:', error);
+        console.error('Context:', { siteUrl: (req as any).siteUrl || 'unknown', hasRefreshToken: !!error.config?.headers?.Authorization });
         // REDACCIÓN DE SEGURIDAD (Búnker)
         const safeMessage = (error.message || "")
             .replace(/\{"type": "service_account".*?\}/g, "[SERVICE_ACCOUNT_REDACTED]")

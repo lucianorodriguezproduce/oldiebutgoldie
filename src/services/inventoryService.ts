@@ -158,12 +158,12 @@ export const inventoryService = {
                 ...logistics,
                 status: logistics.stock > 0 ? "active" : "sold_out"
             },
-            tracklist: discogsData.tracklist?.map((t: any) => ({
+            tracklist: (discogsData.tracklist || []).map((t: any) => ({
                 position: t.position || "",
                 title: t.title || "",
                 duration: t.duration || ""
             })),
-            labels: discogsData.labels?.map((l: any) => ({
+            labels: (discogsData.labels || []).map((l: any) => ({
                 name: l.name || "",
                 catno: l.catno || ""
             }))
