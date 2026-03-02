@@ -54,44 +54,8 @@ interface ProfileItem {
     addedAt: string;
 }
 
-interface OrderItem {
-    id: string;
-    item_id: number;
-    user_id: string;
-    order_number?: string;
-    status: string;
-    timestamp: any;
-    createdAt?: any;
-    admin_offer_price?: number;
-    admin_offer_currency?: string;
-    adminPrice?: number;
-    adminCurrency?: string;
-    negotiationHistory?: {
-        price: number;
-        currency: string;
-        sender: 'admin' | 'user';
-        timestamp: any;
-        message?: string;
-    }[];
-    details: {
-        format: string;
-        condition: string;
-        intent: string;
-        artist: string;
-        album: string;
-        cover_image?: string;
-        price?: number;
-        currency?: string;
-    };
-    isBatch?: boolean;
-    items?: any[];
-    totalPrice?: number;
-    currency?: string;
-    type?: 'buy' | 'sell';
-    view_count?: number;
-    last_viewed_at?: any;
-    unique_visitors?: string[];
-}
+// Cleaned Slate: Using Sovereign Trade engine only.
+
 
 import { tradeService } from "@/services/tradeService";
 import { inventoryService } from "@/services/inventoryService";
@@ -103,12 +67,11 @@ export default function Profile() {
     const { user, isAdmin } = useAuth();
     const { showLoading, hideLoading, isLoading } = useLoading();
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
-    const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
+    const [trades, setTrades] = useState<Trade[]>([]);
     const [ordersLoading, setOrdersLoading] = useState(true);
-    const [selectedOrder, setSelectedOrder] = useState<OrderItem | null>(null);
+    const [selectedOrder, setSelectedOrder] = useState<any>(null);
 
     // Trades State
-    const [trades, setTrades] = useState<Trade[]>([]);
     const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
     const [activeTab, setActiveTab] = useState<"orders" | "trades" | "collection">("orders");
     const [itemDetails, setItemDetails] = useState<Record<string, InventoryItem>>({});
@@ -128,13 +91,13 @@ export default function Profile() {
         if (confirm(TEXTS.profile.confirmAcceptProposal)) {
             showLoading(TEXTS.profile.acceptingProposal);
             try {
-                const orderRef = doc(db, "orders", selectedOrder.id);
-                await updateDoc(orderRef, {
-                    status: "completed",
-                    acceptedAt: serverTimestamp()
+                // MOTOR SOBERANO: Usamos resolveTrade para completar la operación
+                await tradeService.resolveTrade(selectedOrder.id, selectedOrder.manifest || {
+                    requestedItems: selectedOrder.items?.map((i: any) => i.id) || [],
+                    offeredItems: [],
+                    cashAdjustment: selectedOrder.totalPrice || 0
                 });
-                // Update local state to reflect change immediately
-                setSelectedOrder({ ...selectedOrder, status: "venta_finalizada" });
+
                 setSuccessMessage(TEXTS.profile.proposalAccepted);
             } catch (error) {
                 console.error("Error accepting proposal:", error);
@@ -167,25 +130,25 @@ export default function Profile() {
     // Deep-link: auto-open drawer if ?order=ORDER_ID is in the URL
     useEffect(() => {
         const orderId = searchParams.get("order");
-        if (orderId && orderItems.length > 0 && !ordersLoading) {
-            const found = orderItems.find(o => o.id === orderId);
+        if (orderId && trades.length > 0 && !ordersLoading) {
+            const found = trades.find(o => o.id === orderId);
             if (found) {
                 setSelectedOrder(found);
             }
             // Clean URL to prevent re-triggering
             setSearchParams({}, { replace: true });
         }
-    }, [orderItems, ordersLoading, searchParams]);
+    }, [trades, ordersLoading, searchParams]);
 
     // Keep selectedOrder in sync with live data
     useEffect(() => {
         if (selectedOrder) {
-            const latest = orderItems.find(o => o.id === selectedOrder.id);
+            const latest = trades.find(o => o.id === selectedOrder.id);
             if (latest && JSON.stringify(latest) !== JSON.stringify(selectedOrder)) {
                 setSelectedOrder(latest);
             }
         }
-    }, [orderItems, selectedOrder?.id]);
+    }, [trades, selectedOrder?.id]);
 
     useEffect(() => {
         if (!user) return;
@@ -263,7 +226,7 @@ export default function Profile() {
         }
     };
 
-    const handleCounterOffer = async (order: OrderItem) => {
+    const handleCounterOffer = async (order: any) => {
         const priceVal = parseFloat(counterOfferPrice);
         if (isNaN(priceVal) || priceVal <= 0) return;
 
@@ -347,19 +310,19 @@ export default function Profile() {
     };
 
 
-    const downloadReceipt = (order: OrderItem) => {
+    const downloadReceipt = (trade: any) => {
         const content = `
           OLDIE BUT GOLDIE - COMPROBANTE DE TRATO
           =======================================
-          ORDEN ID: ${order.order_number || order.id}
-          FECHA: ${formatDate(order.createdAt || order.timestamp)}
+          OPERACIÓN ID: #${trade.id?.slice(-8).toUpperCase()}
+          FECHA: ${formatDate(trade.timestamp)}
           CLIENTE: ${user?.displayName || user?.email}
           
           ITEMS:
-          ${order.items?.map(i => `- ${i.title} (${i.format})`).join('\n          ')}
+          ${trade.items?.map((i: any) => `- ${i.title} (${i.format})`).join('\n          ')}
           
-          PRECIO FINAL: ${order.currency === 'USD' ? 'US$' : '$'} ${(order.totalPrice || order.adminPrice || 0).toLocaleString()}
-          ESTADO: VENTA FINALIZADA
+          PRECIO FINAL: ${trade.currency === 'USD' ? 'US$' : '$'} ${(trade.manifest?.cashAdjustment || 0).toLocaleString()}
+          ESTADO: OPERACIÓN FINALIZADA
           =======================================
           Gracias por confiar en Oldie but Goldie.
         `.trim();
@@ -368,7 +331,7 @@ export default function Profile() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `Comprobante_${order.order_number || order.id}.txt`;
+        a.download = `Comprobante_${trade.id}.txt`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -460,16 +423,10 @@ export default function Profile() {
                             </h2>
                             <div className="flex bg-white/5 p-1 rounded-2xl w-fit">
                                 <button
-                                    onClick={() => setActiveTab("orders")}
-                                    className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === "orders" ? "bg-primary text-black" : "text-gray-500 hover:text-white"}`}
-                                >
-                                    Operaciones
-                                </button>
-                                <button
                                     onClick={() => setActiveTab("trades")}
                                     className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === "trades" ? "bg-primary text-black" : "text-gray-500 hover:text-white"}`}
                                 >
-                                    Intercambios
+                                    Actividad Reciente
                                 </button>
                                 <button
                                     onClick={() => setActiveTab("collection")}
@@ -480,12 +437,12 @@ export default function Profile() {
                             </div>
                         </div>
                         <Badge className="bg-white/5 text-gray-500 border-white/10 px-4 py-2 rounded-xl font-bold">
-                            {activeTab === "orders" ? (orderItems || []).length : activeTab === "trades" ? trades.length : "ACTIVOS"}
+                            {activeTab === "trades" ? trades.length : "ACTIVOS"}
                         </Badge>
                     </div>
 
-                    {activeTab === "orders" ? (
-                        <>
+                    {activeTab === "trades" ? (
+                        <div className="space-y-5">
                             {ordersLoading ? (
                                 <div className="space-y-4">
                                     {Array.from({ length: 4 }).map((_, i) => (
@@ -496,9 +453,12 @@ export default function Profile() {
                                 <div className="py-20 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[3rem] space-y-6 text-center">
                                     <ShoppingBag className="h-12 w-12 text-gray-700" />
                                     <div className="space-y-2">
-                                        <p className="text-xl font-display font-medium text-gray-500">¿Buscando tu primer disco?</p>
-                                        <Link to="/" className="text-primary font-black uppercase tracking-widest text-[10px] hover:underline underline-offset-8">Iniciar Búsqueda</Link>
+                                        <p className="text-white font-black uppercase tracking-widest">{TEXTS.profile.noActivity}</p>
+                                        <p className="text-gray-600 text-xs font-bold uppercase tracking-widest max-w-xs">{TEXTS.profile.noActivitySub}</p>
                                     </div>
+                                    <Link to="/tienda" className="bg-primary text-black px-8 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:scale-105 transition-all">
+                                        Explorar Búnker
+                                    </Link>
                                 </div>
                             ) : (
                                 <div className="space-y-5">
@@ -518,63 +478,6 @@ export default function Profile() {
                                         </motion.div>
                                     ))}
                                 </div>
-                            )}
-                        </>
-                    ) : activeTab === "trades" ? (
-                        <div className="space-y-5">
-                            {trades.length === 0 ? (
-                                <div className="py-20 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[3rem] space-y-6 text-center">
-                                    <Handshake className="h-12 w-12 text-gray-700" />
-                                    <p className="text-xl font-display font-medium text-gray-500">No tienes propuestas de canje activas.</p>
-                                </div>
-                            ) : (
-                                trades.map((trade, i) => (
-                                    <motion.div
-                                        key={trade.id}
-                                        initial={{ opacity: 0, y: 15 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: i * 0.04 }}
-                                        onClick={() => setSelectedTrade(trade)}
-                                        className="group relative bg-white/[0.02] border border-white/5 rounded-[2rem] p-6 space-y-6 cursor-pointer hover:border-primary/30 transition-all"
-                                    >
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
-                                                <div className="p-2.5 bg-white/5 rounded-xl">
-                                                    <ArrowRightLeft className="h-4 w-4 text-gray-400" />
-                                                </div>
-                                                <div className="flex flex-col">
-                                                    <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest leading-none">Canje ID</span>
-                                                    <span className="text-xs font-bold text-white">#{trade.id?.slice(-6).toUpperCase()}</span>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-4">
-                                                <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest bg-white/5 px-3 py-1.5 rounded-xl">
-                                                    Turno: {trade.currentTurn === user?.uid ? <span className="text-primary">TUYO</span> : "ESPERANDO"}
-                                                </div>
-                                                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${trade.status === 'accepted' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
-                                                    trade.status === 'cancelled' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
-                                                        'bg-blue-500/10 text-blue-500 border-blue-500/20'
-                                                    }`}>
-                                                    {trade.status}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-center justify-between text-white">
-                                            <div className="flex gap-8">
-                                                <div className="space-y-1">
-                                                    <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Entregas</p>
-                                                    <p className="text-sm font-black">{trade.manifest.offeredItems.length} Discos</p>
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Recibes</p>
-                                                    <p className="text-sm font-black">{trade.manifest.requestedItems.length} Discos</p>
-                                                </div>
-                                            </div>
-                                            <ChevronDown className="h-5 w-5 text-gray-700 -rotate-90 group-hover:text-primary transition-all" />
-                                        </div>
-                                    </motion.div>
-                                ))
                             )}
                         </div>
                     ) : (

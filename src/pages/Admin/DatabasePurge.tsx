@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { db } from "@/lib/firebase";
-import { collection, query, getDocs, writeBatch, doc } from "firebase/firestore";
+import { collection, query, getDocs, writeBatch, doc, where } from "firebase/firestore";
 import { motion } from "framer-motion";
 import { Trash2, AlertTriangle, ShieldCheck, Database, RefreshCw } from "lucide-react";
 import { useLote } from "@/context/LoteContext";
 
-const TARGET_COLLECTIONS = ["trades", "orders", "interactions", "notifications"];
+const TARGET_COLLECTIONS = ["orders", "trades_purgados", "assets_saneados", "stock_recalibrado"];
 
 export default function DatabasePurge() {
     const [isPurging, setIsPurging] = useState(false);
@@ -19,18 +19,74 @@ export default function DatabasePurge() {
         const newResults: { [key: string]: number } = {};
 
         try {
-            for (const collectionName of TARGET_COLLECTIONS) {
-                const q = query(collection(db, collectionName));
-                const snap = await getDocs(q);
-                const batch = writeBatch(db);
+            // 1. ELIMINACIÓN TOTAL DE 'ORDERS'
+            const ordersSnap = await getDocs(collection(db, "orders"));
+            const ordersBatch = writeBatch(db);
+            ordersSnap.docs.forEach(d => ordersBatch.delete(d.ref));
+            await ordersBatch.commit();
+            newResults["orders"] = ordersSnap.size;
 
-                snap.docs.forEach((d) => {
-                    batch.delete(doc(db, collectionName, d.id));
-                });
+            // 2. PURGA DE TRADES INCONSISTENTES (Pre-V1.5)
+            // Borramos trades sin timestamp o de fechas anteriores al debug de hoy
+            const tradesSnap = await getDocs(collection(db, "trades"));
+            const tradesBatch = writeBatch(db);
+            let tradesCount = 0;
+            const today = new Date("2026-03-02").getTime();
 
-                await batch.commit();
-                newResults[collectionName] = snap.size;
+            tradesSnap.docs.forEach(d => {
+                const data = d.data();
+                const ts = data.timestamp?.seconds ? data.timestamp.seconds * 1000 : 0;
+                if (ts < today || !data.manifest || data.status === 'cancelled') {
+                    tradesBatch.delete(d.ref);
+                    tradesCount++;
+                }
+            });
+            await tradesBatch.commit();
+            newResults["trades_purgados"] = tradesCount;
+
+            // 3. SANEAMIENTO DE USER_ASSETS & RECALIBRACIÓN DE STOCK
+            // Si un asset no tiene un trade 'accepted'/'completed' o el item original volvió a 'active', lo borramos.
+            const assetsSnap = await getDocs(collection(db, "user_assets"));
+            const assetsBatch = writeBatch(db);
+            let assetsCount = 0;
+
+            for (const assetDoc of assetsSnap.docs) {
+                const assetData = assetDoc.data();
+                const invId = assetData.originalInventoryId;
+
+                if (invId) {
+                    const invSnap = await getDocs(query(collection(db, "inventory"), where("__name__", "==", invId)));
+                    if (!invSnap.empty) {
+                        const invData = invSnap.docs[0].data();
+                        // Si el ítem está 'active' en el búnker, no puede ser un asset del usuario (duplicidad física)
+                        if (invData.logistics?.status === 'active') {
+                            assetsBatch.delete(assetDoc.ref);
+                            assetsCount++;
+                        }
+                    }
+                }
             }
+            await assetsBatch.commit();
+            newResults["assets_saneados"] = assetsCount;
+
+            // 4. RECALIBRACIÓN DE STOCK (Inventory)
+            // Todos los items que quedaron como sold_out por error vuelven a estar activos
+            const invSnap = await getDocs(collection(db, "inventory"));
+            const itemsBatch = writeBatch(db);
+            let invCount = 0;
+
+            invSnap.docs.forEach(d => {
+                const data = d.data();
+                if (data.logistics?.status === 'sold_out' || data.logistics?.stock === 0) {
+                    itemsBatch.update(d.ref, {
+                        "logistics.stock": 1,
+                        "logistics.status": "active"
+                    });
+                    invCount++;
+                }
+            });
+            await itemsBatch.commit();
+            newResults["stock_recalibrado"] = invCount;
 
             // Client side reset
             clearLote();
@@ -38,7 +94,7 @@ export default function DatabasePurge() {
             sessionStorage.clear();
 
             setResults(newResults);
-            alert("Sistema Purificado Correctamente. Rederizacion de estados vacíos activada.");
+            alert("Operación Tabla Rasa Completada con Éxito. El Búnker ha sido restaurado.");
         } catch (error) {
             console.error("Purge Error:", error);
             alert("Falla Crítica en el Protocolo de Purga: " + error);
@@ -52,10 +108,10 @@ export default function DatabasePurge() {
         <div className="max-w-4xl mx-auto p-12 space-y-12">
             <header className="space-y-4">
                 <div className="flex items-center gap-3 text-red-500">
-                    <AlertTriangle className="h-8 w-8" />
-                    <h1 className="text-4xl font-display font-black uppercase tracking-tighter">Protocolo de Purga Atómica</h1>
+                    <RefreshCw className="h-8 w-8" />
+                    <h1 className="text-4xl font-display font-black uppercase tracking-tighter">Operación Tabla Rasa</h1>
                 </div>
-                <p className="text-gray-500 font-medium">Este módulo ELIMINA PERMANENTEMENTE todos los registros de prueba para el lanzamiento a producción.</p>
+                <p className="text-gray-500 font-medium">Saneamiento profundo: eliminación de `orders`, purga de trades antiguos y recalibración de stock físico.</p>
             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

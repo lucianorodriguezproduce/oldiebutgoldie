@@ -227,12 +227,12 @@ export default function Home() {
                         }
                         setIsSearchActive(false);
 
-                        // Cross-reference with existing orders in Firebase
+                        // SOBERANIA: Cross-reference with existing trades in Firebase
                         try {
                             const numericalRouteId = Number(routeId || 0);
                             const q = firestoreQuery(
-                                collection(db, "orders"),
-                                where(isLocalItem ? "inventory_id" : "item_id", "==", isLocalItem ? routeId : numericalRouteId),
+                                collection(db, "trades"),
+                                where("manifest.requestedItems", "array-contains", isLocalItem ? routeId : numericalRouteId),
                                 limit(1)
                             );
                             const orderSnap = await getDocs(q);
@@ -240,14 +240,14 @@ export default function Home() {
                                 const orderData = orderSnap.docs[0].data() as any;
                                 setPublicOrder({
                                     id: orderSnap.docs[0].id,
-                                    order_number: orderData.order_number,
+                                    order_number: orderSnap.docs[0].id?.slice(-5).toUpperCase(),
                                     status: orderData.status || 'pending',
-                                    format: orderData.details?.format,
-                                    condition: orderData.details?.condition,
-                                    intent: orderData.details?.intent,
-                                    price: orderData.details?.price || null,
+                                    format: orderData.manifest?.items?.[0]?.format,
+                                    condition: orderData.manifest?.items?.[0]?.condition,
+                                    intent: 'COMPRAR',
+                                    price: orderData.manifest?.cashAdjustment || null,
                                     timestamp: orderData.timestamp?.toDate() || new Date(),
-                                    isOwner: auth.currentUser?.uid === orderData.user_id
+                                    isOwner: auth.currentUser?.uid === orderData.participants?.senderId
                                 });
                             }
                         } catch (err) {
