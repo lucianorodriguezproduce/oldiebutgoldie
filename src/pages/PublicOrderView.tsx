@@ -131,6 +131,10 @@ export default function PublicOrderView() {
         } finally {
             setIsExecuting(false);
             hideLoading();
+            // Fallback: Si no redirigió antes por algún motivo, forzamos salida tras 2s si el estado es final
+            if (order?.status === 'venta_finalizada') {
+                setTimeout(() => navigate('/perfil'), 2000);
+            }
         }
     };
 
