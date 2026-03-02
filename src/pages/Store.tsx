@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Star, ArrowLeft, Search, Filter, X, ChevronRight } from "lucide-react";
 import { TEXTS } from "@/constants/texts";
 import { inventoryService } from "@/services/inventoryService";
+import { tradeService } from "@/services/tradeService";
 import type { InventoryItem } from "@/types/inventory";
 import { CompactSearchCard } from "@/components/ui/CompactSearchCard";
 import { SEO } from "@/components/SEO";
@@ -44,7 +45,7 @@ export default function Store() {
             setHasMore(false); // In real-time mode, we load the full active set for now
         });
 
-        const unsubscribeTrades = tradeService.onSnapshotBlockedAssets((ids) => {
+        const unsubscribeTrades = tradeService.onSnapshotBlockedAssets((ids: string[]) => {
             setBlockedAssetIds(ids);
         });
 
