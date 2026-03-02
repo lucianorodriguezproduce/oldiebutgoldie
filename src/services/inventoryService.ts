@@ -1,4 +1,5 @@
 import { db } from "@/lib/firebase";
+import { discogsService } from "@/lib/discogs";
 import {
     collection,
     doc,
@@ -115,12 +116,27 @@ export const inventoryService = {
             console.error("Failed to import image to Storage, using original URL line-of-sight:", error);
         }
 
+        // 2. Fetch Original Year from Master if available
+        let originalYear = parseInt(discogsData.year) || 0;
+        if (discogsData.master_id) {
+            try {
+                const master = await discogsService.getMasterDetails(discogsData.master_id);
+                if (master && master.year) {
+                    originalYear = master.year;
+                    console.log(`[Bunker-Import] Found Original Year for ${discogsData.title}: ${originalYear}`);
+                }
+            } catch (e) {
+                console.warn(`[Bunker-Import] Could not fetch master ${discogsData.master_id} for original year.`);
+            }
+        }
+
         const newItem: InventoryItem = {
             id: internalId,
             metadata: {
                 title: discogsData.title || "Unknown Title",
                 artist: discogsData.artists?.[0]?.name || discogsData.artist || "Unknown Artist",
                 year: parseInt(discogsData.year) || 0,
+                original_year: originalYear,
                 country: discogsData.country || "Unknown",
                 genres: discogsData.genres || [],
                 styles: discogsData.styles || [],

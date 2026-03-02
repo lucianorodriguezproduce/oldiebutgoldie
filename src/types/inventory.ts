@@ -4,6 +4,7 @@ export interface InventoryItem {
         title: string;
         artist: string;
         year: number;
+        original_year?: number; // Premiere release year
         country: string;
         genres: string[];
         styles: string[];

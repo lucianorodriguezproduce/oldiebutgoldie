@@ -32,6 +32,17 @@ export const CompactSearchCard = memo(({ result, idx, onClick }: { result: Disco
                     </div>
                 )}
 
+                {/* Style Badge */}
+                {(result.style?.[0] || result.genre?.[0]) && (
+                    <div className="absolute top-2 right-2 z-20">
+                        <div className="px-2 py-1 bg-white/10 backdrop-blur-md text-white/70 border border-white/10 rounded-lg transform scale-75 md:scale-100 origin-top-right">
+                            <span className="text-[7px] md:text-[8px] font-black uppercase tracking-widest">
+                                {result.style?.[0] || result.genre?.[0]}
+                            </span>
+                        </div>
+                    </div>
+                )}
+
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/10 to-transparent opacity-80 group-hover:opacity-40 transition-opacity" />
 
                 <div className="absolute inset-x-0 bottom-0 p-2 md:p-6 space-y-0.5 z-10">
