@@ -36,7 +36,7 @@ import { formatDate, getReadableDate } from "@/utils/date";
 import { collection, onSnapshot, query, orderBy, where, doc, deleteDoc, updateDoc, addDoc, serverTimestamp, arrayUnion } from "firebase/firestore";
 import { useState, useEffect } from "react";
 import { TEXTS } from "@/constants/texts";
-import { AlbumCardSkeleton } from "@/components/ui/Skeleton";
+import { CardSkeleton } from "@/components/ui/Skeleton";
 import { Link, useSearchParams } from "react-router-dom";
 import OrderDetailsDrawer from "@/components/OrderDetailsDrawer";
 import { generateWhatsAppLink, generateWhatsAppAcceptDealMsg } from '@/utils/whatsapp';
@@ -97,6 +97,7 @@ import { tradeService } from "@/services/tradeService";
 import { inventoryService } from "@/services/inventoryService";
 import type { Trade, InventoryItem, TradeManifest } from "@/types/inventory";
 import ManifestEditor from "@/components/Trade/ManifestEditor";
+import UserCollection from "@/components/Profile/UserCollection";
 
 export default function Profile() {
     const { user, isAdmin } = useAuth();
@@ -109,7 +110,7 @@ export default function Profile() {
     // Trades State
     const [trades, setTrades] = useState<Trade[]>([]);
     const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
-    const [activeTab, setActiveTab] = useState<"orders" | "trades">("orders");
+    const [activeTab, setActiveTab] = useState<"orders" | "trades" | "collection">("orders");
     const [itemDetails, setItemDetails] = useState<Record<string, InventoryItem>>({});
 
     // Negotiation State
@@ -473,10 +474,16 @@ export default function Profile() {
                                 >
                                     Intercambios
                                 </button>
+                                <button
+                                    onClick={() => setActiveTab("collection")}
+                                    className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === "collection" ? "bg-primary text-black" : "text-gray-500 hover:text-white"}`}
+                                >
+                                    Mi Colección
+                                </button>
                             </div>
                         </div>
                         <Badge className="bg-white/5 text-gray-500 border-white/10 px-4 py-2 rounded-xl font-bold">
-                            {activeTab === "orders" ? (orderItems || []).length : trades.length} {activeTab === "orders" ? "ARCHIVOS" : "NEGOCIACIONES"}
+                            {activeTab === "orders" ? (orderItems || []).length : activeTab === "trades" ? trades.length : "ACTIVOS"}
                         </Badge>
                     </div>
 
@@ -516,7 +523,7 @@ export default function Profile() {
                                 </div>
                             )}
                         </>
-                    ) : (
+                    ) : activeTab === "trades" ? (
                         <div className="space-y-5">
                             {trades.length === 0 ? (
                                 <div className="py-20 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[3rem] space-y-6 text-center">
@@ -573,6 +580,8 @@ export default function Profile() {
                                 ))
                             )}
                         </div>
+                    ) : (
+                        <UserCollection userId={user?.uid || ""} />
                     )}
                 </div>
             </div>

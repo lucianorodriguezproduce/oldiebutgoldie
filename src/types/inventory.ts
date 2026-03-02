@@ -64,3 +64,14 @@ export interface Trade {
     timestamp: any;
 }
 
+export interface UserAsset {
+    id: string; // Internal UUID (UserAsset ID)
+    ownerId: string;
+    originalInventoryId: string;
+    valuation: number;
+    isTradeable: boolean;
+    metadata: InventoryItem['metadata'];
+    media: InventoryItem['media'];
+    acquiredAt: any;
+    status: "active" | "traded" | "archived";
+}

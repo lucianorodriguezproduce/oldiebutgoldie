@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import type { TradeManifest, InventoryItem } from "@/types/inventory";
 import { inventoryService } from "@/services/inventoryService";
+import { userAssetService } from "@/services/userAssetService";
+import { useAuth } from "@/context/AuthContext";
 import { LazyImage } from "@/components/ui/LazyImage";
 
 interface ManifestEditorProps {
@@ -28,10 +30,12 @@ export default function ManifestEditor({
     myItems,
     theirItems
 }: ManifestEditorProps) {
-    const [itemDetails, setItemDetails] = useState<Record<string, InventoryItem>>({});
+    const { user } = useAuth();
+    const [itemDetails, setItemDetails] = useState<Record<string, InventoryItem | any>>({});
     const [isSearching, setIsSearching] = useState<"offered" | "requested" | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
-    const [searchResults, setSearchResults] = useState<InventoryItem[]>([]);
+    const [searchResults, setSearchResults] = useState<any[]>([]);
+    const [searchSource, setSearchSource] = useState<"store" | "collection">("store");
 
     useEffect(() => {
         resolveItems();
@@ -39,11 +43,17 @@ export default function ManifestEditor({
 
     const resolveItems = async () => {
         const allIds = [...manifest.offeredItems, ...manifest.requestedItems];
-        const details: Record<string, InventoryItem> = { ...itemDetails };
+        const details: Record<string, any> = { ...itemDetails };
 
         await Promise.all(allIds.map(async id => {
             if (!details[id]) {
-                const item = await inventoryService.getItemById(id);
+                // Try inventory first
+                let item = await inventoryService.getItemById(id);
+                // Fallback to user assets (simplified check)
+                if (!item) {
+                    // We could fetch from user_assets here if ID format allows, 
+                    // or assume metadata is already in itemDetails if added during search
+                }
                 if (item) details[id] = item;
             }
         }));
@@ -64,14 +74,26 @@ export default function ManifestEditor({
         });
     };
 
-    const addItem = (item: InventoryItem, type: "offered" | "requested") => {
+    const addItem = (item: any, type: "offered" | "requested") => {
         if (isLocked) return;
         const key = type === "offered" ? "offeredItems" : "requestedItems";
-        if (manifest[key].includes(item.id)) return;
+        const itemId = item.originalInventoryId || item.id;
+
+        if (manifest[key].includes(itemId)) return;
+
+        // Ensure metadata is cached for display
+        const displayItem = item.metadata ? {
+            ...item,
+            id: itemId,
+            media: item.media,
+            metadata: item.metadata
+        } : item;
+
+        setItemDetails(prev => ({ ...prev, [itemId]: displayItem }));
 
         onChange({
             ...manifest,
-            [key]: [...manifest[key], item.id]
+            [key]: [...manifest[key], itemId]
         });
         setIsSearching(null);
         setSearchQuery("");
@@ -86,12 +108,21 @@ export default function ManifestEditor({
     }, [searchQuery]);
 
     const searchInventory = async () => {
-        const all = await inventoryService.getItems();
-        const results = all.filter(it =>
-            it.metadata.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            it.metadata.artist.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-        setSearchResults(results.slice(0, 5));
+        if (searchSource === "store") {
+            const all = await inventoryService.getItems();
+            const results = all.filter(it =>
+                it.metadata.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                it.metadata.artist.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+            setSearchResults(results.slice(0, 5));
+        } else if (user) {
+            const all = await userAssetService.getUserAssets(user.uid);
+            const results = all.filter(it =>
+                it.metadata.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                it.metadata.artist.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+            setSearchResults(results.slice(0, 5));
+        }
     };
 
     const renderItemList = (ids: string[], type: "offered" | "requested", title: string, color: string) => (
@@ -201,10 +232,25 @@ export default function ManifestEditor({
                             </button>
                         </div>
 
+                        <div className="flex bg-white/5 p-1 rounded-xl mb-4">
+                            <button
+                                onClick={() => setSearchSource("store")}
+                                className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${searchSource === "store" ? "bg-primary text-black" : "text-gray-500 hover:text-white"}`}
+                            >
+                                Tienda OBG
+                            </button>
+                            <button
+                                onClick={() => setSearchSource("collection")}
+                                className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${searchSource === "collection" ? "bg-primary text-black" : "text-gray-500 hover:text-white"}`}
+                            >
+                                Mi Búnker
+                            </button>
+                        </div>
+
                         <input
                             autoFocus
                             type="text"
-                            placeholder="Cualquier título o artista..."
+                            placeholder={searchSource === "store" ? "Buscar en la tienda..." : "Buscar en mi colección..."}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-sm text-white focus:border-primary/40 focus:outline-none"

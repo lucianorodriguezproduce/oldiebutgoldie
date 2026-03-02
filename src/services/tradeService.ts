@@ -199,6 +199,30 @@ export const tradeService = {
                 });
             }
 
+            const trade = tradeSnap.data() as Trade;
+            // 3. Crear activos para el comprador (Transferencia de Propiedad)
+            const buyerId = trade.participants.senderId;
+            for (const itemId of manifest.requestedItems) {
+                const itemRef = doc(db, "inventory", itemId);
+                const itemSnap = await transaction.get(itemRef);
+
+                if (itemSnap.exists()) {
+                    const data = itemSnap.data() as InventoryItem;
+                    const assetRef = doc(collection(db, "user_assets"));
+
+                    transaction.set(assetRef, {
+                        ownerId: buyerId,
+                        originalInventoryId: itemId,
+                        valuation: data.logistics.price || 0,
+                        isTradeable: false,
+                        metadata: data.metadata,
+                        media: data.media,
+                        acquiredAt: serverTimestamp(),
+                        status: "active"
+                    });
+                }
+            }
+
             // Actualizar estado del trade
             transaction.update(tradeRef, { status: "accepted" });
         });
