@@ -39,7 +39,7 @@ export default function RevisarLote() {
             const ids = inventoryItems.map(item => item.id.toString()).slice(0, 30); // Firestore 'in' limit
 
             try {
-                const q = query(collection(db, "orders"), where("__name__", "in", ids));
+                const q = query(collection(db, "inventory"), where("__name__", "in", ids));
                 const snapshot = await getDocs(q);
 
                 const soldItems: string[] = [];
@@ -47,7 +47,7 @@ export default function RevisarLote() {
 
                 inventoryItems.forEach(item => {
                     const freshData = updatedItemsMap.get(item.id.toString()) as any;
-                    if (freshData && ['sold', 'venta_finalizada', 'completed'].includes(freshData.status)) {
+                    if (freshData && freshData.logistics?.status !== 'active') {
                         soldItems.push(item.title);
                         toggleItem(item);
                     }

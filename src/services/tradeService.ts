@@ -89,6 +89,26 @@ const bunkerToLegacy = async (trade: any) => {
 
 export const tradeService = {
     async createTrade(trade: Omit<Trade, 'id' | 'timestamp' | 'status' | 'currentTurn' | 'negotiationHistory'>) {
+        // --- ASSET LOCKING: Verificación de disponibilidad real-time ---
+        const allItems = [...(trade.manifest?.requestedItems || []), ...(trade.manifest?.offeredItems || [])];
+
+        // Buscamos trades activos que involucren estos mismos ítems
+        const activeTradesQuery = query(
+            collection(db, COLLECTION_NAME),
+            where("status", "in", ["pending", "counter_offer", "accepted"])
+        );
+
+        const activeSnap = await getDocs(activeTradesQuery);
+        const doubleBooking = activeSnap.docs.some(doc => {
+            const data = doc.data() as Trade;
+            const existingItems = [...(data.manifest?.requestedItems || []), ...(data.manifest?.offeredItems || [])];
+            return allItems.some(id => existingItems.includes(id));
+        });
+
+        if (doubleBooking) {
+            throw new Error("ASSET_LOCKED: Uno o más ítems ya están en una negociación activa.");
+        }
+
         const tradeData = {
             ...trade,
             participants: {
@@ -96,7 +116,7 @@ export const tradeService = {
                 receiverId: trade.participants.receiverId || ADMIN_UID
             },
             status: "pending" as const,
-            currentTurn: trade.participants.receiverId || ADMIN_UID, // First turn goes to receiver (usually admin)
+            currentTurn: trade.participants.receiverId || ADMIN_UID,
             negotiationHistory: [],
             timestamp: serverTimestamp()
         };
@@ -136,13 +156,14 @@ export const tradeService = {
             getDocs(qReceiver)
         ]);
 
-        const rawTrades = [
-            ...snapSender.docs.map(doc => ({ id: doc.id, ...doc.data() } as Trade)),
-            ...snapReceiver.docs.map(doc => ({ id: doc.id, ...doc.data() } as Trade))
-        ];
+        const rawTradesMap = new Map<string, Trade>();
+        snapSender.docs.forEach(doc => rawTradesMap.set(doc.id, { id: doc.id, ...doc.data() } as Trade));
+        snapReceiver.docs.forEach(doc => rawTradesMap.set(doc.id, { id: doc.id, ...doc.data() } as Trade));
+
+        const uniqueTrades = Array.from(rawTradesMap.values());
 
         // Transmutación Silenciosa
-        const legacyTrades = await Promise.all(rawTrades.map(t => bunkerToLegacy(t)));
+        const legacyTrades = await Promise.all(uniqueTrades.map(t => bunkerToLegacy(t)));
 
         return legacyTrades.sort((a: any, b: any) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
     },

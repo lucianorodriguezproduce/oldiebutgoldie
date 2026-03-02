@@ -112,6 +112,11 @@ export default function PublicOrderView() {
             }
 
             setOrder((prev: any) => ({ ...prev, status: "venta_finalizada" }));
+
+            // ÉXITO: Redirección inmediata para evitar el "Bloqueo Visionario"
+            setTimeout(() => {
+                navigate('/perfil');
+            }, 1500);
         } catch (error: any) {
             console.error("Buy error:", error);
             let errorMessage = "Hubo un error al procesar tu compra. Por favor intenta nuevamente o contáctanos por WhatsApp.";

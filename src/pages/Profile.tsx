@@ -151,12 +151,12 @@ export default function Profile() {
 
         showLoading("Procesando...");
         try {
-            const orderRef = doc(db, "orders", selectedOrder.id);
+            const orderRef = doc(db, "trades", selectedOrder.id);
             await updateDoc(orderRef, {
-                status: "negotiating", // Revert to negotiation if rejected
+                status: "counter_offer", // Revert to negotiation if rejected
                 rejectedAt: serverTimestamp()
             });
-            setSelectedOrder({ ...selectedOrder, status: "negotiating" });
+            setSelectedOrder({ ...selectedOrder, status: "counter_offer" });
         } catch (error) {
             console.error("Error rejecting offer:", error);
         } finally {
@@ -231,19 +231,22 @@ export default function Profile() {
         }
     };
 
-    const handleAcceptProposal = async (order: OrderItem) => {
+    const handleAcceptProposal = async (order: any) => {
         if (!user) return;
         showLoading("Confirmando trato...");
         setIsNegotiating(true);
         try {
-            await updateDoc(doc(db, "orders", order.id), {
-                status: "venta_finalizada"
+            // MOTOR SOBERANO: Resolvemos el trade atómicamente
+            await tradeService.resolveTrade(order.id, order.manifest || {
+                requestedItems: order.items?.map((i: any) => i.id) || [],
+                offeredItems: [],
+                cashAdjustment: order.totalPrice || 0
             });
 
             await addDoc(collection(db, "notifications"), {
                 user_id: "admin",
                 title: "Venta Finalizada 🎉",
-                message: `${user.displayName || 'Un cliente'} ha ACEPTADO el trato por el pedido ${order.order_number || order.id}.`,
+                message: `${user.displayName || 'Un cliente'} ha ACEPTADO el trato por la operación #${order.id?.slice(-6).toUpperCase()}.`,
                 read: false,
                 timestamp: serverTimestamp(),
                 order_id: order.id
