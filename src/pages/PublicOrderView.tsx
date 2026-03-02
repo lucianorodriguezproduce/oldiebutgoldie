@@ -89,26 +89,17 @@ export default function PublicOrderView() {
         if (!id) return;
         showLoading("Confirmando compra...");
         try {
-            await updateDoc(doc(db, "trades", id), {
-                status: "completed",
-                purchased_by: user.uid,
-                buyer_uid: user.uid,
-                confirmedAt: serverTimestamp(),
-                negotiationHistory: arrayUnion({
-                    price: order.adminPrice || order.totalPrice || order.details?.price || 0,
-                    currency: order.adminCurrency || order.currency || order.details?.currency || "ARS",
-                    sender: "user",
-                    timestamp: new Date(),
-                    message: `Orden aceptada por ${user.displayName || user.email}`
-                })
-            });
+            // INTEGRACIÓN DEL MOTOR TRANSACCIONAL (Soberanía Atómica)
+            // Resolvemos el trade usando el manifiesto actual para gatillar descuento de stock y creación de user_assets
+            await tradeService.resolveTrade(id, order.manifest);
 
-            if (order.is_admin_offer) {
+            // Notificación al Admin (Búnker)
+            if (order.is_admin_offer || order.participants?.receiverId === "oldiebutgoldie") {
                 await addDoc(collection(db, "notifications"), {
-                    userId: "oldiebutgoldie", // Target the master admin
+                    userId: "oldiebutgoldie",
                     orderId: id,
                     title: "¡Vendido!",
-                    message: `El usuario ${user.displayName || user.email || 'Usuario'} ha comprado el ${order.isBatch || order.is_batch ? 'lote' : 'vinilo'} "${order.title || 'Sin Título'}".`,
+                    message: `El usuario ${user.displayName || user.email || 'Usuario'} ha comprado el ${order.isBatch ? 'lote' : 'vinilo'} "${order.title || 'Sin Título'}".`,
                     type: "sale_completed",
                     read: false,
                     createdAt: serverTimestamp(),
@@ -271,7 +262,7 @@ export default function PublicOrderView() {
                         {isAdminOrder && order.status === 'pending' && (
                             <div className="flex w-full items-center justify-between mb-4 mt-2">
                                 <Link
-                                    to="/actividad"
+                                    to="/comercio"
                                     className="flex items-center gap-2 text-gray-500 hover:text-white transition-colors group"
                                 >
                                     <ChevronRight className="h-5 w-5 md:h-6 md:w-6 rotate-180 group-hover:-translate-x-1 transition-transform" />
