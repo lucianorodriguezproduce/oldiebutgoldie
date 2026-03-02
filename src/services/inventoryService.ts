@@ -12,7 +12,9 @@ import {
     serverTimestamp,
     orderBy,
     limit,
-    startAfter
+    startAfter,
+    deleteDoc,
+    writeBatch
 } from "firebase/firestore";
 import type { InventoryItem } from "@/types/inventory";
 
@@ -177,7 +179,16 @@ export const inventoryService = {
 
     async deleteItem(id: string) {
         const docRef = doc(db, COLLECTION_NAME, id);
-        await setDoc(docRef, { "logistics.status": "archived" }, { merge: true });
+        await deleteDoc(docRef);
+    },
+
+    async deleteItems(ids: string[]) {
+        const batch = writeBatch(db);
+        ids.forEach(id => {
+            const docRef = doc(db, COLLECTION_NAME, id);
+            batch.delete(docRef);
+        });
+        await batch.commit();
     },
 
     async updateLogistics(id: string, data: Partial<InventoryItem['logistics']>) {

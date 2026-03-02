@@ -124,7 +124,7 @@ export default function TradeConsole({ trade, onUpdate, onClose }: TradeConsoleP
             />
 
             {canAction && (
-                <div className="flex gap-4 pt-8">
+                <div className="flex gap-4 pt-8 pb-[env(safe-area-inset-bottom)] mb-4">
                     {isEditing ? (
                         <>
                             <button

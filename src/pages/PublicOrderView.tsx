@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, Link, useSearchParams, useNavigate } from "react-router-dom";
-import { doc, getDoc, updateDoc, increment, arrayUnion, serverTimestamp, addDoc, collection } from "firebase/firestore";
+import { doc, getDoc, updateDoc, increment, arrayUnion, serverTimestamp, addDoc, collection, onSnapshot } from "firebase/firestore";
 import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { db, auth } from "@/lib/firebase";
 import { SEO } from "@/components/SEO";
@@ -35,63 +35,39 @@ export default function PublicOrderView() {
     const [showLoginDrawer, setShowLoginDrawer] = useState(false);
 
     useEffect(() => {
-        const fetchOrder = async () => {
-            if (!id) {
-                setLoading(false);
-                return;
-            }
+        if (!id) {
+            setLoading(false);
+            return;
+        }
 
-            // Anti-Timeout 3s
-            const timeout = setTimeout(() => {
-                if (loading) {
-                    console.warn("Safety Timeout Triggered: 3s reached.");
-                    setLoading(false);
-                    hideLoading();
+        showLoading(TEXTS.common.locatingBatch);
+
+        // --- LIVE SYNC ENGINE (onSnapshot) ---
+        const unsub = onSnapshot(doc(db, "trades", id), async (tradeSnap) => {
+            if (tradeSnap.exists()) {
+                const tradeData = { id: tradeSnap.id, ...tradeSnap.data() } as any;
+
+                // Adaptar al motor legacy (silenciosamente)
+                const legacyData = await tradeService.getTradeById(id);
+                setOrder(legacyData);
+
+                // Tracking de vistas (Solo la primera vez o cada 5 min para no saturar)
+                if (!order) {
+                    pushViewItemFromOrder(legacyData);
+                    if (legacyData.view_count === 4) pushHotOrderDetected(legacyData, 5);
                 }
-            }, 3000);
-
-            showLoading(TEXTS.common.locatingBatch);
-            try {
-                // 1. Buscar en el motor de Trades (Soberanía de Datos)
-                let orderData = await tradeService.getTradeById(id);
-
-                if (orderData) {
-                    setOrder(orderData);
-                    pushViewItemFromOrder(orderData);
-                    if (orderData.view_count === 4) pushHotOrderDetected(orderData, 5);
-
-                    // Tracker de vistas (Compatible con ambos motores)
-                    try {
-                        const visitorId = user?.uid || (() => {
-                            let stored = localStorage.getItem('visitor_id');
-                            if (!stored) {
-                                stored = 'anon_' + Math.random().toString(36).substring(2, 9);
-                                localStorage.setItem('visitor_id', stored);
-                            }
-                            return stored;
-                        })();
-
-                        const docRef = doc(db, "trades", id);
-
-                        await updateDoc(docRef, {
-                            view_count: increment(1),
-                            unique_visitors: arrayUnion(visitorId),
-                            last_viewed_at: serverTimestamp()
-                        });
-                    } catch (e) {
-                        console.error("Tracker error:", e);
-                    }
-                }
-            } catch (error) {
-                console.error("Error fetching order via hybrid engine:", error);
-            } finally {
-                clearTimeout(timeout);
-                setLoading(false);
-                hideLoading();
+            } else {
+                console.warn("Trade no encontrado en el búnker.");
             }
-        };
+            setLoading(false);
+            hideLoading();
+        }, (error) => {
+            console.error("Error en LiveSync:", error);
+            setLoading(false);
+            hideLoading();
+        });
 
-        fetchOrder();
+        return () => unsub();
     }, [id]);
 
     // Handle incoming buy intents via URL params
@@ -630,7 +606,7 @@ export default function PublicOrderView() {
                     })()}
 
                     {/* Metadata Footer */}
-                    <div className="p-8 rounded-[2.5rem] bg-white/[0.02] border border-white/5 flex flex-col md:flex-row justify-between gap-8 items-start md:items-center">
+                    <div className="p-8 pb-[env(safe-area-inset-bottom)] rounded-[2.5rem] bg-white/[0.02] border border-white/5 flex flex-col md:flex-row justify-between gap-8 items-start md:items-center">
                         <div className="flex items-center gap-4">
                             <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-inner">
                                 <span className="text-xl text-primary font-black uppercase">{(order.user_name || "C").charAt(0)}</span>

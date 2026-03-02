@@ -3,11 +3,14 @@ Allow: /
 # Abrimos el acceso a la ruta del rewrite
 Allow: /sitemap.xml
 Allow: /api/sitemap
+Allow: /api/proxy-images
 
 # Bloqueos de seguridad
 Disallow: /admin/*
 Disallow: /checkout/*
-Disallow: /api/*
+# Bloqueamos el resto de la API pero permitimos los recursos multimedia
+Disallow: /api/webhooks
+Disallow: /api/admin
 
 # Referencia al sitemap con el dominio exacto
 Sitemap: https://www.oldiebutgoldie.com.ar/sitemap.xml

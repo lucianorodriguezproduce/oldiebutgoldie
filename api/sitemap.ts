@@ -38,7 +38,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         urlList.push(`<url><loc>${xmlEscape(baseUrl)}/comercio</loc><changefreq>daily</changefreq><priority>0.8</priority></url>`);
         urlList.push(`<url><loc>${xmlEscape(baseUrl)}/comunidad</loc><changefreq>daily</changefreq><priority>0.9</priority></url>`);
         urlList.push(`<url><loc>${xmlEscape(baseUrl)}/tienda</loc><changefreq>daily</changefreq><priority>0.9</priority></url>`);
-        urlList.push(`<url><loc>${xmlEscape(baseUrl)}/perfil</loc><changefreq>daily</changefreq><priority>0.5</priority></url>`);
         urlList.push(`<url><loc>${xmlEscape(baseUrl)}/guias</loc><changefreq>weekly</changefreq><priority>0.4</priority></url>`);
 
         // 2. Inventario Soberano (Búnker)

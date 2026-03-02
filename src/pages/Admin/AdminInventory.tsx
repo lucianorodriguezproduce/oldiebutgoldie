@@ -15,7 +15,8 @@ import {
     Plus,
     PlusCircle,
     LayoutGrid,
-    Search as SearchIcon
+    Search as SearchIcon,
+    Trash2
 } from "lucide-react";
 import { inventoryService } from "@/services/inventoryService";
 import { discogsService } from "@/lib/discogs";
@@ -32,6 +33,7 @@ export default function AdminInventory() {
     const [editData, setEditData] = useState<{ price?: number, stock?: number, condition?: string }>({});
     const [filter, setFilter] = useState<"all" | "low_stock" | "sold_out">("all");
     const [auditStats, setAuditStats] = useState<any>(null);
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
     // Ingestion Modal State
     const [showIngestionModal, setShowIngestionModal] = useState(false);
@@ -159,6 +161,53 @@ export default function AdminInventory() {
         }
     };
 
+    const handleDeleteIndividual = async (id: string, title: string) => {
+        if (!window.confirm(`¿Estás seguro de eliminar "${title}"? Esta acción no se puede deshacer y no dejará rastro.`)) return;
+
+        showLoading("Eliminando registro...");
+        try {
+            await inventoryService.deleteItem(id);
+            fetchInventory();
+        } catch (error) {
+            console.error("Error deleting item:", error);
+            alert("Error al eliminar el ítem.");
+        } finally {
+            hideLoading();
+        }
+    };
+
+    const handleDeleteBulk = async () => {
+        const count = selectedIds.size;
+        if (!window.confirm(`¿Estás seguro de eliminar ${count} ítems seleccionados? Esta acción es irreversible.`)) return;
+
+        showLoading(`Eliminando ${count} ítems...`);
+        try {
+            await inventoryService.deleteItems(Array.from(selectedIds));
+            setSelectedIds(new Set());
+            fetchInventory();
+        } catch (error) {
+            console.error("Error deleting items:", error);
+            alert("Error al eliminar los ítems.");
+        } finally {
+            hideLoading();
+        }
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedIds.size === filteredItems.length) {
+            setSelectedIds(new Set());
+        } else {
+            setSelectedIds(new Set(filteredItems.map(it => it.id)));
+        }
+    };
+
+    const toggleSelectItem = (id: string) => {
+        const next = new Set(selectedIds);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        setSelectedIds(next);
+    };
+
     const filteredItems = useMemo(() => {
         let list = items;
 
@@ -202,15 +251,44 @@ export default function AdminInventory() {
                     </div>
                     <p className="text-gray-500 font-medium text-lg">Gestión avanzada de la base de datos soberana.</p>
                 </div>
-                <div className="flex bg-white/5 border border-white/10 rounded-2xl px-4 py-3 flex-1 max-w-md">
-                    <Search className="h-4 w-4 text-gray-500 mt-1" />
-                    <input
-                        type="text"
-                        placeholder="Buscar por Título, Artista o ID..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="bg-transparent border-none outline-none text-sm text-white px-3 w-full"
-                    />
+                <div className="flex items-center gap-4 flex-1 max-w-2xl">
+                    <div className="flex bg-white/5 border border-white/10 rounded-2xl px-4 py-3 flex-1">
+                        <Search className="h-4 w-4 text-gray-500 mt-1" />
+                        <input
+                            type="text"
+                            placeholder="Buscar por Título, Artista o ID..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="bg-transparent border-none outline-none text-sm text-white px-3 w-full"
+                        />
+                    </div>
+
+                    <AnimatePresence>
+                        {selectedIds.size > 0 && (
+                            <motion.div
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: 20 }}
+                                className="flex items-center gap-3 bg-red-500/10 border border-red-500/20 px-6 py-3 rounded-2xl whitespace-nowrap"
+                            >
+                                <span className="text-xs font-black text-red-500 uppercase tracking-widest">
+                                    {selectedIds.size} Seleccionados
+                                </span>
+                                <button
+                                    onClick={handleDeleteBulk}
+                                    className="bg-red-500 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-600 transition-all shadow-lg shadow-red-500/20 flex items-center gap-2"
+                                >
+                                    <Trash2 className="h-3.5 w-3.5" /> Eliminar Todo
+                                </button>
+                                <button
+                                    onClick={() => setSelectedIds(new Set())}
+                                    className="text-gray-500 hover:text-white transition-colors p-2"
+                                >
+                                    <X className="h-4 w-4" />
+                                </button>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
             </div>
 
@@ -259,6 +337,14 @@ export default function AdminInventory() {
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="border-b border-white/5 bg-white/[0.01]">
+                                <th className="px-8 py-6 w-10">
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedIds.size === filteredItems.length && filteredItems.length > 0}
+                                        onChange={toggleSelectAll}
+                                        className="w-4 h-4 rounded border-white/10 bg-white/5 text-primary focus:ring-primary/40 transition-all cursor-pointer"
+                                    />
+                                </th>
                                 <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-gray-500">Item</th>
                                 <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-gray-500">Logística</th>
                                 <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-gray-500">Estado</th>
@@ -267,7 +353,15 @@ export default function AdminInventory() {
                         </thead>
                         <tbody className="divide-y divide-white/5">
                             {filteredItems.map(item => (
-                                <tr key={item.id} className="group hover:bg-white/[0.02] transition-colors">
+                                <tr key={item.id} className={`group hover:bg-white/[0.02] transition-colors ${selectedIds.has(item.id) ? 'bg-primary/[0.03]' : ''}`}>
+                                    <td className="px-8 py-6">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedIds.has(item.id)}
+                                            onChange={() => toggleSelectItem(item.id)}
+                                            className="w-4 h-4 rounded border-white/10 bg-white/5 text-primary focus:ring-primary/40 transition-all cursor-pointer"
+                                        />
+                                    </td>
                                     <td className="px-8 py-6">
                                         <div className="flex items-center gap-4">
                                             <div className="w-12 h-12 rounded-xl overflow-hidden bg-black/40 border border-white/10 shrink-0">
@@ -348,12 +442,20 @@ export default function AdminInventory() {
                                                 </button>
                                             </div>
                                         ) : (
-                                            <button
-                                                onClick={() => handleEdit(item)}
-                                                className="p-3 bg-white/5 text-gray-400 rounded-2xl hover:text-primary hover:bg-primary/10 transition-all opacity-0 group-hover:opacity-100"
-                                            >
-                                                <Edit2 className="h-4 w-4" />
-                                            </button>
+                                            <div className="flex items-center justify-end gap-2">
+                                                <button
+                                                    onClick={() => handleEdit(item)}
+                                                    className="p-3 bg-white/5 text-gray-400 rounded-2xl hover:text-primary hover:bg-primary/10 transition-all opacity-0 group-hover:opacity-100"
+                                                >
+                                                    <Edit2 className="h-4 w-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteIndividual(item.id, item.metadata.title)}
+                                                    className="p-3 bg-white/5 text-gray-400 rounded-2xl hover:text-red-500 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </button>
+                                            </div>
                                         )}
                                     </td>
                                 </tr>

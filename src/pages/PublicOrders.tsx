@@ -62,7 +62,7 @@ export default function PublicOrders() {
                 title={TEXTS.common.seo.activity.title}
                 description={TEXTS.common.seo.activity.desc}
                 image={TEXTS.common.seo.activity.ogImage}
-                url="https://oldiebutgoldie.com.ar/actividad"
+                url="https://oldiebutgoldie.com.ar/comercio"
                 schema={{
                     "@context": "https://schema.org",
                     "@type": "CollectionPage",

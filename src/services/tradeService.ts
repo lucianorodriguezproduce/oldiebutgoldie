@@ -175,58 +175,74 @@ export const tradeService = {
             const tradeSnap = await transaction.get(tradeRef);
             if (!tradeSnap.exists()) throw new Error("Trade no encontrado");
 
-            // Deducción de stock para cada ítem solicitado
+            const tradeData = tradeSnap.data() as Trade;
+            const senderId = tradeData.participants.senderId;
+            const receiverId = tradeData.participants.receiverId;
+
+            // --- 1. PROCESAR ITEMS SOLICITADOS (Receiver -> Sender) ---
             for (const itemId of manifest.requestedItems) {
-                const itemRef = doc(db, "inventory", itemId);
-                const itemSnap = await transaction.get(itemRef);
+                if (receiverId === ADMIN_UID) {
+                    const itemRef = doc(db, "inventory", itemId);
+                    const itemSnap = await transaction.get(itemRef);
 
-                if (!itemSnap.exists()) {
-                    console.warn(`Item ${itemId} no encontrado en el búnker.`);
-                    continue;
+                    if (itemSnap.exists()) {
+                        const invData = itemSnap.data() as InventoryItem;
+                        const currentStock = invData.logistics.stock || 0;
+                        if (currentStock <= 0) throw new Error(`Stock insuficiente en Búnker: ${invData.metadata.title}`);
+
+                        transaction.update(itemRef, {
+                            "logistics.stock": currentStock - 1,
+                            "logistics.status": (currentStock - 1) === 0 ? "sold_out" : "active"
+                        });
+
+                        const assetRef = doc(collection(db, "user_assets"));
+                        transaction.set(assetRef, {
+                            ownerId: senderId,
+                            originalInventoryId: itemId,
+                            valuation: invData.logistics.price || 0,
+                            isTradeable: false,
+                            metadata: invData.metadata,
+                            media: invData.media,
+                            acquiredAt: serverTimestamp(),
+                            status: "active"
+                        });
+                    }
+                } else {
+                    const q = query(collection(db, "user_assets"),
+                        where("ownerId", "==", receiverId),
+                        where("originalInventoryId", "==", itemId),
+                        where("status", "==", "active")
+                    );
+                    const assetSnaps = await getDocs(q);
+                    if (!assetSnaps.empty) {
+                        transaction.update(assetSnaps.docs[0].ref, {
+                            ownerId: senderId,
+                            isTradeable: false,
+                            acquiredAt: serverTimestamp()
+                        });
+                    }
                 }
-
-                const data = itemSnap.data() as InventoryItem;
-                const currentStock = data.logistics.stock || 0;
-
-                if (currentStock <= 0) {
-                    throw new Error(`Stock insuficiente para: ${data.metadata.title}`);
-                }
-
-                const newStock = currentStock - 1;
-                transaction.update(itemRef, {
-                    "logistics.stock": newStock,
-                    "logistics.status": newStock === 0 ? "sold_out" : "active"
-                });
             }
 
-            const trade = tradeSnap.data() as Trade;
-            // 3. Crear activos para el comprador (Transferencia de Propiedad)
-            const buyerId = trade.participants.senderId;
-            for (const itemId of manifest.requestedItems) {
-                const itemRef = doc(db, "inventory", itemId);
-                const itemSnap = await transaction.get(itemRef);
-
-                if (itemSnap.exists()) {
-                    const data = itemSnap.data() as InventoryItem;
-                    const assetRef = doc(collection(db, "user_assets"));
-
-                    transaction.set(assetRef, {
-                        ownerId: buyerId,
-                        originalInventoryId: itemId,
-                        valuation: data.logistics.price || 0,
+            // --- 2. PROCESAR ITEMS OFRECIDOS (Sender -> Receiver) ---
+            for (const itemId of manifest.offeredItems) {
+                const q = query(collection(db, "user_assets"),
+                    where("ownerId", "==", senderId),
+                    where("originalInventoryId", "==", itemId),
+                    where("status", "==", "active")
+                );
+                const assetSnaps = await getDocs(q);
+                if (!assetSnaps.empty) {
+                    transaction.update(assetSnaps.docs[0].ref, {
+                        ownerId: receiverId,
                         isTradeable: false,
-                        metadata: data.metadata,
-                        media: data.media,
-                        acquiredAt: serverTimestamp(),
-                        status: "active"
+                        acquiredAt: serverTimestamp()
                     });
                 }
             }
 
-            // Actualizar estado del trade
-            transaction.update(tradeRef, { status: "accepted" });
+            transaction.update(tradeRef, { status: "accepted", resolvedAt: serverTimestamp() });
         });
     }
 
 };
-

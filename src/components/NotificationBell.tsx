@@ -33,7 +33,7 @@ export default function NotificationBell() {
     const navigate = useNavigate();
 
     const openOrderDrawer = (orderId: string) => {
-        navigate(`/profile?order=${orderId}`);
+        navigate(`/perfil?order=${orderId}`);
     };
 
     const unreadCount = notifications.filter(n => !n.read).length;
