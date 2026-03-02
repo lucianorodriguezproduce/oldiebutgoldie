@@ -16,7 +16,8 @@ import {
     ChevronRight,
     Plus,
     PlusCircle,
-    Search
+    Search,
+    Trash2
 } from "lucide-react";
 
 import { tradeService } from "@/services/tradeService";
@@ -103,6 +104,22 @@ export default function AdminTrades() {
         } catch (error) {
             console.error("Error creating trade:", error);
             alert("Error al crear la propuesta.");
+        } finally {
+            hideLoading();
+        }
+    };
+
+    const handleDeleteTrade = async (e: React.MouseEvent, tradeId: string) => {
+        e.stopPropagation();
+        if (!confirm("¿Estás seguro de que deseas eliminar este trade? Esta acción es irreversible.")) return;
+
+        showLoading("Eliminando registro de trade...");
+        try {
+            await tradeService.deleteTrade(tradeId);
+            fetchTrades();
+        } catch (error) {
+            console.error("Error deleting trade:", error);
+            alert("Error al eliminar el trade.");
         } finally {
             hideLoading();
         }
@@ -196,6 +213,13 @@ export default function AdminTrades() {
                                         </div>
                                     </div>
                                     {getStatusBadge(trade.status)}
+                                    <button
+                                        onClick={(e) => handleDeleteTrade(e, trade.id)}
+                                        className="p-2 hover:bg-red-500/20 text-gray-700 hover:text-red-500 rounded-xl transition-all"
+                                        title="Eliminar Trade"
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </button>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">

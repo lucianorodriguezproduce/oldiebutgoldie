@@ -12,7 +12,8 @@ import {
     orderBy,
     arrayUnion,
     runTransaction,
-    onSnapshot
+    onSnapshot,
+    deleteDoc
 } from "firebase/firestore";
 
 
@@ -188,6 +189,11 @@ export const tradeService = {
     async updateTradeStatus(tradeId: string, status: Trade['status']) {
         const docRef = doc(db, COLLECTION_NAME, tradeId);
         await updateDoc(docRef, { status });
+    },
+
+    async deleteTrade(tradeId: string) {
+        const docRef = doc(db, COLLECTION_NAME, tradeId);
+        await deleteDoc(docRef);
     },
 
     /**
