@@ -14,7 +14,8 @@ import {
     limit,
     startAfter,
     deleteDoc,
-    writeBatch
+    writeBatch,
+    onSnapshot
 } from "firebase/firestore";
 import type { InventoryItem } from "@/types/inventory";
 
@@ -251,6 +252,19 @@ export const inventoryService = {
             .map(doc => ({ id: doc.id, ...doc.data() } as InventoryItem))
             .sort((a, b) => ((b as any).timestamp?.seconds || 0) - ((a as any).timestamp?.seconds || 0))
             .slice(0, limitCount);
+    },
+
+    onSnapshotInventory(callback: (items: InventoryItem[]) => void) {
+        const q = query(
+            collection(db, COLLECTION_NAME),
+            where("logistics.status", "==", "active")
+        );
+        return onSnapshot(q, (snapshot) => {
+            const items = snapshot.docs
+                .map(doc => ({ id: doc.id, ...doc.data() } as InventoryItem))
+                .filter(item => item.logistics.stock > 0);
+            callback(items);
+        });
     }
 };
 

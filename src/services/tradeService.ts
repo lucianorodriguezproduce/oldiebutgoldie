@@ -176,6 +176,11 @@ export const tradeService = {
             if (!tradeSnap.exists()) throw new Error("Trade no encontrado");
 
             const tradeData = tradeSnap.data() as Trade;
+
+            // --- PROTECCIÓN DE CONCURRENCIA: Evitar doble procesamiento ---
+            if (tradeData.status === "accepted" || tradeData.status === "completed") {
+                throw new Error("TRADE_ALREADY_PROCESSED");
+            }
             const senderId = tradeData.participants.senderId;
             const receiverId = tradeData.participants.receiverId;
 

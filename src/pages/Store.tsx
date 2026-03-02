@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Star, ArrowLeft, Search, Filter, X, ChevronRight } from "lucide-react";
 import { TEXTS } from "@/constants/texts";
-import { getInventoryPaged } from "@/services/inventoryService";
+import { inventoryService } from "@/services/inventoryService";
+import type { InventoryItem } from "@/types/inventory";
 import { CompactSearchCard } from "@/components/ui/CompactSearchCard";
 import { SEO } from "@/components/SEO";
 import { useLoading } from "@/context/LoadingContext";
@@ -31,50 +32,23 @@ export default function Store() {
 
     const observer = useRef<IntersectionObserver | null>(null);
 
-    const loadItems = useCallback(async (reset = false) => {
-        if (loading || (!hasMore && !reset)) return;
-
-        setLoading(true);
-        if (reset) showLoading(TEXTS.common.loadingGeneric);
-
-        try {
-            const result = await getInventoryPaged(20, reset ? undefined : lastDoc);
-
-            if (reset) {
-                setItems(result.items);
-            } else {
-                setItems(prev => {
-                    const newItems = result.items.filter(newItem => !prev.some(p => p.id === newItem.id));
-                    return [...prev, ...newItems];
-                });
-            }
-
-            setLastDoc(result.lastDoc);
-            setHasMore(result.items.length === 20);
-        } catch (error) {
-            console.error("Error loading store items:", error);
-        } finally {
-            setLoading(false);
-            if (reset) hideLoading();
-        }
-    }, [lastDoc, loading, hasMore, showLoading, hideLoading]);
+    const loadItemsRef = useRef<(() => void) | null>(null);
 
     useEffect(() => {
-        loadItems(true);
-    }, []);
-
-    const lastItemRef = useCallback((node: HTMLDivElement) => {
-        if (loading) return;
-        if (observer.current) observer.current.disconnect();
-
-        observer.current = new IntersectionObserver(entries => {
-            if (entries[0].isIntersecting && hasMore) {
-                loadItems();
-            }
+        showLoading(TEXTS.common.loadingGeneric);
+        const unsubscribe = inventoryService.onSnapshotInventory((updatedItems: InventoryItem[]) => {
+            setItems(updatedItems);
+            setLoading(false);
+            hideLoading();
+            setHasMore(false); // In real-time mode, we load the full active set for now
         });
 
-        if (node) observer.current.observe(node);
-    }, [loading, hasMore, loadItems]);
+        return () => unsubscribe();
+    }, [showLoading, hideLoading]);
+
+    const lastItemRef = useCallback((node: HTMLDivElement) => {
+        // Infinite scroll disabled in real-time mode to ensure 1:1 sync
+    }, []);
 
     const filteredItems = useMemo(() => {
         return items.filter(item => {

@@ -25,6 +25,7 @@ export default function PublicOrderView() {
     const [loading, setLoading] = useState(true);
     const [isItemsExpanded, setIsItemsExpanded] = useState(false);
     const { addItemFromInventory, isInLote } = useLote();
+    const [isExecuting, setIsExecuting] = useState(false);
 
     const isOwner = user?.uid === order?.user_id;
     const isAdminOrder = order?.user_id === "oldiebutgoldie" || order?.user_email === "admin@discography.ai";
@@ -86,7 +87,9 @@ export default function PublicOrderView() {
             setShowLoginDrawer(true);
             return;
         }
-        if (!id) return;
+        if (!id || isExecuting) return;
+
+        setIsExecuting(true);
         showLoading("Confirmando compra...");
         try {
             // INTEGRACIÓN DEL MOTOR TRANSACCIONAL (Soberanía Atómica)
@@ -111,11 +114,17 @@ export default function PublicOrderView() {
             setOrder((prev: any) => ({ ...prev, status: "venta_finalizada" }));
         } catch (error: any) {
             console.error("Buy error:", error);
-            const errorMessage = error.message?.includes("disponible")
-                ? error.message
-                : "Hubo un error al procesar tu compra. Por favor intenta nuevamente o contáctanos por WhatsApp.";
+            let errorMessage = "Hubo un error al procesar tu compra. Por favor intenta nuevamente o contáctanos por WhatsApp.";
+
+            if (error.message === "TRADE_ALREADY_PROCESSED") {
+                errorMessage = "¡Operación relámpago! Este ítem ya ha sido procesado por otro coleccionista.";
+            } else if (error.message?.includes("disponible")) {
+                errorMessage = error.message;
+            }
+
             alert(errorMessage);
         } finally {
+            setIsExecuting(false);
             hideLoading();
         }
     };
@@ -587,9 +596,10 @@ export default function PublicOrderView() {
                                                     // This will trigger the logic in handleQuickBuy which shows login drawer
                                                     handleQuickBuy();
                                                 }}
-                                                className="w-full md:w-auto px-4 md:px-8 py-3 md:py-4 rounded-2xl bg-gradient-to-r from-primary to-secondary hover:from-primary/80 hover:to-secondary/80 text-black font-black uppercase tracking-widest text-[10px] md:text-xs shadow-xl shadow-secondary/20 hover:shadow-secondary/40 transition-all text-center flex-1 md:flex-none transform hover:-translate-y-1 whitespace-nowrap"
+                                                disabled={isExecuting}
+                                                className={`w-full md:w-auto px-4 md:px-8 py-3 md:py-4 rounded-2xl bg-gradient-to-r from-primary to-secondary text-black font-black uppercase tracking-widest text-[10px] md:text-xs shadow-xl shadow-secondary/20 transition-all text-center flex-1 md:flex-none transform whitespace-nowrap ${isExecuting ? 'opacity-50 cursor-not-allowed' : 'hover:from-primary/80 hover:to-secondary/80 hover:shadow-secondary/40 hover:-translate-y-1'}`}
                                             >
-                                                ¡Comprar Ahora!
+                                                {isExecuting ? 'Procesando...' : '¡Comprar Ahora!'}
                                             </button>
                                         </div>
                                     )}
