@@ -203,6 +203,7 @@ export const tradeService = {
                             isTradeable: false,
                             metadata: invData.metadata,
                             media: invData.media,
+                            items: invData.items || [],
                             acquiredAt: serverTimestamp(),
                             status: "active"
                         });
@@ -227,7 +228,7 @@ export const tradeService = {
                     });
 
                     // --- RECURSIVIDAD: Transferencia de Sub-Ítems (Lotes) ---
-                    if (assetData.metadata.isBatch && assetData.metadata.items) {
+                    if (assetData.metadata.isBatch && assetData.items) {
                         console.log(`Bunker: Transfiriendo sub-ítems del lote ${itemId}...`);
                         // Aquí se asume que los sub-ítems son referencias o se manejan como parte del objeto metadata.
                         // Si fueran documentos separados, se iteraría aquí.

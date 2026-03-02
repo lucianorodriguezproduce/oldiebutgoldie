@@ -72,6 +72,7 @@ export interface UserAsset {
     isTradeable: boolean;
     metadata: InventoryItem['metadata'];
     media: InventoryItem['media'];
+    items?: InventoryItem['items'];
     acquiredAt: any;
     status: "active" | "traded" | "archived";
 }
