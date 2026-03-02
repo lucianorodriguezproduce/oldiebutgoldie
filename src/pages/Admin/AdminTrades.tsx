@@ -214,7 +214,7 @@ export default function AdminTrades() {
                                     </div>
                                     {getStatusBadge(trade.status)}
                                     <button
-                                        onClick={(e) => handleDeleteTrade(e, trade.id)}
+                                        onClick={(e) => trade.id && handleDeleteTrade(e, trade.id)}
                                         className="p-2 hover:bg-red-500/20 text-gray-700 hover:text-red-500 rounded-xl transition-all"
                                         title="Eliminar Trade"
                                     >
