@@ -18,56 +18,42 @@ export default function PublicOrders() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const fetchPublicFeed = async () => {
+        let unsubscribe: (() => void) | undefined;
+
+        const startListener = async () => {
             try {
-                // 1. Sincronización con el nuevo motor de Trades (Soberanía de Datos)
-                const trades = await tradeService.getTrades();
+                const q = query(collection(db, 'trades'), orderBy('timestamp', 'desc'));
 
-                // 2. Inyectamos nuevos ingresos del búnker para mantener el feed vivo
-                const inventoryItems = await inventoryService.getRecentAdditions(15);
-                const enrichedInventory = inventoryItems.map(item => ({
-                    ...item,
-                    is_admin_offer: true, // Forzar visibilidad de compra
-                    isInventoryItem: true,
-                    status: 'active'
-                }));
+                unsubscribe = onSnapshot(q, async (snapshot) => {
+                    const tradeData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+                    const inventoryItems = await inventoryService.getRecentAdditions(15);
+                    const enrichedInventory = inventoryItems.map(item => ({
+                        ...item,
+                        is_admin_offer: true,
+                        isInventoryItem: true,
+                        status: 'active'
+                    }));
 
-                // Mantenemos compatibilidad con el feed híbrido (Legacy + Bunker + Soberanos)
-                const validOrders = trades.filter((o: any) => o.item_id || o.isBatch || o.is_batch || (o.items && o.items.length > 0));
+                    const validTrades = tradeData.filter((o: any) => o.item_id || o.isBatch || o.is_batch || (o.items && o.items.length > 0));
 
-                setOrders([...enrichedInventory, ...validOrders]);
+                    setOrders([...enrichedInventory, ...validTrades].sort((a, b) => {
+                        const timeA = a.timestamp?.seconds || a.createdAt?.seconds || 0;
+                        const timeB = b.timestamp?.seconds || b.createdAt?.seconds || 0;
+                        return timeB - timeA;
+                    }));
+                    setLoading(false);
+                });
             } catch (error) {
                 console.error("Error fetching public activity feed", error);
-            } finally {
                 setLoading(false);
             }
         };
 
-        fetchPublicFeed();
+        startListener();
 
-        // Listener de tiempo real para la colección de orders (Legacy compatibility)
-        const ordersRef = collection(db, 'orders');
-        const q = query(ordersRef, orderBy('timestamp', 'desc'));
-
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            const publicOrdersData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-            setOrders(prev => {
-                const combined = [...prev];
-                publicOrdersData.forEach(newOrder => {
-                    if (!combined.find(o => o.id === newOrder.id)) {
-                        combined.push(newOrder);
-                    }
-                });
-                return combined.sort((a, b) => {
-                    const timeA = a.timestamp?.seconds || a.createdAt?.seconds || 0;
-                    const timeB = b.timestamp?.seconds || b.createdAt?.seconds || 0;
-                    return timeB - timeA;
-                });
-            });
-        });
-
-        return () => unsubscribe();
+        return () => {
+            if (unsubscribe) unsubscribe();
+        };
     }, []);
 
     return (

@@ -2,123 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-    --radius: 0.5rem;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-  }
-
-  .dark {
-    --background: 222.2 0% 2%;
-    --foreground: 0 0% 98%;
-    --card: 222.2 0% 3%;
-    --card-foreground: 0 0% 98%;
-    --popover: 222.2 0% 3%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 43 100% 50%;
-    --primary-foreground: 0 0% 0%;
-    --secondary: 18 100% 50%;
-    --secondary-foreground: 0 0% 100%;
-    --muted: 217.2 0% 12%;
-    --muted-foreground: 215 0% 65.1%;
-    --accent: 191 100% 50%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 0% 12%;
-    --input: 217.2 0% 12%;
-    --ring: 43 100% 50%;
-    --chart-1: 43 100% 50%;
-    --chart-2: 18 100% 50%;
-    --chart-3: 0 100% 50%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 191 100% 50%;
-    box-shadow: 0 0 20px rgba(255, 184, 0, 0.05);
-  }
-}
-
-/* Print Styles for Deal Receipt */
-@media print {
-  body * {
-    visibility: hidden;
-  }
-
-  #printable-receipt,
-  #printable-receipt * {
-    visibility: visible;
-  }
-
-  #printable-receipt {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    background: white !important;
-    color: black !important;
-    padding: 2cm !important;
-    margin: 0 !important;
-    border: none !important;
-    box-shadow: none !important;
-  }
-
-  #printable-receipt .bg-white\/5,
-  #printable-receipt .bg-green-500\/10,
-  #printable-receipt .bg-black {
-    background: #f8f8f8 !important;
-    border: 1px solid #ddd !important;
-  }
-
-  #printable-receipt h3,
-  #printable-receipt h4,
-  #printable-receipt p,
-  #printable-receipt span {
-    color: black !important;
-  }
-
-  #printable-receipt .text-primary {
-    color: #000 !important;
-    font-weight: bold;
-  }
-
-  #printable-receipt button,
-  #printable-receipt .lucide-download,
-  #printable-receipt .lucide-message-circle {
-    display: none !important;
-  }
-}
-
-@layer utilities {
-  .hide-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
-
-  .hide-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
+:root {
+  --background: 0 0% 3.9%;
+  --foreground: 0 0% 98%;
+  --card: 0 0% 3.9%;
+  --card-foreground: 0 0% 98%;
+  --popover: 0 0% 3.9%;
+  --popover-foreground: 0 0% 98%;
+  --primary: 48 100% 50%;
+  --primary-foreground: 0 0% 9%;
+  --secondary: 48 100% 50%;
+  --secondary-foreground: 0 0% 98%;
+  --muted: 0 0% 14.9%;
+  --muted-foreground: 0 0% 63.9%;
+  --accent: 0 0% 14.9%;
+  --accent-foreground: 0 0% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 0 0% 14.9%;
+  --input: 0 0% 14.9%;
+  --ring: 48 100% 50%;
+  --radius: 0.5rem;
 }
 
 @layer base {
@@ -129,4 +33,41 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Accessibility: Mobile Base Font Size V1 */
+  @media (max-width: 640px) {
+    html {
+      font-size: 12px !important;
+    }
+  }
+}
+
+.font-display {
+  font-family: 'Outfit', sans-serif;
+}
+
+.glass {
+  @apply bg-white/5 backdrop-blur-md border border-white/10;
+}
+
+/* Custom Utilities */
+.tracking-tightest {
+  letter-spacing: -0.05em;
+}
+
+/* Animations */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.05) 50%, rgba(255, 255, 255, 0) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
 }

@@ -9,6 +9,7 @@ import { SEO } from "@/components/SEO";
 import { useLoading } from "@/context/LoadingContext";
 import { getCleanOrderMetadata } from "@/utils/orderMetadata";
 import taxonomyData from "@/constants/taxonomy_options.json";
+import { CardSkeleton } from "@/components/ui/Skeleton";
 
 export default function Store() {
     const navigate = useNavigate();
@@ -246,8 +247,10 @@ export default function Store() {
 
                         {/* Loading State for Infinite Scroll */}
                         {loading && (
-                            <div className="flex justify-center py-10">
-                                <div className="h-8 w-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+                            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-8 mt-8">
+                                {[...Array(4)].map((_, i) => (
+                                    <CardSkeleton key={i} />
+                                ))}
                             </div>
                         )}
 

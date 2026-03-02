@@ -9,6 +9,7 @@ import { ChevronRight, Check, Plus, ShoppingBag, Star } from "lucide-react";
 import { getCleanOrderMetadata } from "@/utils/orderMetadata";
 import { useLote } from "@/context/LoteContext";
 import { CompactSearchCard } from "@/components/ui/CompactSearchCard";
+import { CardSkeleton } from "@/components/ui/Skeleton";
 
 export function PremiumShowcase() {
     const [orders, setOrders] = useState<any[]>([]);
@@ -77,7 +78,19 @@ export function PremiumShowcase() {
         };
     }, []);
 
-    if (loading) return null;
+    if (loading) {
+        return (
+            <section className="w-full py-12 px-6">
+                <div className="max-w-7xl mx-auto">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-8">
+                        {[...Array(5)].map((_, i) => (
+                            <CardSkeleton key={i} />
+                        ))}
+                    </div>
+                </div>
+            </section>
+        );
+    }
 
     if (orders.length === 0) {
         return null;

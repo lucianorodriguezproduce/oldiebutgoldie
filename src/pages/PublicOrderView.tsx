@@ -52,16 +52,8 @@ export default function PublicOrderView() {
 
             showLoading(TEXTS.common.locatingBatch);
             try {
-                // 1. Intentar buscar en el motor de Trades (Búnker)
+                // 1. Buscar en el motor de Trades (Soberanía de Datos)
                 let orderData = await tradeService.getTradeById(id);
-
-                // 2. Fallback al sistema Legacy de Orders
-                if (!orderData) {
-                    const docSnap = await getDoc(doc(db, "orders", id));
-                    if (docSnap.exists()) {
-                        orderData = { id: docSnap.id, ...docSnap.data() } as any;
-                    }
-                }
 
                 if (orderData) {
                     setOrder(orderData);
@@ -79,9 +71,7 @@ export default function PublicOrderView() {
                             return stored;
                         })();
 
-                        const docRef = orderData.is_bunker_data
-                            ? doc(db, "trades", id)
-                            : doc(db, "orders", id);
+                        const docRef = doc(db, "trades", id);
 
                         await updateDoc(docRef, {
                             view_count: increment(1),
@@ -123,21 +113,17 @@ export default function PublicOrderView() {
         if (!id) return;
         showLoading("Confirmando compra...");
         try {
-            await updateDoc(doc(db, "orders", id), {
-                status: "venta_finalizada",
+            await updateDoc(doc(db, "trades", id), {
+                status: "completed",
                 purchased_by: user.uid,
                 buyer_uid: user.uid,
-                user_id: user.uid,
-                original_admin: "oldiebutgoldie",
-                buyer_email: user.email,
-                buyer_name: user.displayName || "Usuario",
                 confirmedAt: serverTimestamp(),
                 negotiationHistory: arrayUnion({
                     price: order.adminPrice || order.totalPrice || order.details?.price || 0,
                     currency: order.adminCurrency || order.currency || order.details?.currency || "ARS",
                     sender: "user",
                     timestamp: new Date(),
-                    message: `Orden aceptada por ${user.displayName || user.email} `
+                    message: `Orden aceptada por ${user.displayName || user.email}`
                 })
             });
 
@@ -185,27 +171,23 @@ export default function PublicOrderView() {
         showLoading("Enviando oferta...");
         try {
             const currentCurrency = order.adminCurrency || order.currency || order.details?.currency || "ARS";
-            await updateDoc(doc(db, "orders", id), {
+            await updateDoc(doc(db, "trades", id), {
                 totalPrice: offerVal,
-                status: "contraoferta_usuario",
+                status: "counter_offer",
                 buyer_uid: user.uid,
-                user_id: user.uid, // Mutate ownership so it appears in Profile
-                original_admin: "oldiebutgoldie", // Track the creator
-                buyer_email: user.email,
-                buyer_name: user.displayName || "Usuario",
                 confirmedAt: serverTimestamp(),
                 negotiationHistory: arrayUnion({
                     price: offerVal,
                     currency: currentCurrency,
                     sender: "user",
                     timestamp: new Date(),
-                    message: `Contraoferta de ${user.displayName || user.email} `
+                    message: `Contraoferta de ${user.displayName || user.email}`
                 })
             });
             setOrder((prev: any) => ({
                 ...prev,
                 totalPrice: offerVal,
-                status: "contraoferta_usuario",
+                status: "counter_offer",
                 negotiationHistory: [...(prev.negotiationHistory || []), {
                     price: offerVal,
                     currency: currentCurrency,

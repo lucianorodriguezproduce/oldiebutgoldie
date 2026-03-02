@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { TEXTS } from "@/constants/texts";
-import { Disc, Search, User as UserIcon, LogOut, BookOpen, Clock, Menu, X } from "lucide-react";
+import { Disc, Search, User as UserIcon, LogOut, BookOpen, Clock, Menu, X, ShoppingBag, HelpCircle } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
@@ -28,8 +28,10 @@ export const Navbar = () => {
 
     const navItems = [
         { path: "/", label: TEXTS.navigation.home, icon: Search },
-        { path: "/actividad", label: TEXTS.navigation.activity, icon: Clock },
-        { path: "/editorial", label: TEXTS.navigation.editorial, icon: BookOpen },
+        { path: "/tienda", label: TEXTS.navigation.tienda, icon: Disc },
+        { path: "/comercio", label: TEXTS.navigation.activity, icon: ShoppingBag },
+        { path: "/comunidad", label: TEXTS.navigation.editorial, icon: BookOpen },
+        { path: "/guias", label: TEXTS.navigation.guias, icon: HelpCircle },
     ];
 
     // Close menu when route changes
@@ -100,7 +102,7 @@ export const Navbar = () => {
                         <div className="hidden md:flex items-center gap-4">
                             {user ? (
                                 <div className="flex items-center gap-4">
-                                    <Link to="/profile" className="flex items-center gap-3 bg-white/5 pl-2 pr-4 py-1.5 rounded-full border border-white/5 hover:bg-white/10 transition-all group relative">
+                                    <Link to="/perfil" className="flex items-center gap-3 bg-white/5 pl-2 pr-4 py-1.5 rounded-full border border-white/5 hover:bg-white/10 transition-all group relative">
                                         <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-black font-black text-xs overflow-hidden group-hover:scale-110 transition-transform">
                                             {user.photoURL ? (
                                                 <img src={user.photoURL} alt={user.displayName || "User"} />
@@ -188,7 +190,7 @@ export const Navbar = () => {
                         <div className="mt-auto pt-8 border-t border-white/10 flex flex-col gap-4 pb-12">
                             {user ? (
                                 <>
-                                    <Link to="/profile" className="flex items-center gap-4 p-5 rounded-[2rem] bg-[#0A0A0A] text-white border border-white/10 relative">
+                                    <Link to="/perfil" className="flex items-center gap-4 p-5 rounded-[2rem] bg-[#0A0A0A] text-white border border-white/10 relative">
                                         <div className="h-12 w-12 rounded-full bg-primary flex items-center justify-center text-black font-black overflow-hidden ring-2 ring-white/10">
                                             {user.photoURL ? <img src={user.photoURL} alt="User" /> : user.email?.charAt(0).toUpperCase()}
                                         </div>

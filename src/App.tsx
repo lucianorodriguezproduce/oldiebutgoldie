@@ -31,7 +31,9 @@ import BulkUpload from "@/pages/Admin/BulkUpload";
 import BrandingPage from "@/pages/Admin/BrandingPage";
 import AdminInventory from "@/pages/Admin/AdminInventory";
 import AdminTrades from "@/pages/Admin/AdminTrades";
+import Guias from "@/pages/Guias";
 import { ProtectedRoute } from "@/components/Guard/ProtectedRoute";
+import { Navigate } from "react-router-dom";
 
 
 const queryClient = new QueryClient({
@@ -73,18 +75,24 @@ function AppContent() {
           <Route element={<Layout />}>
             <Route path="/" element={<Home />} />
             <Route path="/tienda" element={<Store />} />
-            <Route path="/actividad" element={<PublicOrders />} />
+            <Route path="/comercio" element={<PublicOrders />} />
             <Route path="/orden/:id" element={<PublicOrderView />} />
             <Route path="/revisar-lote" element={<RevisarLote />} />
             <Route path="/item/:type/:id" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/album/:id" element={<AlbumDetail />} />
-            <Route path="/editorial" element={<Editorial />} />
-            <Route path="/editorial/:id" element={<ArticleDetail />} />
+            <Route path="/comunidad" element={<Editorial />} />
+            <Route path="/comunidad/:id" element={<ArticleDetail />} />
+            <Route path="/guias" element={<Guias />} />
             <Route path="/eventos" element={<Eventos />} />
 
+            {/* Redirecciones Legales / SEO */}
+            <Route path="/actividad" element={<Navigate to="/comercio" replace />} />
+            <Route path="/editorial" element={<Navigate to="/comunidad" replace />} />
+            <Route path="/profile" element={<Navigate to="/perfil" replace />} />
+
             <Route element={<ProtectedRoute />}>
-              <Route path="/profile" element={<Profile />} />
+              <Route path="/perfil" element={<Profile />} />
             </Route>
           </Route>
 

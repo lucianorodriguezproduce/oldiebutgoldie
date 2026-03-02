@@ -21,6 +21,7 @@ import { PremiumShowcase } from "@/components/PremiumShowcase";
 import { inventoryService } from "@/services/inventoryService";
 import { CompactSearchCard } from "@/components/ui/CompactSearchCard";
 import React, { memo } from "react";
+import { CardSkeleton } from "@/components/ui/Skeleton";
 
 
 
@@ -1021,11 +1022,10 @@ export default function Home() {
                                     <div className="max-w-4xl mx-auto pb-40">
                                         {/* Loading State */}
                                         {isLoadingSearch && searchResults.length === 0 && (
-                                            <div className="flex flex-col items-center justify-center py-20 space-y-4">
-                                                <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-                                                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500 animate-pulse">
-                                                    {TEXTS.home.loadingDiscogs}
-                                                </p>
+                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6 py-10">
+                                                {[...Array(6)].map((_, i) => (
+                                                    <CardSkeleton key={i} />
+                                                ))}
                                             </div>
                                         )}
 

@@ -1,9 +1,11 @@
 export const TEXTS = {
     navigation: {
-        home: "Descubrir",
-        activity: "Tienda",
+        home: "Home",
+        tienda: "Tienda",
+        activity: "Comercio",
         editorial: "Comunidad",
-        profile: "Ver Perfil",
+        profile: "Mi Perfil",
+        guias: "Guías",
         logout: "Cerrar Sesión",
         sync: "Conectar",
         admin: "Administrar",

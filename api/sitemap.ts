@@ -35,8 +35,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // 1. Páginas Estáticas
         urlList.push(`<url><loc>${xmlEscape(baseUrl)}/</loc><changefreq>always</changefreq><priority>1.0</priority></url>`);
-        urlList.push(`<url><loc>${xmlEscape(baseUrl)}/actividad</loc><changefreq>daily</changefreq><priority>0.8</priority></url>`);
-        urlList.push(`<url><loc>${xmlEscape(baseUrl)}/editorial</loc><changefreq>daily</changefreq><priority>0.9</priority></url>`);
+        urlList.push(`<url><loc>${xmlEscape(baseUrl)}/comercio</loc><changefreq>daily</changefreq><priority>0.8</priority></url>`);
+        urlList.push(`<url><loc>${xmlEscape(baseUrl)}/comunidad</loc><changefreq>daily</changefreq><priority>0.9</priority></url>`);
+        urlList.push(`<url><loc>${xmlEscape(baseUrl)}/tienda</loc><changefreq>daily</changefreq><priority>0.9</priority></url>`);
+        urlList.push(`<url><loc>${xmlEscape(baseUrl)}/perfil</loc><changefreq>daily</changefreq><priority>0.5</priority></url>`);
+        urlList.push(`<url><loc>${xmlEscape(baseUrl)}/guias</loc><changefreq>weekly</changefreq><priority>0.4</priority></url>`);
 
         // 2. Inventario Soberano (Búnker)
         const inventorySnap = await db.collection('inventory')
@@ -57,7 +60,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         articlesSnap.forEach(doc => {
             const data = doc.data();
             const updatedAt = safeDate(data.updatedAt || data.timestamp || data.date);
-            const loc = `${baseUrl}/editorial/${doc.id}`;
+            const loc = `${baseUrl}/comunidad/${doc.id}`;
             urlList.push(`<url><loc>${xmlEscape(loc)}</loc><lastmod>${updatedAt}</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>`);
         });
 

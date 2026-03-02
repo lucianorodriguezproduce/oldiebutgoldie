@@ -1,4 +1,6 @@
 import { Disc } from "lucide-react";
+import { Link } from "react-router-dom";
+import { TEXTS } from "@/constants/texts";
 
 export function Footer() {
     const labels: Record<string, string> = {
@@ -18,19 +20,31 @@ export function Footer() {
                             Oldie but Goldie
                         </span>
                     </div>
-                    <div className="flex gap-8 text-sm text-gray-400">
+                    <div className="flex flex-wrap gap-x-8 gap-y-4 text-sm text-gray-400 justify-center">
+                        <Link to="/tienda" className="hover:text-primary transition-colors uppercase tracking-widest text-[10px] font-black">
+                            {TEXTS.navigation.tienda}
+                        </Link>
+                        <Link to="/comercio" className="hover:text-primary transition-colors uppercase tracking-widest text-[10px] font-black">
+                            {TEXTS.navigation.activity}
+                        </Link>
+                        <Link to="/comunidad" className="hover:text-primary transition-colors uppercase tracking-widest text-[10px] font-black">
+                            {TEXTS.navigation.editorial}
+                        </Link>
+                        <Link to="/guias" className="hover:text-primary transition-colors uppercase tracking-widest text-[10px] font-black">
+                            {TEXTS.navigation.guias}
+                        </Link>
                         {["About", "API Status", "Terms", "Privacy"].map((item) => (
                             <a
                                 key={item}
                                 href="#"
-                                className="hover:text-primary transition-colors"
+                                className="hover:text-primary transition-colors uppercase tracking-widest text-[10px] font-black"
                             >
                                 {labels[item] || item}
                             </a>
                         ))}
                     </div>
-                    <div className="text-sm text-gray-500">
-                        © 2023 Oldie but Goldie. Datos proporcionados por Discogs.
+                    <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest text-center">
+                        © {new Date().getFullYear()} Oldie but Goldie. Datos proporcionados por Discogs.
                     </div>
                 </div>
             </div>
