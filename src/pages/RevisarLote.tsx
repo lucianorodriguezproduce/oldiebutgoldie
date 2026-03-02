@@ -95,7 +95,7 @@ export default function RevisarLote() {
             // 1. Import or Resolve IDs for all items in the batch
             const finalizedItems = await Promise.all(loteItems.map(async (item) => {
                 if (item.source === 'INVENTORY') {
-                    return item.id;
+                    return item.id.toString();
                 } else {
                     // Import Discogs item to get a Bunker UUID
                     // We use minimal metadata as it will be hydrated later
