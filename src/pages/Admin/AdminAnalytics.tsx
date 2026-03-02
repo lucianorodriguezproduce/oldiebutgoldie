@@ -78,13 +78,12 @@ export default function AdminAnalytics() {
                 const interData = interSnap.docs.map(d => ({ id: d.id, ...d.data() } as InteractionEvent));
                 setEvents(interData);
 
-                const ordersReq = query(
-                    collection(db, "orders"),
-                    where("status", "in", ["pending", "quoted", "negotiating", "counteroffered", "venta_finalizada", "contraoferta_usuario"]),
+                const tradesReq = query(
+                    collection(db, "trades"),
                     orderBy("timestamp", "desc")
                 );
-                const ordersSnap = await getDocs(ordersReq);
-                const activeOrders = ordersSnap.docs.map(d => d.data());
+                const tradesSnap = await getDocs(tradesReq);
+                const trades = tradesSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
 
                 // Process Business Metrics
                 const countries: Record<string, number> = {};
@@ -99,20 +98,25 @@ export default function AdminAnalytics() {
                     if (e.action === "search" && e.metadata?.query) searches.push(e.metadata.query);
                 });
 
-                activeOrders.forEach(o => {
-                    if (o.type === 'buy' || o.details?.intent === "COMPRAR") buyCount++;
-                    if (o.type === 'sell' || o.details?.intent === "VENDER") sellCount++;
+                trades.forEach(t => {
+                    const isBuy = t.manifest?.requestedItems?.length > 0;
+                    const isSell = t.manifest?.offeredItems?.length > 0;
+                    if (isBuy) buyCount++;
+                    if (isSell) sellCount++;
                 });
+
+                const activeTrades = trades.filter(t => ["pending", "counter_offer"].includes(t.status));
+                const completedTrades = trades.filter(t => ["accepted", "completed"].includes(t.status));
 
                 setBusinessStats({
                     totalViews: views,
                     topCountries: countries,
-                    activeOrdersCount: activeOrders.length,
+                    activeOrdersCount: activeTrades.length,
                     buyIntent: buyCount,
                     sellIntent: sellCount,
-                    potentialVolumeARS: activeOrders.reduce((sum, o: any) => sum + (o.totalPrice || o.details?.price || 0), 0),
-                    facturacionReal: activeOrders.filter((o: any) => o.status === "venta_finalizada").reduce((sum, o: any) => sum + (o.adminPrice || o.totalPrice || o.details?.price || 0), 0),
-                    ticketPromedio: activeOrders.length > 0 ? activeOrders.reduce((sum, o: any) => sum + (o.totalPrice || o.details?.price || 0), 0) / activeOrders.length : 0,
+                    potentialVolumeARS: activeTrades.reduce((sum, t) => sum + (t.manifest?.cashAdjustment || 0), 0),
+                    facturacionReal: completedTrades.reduce((sum, t) => sum + (t.manifest?.cashAdjustment || 0), 0),
+                    ticketPromedio: trades.length > 0 ? trades.reduce((sum, t) => sum + (t.manifest?.cashAdjustment || 0), 0) / trades.length : 0,
                     recentSearches: [...new Set(searches)].slice(0, 10)
                 });
 

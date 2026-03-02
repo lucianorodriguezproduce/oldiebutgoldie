@@ -15,22 +15,35 @@ export const useOrderNotifications = () => {
             return;
         }
 
-        // Listen for orders with status 'offer_sent' for the current user
-        const q = query(
-            collection(db, "orders"),
-            where("user_id", "==", user.uid),
-            where("status", "==", "offer_sent")
+        // Listen for trades where it's the user's turn
+        const qSender = query(
+            collection(db, "trades"),
+            where("participants.senderId", "==", user.uid),
+            where("currentTurn", "==", user.uid),
+            where("status", "in", ["pending", "counter_offer"])
         );
 
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            setHasActiveOffer(!snapshot.empty);
-            setLoading(false);
-        }, (error) => {
-            console.error("useOrderNotifications error:", error);
+        const qReceiver = query(
+            collection(db, "trades"),
+            where("participants.receiverId", "==", user.uid),
+            where("currentTurn", "==", user.uid),
+            where("status", "in", ["pending", "counter_offer"])
+        );
+
+        const unsubSender = onSnapshot(qSender, (snap) => {
+            setHasActiveOffer(prev => prev || !snap.empty);
             setLoading(false);
         });
 
-        return () => unsubscribe();
+        const unsubReceiver = onSnapshot(qReceiver, (snap) => {
+            setHasActiveOffer(prev => prev || !snap.empty);
+            setLoading(false);
+        });
+
+        return () => {
+            unsubSender();
+            unsubReceiver();
+        };
     }, [user]);
 
     return { hasActiveOffer, loading };

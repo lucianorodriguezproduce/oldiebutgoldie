@@ -190,25 +190,19 @@ export default function Profile() {
     useEffect(() => {
         if (!user) return;
 
-        showLoading("Sincronizando Perfil de Coleccionista...");
+        showLoading("Sincronizando Búnker Personal...");
 
-        // Fetch Orders
-        const qOrders = query(
-            collection(db, "orders"),
-            where("user_id", "==", user.uid),
-            orderBy("timestamp", "desc")
-        );
-        const unsubOrders = onSnapshot(qOrders, (snap) => {
-            setOrderItems(snap.docs.map(d => ({ id: d.id, ...d.data() } as OrderItem)));
+        // Unificado: Cargar todos los trades (Compras, Ventas e Intercambios)
+        const loadEverything = async () => {
+            await fetchTrades();
             setOrdersLoading(false);
-        }, (err) => {
-            console.error("Orders snapshot error:", err);
-            setOrdersLoading(false);
-        });
+            hideLoading();
+        };
 
-        fetchTrades();
+        loadEverything();
 
-        return () => unsubOrders();
+        // Optional: Implement matching trades listener if real-time is needed for Profile
+        // For now, we use the fetchTrades method which already has the legacy adapter
     }, [user]);
 
     const fetchTrades = async () => {
@@ -466,7 +460,7 @@ export default function Profile() {
                                     onClick={() => setActiveTab("orders")}
                                     className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === "orders" ? "bg-primary text-black" : "text-gray-500 hover:text-white"}`}
                                 >
-                                    Pedidos
+                                    Operaciones
                                 </button>
                                 <button
                                     onClick={() => setActiveTab("trades")}
@@ -495,7 +489,7 @@ export default function Profile() {
                                         <div key={i} className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 h-32 animate-pulse" />
                                     ))}
                                 </div>
-                            ) : (orderItems || []).length === 0 ? (
+                            ) : trades.length === 0 ? (
                                 <div className="py-20 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[3rem] space-y-6 text-center">
                                     <ShoppingBag className="h-12 w-12 text-gray-700" />
                                     <div className="space-y-2">
@@ -505,18 +499,18 @@ export default function Profile() {
                                 </div>
                             ) : (
                                 <div className="space-y-5">
-                                    {(orderItems || []).map((order, i) => (
+                                    {trades.map((trade, i) => (
                                         <motion.div
-                                            key={order.id}
+                                            key={trade.id}
                                             initial={{ opacity: 0, y: 15 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ delay: i * 0.04 }}
                                         >
                                             <OrderCard
-                                                key={`${order.id}-${order.items?.length || 0}-${order.status}`}
-                                                order={order}
+                                                key={`${trade.id}-${trade.status}`}
+                                                order={trade as any}
                                                 context="profile"
-                                                onClick={() => setSelectedOrder(order)}
+                                                onClick={() => setSelectedOrder(trade as any)}
                                             />
                                         </motion.div>
                                     ))}

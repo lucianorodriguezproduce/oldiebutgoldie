@@ -64,7 +64,7 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
         showLoading(TEXTS.admin.updatingStatus);
         try {
             const currency = order.adminCurrency || order.currency || order.details?.currency || "ARS";
-            await updateDoc(doc(db, "orders", order.id), {
+            await updateDoc(doc(db, "trades", order.id), {
                 adminPrice: priceVal,
                 adminCurrency: currency,
                 status: "counteroffered",
@@ -78,9 +78,9 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
 
             const currSymbol = currency === "USD" ? "US$" : "$";
             await addDoc(collection(db, "notifications"), {
-                user_id: order.user_id,
+                user_id: (order.participants?.senderId || order.user_id),
                 title: TEXTS.admin.counterOfferReceived,
-                message: `Oldie but Goldie propone ${currSymbol} ${priceVal.toLocaleString()} para tu pedido.`,
+                message: `Oldie but Goldie propone ${currSymbol} ${priceVal.toLocaleString()} para tu operación.`,
                 read: false,
                 timestamp: serverTimestamp(),
                 order_id: order.id

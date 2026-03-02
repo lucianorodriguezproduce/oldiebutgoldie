@@ -19,6 +19,7 @@ import { SEO } from "@/components/SEO";
 import { useLote } from "@/context/LoteContext";
 import { PremiumShowcase } from "@/components/PremiumShowcase";
 import { inventoryService } from "@/services/inventoryService";
+import { tradeService } from "@/services/tradeService";
 import { CompactSearchCard } from "@/components/ui/CompactSearchCard";
 import React, { memo } from "react";
 import { CardSkeleton } from "@/components/ui/Skeleton";
@@ -566,83 +567,6 @@ export default function Home() {
         return `#ORD-${result}`;
     };
 
-    const buildOrderPayload = (uid: string, intentOverride?: Intent, inventoryId?: string) => {
-        const resolvedIntent = intentOverride || intent;
-        if (!selectedItem || !format || !condition || !resolvedIntent) return null;
-
-        const artistData = (selectedItem as any).normalizedArtist || "Varios";
-        const albumData = (selectedItem as any).normalizedAlbum || selectedItem.title;
-        const discogsId = (selectedItem as any).id;
-
-        const payload: any = {
-            order_number: `ORD-${Date.now().toString().slice(-6)}`,
-            user_id: user?.uid || "anonymous",
-            user_email: user?.email || "anonymous@oldiebutgoldie.com.ar",
-            status: "pending",
-            item_id: inventoryId || discogsId,
-            discogs_id: discogsId,
-            inventory_id: inventoryId,
-            artist: artistData,
-            title: albumData,
-            album: albumData,
-            timestamp: serverTimestamp(),
-            details: {
-                format: format,
-                condition: condition,
-                intent: intent,
-                price: price ? parseFloat(price) : null,
-                currency: currency,
-                discogs_id: discogsId,
-                inventory_id: inventoryId,
-                artist: artistData,
-                album: albumData,
-                market_price: marketPrice,
-                market_currency: "USD"
-            },
-            items: [
-                {
-                    id: inventoryId || discogsId.toString(),
-                    discogs_id: discogsId,
-                    inventory_id: inventoryId,
-                    title: albumData,
-                    artist: artistData,
-                    album: albumData,
-                    format: format,
-                    condition: condition,
-                    source: inventoryId ? 'INVENTORY' : 'DISCOGS',
-                    cover_image: selectedItem.cover_image || selectedItem.thumb
-                }
-            ]
-        };
-
-        // Add pricing info for VENDER orders
-        if (resolvedIntent === "VENDER" && price) {
-            payload.details.price = parseFloat(price);
-            payload.details.currency = currency;
-        }
-
-        // Attach market reference for margin analysis
-        if (marketPrice !== null && marketPrice !== undefined) {
-            payload.market_reference = marketPrice;
-        }
-
-        // Deep clean function to recursively remove undefined
-        const cleanObject = (obj: any): any => {
-            if (Array.isArray(obj)) return obj.map(cleanObject);
-            if (obj !== null && typeof obj === 'object') {
-                return Object.entries(obj).reduce((acc, [key, value]) => {
-                    if (value !== undefined) {
-                        acc[key] = cleanObject(value);
-                    }
-                    return acc;
-                }, {} as any);
-            }
-            return obj;
-        };
-
-        return cleanObject(payload);
-    };
-
     const performSubmission = async (uid: string, intentOverride?: Intent) => {
         if (!selectedItem) return;
 
@@ -659,18 +583,37 @@ export default function Home() {
                 }
             );
 
-            // 2. Build Order Payload with Inventory UUID
-            const payload = buildOrderPayload(uid, intentOverride, inventoryId);
-            if (!payload) return;
+            // 2. Create the Trade
+            const resolvedIntent = intentOverride || intent;
+            const manifest = {
+                requestedItems: resolvedIntent === 'COMPRAR' ? [inventoryId] : [],
+                offeredItems: resolvedIntent === 'VENDER' ? [inventoryId] : [],
+                cashAdjustment: price ? parseFloat(price) : 0
+            };
 
-            // Save order to Firebase
-            const docRef = await addDoc(collection(db, "orders"), payload);
+            const tradeId = await tradeService.createTrade({
+                participants: {
+                    senderId: uid,
+                    receiverId: 'oldiebutgoldie'
+                },
+                manifest
+            });
 
-            const completeOrder = { id: docRef.id, ...payload };
-            setSubmittedOrder(completeOrder as OrderData);
+            // 3. Immediate Resolution for Buy Now
+            if (resolvedIntent === 'COMPRAR') {
+                try {
+                    await tradeService.resolveTrade(tradeId, manifest);
+                } catch (resError) {
+                    console.warn("Auto-resolution failed, trade remains pending:", resError);
+                }
+            }
+
+            // 4. Redirect to Order View
+            navigate(`/orden/${tradeId}`);
+
         } catch (error) {
-            console.error("Error creating order/inventory:", error);
-            alert(TEXTS.profile.genericError || "Error al procesar el pedido.");
+            console.error("Error creating trade/inventory:", error);
+            alert(TEXTS.profile.genericError || "Error al procesar la operación.");
         } finally {
             hideLoading();
         }

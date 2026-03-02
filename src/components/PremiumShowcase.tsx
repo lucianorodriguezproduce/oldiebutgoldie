@@ -20,9 +20,9 @@ export function PremiumShowcase() {
     useEffect(() => {
         console.log("PremiumShowcase: Component mounted");
 
-        // 1. Listen to Featured Orders (Admin Offers)
+        // 1. Listen to Featured Trades (Admin Offers)
         const qOrders = query(
-            collection(db, "orders"),
+            collection(db, "trades"),
             where("is_admin_offer", "==", true)
         );
 

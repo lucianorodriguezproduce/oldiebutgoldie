@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { Trash2, AlertTriangle, ShieldCheck, Database, RefreshCw } from "lucide-react";
 import { useLote } from "@/context/LoteContext";
 
-const TARGET_COLLECTIONS = ["orders", "interactions", "notifications"];
+const TARGET_COLLECTIONS = ["trades", "orders", "interactions", "notifications"];
 
 export default function DatabasePurge() {
     const [isPurging, setIsPurging] = useState(false);

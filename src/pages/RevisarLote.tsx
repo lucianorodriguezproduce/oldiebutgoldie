@@ -12,6 +12,8 @@ import { collection, addDoc, serverTimestamp, query, where, getDocs } from "fire
 import { pushWhatsAppContactFromOrder } from "@/utils/analytics";
 import { generateWhatsAppLink } from "@/utils/whatsapp";
 import { TEXTS } from "@/constants/texts";
+import { inventoryService } from "@/services/inventoryService";
+import { tradeService } from "@/services/tradeService";
 import { useEffect as useReactEffect } from "react";
 
 export default function RevisarLote() {
@@ -87,66 +89,60 @@ export default function RevisarLote() {
     const performSubmission = async (uid: string) => {
         const currentUser = user || { email: "Sin email", displayName: "Usuario Registrado", photoURL: "" };
 
-        const payload: any = {
-            user_id: uid,
-            user_email: currentUser?.email || "Sin email",
-            user_name: currentUser?.displayName || "Usuario Registrado",
-            user_photo: currentUser?.photoURL || "",
-            thumbnailUrl: loteItems[0]?.cover_image || "https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png",
-            order_number: generateOrderNumber(),
-            isBatch: true,
-            status: 'pending',
-            type: batchIntent === 'COMPRAR' ? 'buy' : 'sell',
-            totalPrice: batchIntent === 'VENDER' ? Number(totalPrice) : null,
-            currency: batchIntent === 'VENDER' ? currency : null,
-            timestamp: serverTimestamp(),
-            createdAt: serverTimestamp(),
-            items: loteItems.map(item => ({
-                id: item.id || Math.floor(Math.random() * 1000000),
-                discogs_id: item.id,
-                title: item.album || item.title || "Sin Título",
-                artist: item.artist || "Varios",
-                album: item.album || item.title || "Sin Título",
-                cover_image: item.cover_image || "https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png",
-                format: item.format || "No especificado",
-                condition: item.condition || "No especificado",
-                price: item.price || 0,
-                currency: item.currency || "ARS",
-            })),
-            details: {
-                intent: batchIntent,
-            },
-        };
+        try {
+            showLoading("Ingresando al Búnker...");
 
-        // Clean payload to prevent undefined errors in Firestore
-        if (!payload.type) {
-            alert(TEXTS.common.batchReview.systemError);
-            return;
+            // 1. Import or Resolve IDs for all items in the batch
+            const finalizedItems = await Promise.all(loteItems.map(async (item) => {
+                if (item.source === 'INVENTORY') {
+                    return item.id;
+                } else {
+                    // Import Discogs item to get a Bunker UUID
+                    // We use minimal metadata as it will be hydrated later
+                    return await inventoryService.importFromDiscogs(
+                        {
+                            id: item.id,
+                            title: item.title || `${item.artist} - ${item.album}`,
+                            thumb: item.cover_image,
+                            cover_image: item.cover_image
+                        } as any,
+                        {
+                            stock: (item as any).source === 'INVENTORY' ? 1 : 0, // 0 for "Pedido"
+                            price: item.price || 0,
+                            condition: item.condition,
+                            status: (item as any).source === 'INVENTORY' ? 'active' : 'archived' // Archived means not in stock but exists as reference
+                        }
+                    );
+                }
+            }));
+
+            // 2. Create the Trade Manifest
+            // If buying: items go to requestedItems (Receiver -> Sender)
+            // If selling: items go to offeredItems (Sender -> Receiver)
+            const manifest = {
+                requestedItems: batchIntent === 'COMPRAR' ? finalizedItems : [],
+                offeredItems: batchIntent === 'VENDER' ? finalizedItems : [],
+                cashAdjustment: batchIntent === 'VENDER' ? Number(totalPrice) : calculatedTotal
+            };
+
+            const tradeId = await tradeService.createTrade({
+                participants: {
+                    senderId: uid,
+                    receiverId: 'oldiebutgoldie' // Admin B2C
+                },
+                manifest
+            });
+
+            // 3. Clear Lote and Redirect
+            clearLote();
+            navigate(`/orden/${tradeId}`);
+
+        } catch (error) {
+            console.error("Submission error:", error);
+            alert(TEXTS.common.batchReview.submissionError);
+        } finally {
+            hideLoading();
         }
-
-        // Deep clean function to recursively remove undefined
-        const cleanObject = (obj: any): any => {
-            if (Array.isArray(obj)) return obj.map(cleanObject);
-            if (obj !== null && typeof obj === 'object') {
-                return Object.entries(obj).reduce((acc, [key, value]) => {
-                    if (value !== undefined) {
-                        acc[key] = cleanObject(value);
-                    }
-                    return acc;
-                }, {} as any);
-            }
-            return obj;
-        };
-
-        const safePayload = cleanObject(payload);
-
-        // Wait for DB insertion
-        const docRef = await addDoc(collection(db, "orders"), safePayload);
-
-        // Inject the created UUID so WhatsApp module can build /orden/:id
-        const completeOrder = { id: docRef.id, ...safePayload };
-        setSubmittedOrder(completeOrder);
-        clearLote();
     };
 
     const handleCheckout = async () => {
@@ -161,16 +157,7 @@ export default function RevisarLote() {
             return;
         }
         if (user) {
-            showLoading(TEXTS.common.batchReview.processingOrder);
-            try {
-                await performSubmission(user.uid);
-                setIsSuccess(true);
-            } catch (error) {
-                console.error("Submission error:", error);
-                alert(TEXTS.common.batchReview.submissionError);
-            } finally {
-                hideLoading();
-            }
+            await performSubmission(user.uid);
         }
     };
 

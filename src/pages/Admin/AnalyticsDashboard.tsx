@@ -80,36 +80,38 @@ export default function AnalyticsDashboard() {
                     }
                 });
 
-                // Fetch Active Orders
-                const ordersQuery = query(
-                    collection(db, "orders"),
-                    where("status", "in", ["pending", "quoted", "negotiating", "counteroffered", "pending_acceptance", "venta_finalizada", "contraoferta_usuario"]),
+                // Fetch Active Trades
+                const tradesQuery = query(
+                    collection(db, "trades"),
                     orderBy("timestamp", "desc")
                 );
-                const ordersSnap = await getDocs(ordersQuery);
-                const activeOrders = ordersSnap.docs.map(d => d.data());
+                const tradesSnap = await getDocs(tradesQuery);
+                const trades = tradesSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
 
                 let buyIntentCount = 0;
                 let sellIntentCount = 0;
-                activeOrders.forEach(o => {
-                    if (o.type === 'buy' || o.details?.intent === "COMPRAR") buyIntentCount++;
-                    if (o.type === 'sell' || o.details?.intent === "VENDER") sellIntentCount++;
+                trades.forEach(t => {
+                    if (t.manifest?.requestedItems?.length > 0) buyIntentCount++;
+                    if (t.manifest?.offeredItems?.length > 0) sellIntentCount++;
                 });
+
+                const activeTrades = trades.filter(t => ["pending", "counter_offer"].includes(t.status));
+                const completedTrades = trades.filter(t => ["accepted", "completed"].includes(t.status));
 
                 setStats({
                     totalViews: views,
                     topCountries: countries,
                     topCities: cities,
-                    recentSearches: [...new Set(searches)].slice(0, 10), // Unique, top 10
-                    activeOrdersCount: activeOrders.length,
+                    recentSearches: [...new Set(searches)].slice(0, 10),
+                    activeOrdersCount: activeTrades.length,
                     buyIntent: buyIntentCount,
                     sellIntent: sellIntentCount,
-                    potentialVolumeARS: activeOrders.reduce((sum, o: any) => sum + (o.totalPrice || o.details?.price || 0), 0),
-                    realVolumeARS: activeOrders.reduce((sum, o: any) => sum + (o.adminPrice || o.totalPrice || o.details?.price || 0), 0),
-                    facturacionPotencial: activeOrders.reduce((sum, o: any) => sum + (o.adminPrice || o.totalPrice || o.details?.price || 0), 0),
-                    facturacionReal: activeOrders.filter((o: any) => o.status === "venta_finalizada").reduce((sum, o: any) => sum + (o.adminPrice || o.totalPrice || o.details?.price || 0), 0),
-                    ticketPromedio: activeOrders.length > 0
-                        ? activeOrders.reduce((sum, o: any) => sum + (o.totalPrice || o.details?.price || 0), 0) / activeOrders.length
+                    potentialVolumeARS: activeTrades.reduce((sum, t) => sum + (t.manifest?.cashAdjustment || 0), 0),
+                    realVolumeARS: completedTrades.reduce((sum, t) => sum + (t.manifest?.cashAdjustment || 0), 0),
+                    facturacionPotencial: activeTrades.reduce((sum, t) => sum + (t.manifest?.cashAdjustment || 0), 0),
+                    facturacionReal: completedTrades.reduce((sum, t) => sum + (t.manifest?.cashAdjustment || 0), 0),
+                    ticketPromedio: trades.length > 0
+                        ? trades.reduce((sum, t) => sum + (t.manifest?.cashAdjustment || 0), 0) / trades.length
                         : 0
                 });
 
@@ -172,10 +174,10 @@ export default function AnalyticsDashboard() {
                     <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-[60px] rounded-full" />
                     <div className="flex items-center gap-4 mb-4">
                         <ShoppingBag className="h-6 w-6 text-primary" />
-                        <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500">Active Orders</h3>
+                        <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500">Operaciones Activas</h3>
                     </div>
                     <p className="text-5xl font-black text-white">{stats.activeOrdersCount}</p>
-                    <p className="text-xs text-gray-600 mt-2 font-bold uppercase tracking-widest">In Pipeline</p>
+                    <p className="text-xs text-gray-600 mt-2 font-bold uppercase tracking-widest">En Proceso</p>
                 </Card>
 
                 <Card className="bg-white/[0.03] border-white/5 p-8 rounded-[2.5rem] relative overflow-hidden">
@@ -232,7 +234,7 @@ export default function AnalyticsDashboard() {
                                     />
                                 </div>
                                 <p className="text-[10px] text-center text-gray-500 font-bold uppercase tracking-widest">
-                                    Proporción de mercado basada en órdenes activas
+                                    Proporción de mercado basada en operaciones activas
                                 </p>
                             </>
                         ) : (
