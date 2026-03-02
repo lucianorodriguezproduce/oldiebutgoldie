@@ -51,39 +51,40 @@ const bunkerToLegacy = async (trade: any) => {
     const firstItem = cleanItems[0] || {};
 
     // Mapeo de estados visuales
-    "pending": "pending",
+    const statusMap: Record<string, string> = {
+        "pending": "pending",
         "counter_offer": "counteroffered",
-            "accepted": "completed",
-                "completed": "completed",
-                    "cancelled": "cancelled"
-};
+        "accepted": "completed",
+        "completed": "completed",
+        "cancelled": "cancelled"
+    };
 
-return {
-    ...trade,
-    id: trade.id,
-    status: statusMap[trade.status] || trade.status,
-    createdAt: trade.timestamp,
-    user_id: trade.participants?.senderId,
-    is_bunker_data: true,
-    // Campos de compatibilidad V1
-    items: cleanItems,
-    totalPrice: trade.manifest?.cashAdjustment || 0,
-    currency: "ARS", // Default para trades locales
-    details: {
-        artist: firstItem.artist || "Varios",
-        album: firstItem.album || (cleanItems.length > 1 ? `Lote de ${cleanItems.length}` : "Sin Título"),
-        cover_image: firstItem.cover_image,
-        price: trade.manifest?.cashAdjustment || 0,
-        currency: "ARS",
-        intent: "COMPRAR" // Por defecto en Trades por ahora
-    },
-    // Inyectar metadatos para OrderCard
-    artist: firstItem.artist,
-    album: firstItem.album,
-    thumbnailUrl: firstItem.cover_image,
-    isBatch: cleanItems.length > 1,
-    itemsCount: cleanItems.length
-};
+    return {
+        ...trade,
+        id: trade.id,
+        status: statusMap[trade.status] || trade.status,
+        createdAt: trade.timestamp,
+        user_id: trade.participants?.senderId,
+        is_bunker_data: true,
+        // Campos de compatibilidad V1
+        items: cleanItems,
+        totalPrice: trade.manifest?.cashAdjustment || 0,
+        currency: "ARS", // Default para trades locales
+        details: {
+            artist: firstItem.artist || "Varios",
+            album: firstItem.album || (cleanItems.length > 1 ? `Lote de ${cleanItems.length}` : "Sin Título"),
+            cover_image: firstItem.cover_image,
+            price: trade.manifest?.cashAdjustment || 0,
+            currency: "ARS",
+            intent: "COMPRAR" // Por defecto en Trades por ahora
+        },
+        // Inyectar metadatos para OrderCard
+        artist: firstItem.artist,
+        album: firstItem.album,
+        thumbnailUrl: firstItem.cover_image,
+        isBatch: cleanItems.length > 1,
+        itemsCount: cleanItems.length
+    };
 };
 
 export const tradeService = {
