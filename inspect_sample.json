@@ -1,0 +1,156 @@
+[
+  {
+    "id": "377292ce-cbef-4095-9919-c56759a85983",
+    "metadata": {
+      "artist": "Unknown Artist",
+      "title": "Pink Floyd - The Dark Side Of The Moon",
+      "format_description": "Vinyl",
+      "year": 2016,
+      "country": "Europe",
+      "genres": [],
+      "styles": []
+    },
+    "logistics": {
+      "status": "active",
+      "price": 85000,
+      "condition": "M/NM / VG+",
+      "stock": 2
+    },
+    "reference": {
+      "originalDiscogsUrl": "/release/9287809-Pink-Floyd-The-Dark-Side-Of-The-Moon",
+      "originalDiscogsId": 9287809
+    },
+    "media": {
+      "full_res_image_url": "https://storage.googleapis.com/buscador-discogs-11425.firebasestorage.app/inventory/377292ce-cbef-4095-9919-c56759a85983_1772150027448.jpg",
+      "thumbnail": "https://i.discogs.com/sVLIxn9GSzw4lpSDt2YnmRMfTbMN1CrAkfjo0M7-ckk/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTkyODc4/MDktMTQ3OTc1MzIz/Ni05NjE3LmpwZWc.jpeg"
+    },
+    "timestamp": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1772150029,
+      "nanoseconds": 795000000
+    }
+  },
+  {
+    "id": "3c65872a-6efb-41cd-a3a6-3ac6674ebb27",
+    "logistics": {
+      "stock": 1,
+      "condition": "M / NM",
+      "status": "active",
+      "price": 35000
+    },
+    "metadata": {
+      "styles": [],
+      "year": 2010,
+      "country": "Portugal",
+      "genres": [],
+      "artist": "Unknown Artist",
+      "title": "Miles Davis - Miles Davis • Kind Of Blue",
+      "format_description": "CD"
+    },
+    "reference": {
+      "originalDiscogsUrl": "/release/13892788-Miles-Davis-Miles-Davis-Kind-Of-Blue",
+      "originalDiscogsId": 13892788
+    },
+    "media": {
+      "full_res_image_url": "https://storage.googleapis.com/buscador-discogs-11425.firebasestorage.app/inventory/3c65872a-6efb-41cd-a3a6-3ac6674ebb27_1772150031261.jpg",
+      "thumbnail": "https://i.discogs.com/UBtbZ5v7WUJtIRRkROWsQWQC2u5aQfCaROZTDpX4Am0/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEzODky/Nzg4LTE1NjM0NjY3/NDUtOTY5NC5qcGVn.jpeg"
+    },
+    "timestamp": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1772150031,
+      "nanoseconds": 622000000
+    }
+  },
+  {
+    "id": "c71be126-6cc7-49c0-af6d-76939f80c3d8",
+    "items": [
+      {
+        "title": "Pink Floyd - The Dark Side Of The Moon",
+        "artist": "Pink Floyd",
+        "condition": "M/NM / VG+",
+        "price": 85000,
+        "thumb": "https://i.discogs.com/sVLIxn9GSzw4lpSDt2YnmRMfTbMN1CrAkfjo0M7-ckk/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTkyODc4/MDktMTQ3OTc1MzIz/Ni05NjE3LmpwZWc.jpeg",
+        "format": "Vinyl",
+        "id": 9287809
+      },
+      {
+        "condition": "VG+ / VG",
+        "artist": "Sui Generis (4)",
+        "title": "Sui Generis (4) - Pequeñas Anécdotas Sobre Las Instituciones",
+        "id": 3021859,
+        "thumb": "https://i.discogs.com/RKApAy80mz1cpm3j-958So2Jlo3QgUo26yW7bXz68Fk/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTMwMjE4/NTktMTMxMjEyMDc4/MC5qcGVn.jpeg",
+        "format": "Vinyl",
+        "price": 45000
+      },
+      {
+        "id": 13892788,
+        "price": 35000,
+        "format": "CD",
+        "thumb": "https://i.discogs.com/UBtbZ5v7WUJtIRRkROWsQWQC2u5aQfCaROZTDpX4Am0/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEzODky/Nzg4LTE1NjM0NjY3/NDUtOTY5NC5qcGVn.jpeg",
+        "artist": "Miles Davis",
+        "condition": "M / NM",
+        "title": "Miles Davis - Miles Davis • Kind Of Blue"
+      }
+    ],
+    "media": {
+      "full_res_image_url": "https://i.discogs.com/sVLIxn9GSzw4lpSDt2YnmRMfTbMN1CrAkfjo0M7-ckk/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTkyODc4/MDktMTQ3OTc1MzIz/Ni05NjE3LmpwZWc.jpeg",
+      "thumbnail": "https://i.discogs.com/sVLIxn9GSzw4lpSDt2YnmRMfTbMN1CrAkfjo0M7-ckk/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTkyODc4/MDktMTQ3OTc1MzIz/Ni05NjE3LmpwZWc.jpeg"
+    },
+    "timestamp": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1772382010,
+      "nanoseconds": 990000000
+    },
+    "logistics": {
+      "stock": 1,
+      "status": "active",
+      "price": 200000,
+      "condition": "Mixed"
+    },
+    "metadata": {
+      "format_description": "Lote Especial",
+      "title": "Lote de Rock",
+      "artist": "Varios",
+      "isBatch": true,
+      "styles": [],
+      "genres": [],
+      "year": 2026,
+      "country": "Argentina"
+    },
+    "reference": {
+      "originalDiscogsId": 0,
+      "originalDiscogsUrl": ""
+    }
+  },
+  {
+    "id": "e4bf7669-7263-4111-853e-f14fbfd0aee2",
+    "logistics": {
+      "stock": 1,
+      "condition": "VG+ / VG",
+      "price": 45000,
+      "status": "active"
+    },
+    "metadata": {
+      "year": 0,
+      "country": "Argentina",
+      "genres": [],
+      "styles": [],
+      "artist": "Unknown Artist",
+      "title": "Sui Generis (4) - Pequeñas Anecdotas Sobre Las Instituciones",
+      "format_description": "Vinyl"
+    },
+    "reference": {
+      "originalDiscogsId": 13462511,
+      "originalDiscogsUrl": "/release/13462511-Sui-Generis-Peque%C3%B1as-Anecdotas-Sobre-Las-Instituciones"
+    },
+    "media": {
+      "full_res_image_url": "https://storage.googleapis.com/buscador-discogs-11425.firebasestorage.app/inventory/e4bf7669-7263-4111-853e-f14fbfd0aee2_1772150030426.jpg",
+      "thumbnail": "https://i.discogs.com/S-eFIfJzTMqnJG6pt4YpXO1gcE-pC9TqBUMQo4fhnDg/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEzNDYy/NTExLTE1NTQ2Njgz/MTgtNzUxMy5qcGVn.jpeg"
+    },
+    "timestamp": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1772150030,
+      "nanoseconds": 812000000
+    }
+  }
+]

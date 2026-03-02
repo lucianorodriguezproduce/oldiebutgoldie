@@ -1,0 +1,24 @@
+{
+    "genres": [
+        "Blues",
+        "Folk, World, & Country",
+        "Jazz",
+        "Rock"
+    ],
+    "styles": [
+        "Classic Rock",
+        "Folk Rock",
+        "Modal",
+        "Prog Rock",
+        "Psychedelic Rock"
+    ],
+    "decades": [
+        2010,
+        2020
+    ],
+    "formats": [
+        "CD",
+        "Lote Especial",
+        "Vinyl"
+    ]
+}

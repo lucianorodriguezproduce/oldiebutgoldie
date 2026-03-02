@@ -1,0 +1,39 @@
+{
+  "genres": [
+    "Blues",
+    "Folk, World, & Country",
+    "Jazz",
+    "Rock"
+  ],
+  "styles": [
+    "Classic Rock",
+    "Folk Rock",
+    "Modal",
+    "Prog Rock",
+    "Psychedelic Rock"
+  ],
+  "decades": [
+    2010,
+    2020
+  ],
+  "formats": [
+    "CD",
+    "Lote Especial",
+    "Vinyl"
+  ],
+  "rarityHighlights": [
+    {
+      "title": "Pink Floyd - The Dark Side Of The Moon",
+      "rarity": "alta demanda",
+      "have": 73214,
+      "want": 9071
+    },
+    {
+      "title": "Miles Davis - Miles Davis • Kind Of Blue",
+      "rarity": "mítica",
+      "have": 8,
+      "want": 389
+    }
+  ],
+  "sampleSize": 4
+}
