@@ -165,6 +165,17 @@ export default function TradeConsole({ trade, onUpdate, onClose }: TradeConsoleP
                 </div>
             )}
 
+            {!canAction && trade.status !== 'accepted' && trade.status !== 'cancelled' && (
+                <div className="flex gap-4 pt-4">
+                    <button
+                        onClick={handleAcceptTrade}
+                        className="flex-1 flex items-center justify-center gap-3 py-4 bg-red-500/10 text-red-500 border border-red-500/20 rounded-2xl font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all"
+                    >
+                        <AlertCircle className="h-5 w-5" /> Forzar Cierre Administrativo
+                    </button>
+                </div>
+            )}
+
             {trade.status === 'accepted' && (
                 <div className="p-6 bg-green-500/10 border border-green-500/20 rounded-[2rem] flex items-center gap-4">
                     <div className="p-3 bg-green-500 rounded-2xl">

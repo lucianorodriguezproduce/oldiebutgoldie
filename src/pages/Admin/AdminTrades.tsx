@@ -42,6 +42,7 @@ export default function AdminTrades() {
     const [isWizardOpen, setIsWizardOpen] = useState(false);
     const [wizardStep, setWizardStep] = useState<1 | 2>(1);
     const [targetUserEmail, setTargetUserEmail] = useState("");
+    const [autoApprove, setAutoApprove] = useState(false);
     const [wizardManifest, setWizardManifest] = useState<TradeManifest>({
         offeredItems: [],
         requestedItems: [],
@@ -89,17 +90,24 @@ export default function AdminTrades() {
         if (!targetUserEmail) return alert("Debes ingresar el email/ID del usuario.");
         showLoading("Generando propuesta...");
         try {
-            await tradeService.createTrade({
+            const tradeId = await tradeService.createTrade({
                 participants: {
                     senderId: user?.uid || "admin",
                     receiverId: targetUserEmail // For now using email as proxy for ID if not found, or ideally a real ID
                 },
                 manifest: wizardManifest,
             });
+
+            if (autoApprove) {
+                showLoading("Cerrando trato automáticamente...");
+                await tradeService.resolveTrade(tradeId, wizardManifest);
+            }
+
             setIsWizardOpen(false);
             setWizardStep(1);
             setWizardManifest({ offeredItems: [], requestedItems: [], cashAdjustment: 0 });
             setTargetUserEmail("");
+            setAutoApprove(false);
             fetchTrades();
         } catch (error) {
             console.error("Error creating trade:", error);
@@ -363,6 +371,24 @@ export default function AdminTrades() {
                                                 isLocked={false}
                                                 myItems={[]}
                                                 theirItems={[]}
+                                            />
+                                        </div>
+
+                                        <div className="pt-4 flex items-center gap-4 bg-primary/5 border border-primary/20 p-6 rounded-[2rem]">
+                                            <div className="flex items-center gap-3 flex-1">
+                                                <div className="p-2 bg-primary/10 rounded-lg">
+                                                    <CheckCircle2 className="h-4 w-4 text-primary" />
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="text-[10px] font-black text-white uppercase tracking-widest">Aprobación Automática</span>
+                                                    <span className="text-[9px] text-gray-500 font-bold uppercase">Cerrar trato y descontar stock ahora.</span>
+                                                </div>
+                                            </div>
+                                            <input
+                                                type="checkbox"
+                                                checked={autoApprove}
+                                                onChange={(e) => setAutoApprove(e.target.checked)}
+                                                className="w-6 h-6 rounded-lg border-white/10 bg-black text-primary focus:ring-primary"
                                             />
                                         </div>
                                     </div>
