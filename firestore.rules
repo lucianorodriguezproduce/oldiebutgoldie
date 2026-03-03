@@ -53,9 +53,9 @@ service cloud.firestore {
       allow create, update, delete: if request.auth != null;
     }
 
-    // Trades - Negociaciones: Lectura permitida si es oferta de admin o el usuario está autenticado
+    // Trades - Negociaciones: Lectura permitida si es oferta de admin o el usuario está autenticado (o pública para Asset Locking)
     match /trades/{tradeId} {
-      allow read: if resource.data.is_admin_offer == true || request.auth != null;
+      allow read: if true; // Requerido para Asset Locking visual en Home/Tienda
       allow write, delete: if request.auth != null;
     }
 

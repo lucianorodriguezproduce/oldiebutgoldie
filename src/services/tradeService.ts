@@ -217,6 +217,9 @@ export const tradeService = {
                 }
             });
             callback(Array.from(blockedIds));
+        }, (error) => {
+            console.error("Error in onSnapshotBlockedAssets:", error);
+            callback([]); // Retornar vacío en caso de error para no romper la UI
         });
     },
 
