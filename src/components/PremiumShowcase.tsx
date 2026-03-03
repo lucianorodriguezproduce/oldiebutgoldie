@@ -66,7 +66,9 @@ export function PremiumShowcase() {
         });
 
         const unsubInventory = onSnapshot(qInventory, (snapshot) => {
-            activeInventory = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+            activeInventory = snapshot.docs
+                .map(doc => ({ id: doc.id, ...doc.data() } as any))
+                .filter(item => item.logistics?.stock > 0);
             updateShowcase();
         }, (error) => {
             console.warn("Inventory fetch error:", error);

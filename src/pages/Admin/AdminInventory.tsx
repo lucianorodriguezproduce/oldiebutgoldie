@@ -161,6 +161,21 @@ export default function AdminInventory() {
         }
     };
 
+    const handleArchiveIndividual = async (id: string, title: string) => {
+        if (!window.confirm(`¿Estás seguro de archivar "${title}"? Se marcará como agotado y desaparecerá del catálogo público.`)) return;
+
+        showLoading("Archivando ítem...");
+        try {
+            await inventoryService.patchLogistics(id, { stock: 0, status: "sold_out" });
+            fetchInventory();
+        } catch (error) {
+            console.error("Error archiving item:", error);
+            alert("Error al archivar el ítem.");
+        } finally {
+            hideLoading();
+        }
+    };
+
     const handleDeleteIndividual = async (id: string, title: string) => {
         if (!window.confirm(`¿Estás seguro de eliminar "${title}"? Esta acción no se puede deshacer y no dejará rastro.`)) return;
 
@@ -450,8 +465,16 @@ export default function AdminInventory() {
                                                     <Edit2 className="h-4 w-4" />
                                                 </button>
                                                 <button
+                                                    onClick={() => handleArchiveIndividual(item.id, item.metadata.title)}
+                                                    className="p-3 bg-white/5 text-gray-400 rounded-2xl hover:text-amber-500 hover:bg-amber-500/10 transition-all opacity-0 group-hover:opacity-100"
+                                                    title="Archivar (Marcar como agotado)"
+                                                >
+                                                    <Archive className="h-4 w-4" />
+                                                </button>
+                                                <button
                                                     onClick={() => handleDeleteIndividual(item.id, item.metadata.title)}
                                                     className="p-3 bg-white/5 text-gray-400 rounded-2xl hover:text-red-500 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100"
+                                                    title="Eliminar permanentemente"
                                                 >
                                                     <Trash2 className="h-4 w-4" />
                                                 </button>

@@ -236,8 +236,9 @@ export const inventoryService = {
 
         const lowTerm = searchTerm.toLowerCase();
         return items.filter(item =>
-            item.metadata.title.toLowerCase().includes(lowTerm) ||
-            item.metadata.artist.toLowerCase().includes(lowTerm)
+            (item.metadata.title.toLowerCase().includes(lowTerm) ||
+                item.metadata.artist.toLowerCase().includes(lowTerm)) &&
+            (item.logistics.stock > 0)
         );
     },
 
@@ -250,6 +251,7 @@ export const inventoryService = {
         const snapshot = await getDocs(q);
         return snapshot.docs
             .map(doc => ({ id: doc.id, ...doc.data() } as InventoryItem))
+            .filter(item => item.logistics.stock > 0)
             .sort((a, b) => ((b as any).timestamp?.seconds || 0) - ((a as any).timestamp?.seconds || 0))
             .slice(0, limitCount);
     },
