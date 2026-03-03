@@ -53,9 +53,10 @@ service cloud.firestore {
       allow create, update, delete: if request.auth != null;
     }
 
-    // Trades - Negociaciones: Solo personal autenticado
-    match /trades/{document=**} {
-      allow read, write, delete: if request.auth != null;
+    // Trades - Negociaciones: Lectura permitida si es oferta de admin o el usuario está autenticado
+    match /trades/{tradeId} {
+      allow read: if resource.data.is_admin_offer == true || request.auth != null;
+      allow write, delete: if request.auth != null;
     }
 
     // User Assets - Soberanía y Blindaje P2P
