@@ -37,6 +37,7 @@ export default function AdminTrades() {
     const [loading, setLoading] = useState(true);
     const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
     const [itemDetails, setItemDetails] = useState<Record<string, InventoryItem>>({});
+    const [activeView, setActiveView] = useState<'exchange' | 'direct_sale'>('exchange');
 
     // Wizard State
     const [isWizardOpen, setIsWizardOpen] = useState(false);
@@ -137,6 +138,7 @@ export default function AdminTrades() {
         switch (status) {
             case 'pending':
                 return <span className="bg-amber-500/10 text-amber-500 border border-amber-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 animate-pulse"><Clock className="h-3 w-3" /> PENDING_INIT</span>;
+            case 'completed':
             case 'accepted':
                 return <span className="bg-green-500/10 text-green-500 border border-green-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5"><CheckCircle2 className="h-3 w-3" /> COMPLETED</span>;
             case 'cancelled':
@@ -178,8 +180,14 @@ export default function AdminTrades() {
         <div className="space-y-10">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div className="space-y-1">
-                    <h2 className="text-4xl md:text-6xl font-display font-black text-white uppercase tracking-tighter">Intercambios</h2>
-                    <p className="text-gray-500 font-medium text-lg">Resolución de intercambios y conflictos de stock.</p>
+                    <h2 className="text-4xl md:text-6xl font-display font-black text-white uppercase tracking-tighter">
+                        {activeView === 'exchange' ? 'Intercambios' : 'Ventas / Pedidos'}
+                    </h2>
+                    <p className="text-gray-500 font-medium text-lg">
+                        {activeView === 'exchange'
+                            ? 'Resolución de intercambios y conflictos de stock.'
+                            : 'Gestión de pedidos directos y entregas inmediatas.'}
+                    </p>
                 </div>
                 <button
                     onClick={() => setIsWizardOpen(true)}
@@ -189,20 +197,48 @@ export default function AdminTrades() {
                 </button>
             </div>
 
+            {/* View Selector Tabs */}
+            <div className="flex items-center gap-2 p-1.5 bg-white/5 border border-white/10 rounded-2xl w-fit">
+                <button
+                    onClick={() => setActiveView('exchange')}
+                    className={`px-8 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeView === 'exchange'
+                        ? 'bg-primary text-black shadow-lg shadow-primary/20'
+                        : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
+                >
+                    <div className="flex items-center gap-2">
+                        <ArrowRightLeft className="h-3 w-3" />
+                        Intercambios
+                    </div>
+                </button>
+                <button
+                    onClick={() => setActiveView('direct_sale')}
+                    className={`px-8 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeView === 'direct_sale'
+                        ? 'bg-primary text-black shadow-lg shadow-primary/20'
+                        : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
+                >
+                    <div className="flex items-center gap-2">
+                        <ShoppingBag className="h-3 w-3" />
+                        Ventas / Pedidos
+                    </div>
+                </button>
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
                 {loading ? (
                     <div className="py-32 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[2rem] gap-4">
                         <div className="h-12 w-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
                         <span className="text-xs font-black uppercase tracking-[0.3em] text-gray-500">Sincronizando Trades...</span>
                     </div>
-                ) : trades.length === 0 ? (
+                ) : trades.filter(t => (t.type || 'exchange') === activeView).length === 0 ? (
                     <div className="py-32 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[2rem] space-y-4 text-center">
-                        <ArrowRightLeft className="h-12 w-12 text-gray-700" />
-                        <p className="text-xl font-display font-medium text-gray-500">No hay propuestas de intercambio activas.</p>
+                        {activeView === 'exchange' ? <ArrowRightLeft className="h-12 w-12 text-gray-700" /> : <ShoppingBag className="h-12 w-12 text-gray-700" />}
+                        <p className="text-xl font-display font-medium text-gray-500">
+                            {activeView === 'exchange' ? 'No hay propuestas de intercambio activas.' : 'No se encontraron ventas o pedidos registrados.'}
+                        </p>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                        {trades.map(trade => (
+                        {trades.filter(t => (t.type || 'exchange') === activeView).map(trade => (
                             <motion.div
                                 key={trade.id}
                                 layoutId={trade.id}
@@ -213,11 +249,13 @@ export default function AdminTrades() {
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <div className="p-2.5 bg-white/5 rounded-xl">
-                                            <User className="h-4 w-4 text-gray-400" />
+                                            {trade.type === 'direct_sale' ? <ShoppingBag className="h-4 w-4 text-emerald-400" /> : <User className="h-4 w-4 text-gray-400" />}
                                         </div>
                                         <div className="flex flex-col">
-                                            <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest leading-none">Proponente</span>
-                                            <span className="text-xs font-bold text-white truncate max-w-[120px]">{trade.participants.senderId.slice(-8)}</span>
+                                            <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest leading-none">
+                                                {trade.type === 'direct_sale' ? 'Comprador' : 'Proponente'}
+                                            </span>
+                                            <span className="text-xs font-bold text-white truncate max-w-[120px]">{(trade.participants.senderId || 'Anon').slice(-8)}</span>
                                         </div>
                                     </div>
                                     {getStatusBadge(trade.status)}

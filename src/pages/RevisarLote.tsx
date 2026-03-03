@@ -435,7 +435,7 @@ export default function RevisarLote() {
                             <div className="px-1 py-1">
                                 <span className="text-[9px] font-black text-emerald-500 uppercase tracking-[0.2em] flex items-center gap-2">
                                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                                    Items de inventario listos para compra directa
+                                    Venta Directa: {totalCount} {totalCount === 1 ? 'ítem' : 'ítems'} listos para el Búnker
                                 </span>
                             </div>
                         )}

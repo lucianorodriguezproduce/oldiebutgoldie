@@ -90,7 +90,7 @@ const bunkerToLegacy = async (trade: any) => {
 };
 
 export const tradeService = {
-    async createTrade(trade: Omit<Trade, 'id' | 'timestamp' | 'status' | 'currentTurn' | 'negotiationHistory'>) {
+    async createTrade(trade: Omit<Trade, 'id' | 'timestamp' | 'status' | 'currentTurn' | 'negotiationHistory' | 'type'>) {
         // --- ASSET LOCKING: Verificación de disponibilidad real-time ---
         const allItems = [...(trade.manifest?.requestedItems || []), ...(trade.manifest?.offeredItems || [])];
 
@@ -111,18 +111,37 @@ export const tradeService = {
             throw new Error("ASSET_LOCKED: Uno o más ítems ya están en una negociación activa.");
         }
 
+        const isDirectSale = (trade.manifest?.offeredItems?.length || 0) === 0;
+        const tradeType = isDirectSale ? "direct_sale" : "exchange";
+        const initialStatus = isDirectSale ? "completed" : "pending";
+
         const tradeData = {
             ...trade,
             participants: {
                 ...trade.participants,
                 receiverId: trade.participants.receiverId || ADMIN_UID
             },
-            status: "pending" as const,
+            type: tradeType,
+            status: initialStatus as any,
             currentTurn: trade.participants.receiverId || ADMIN_UID,
             negotiationHistory: [],
             timestamp: serverTimestamp()
         };
         const docRef = await addDoc(collection(db, COLLECTION_NAME), tradeData);
+
+        // --- AUTO-RESOLUTION: For direct sales, decrement stock immediately ---
+        if (isDirectSale) {
+            console.log(`[Bunker] Direct sale detected. Auto-resolving trade: ${docRef.id}`);
+            try {
+                await this.resolveTrade(docRef.id, trade.manifest as any);
+            } catch (error) {
+                console.error("[Bunker] Error during auto-resolution of direct sale:", error);
+                // Even if resolution fails (e.g. stock issue), the doc exists. 
+                // In a production app, we'd roll back or handle this more gracefully.
+                throw error;
+            }
+        }
+
         return docRef.id;
     },
 

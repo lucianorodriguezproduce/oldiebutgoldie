@@ -59,6 +59,7 @@ export interface Trade {
     };
     manifest: TradeManifest;
     status: "pending" | "accepted" | "counter_offer" | "completed" | "cancelled";
+    type: "direct_sale" | "exchange";
     currentTurn: string; // UID of the user who must decide
     negotiationHistory: TradeManifest[]; // Previous versions of the manifest
     timestamp: any;
