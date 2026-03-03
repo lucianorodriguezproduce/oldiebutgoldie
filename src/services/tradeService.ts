@@ -295,22 +295,51 @@ export const tradeService = {
 
             // --- 2. PROCESAR ITEMS OFRECIDOS (Sender -> Receiver) ---
             for (const itemId of manifest.offeredItems) {
-                const assetRef = doc(db, "user_assets", String(itemId));
-                const assetSnap = await transaction.get(assetRef);
+                if (senderId === ADMIN_UID) {
+                    const itemRef = doc(db, "inventory", String(itemId));
+                    const itemSnap = await transaction.get(itemRef);
 
-                if (!assetSnap.exists()) throw new Error(`Activo ofrecido no encontrado: ${itemId}`);
-                const assetData = assetSnap.data() as UserAsset;
+                    if (itemSnap.exists()) {
+                        const invData = itemSnap.data() as InventoryItem;
+                        const currentStock = invData.logistics.stock || 0;
+                        if (currentStock <= 0) throw new Error(`Stock insuficiente en Búnker: ${invData.metadata.title}`);
 
-                if (assetData.ownerId !== senderId) throw new Error("Ya no eres dueño del activo que intentas ofrecer");
-                if (assetData.status !== "active" || !assetData.isTradeable) {
-                    throw new Error(`Tu ítem "${assetData.metadata?.title || itemId}" ya no está disponible`);
+                        transaction.update(itemRef, {
+                            "logistics.stock": currentStock - 1,
+                            "logistics.status": (currentStock - 1) === 0 ? "sold_out" : "active"
+                        });
+
+                        const assetRef = doc(collection(db, "user_assets"));
+                        transaction.set(assetRef, {
+                            ownerId: receiverId,
+                            originalInventoryId: itemId,
+                            valuation: invData.logistics.price || 0,
+                            isTradeable: false,
+                            metadata: invData.metadata,
+                            media: invData.media,
+                            items: invData.items || [],
+                            acquiredAt: serverTimestamp(),
+                            status: "active"
+                        });
+                    }
+                } else {
+                    const assetRef = doc(db, "user_assets", String(itemId));
+                    const assetSnap = await transaction.get(assetRef);
+
+                    if (!assetSnap.exists()) throw new Error(`Activo ofrecido no encontrado: ${itemId}`);
+                    const assetData = assetSnap.data() as UserAsset;
+
+                    if (assetData.ownerId !== senderId) throw new Error("Ya no eres dueño del activo que intentas ofrecer");
+                    if (assetData.status !== "active" || !assetData.isTradeable) {
+                        throw new Error(`Tu ítem "${assetData.metadata?.title || itemId}" ya no está disponible`);
+                    }
+
+                    transaction.update(assetRef, {
+                        ownerId: receiverId,
+                        isTradeable: false,
+                        acquiredAt: serverTimestamp()
+                    });
                 }
-
-                transaction.update(assetRef, {
-                    ownerId: receiverId,
-                    isTradeable: false,
-                    acquiredAt: serverTimestamp()
-                });
             }
 
             transaction.update(tradeRef, { status: "completed", resolvedAt: serverTimestamp() });
