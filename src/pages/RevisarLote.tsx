@@ -14,6 +14,7 @@ import { generateWhatsAppLink } from "@/utils/whatsapp";
 import { TEXTS } from "@/constants/texts";
 import { inventoryService } from "@/services/inventoryService";
 import { tradeService } from "@/services/tradeService";
+import { ADMIN_UID } from "@/constants/admin";
 import { useEffect as useReactEffect } from "react";
 
 export default function RevisarLote() {
@@ -128,7 +129,7 @@ export default function RevisarLote() {
             const tradeId = await tradeService.createTrade({
                 participants: {
                     senderId: uid,
-                    receiverId: 'MKPlxxi9JENQt0hS3V1QNeF8oOS2' // Admin UID (B2C)
+                    receiverId: ADMIN_UID
                 },
                 manifest
             });

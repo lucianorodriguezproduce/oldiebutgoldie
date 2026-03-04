@@ -19,8 +19,9 @@ import {
 
 import type { Trade, InventoryItem, UserAsset } from "@/types/inventory";
 
+import { ADMIN_UID } from "@/constants/admin";
+
 const COLLECTION_NAME = "trades";
-const ADMIN_UID = "MKPlxxi9JENQt0hS3V1QNeF8oOS2"; // UID Real del Administrador
 
 /**
  * ADAPTADOR: Transmuta un objeto Trade (Bunker) en un Order (Legacy V1)
@@ -36,7 +37,7 @@ const bunkerToLegacy = async (trade: any) => {
             const data = itemDoc.data() as InventoryItem;
             return {
                 id: data.id,
-                artist: data.metadata.artist,
+                artist: (data.metadata.artist || '').replace(/^UNKNOWN ARTIST\s*[-—–]*\s*/i, '').trim() || data.metadata.artist,
                 album: data.metadata.title,
                 title: data.metadata.title,
                 cover_image: data.media.full_res_image_url || data.media.thumbnail,

@@ -14,6 +14,7 @@ import { TEXTS } from "@/constants/texts";
 import { pushViewItemFromOrder, pushHotOrderDetected } from "@/utils/analytics";
 import { getCleanOrderMetadata } from "@/utils/orderMetadata";
 import { tradeService } from "@/services/tradeService";
+import { ADMIN_UID } from "@/constants/admin";
 
 export default function PublicOrderView() {
     const { id } = useParams<{ id: string }>();
@@ -97,7 +98,7 @@ export default function PublicOrderView() {
             await tradeService.resolveTrade(id, order.manifest);
 
             // Notificación al Admin (Búnker)
-            if (order.is_admin_offer || order.participants?.receiverId === "oldiebutgoldie") {
+            if (order.is_admin_offer || order.participants?.receiverId === ADMIN_UID || order.participants?.receiverId === "oldiebutgoldie") {
                 await addDoc(collection(db, "notifications"), {
                     userId: "oldiebutgoldie",
                     orderId: id,

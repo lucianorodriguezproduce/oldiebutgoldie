@@ -20,6 +20,7 @@ import { useLote } from "@/context/LoteContext";
 import { PremiumShowcase } from "@/components/PremiumShowcase";
 import { inventoryService } from "@/services/inventoryService";
 import { tradeService } from "@/services/tradeService";
+import { ADMIN_UID } from "@/constants/admin";
 import { CompactSearchCard } from "@/components/ui/CompactSearchCard";
 import React, { memo } from "react";
 import { CardSkeleton } from "@/components/ui/Skeleton";
@@ -606,19 +607,13 @@ export default function Home() {
             const tradeId = await tradeService.createTrade({
                 participants: {
                     senderId: uid,
-                    receiverId: 'oldiebutgoldie'
+                    receiverId: ADMIN_UID
                 },
                 manifest
             });
 
-            // 3. Immediate Resolution for Buy Now
-            if (resolvedIntent === 'COMPRAR') {
-                try {
-                    await tradeService.resolveTrade(tradeId, manifest);
-                } catch (resError) {
-                    console.warn("Auto-resolution failed, trade remains pending:", resError);
-                }
-            }
+            // Note: createTrade() already calls resolveTrade() internally for direct_sale trades.
+            // No need for a separate resolveTrade() call here.
 
             // 4. Redirect to Order View
             navigate(`/orden/${tradeId}`);

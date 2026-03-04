@@ -42,7 +42,7 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
     if (!order) return null;
 
     // Extracción tolerante a fallas para órdenes V1
-    const orderIntent = (order && (order.intent || order.details?.intent)) ? (order.intent || order.details.intent) : "VENDER";
+    const orderIntent = (order && (order.intent || order.details?.intent)) ? (order.intent || order.details.intent) : (order.type === 'direct_sale' ? 'COMPRAR' : 'VENDER');
     const orderStatus = order?.status || 'pending';
     const orderType = order?.type || 'buy';
 
