@@ -494,488 +494,489 @@ export default function Profile() {
                         </div>
                     )}
                 </div>
+            </div>
 
 
-                {/* Order Details Drawer */}
-                <OrderDetailsDrawer
-                    isOpen={!!selectedOrder}
-                    onClose={() => setSelectedOrder(null)}
-                    title={selectedOrder ? (() => {
-                        const items = selectedOrder.items || [];
-                        const isBatch = (items.length > 1);
-                        const rawArtist = (items[0]?.artist || selectedOrder.details?.artist || "Artista Desconocido");
-                        const rawAlbum = (selectedOrder.details?.album || items[0]?.title || "Detalle de Pedido");
+            {/* Order Details Drawer */}
+            <OrderDetailsDrawer
+                isOpen={!!selectedOrder}
+                onClose={() => setSelectedOrder(null)}
+                title={selectedOrder ? (() => {
+                    const items = selectedOrder.items || [];
+                    const isBatch = (items.length > 1);
+                    const rawArtist = (items[0]?.artist || selectedOrder.details?.artist || "Artista Desconocido");
+                    const rawAlbum = (selectedOrder.details?.album || items[0]?.title || "Detalle de Pedido");
 
-                        if (isBatch) return `LOTE DE ${items.length} DISCOS`;
+                    if (isBatch) return `LOTE DE ${items.length} DISCOS`;
 
-                        const displayArtist = (rawArtist.toLowerCase() === rawAlbum.toLowerCase())
-                            ? (user?.displayName || "Varios Artistas")
-                            : rawArtist;
+                    const displayArtist = (rawArtist.toLowerCase() === rawAlbum.toLowerCase())
+                        ? (user?.displayName || "Varios Artistas")
+                        : rawArtist;
 
-                        return `${displayArtist} - ${rawAlbum}`;
-                    })() : "Detalle de Pedido"}
-                    footer={
-                        selectedOrder && (
-                            <div className="space-y-4">
-                                {/* Negotiation Actions Footer */}
-                                {!isNegotiating && selectedOrder.status !== "completed" && selectedOrder.status !== "venta_finalizada" && (
-                                    <>
-                                        {/* Negotiation Buttons (if there's an offer to respond to) */}
-                                        {(selectedOrder.adminPrice || selectedOrder.admin_offer_price) && selectedOrder.status !== "contraoferta_usuario" && (
-                                            <div className="space-y-3">
-                                                {!showCounterInput ? (
-                                                    <div className="grid grid-cols-2 gap-3">
-                                                        <button
-                                                            onClick={() => handleAcceptProposal(selectedOrder)}
-                                                            disabled={isNegotiating}
-                                                            className="flex items-center justify-center gap-2 px-4 py-4 bg-primary text-black rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white transition-all disabled:opacity-50"
-                                                        >
-                                                            <CheckCircle2 className="h-4 w-4" /> Aceptar
-                                                        </button>
-                                                        <button
-                                                            onClick={() => setShowCounterInput(true)}
-                                                            disabled={isNegotiating}
-                                                            className="flex items-center justify-center gap-2 px-4 py-4 bg-white/5 border border-white/10 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all disabled:opacity-50"
-                                                        >
-                                                            <Handshake className="h-4 w-4" /> Contraoferta
-                                                        </button>
-                                                    </div>
-                                                ) : (
-                                                    <motion.div
-                                                        initial={{ opacity: 0, y: 10 }}
-                                                        animate={{ opacity: 1, y: 0 }}
-                                                        className="bg-neutral-900 border border-white/10 p-4 rounded-2xl space-y-3 shadow-2xl"
+                    return `${displayArtist} - ${rawAlbum}`;
+                })() : "Detalle de Pedido"}
+                footer={
+                    selectedOrder && (
+                        <div className="space-y-4">
+                            {/* Negotiation Actions Footer */}
+                            {!isNegotiating && selectedOrder.status !== "completed" && selectedOrder.status !== "venta_finalizada" && (
+                                <>
+                                    {/* Negotiation Buttons (if there's an offer to respond to) */}
+                                    {(selectedOrder.adminPrice || selectedOrder.admin_offer_price) && selectedOrder.status !== "contraoferta_usuario" && (
+                                        <div className="space-y-3">
+                                            {!showCounterInput ? (
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <button
+                                                        onClick={() => handleAcceptProposal(selectedOrder)}
+                                                        disabled={isNegotiating}
+                                                        className="flex items-center justify-center gap-2 px-4 py-4 bg-primary text-black rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white transition-all disabled:opacity-50"
                                                     >
-                                                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">¿Cuánto pides por el lote?</p>
-                                                        <div className="flex gap-2">
-                                                            <div className="relative flex-1">
-                                                                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-600" />
-                                                                <input
-                                                                    type="number"
-                                                                    value={counterOfferPrice}
-                                                                    onChange={e => setCounterOfferPrice(e.target.value)}
-                                                                    placeholder="Ej: 50000"
-                                                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-9 py-3 text-white font-bold text-sm focus:border-primary focus:outline-none transition-all"
-                                                                />
-                                                            </div>
-                                                            <button
-                                                                onClick={() => handleCounterOffer(selectedOrder)}
-                                                                disabled={!counterOfferPrice || isNegotiating}
-                                                                className="px-6 bg-primary text-black rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-white transition-all disabled:opacity-20"
-                                                            >
-                                                                Enviar
-                                                            </button>
+                                                        <CheckCircle2 className="h-4 w-4" /> Aceptar
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setShowCounterInput(true)}
+                                                        disabled={isNegotiating}
+                                                        className="flex items-center justify-center gap-2 px-4 py-4 bg-white/5 border border-white/10 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all disabled:opacity-50"
+                                                    >
+                                                        <Handshake className="h-4 w-4" /> Contraoferta
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <motion.div
+                                                    initial={{ opacity: 0, y: 10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    className="bg-neutral-900 border border-white/10 p-4 rounded-2xl space-y-3 shadow-2xl"
+                                                >
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">¿Cuánto pides por el lote?</p>
+                                                    <div className="flex gap-2">
+                                                        <div className="relative flex-1">
+                                                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-600" />
+                                                            <input
+                                                                type="number"
+                                                                value={counterOfferPrice}
+                                                                onChange={e => setCounterOfferPrice(e.target.value)}
+                                                                placeholder="Ej: 50000"
+                                                                className="w-full bg-white/5 border border-white/10 rounded-xl px-9 py-3 text-white font-bold text-sm focus:border-primary focus:outline-none transition-all"
+                                                            />
                                                         </div>
                                                         <button
-                                                            onClick={() => setShowCounterInput(false)}
-                                                            className="w-full text-center text-[9px] font-bold text-gray-600 uppercase tracking-widest hover:text-white transition-colors"
+                                                            onClick={() => handleCounterOffer(selectedOrder)}
+                                                            disabled={!counterOfferPrice || isNegotiating}
+                                                            className="px-6 bg-primary text-black rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-white transition-all disabled:opacity-20"
                                                         >
-                                                            Cancelar
+                                                            Enviar
                                                         </button>
-                                                    </motion.div>
-                                                )}
-                                            </div>
-                                        )}
+                                                    </div>
+                                                    <button
+                                                        onClick={() => setShowCounterInput(false)}
+                                                        className="w-full text-center text-[9px] font-bold text-gray-600 uppercase tracking-widest hover:text-white transition-colors"
+                                                    >
+                                                        Cancelar
+                                                    </button>
+                                                </motion.div>
+                                            )}
+                                        </div>
+                                    )}
 
-                                        {selectedOrder.status === "contraoferta_usuario" && (
-                                            <div className="bg-blue-500/5 border border-blue-500/10 rounded-xl p-4 text-center">
-                                                <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Esperando respuesta de OBG</p>
-                                            </div>
-                                        )}
+                                    {selectedOrder.status === "contraoferta_usuario" && (
+                                        <div className="bg-blue-500/5 border border-blue-500/10 rounded-xl p-4 text-center">
+                                            <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Esperando respuesta de OBG</p>
+                                        </div>
+                                    )}
 
-                                        <button
-                                            onClick={() => {
-                                                pushWhatsAppContactFromOrder(selectedOrder);
-                                                window.open(generateWhatsAppLink(selectedOrder), "_blank");
-                                            }}
-                                            className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-green-600/20 hover:bg-green-600/30 text-green-500 border border-green-500/20 rounded-xl text-xs font-black uppercase tracking-widest active:scale-95 transition-all"
-                                        >
-                                            <MessageCircle className="h-4 w-4" />
-                                            Dudas o Consultas
-                                        </button>
-                                    </>
-                                )}
+                                    <button
+                                        onClick={() => {
+                                            pushWhatsAppContactFromOrder(selectedOrder);
+                                            window.open(generateWhatsAppLink(selectedOrder), "_blank");
+                                        }}
+                                        className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-green-600/20 hover:bg-green-600/30 text-green-500 border border-green-500/20 rounded-xl text-xs font-black uppercase tracking-widest active:scale-95 transition-all"
+                                    >
+                                        <MessageCircle className="h-4 w-4" />
+                                        Dudas o Consultas
+                                    </button>
+                                </>
+                            )}
+                        </div>
+                    )
+                }
+            >
+                {selectedOrder && (
+                    <div className="px-4 py-8 relative">
+                        {/* TAREA 1: Botón de Cierre (X) */}
+                        <button
+                            onClick={() => setSelectedOrder(null)}
+                            style={{
+                                position: 'absolute',
+                                top: '1rem',
+                                right: '1rem',
+                                width: '32px',
+                                height: '32px',
+                                background: '#000',
+                                color: '#fff',
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                zIndex: 50,
+                                cursor: 'pointer'
+                            }}
+                            className="shadow-xl active:scale-95 transition-transform"
+                        >
+                            <X className="h-4 w-4" />
+                        </button>
+                        {/* Header — TAREA 2 & 4 */}
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+                            <div className="space-y-1">
+                                <h4 className="text-xl md:text-3xl font-display font-black text-white uppercase tracking-tighter">{TEXTS.profile.recentOrders}</h4>
                             </div>
-                        )
-                    }
-                >
-                    {selectedOrder && (
-                        <div className="px-4 py-8 relative">
-                            {/* TAREA 1: Botón de Cierre (X) */}
-                            <button
-                                onClick={() => setSelectedOrder(null)}
-                                style={{
-                                    position: 'absolute',
-                                    top: '1rem',
-                                    right: '1rem',
-                                    width: '32px',
-                                    height: '32px',
-                                    background: '#000',
-                                    color: '#fff',
-                                    borderRadius: '50%',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    zIndex: 50,
-                                    cursor: 'pointer'
-                                }}
-                                className="shadow-xl active:scale-95 transition-transform"
-                            >
-                                <X className="h-4 w-4" />
-                            </button>
-                            {/* Header — TAREA 2 & 4 */}
-                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
-                                <div className="space-y-1">
-                                    <h4 className="text-xl md:text-3xl font-display font-black text-white uppercase tracking-tighter">{TEXTS.profile.recentOrders}</h4>
-                                </div>
-                                <div className="flex items-center gap-6 text-[10px] font-black uppercase tracking-widest text-gray-500 overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
-                                    <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">ID: {selectedOrder.id}</p>
-                                    <p className="text-sm text-gray-400 font-bold uppercase">
-                                        Fecha: <span className="text-gray-200">
-                                            {selectedOrder?.createdAt?.seconds
-                                                ? new Date(selectedOrder.createdAt.seconds * 1000).toLocaleString()
-                                                : (selectedOrder?.timestamp?.seconds
-                                                    ? new Date(selectedOrder.timestamp.seconds * 1000).toLocaleString()
-                                                    : "Sincronizando...")}
-                                        </span>
-                                    </p>
-                                    <div className="flex items-center gap-2 mt-1">
-                                        <span className="bg-primary/10 text-primary border border-primary/20 px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest">
-                                            {selectedOrder.status}
-                                        </span>
-                                    </div>
-
-                                    <span className="text-[10px] text-gray-600 uppercase tracking-widest font-bold mt-2">
-                                        Operación: <span className={selectedOrder.type === 'buy' ? 'text-green-400' : 'text-orange-400'}>
-                                            {selectedOrder.type === 'buy' ? 'Compra' : 'Venta'}
-                                        </span>
+                            <div className="flex items-center gap-6 text-[10px] font-black uppercase tracking-widest text-gray-500 overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
+                                <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">ID: {selectedOrder.id}</p>
+                                <p className="text-sm text-gray-400 font-bold uppercase">
+                                    Fecha: <span className="text-gray-200">
+                                        {selectedOrder?.createdAt?.seconds
+                                            ? new Date(selectedOrder.createdAt.seconds * 1000).toLocaleString()
+                                            : (selectedOrder?.timestamp?.seconds
+                                                ? new Date(selectedOrder.timestamp.seconds * 1000).toLocaleString()
+                                                : "Sincronizando...")}
+                                    </span>
+                                </p>
+                                <div className="flex items-center gap-2 mt-1">
+                                    <span className="bg-primary/10 text-primary border border-primary/20 px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest">
+                                        {selectedOrder.status}
                                     </span>
                                 </div>
+
+                                <span className="text-[10px] text-gray-600 uppercase tracking-widest font-bold mt-2">
+                                    Operación: <span className={selectedOrder.type === 'buy' ? 'text-green-400' : 'text-orange-400'}>
+                                        {selectedOrder.type === 'buy' ? 'Compra' : 'Venta'}
+                                    </span>
+                                </span>
                             </div>
+                        </div>
 
-                            {/* Negotiation Banner Removed (Phase 12) - Redundant with Offer Cards */}
+                        {/* Negotiation Banner Removed (Phase 12) - Redundant with Offer Cards */}
 
-                            {/* Items List */}
-                            <div className="space-y-0 mb-8 mt-2">
-                                <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500 italic mb-4">Detalle del Lote</h4>
+                        {/* Items List */}
+                        <div className="space-y-0 mb-8 mt-2">
+                            <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500 italic mb-4">Detalle del Lote</h4>
 
-                                {selectedOrder.items && selectedOrder.items.length > 0 ? (
-                                    selectedOrder.items.map((item: any, idx: number) => (
-                                        <div key={idx} className="border-b border-white/10 py-5 flex items-start gap-4">
-                                            {/* TAREA 2: Imagen de ítem con fallbacks robustos */}
-                                            <div className="w-16 h-16 rounded overflow-hidden flex-shrink-0 bg-white/5 border border-white/10">
-                                                <LazyImage
-                                                    src={item.cover_image || item.thumb || item.image || item.cover || '/default-album.png'}
-                                                    alt={item.title}
-                                                    className="w-full h-full object-cover"
-                                                />
-                                            </div>
-                                            <div className="flex-1 min-w-0 space-y-2">
-                                                <div className="space-y-1">
-                                                    <h4 className="font-bold text-white uppercase text-base leading-tight truncate">{item.title}</h4>
-                                                    <p className="text-gray-500 text-xs font-bold uppercase tracking-widest truncate">{item.artist}</p>
-                                                </div>
-                                                <div className="flex flex-wrap gap-2 mt-1">
-                                                    <span className="bg-gray-800 text-gray-300 px-2 py-1 text-[9px] font-black uppercase rounded">{item.format}</span>
-                                                    <span className="bg-blue-900/30 text-blue-400 px-2 py-1 text-[9px] font-black uppercase rounded border border-blue-500/20">{item.condition}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))
-                                ) : !selectedOrder.isBatch ? (
-                                    <div className="border-b border-white/10 py-5 flex items-start gap-4">
+                            {selectedOrder.items && selectedOrder.items.length > 0 ? (
+                                selectedOrder.items.map((item: any, idx: number) => (
+                                    <div key={idx} className="border-b border-white/10 py-5 flex items-start gap-4">
+                                        {/* TAREA 2: Imagen de ítem con fallbacks robustos */}
                                         <div className="w-16 h-16 rounded overflow-hidden flex-shrink-0 bg-white/5 border border-white/10">
                                             <LazyImage
-                                                src={selectedOrder.details?.cover_image || (selectedOrder.details as any)?.thumb}
-                                                alt={selectedOrder.details?.album}
+                                                src={item.cover_image || item.thumb || item.image || item.cover || '/default-album.png'}
+                                                alt={item.title}
                                                 className="w-full h-full object-cover"
                                             />
                                         </div>
                                         <div className="flex-1 min-w-0 space-y-2">
                                             <div className="space-y-1">
-                                                <h4 className="font-bold text-white uppercase text-base leading-tight truncate">
-                                                    {selectedOrder.details?.album}
-                                                </h4>
-                                                <p className="text-gray-500 text-xs font-bold uppercase tracking-widest truncate">
-                                                    {selectedOrder.details?.artist}
-                                                </p>
+                                                <h4 className="font-bold text-white uppercase text-base leading-tight truncate">{item.title}</h4>
+                                                <p className="text-gray-500 text-xs font-bold uppercase tracking-widest truncate">{item.artist}</p>
                                             </div>
                                             <div className="flex flex-wrap gap-2 mt-1">
-                                                <span className="bg-gray-800 text-gray-300 px-2 py-1 text-[9px] font-black uppercase rounded">{selectedOrder.details?.format}</span>
-                                                <span className="bg-blue-900/30 text-blue-400 px-2 py-1 text-[9px] font-black uppercase rounded border border-blue-500/20">{selectedOrder.details?.condition}</span>
+                                                <span className="bg-gray-800 text-gray-300 px-2 py-1 text-[9px] font-black uppercase rounded">{item.format}</span>
+                                                <span className="bg-blue-900/30 text-blue-400 px-2 py-1 text-[9px] font-black uppercase rounded border border-blue-500/20">{item.condition}</span>
                                             </div>
                                         </div>
                                     </div>
-                                ) : (
-                                    <div className="p-8 text-center bg-white/[0.02] border border-dashed border-white/10 rounded-2xl">
-                                        <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">Sin ítems registrados</p>
+                                ))
+                            ) : !selectedOrder.isBatch ? (
+                                <div className="border-b border-white/10 py-5 flex items-start gap-4">
+                                    <div className="w-16 h-16 rounded overflow-hidden flex-shrink-0 bg-white/5 border border-white/10">
+                                        <LazyImage
+                                            src={selectedOrder.details?.cover_image || (selectedOrder.details as any)?.thumb}
+                                            alt={selectedOrder.details?.album}
+                                            className="w-full h-full object-cover"
+                                        />
                                     </div>
-                                )}
-                            </div>
+                                    <div className="flex-1 min-w-0 space-y-2">
+                                        <div className="space-y-1">
+                                            <h4 className="font-bold text-white uppercase text-base leading-tight truncate">
+                                                {selectedOrder.details?.album}
+                                            </h4>
+                                            <p className="text-gray-500 text-xs font-bold uppercase tracking-widest truncate">
+                                                {selectedOrder.details?.artist}
+                                            </p>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2 mt-1">
+                                            <span className="bg-gray-800 text-gray-300 px-2 py-1 text-[9px] font-black uppercase rounded">{selectedOrder.details?.format}</span>
+                                            <span className="bg-blue-900/30 text-blue-400 px-2 py-1 text-[9px] font-black uppercase rounded border border-blue-500/20">{selectedOrder.details?.condition}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="p-8 text-center bg-white/[0.02] border border-dashed border-white/10 rounded-2xl">
+                                    <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">Sin ítems registrados</p>
+                                </div>
+                            )}
+                        </div>
 
-                            {/* Static Blocks (Moved from Footer) */}
-                            <div className="space-y-6 mb-8 mt-2">
-                                {/* Negotiation History Timeline (Profile Side) - Hidden on Completion */}
-                                {selectedOrder.status !== "completed" && selectedOrder.status !== "venta_finalizada" && selectedOrder.negotiationHistory && selectedOrder.negotiationHistory.length > 0 && (
-                                    <details className="group cursor-pointer border-b border-white/5 pb-4">
-                                        <summary className="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-colors outline-none flex items-center justify-between">
-                                            <span className="flex items-center gap-2"><Clock className="h-3.5 w-3.5" /> Ver Línea de Tiempo de Negociación</span>
-                                            <ChevronDown className="h-3.5 w-3.5 group-open:rotate-180 transition-transform" />
-                                        </summary>
+                        {/* Static Blocks (Moved from Footer) */}
+                        <div className="space-y-6 mb-8 mt-2">
+                            {/* Negotiation History Timeline (Profile Side) - Hidden on Completion */}
+                            {selectedOrder.status !== "completed" && selectedOrder.status !== "venta_finalizada" && selectedOrder.negotiationHistory && selectedOrder.negotiationHistory.length > 0 && (
+                                <details className="group cursor-pointer border-b border-white/5 pb-4">
+                                    <summary className="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-colors outline-none flex items-center justify-between">
+                                        <span className="flex items-center gap-2"><Clock className="h-3.5 w-3.5" /> Ver Línea de Tiempo de Negociación</span>
+                                        <ChevronDown className="h-3.5 w-3.5 group-open:rotate-180 transition-transform" />
+                                    </summary>
 
-                                        <div className="relative space-y-4 max-h-[300px] overflow-y-auto pr-4 custom-scrollbar mt-6">
-                                            {/* Central vertical line */}
-                                            <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white/5 -translate-x-1/2" />
+                                    <div className="relative space-y-4 max-h-[300px] overflow-y-auto pr-4 custom-scrollbar mt-6">
+                                        {/* Central vertical line */}
+                                        <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white/5 -translate-x-1/2" />
 
-                                            {selectedOrder.negotiationHistory.map((h: any, i: number) => (
-                                                <div key={i} className={`flex w-full items-center ${h.sender === 'admin' ? "justify-start" : "justify-end"}`}>
-                                                    <div className={`relative w-[45%] p-3 rounded-xl border ${h.sender === 'admin'
-                                                        ? "bg-primary/5 border-primary/20 text-left"
-                                                        : "bg-secondary/5 border-secondary/20 text-right"
-                                                        }`}>
-                                                        {/* Connector Dot */}
-                                                        <div className={`absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full border-2 bg-black z-10 ${h.sender === 'admin'
-                                                            ? "left-[calc(100%+11px)] border-primary"
-                                                            : "right-[calc(100%+11px)] border-secondary"
-                                                            }`} />
+                                        {selectedOrder.negotiationHistory.map((h: any, i: number) => (
+                                            <div key={i} className={`flex w-full items-center ${h.sender === 'admin' ? "justify-start" : "justify-end"}`}>
+                                                <div className={`relative w-[45%] p-3 rounded-xl border ${h.sender === 'admin'
+                                                    ? "bg-primary/5 border-primary/20 text-left"
+                                                    : "bg-secondary/5 border-secondary/20 text-right"
+                                                    }`}>
+                                                    {/* Connector Dot */}
+                                                    <div className={`absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full border-2 bg-black z-10 ${h.sender === 'admin'
+                                                        ? "left-[calc(100%+11px)] border-primary"
+                                                        : "right-[calc(100%+11px)] border-secondary"
+                                                        }`} />
 
-                                                        <div className="flex flex-col gap-0.5">
-                                                            <span className={`text-[8px] font-black uppercase tracking-tighter ${h.sender === 'admin' ? "text-primary" : "text-secondary"
-                                                                }`}>
-                                                                {h.sender === 'admin' ? "Oldie but Goldie" : "Tú (Cliente)"}
-                                                            </span>
-                                                            <span className="text-sm font-black text-white">
-                                                                {h.currency === "USD" ? "US$" : "$"} {(h.price || 0).toLocaleString()}
-                                                            </span>
-                                                            <span className="text-[8px] text-gray-600 font-mono mt-1">
-                                                                {h.timestamp?.seconds
-                                                                    ? new Date(h.timestamp.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                                                                    : "Reciente"}
-                                                            </span>
-                                                        </div>
+                                                    <div className="flex flex-col gap-0.5">
+                                                        <span className={`text-[8px] font-black uppercase tracking-tighter ${h.sender === 'admin' ? "text-primary" : "text-secondary"
+                                                            }`}>
+                                                            {h.sender === 'admin' ? "Oldie but Goldie" : "Tú (Cliente)"}
+                                                        </span>
+                                                        <span className="text-sm font-black text-white">
+                                                            {h.currency === "USD" ? "US$" : "$"} {(h.price || 0).toLocaleString()}
+                                                        </span>
+                                                        <span className="text-[8px] text-gray-600 font-mono mt-1">
+                                                            {h.timestamp?.seconds
+                                                                ? new Date(h.timestamp.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                                                : "Reciente"}
+                                                        </span>
                                                     </div>
                                                 </div>
-                                            ))}
-                                        </div>
-                                    </details>
-                                )}
-
-                                {isNegotiating ? (
-                                    <div className="space-y-4">
-                                        <div className="h-48 bg-white/5 rounded-[2rem] animate-pulse" />
-                                        <div className="h-12 bg-white/5 rounded-2xl animate-pulse" />
-                                    </div>
-                                ) : (selectedOrder.status === "completed" || selectedOrder.status === "venta_finalizada") ? (
-                                    <div className="space-y-6">
-                                        <div id="printable-receipt" className="bg-green-500/10 border border-green-500/20 rounded-[2rem] p-8 space-y-6 relative overflow-hidden">
-                                            <div className="absolute top-0 right-0 p-8 opacity-5">
-                                                <FileText size={120} />
                                             </div>
+                                        ))}
+                                    </div>
+                                </details>
+                            )}
 
-                                            <div className="flex flex-col items-center justify-center p-8 text-center space-y-6">
-                                                <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center shadow-lg shadow-primary/20">
-                                                    <CheckCircle2 className="w-8 h-8 text-black" />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <h3 className="text-2xl font-display font-black text-white uppercase tracking-tighter">{TEXTS.profile.saleFinished}</h3>
-                                                    <p className="text-gray-400 text-sm font-medium leading-relaxed">
-                                                        {TEXTS.profile.saleSuccess}
+                            {isNegotiating ? (
+                                <div className="space-y-4">
+                                    <div className="h-48 bg-white/5 rounded-[2rem] animate-pulse" />
+                                    <div className="h-12 bg-white/5 rounded-2xl animate-pulse" />
+                                </div>
+                            ) : (selectedOrder.status === "completed" || selectedOrder.status === "venta_finalizada") ? (
+                                <div className="space-y-6">
+                                    <div id="printable-receipt" className="bg-green-500/10 border border-green-500/20 rounded-[2rem] p-8 space-y-6 relative overflow-hidden">
+                                        <div className="absolute top-0 right-0 p-8 opacity-5">
+                                            <FileText size={120} />
+                                        </div>
+
+                                        <div className="flex flex-col items-center justify-center p-8 text-center space-y-6">
+                                            <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center shadow-lg shadow-primary/20">
+                                                <CheckCircle2 className="w-8 h-8 text-black" />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <h3 className="text-2xl font-display font-black text-white uppercase tracking-tighter">{TEXTS.profile.saleFinished}</h3>
+                                                <p className="text-gray-400 text-sm font-medium leading-relaxed">
+                                                    {TEXTS.profile.saleSuccess}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="border-t border-white/5 pt-6 space-y-4">
+                                            <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+                                                <span className="text-gray-500">Precio Acordado</span>
+                                                <span className="text-primary text-base">
+                                                    {selectedOrder.currency === 'USD' ? 'US$' : '$'} ${(selectedOrder.totalPrice || selectedOrder.adminPrice || 0).toLocaleString()}
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-gray-500">
+                                                <span>Items Aceptados</span>
+                                                <span className="text-white">{selectedOrder.items?.length || 0}</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex flex-col sm:flex-row gap-3">
+                                            <button
+                                                onClick={() => {
+                                                    pushWhatsAppContactFromOrder(selectedOrder);
+                                                    const link = generateWhatsAppAcceptDealMsg(selectedOrder);
+                                                    window.open(link, "_blank");
+                                                }}
+                                                className="w-full flex items-center justify-center gap-3 bg-green-600 hover:bg-green-500 text-white px-8 py-4 rounded-2xl font-black uppercase text-xs tracking-widest transition-all shadow-lg shadow-green-500/20"
+                                            >
+                                                <MessageCircle className="h-5 w-5" />
+                                                {TEXTS.success.contactWhatsApp}
+                                            </button>
+                                            <button
+                                                onClick={() => window.print()}
+                                                className="flex-none flex items-center justify-center gap-3 px-6 py-4 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                                            >
+                                                <Download className="h-4 w-4" />
+                                                Imprimir / PDF
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-[#0A0A0A] border border-white/5 rounded-2xl p-6 text-center">
+                                        <p className="text-[9px] text-gray-700 font-black uppercase tracking-[0.3em]">Registro de Transacción: {selectedOrder.id}</p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <>
+                                    {(selectedOrder.adminPrice || selectedOrder.admin_offer_price) && (
+                                        <div className="flex flex-col gap-4">
+                                            {/* Admin Counter-Offer */}
+                                            {(selectedOrder.adminPrice || selectedOrder.admin_offer_price) && (
+                                                <div className="bg-primary/5 rounded-2xl p-6 border border-primary/20">
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <BadgeDollarSign className="h-5 w-5 text-primary" />
+                                                        <span className="text-xs font-black uppercase tracking-widest text-primary">Oldie but Goldie te ofrece</span>
+                                                    </div>
+                                                    <p className="text-4xl font-display font-black text-white tracking-tight">
+                                                        {(selectedOrder.adminCurrency || selectedOrder.admin_offer_currency) === "USD" ? "US$" : "$"} {(selectedOrder.adminPrice || selectedOrder.admin_offer_price || 0).toLocaleString()}
                                                     </p>
                                                 </div>
-                                            </div>
-
-                                            <div className="border-t border-white/5 pt-6 space-y-4">
-                                                <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
-                                                    <span className="text-gray-500">Precio Acordado</span>
-                                                    <span className="text-primary text-base">
-                                                        {selectedOrder.currency === 'USD' ? 'US$' : '$'} ${(selectedOrder.totalPrice || selectedOrder.adminPrice || 0).toLocaleString()}
-                                                    </span>
-                                                </div>
-                                                <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-gray-500">
-                                                    <span>Items Aceptados</span>
-                                                    <span className="text-white">{selectedOrder.items?.length || 0}</span>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex flex-col sm:flex-row gap-3">
-                                                <button
-                                                    onClick={() => {
-                                                        pushWhatsAppContactFromOrder(selectedOrder);
-                                                        const link = generateWhatsAppAcceptDealMsg(selectedOrder);
-                                                        window.open(link, "_blank");
-                                                    }}
-                                                    className="w-full flex items-center justify-center gap-3 bg-green-600 hover:bg-green-500 text-white px-8 py-4 rounded-2xl font-black uppercase text-xs tracking-widest transition-all shadow-lg shadow-green-500/20"
-                                                >
-                                                    <MessageCircle className="h-5 w-5" />
-                                                    {TEXTS.success.contactWhatsApp}
-                                                </button>
-                                                <button
-                                                    onClick={() => window.print()}
-                                                    className="flex-none flex items-center justify-center gap-3 px-6 py-4 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
-                                                >
-                                                    <Download className="h-4 w-4" />
-                                                    Imprimir / PDF
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <div className="bg-[#0A0A0A] border border-white/5 rounded-2xl p-6 text-center">
-                                            <p className="text-[9px] text-gray-700 font-black uppercase tracking-[0.3em]">Registro de Transacción: {selectedOrder.id}</p>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <>
-                                        {(selectedOrder.adminPrice || selectedOrder.admin_offer_price) && (
-                                            <div className="flex flex-col gap-4">
-                                                {/* Admin Counter-Offer */}
-                                                {(selectedOrder.adminPrice || selectedOrder.admin_offer_price) && (
-                                                    <div className="bg-primary/5 rounded-2xl p-6 border border-primary/20">
-                                                        <div className="flex items-center gap-2 mb-2">
-                                                            <BadgeDollarSign className="h-5 w-5 text-primary" />
-                                                            <span className="text-xs font-black uppercase tracking-widest text-primary">Oldie but Goldie te ofrece</span>
-                                                        </div>
-                                                        <p className="text-4xl font-display font-black text-white tracking-tight">
-                                                            {(selectedOrder.adminCurrency || selectedOrder.admin_offer_currency) === "USD" ? "US$" : "$"} {(selectedOrder.adminPrice || selectedOrder.admin_offer_price || 0).toLocaleString()}
-                                                        </p>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </>
-                                )}
-                            </div>
-
-                            {/* User Offer Highlight */}
-                            <div className="bg-secondary/5 border border-secondary/20 rounded-2xl p-5 space-y-2 mb-4">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-secondary">Oferta Inicial</span>
-                                <div className="flex items-center gap-3">
-                                    <DollarSign className="h-5 w-5 text-secondary" />
-                                    <span className="text-3xl font-display font-black text-white">
-                                        {selectedOrder.totalPrice
-                                            ? `${selectedOrder.currency === 'USD' ? 'US$' : '$'} ${selectedOrder.totalPrice.toLocaleString()}`
-                                            : (selectedOrder.details?.price
-                                                ? `${selectedOrder.details.currency === 'USD' ? 'US$' : '$'} ${selectedOrder.details.price.toLocaleString()}`
-                                                : "Precio no especificado")}
-                                    </span>
-                                </div>
-                            </div>
-
-                            <Link
-                                to={`/orden/${selectedOrder.id}`}
-                                className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-white/5 hover:bg-white/10 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-white/10 mt-6"
-                            >
-                                <Search className="h-4 w-4" /> Link Público del Lote
-                            </Link>
-                        </div>
-                    )}
-                </OrderDetailsDrawer>
-                {/* Trade Details Modal */}
-                <AnimatePresence>
-                    {selectedTrade && (
-                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                onClick={() => { setSelectedTrade(null); setIsEditing(false); }}
-                                className="absolute inset-0 bg-black/80 backdrop-blur-xl"
-                            />
-                            <motion.div
-                                initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                                animate={{ opacity: 1, scale: 1, y: 0 }}
-                                exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                                className="relative w-full max-w-4xl bg-[#0a0a0a] border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl max-h-[90vh] flex flex-col"
-                            >
-                                <div className="p-8 space-y-8 overflow-y-auto flex-1">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-4">
-                                            <h3 className="text-2xl font-black text-white uppercase tracking-tighter">
-                                                {isEditing ? "Editando Propuesta" : "Detalle de Canje"}
-                                            </h3>
-                                            <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${selectedTrade.status === 'accepted' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
-                                                'bg-blue-500/10 text-blue-500 border-blue-500/20'
-                                                }`}>
-                                                {selectedTrade.status}
-                                            </span>
-                                        </div>
-                                        <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest bg-white/5 px-3 py-1.5 rounded-xl">
-                                            Turno: {selectedTrade.currentTurn === user?.uid ? <span className="text-primary">Tu Turno</span> : "Oldie but Goldie"}
-                                        </div>
-                                    </div>
-
-                                    <ManifestEditor
-                                        manifest={isEditing ? (editedManifest as TradeManifest) : selectedTrade.manifest}
-                                        onChange={(m) => setEditedManifest(m)}
-                                        isLocked={!isEditing}
-                                        myItems={[]} // TBD in Phase Delta
-                                        theirItems={[]}
-                                    />
-
-                                    {selectedTrade.status !== 'accepted' && selectedTrade.status !== 'cancelled' && (
-                                        <div className="flex gap-4 pt-8">
-                                            {isEditing ? (
-                                                <>
-                                                    <button
-                                                        onClick={handleCounterOfferTrade}
-                                                        className="flex-1 flex items-center justify-center gap-3 py-4 bg-primary text-black rounded-2xl font-black uppercase tracking-widest hover:bg-white transition-all shadow-lg shadow-primary/20"
-                                                    >
-                                                        <ArrowRightLeft className="h-5 w-5" /> Enviar Contraoferta
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setIsEditing(false)}
-                                                        className="px-8 py-4 bg-white/5 text-gray-400 rounded-2xl font-black uppercase tracking-widest hover:bg-white/10 transition-all"
-                                                    >
-                                                        Cancelar
-                                                    </button>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    {selectedTrade.currentTurn === user?.uid && (
-                                                        <button
-                                                            onClick={() => handleAcceptTrade(selectedTrade)}
-                                                            className="flex-1 flex items-center justify-center gap-3 py-4 bg-primary text-black rounded-2xl font-black uppercase tracking-widest hover:bg-white transition-all shadow-lg shadow-primary/20"
-                                                        >
-                                                            <CheckCircle2 className="h-5 w-5" /> Aceptar Canje
-                                                        </button>
-                                                    )}
-                                                    {selectedTrade.currentTurn === user?.uid && (
-                                                        <button
-                                                            onClick={() => {
-                                                                setEditedManifest(selectedTrade.manifest);
-                                                                setIsEditing(true);
-                                                            }}
-                                                            className="flex-1 flex items-center justify-center gap-3 py-4 bg-white/5 text-white border border-white/10 rounded-2xl font-black uppercase tracking-widest hover:bg-primary hover:text-black transition-all"
-                                                        >
-                                                            <Edit3 className="h-5 w-5" /> Mejorar Oferta
-                                                        </button>
-                                                    )}
-                                                    <button
-                                                        onClick={() => setSelectedTrade(null)}
-                                                        className="flex-1 flex items-center justify-center gap-3 py-4 bg-white/5 text-gray-500 border border-white/10 rounded-2xl font-black uppercase tracking-widest hover:bg-white/10 transition-all"
-                                                    >
-                                                        Cerrar
-                                                    </button>
-                                                </>
                                             )}
                                         </div>
                                     )}
-
-                                    {selectedTrade.status === 'accepted' && (
-                                        <div className="p-6 bg-green-500/10 border border-green-500/20 rounded-[2rem] flex items-center gap-4">
-                                            <div className="p-3 bg-green-500 rounded-2xl">
-                                                <CheckCircle2 className="h-6 w-6 text-black" />
-                                            </div>
-                                            <div className="flex-1">
-                                                <p className="text-[10px] font-black text-green-500 uppercase tracking-widest">Canje Realizado</p>
-                                                <p className="text-sm font-bold text-white">El intercambio ha sido confirmado. Coordina la entrega por WhatsApp.</p>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            </motion.div>
+                                </>
+                            )}
                         </div>
-                    )}
-                </AnimatePresence>
-            </div >
-            );
+
+                        {/* User Offer Highlight */}
+                        <div className="bg-secondary/5 border border-secondary/20 rounded-2xl p-5 space-y-2 mb-4">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-secondary">Oferta Inicial</span>
+                            <div className="flex items-center gap-3">
+                                <DollarSign className="h-5 w-5 text-secondary" />
+                                <span className="text-3xl font-display font-black text-white">
+                                    {selectedOrder.totalPrice
+                                        ? `${selectedOrder.currency === 'USD' ? 'US$' : '$'} ${selectedOrder.totalPrice.toLocaleString()}`
+                                        : (selectedOrder.details?.price
+                                            ? `${selectedOrder.details.currency === 'USD' ? 'US$' : '$'} ${selectedOrder.details.price.toLocaleString()}`
+                                            : "Precio no especificado")}
+                                </span>
+                            </div>
+                        </div>
+
+                        <Link
+                            to={`/orden/${selectedOrder.id}`}
+                            className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-white/5 hover:bg-white/10 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-white/10 mt-6"
+                        >
+                            <Search className="h-4 w-4" /> Link Público del Lote
+                        </Link>
+                    </div>
+                )}
+            </OrderDetailsDrawer>
+            {/* Trade Details Modal */}
+            <AnimatePresence>
+                {selectedTrade && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => { setSelectedTrade(null); setIsEditing(false); }}
+                            className="absolute inset-0 bg-black/80 backdrop-blur-xl"
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="relative w-full max-w-4xl bg-[#0a0a0a] border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl max-h-[90vh] flex flex-col"
+                        >
+                            <div className="p-8 space-y-8 overflow-y-auto flex-1">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-4">
+                                        <h3 className="text-2xl font-black text-white uppercase tracking-tighter">
+                                            {isEditing ? "Editando Propuesta" : "Detalle de Canje"}
+                                        </h3>
+                                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${selectedTrade.status === 'accepted' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
+                                            'bg-blue-500/10 text-blue-500 border-blue-500/20'
+                                            }`}>
+                                            {selectedTrade.status}
+                                        </span>
+                                    </div>
+                                    <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest bg-white/5 px-3 py-1.5 rounded-xl">
+                                        Turno: {selectedTrade.currentTurn === user?.uid ? <span className="text-primary">Tu Turno</span> : "Oldie but Goldie"}
+                                    </div>
+                                </div>
+
+                                <ManifestEditor
+                                    manifest={isEditing ? (editedManifest as TradeManifest) : selectedTrade.manifest}
+                                    onChange={(m) => setEditedManifest(m)}
+                                    isLocked={!isEditing}
+                                    myItems={[]} // TBD in Phase Delta
+                                    theirItems={[]}
+                                />
+
+                                {selectedTrade.status !== 'accepted' && selectedTrade.status !== 'cancelled' && (
+                                    <div className="flex gap-4 pt-8">
+                                        {isEditing ? (
+                                            <>
+                                                <button
+                                                    onClick={handleCounterOfferTrade}
+                                                    className="flex-1 flex items-center justify-center gap-3 py-4 bg-primary text-black rounded-2xl font-black uppercase tracking-widest hover:bg-white transition-all shadow-lg shadow-primary/20"
+                                                >
+                                                    <ArrowRightLeft className="h-5 w-5" /> Enviar Contraoferta
+                                                </button>
+                                                <button
+                                                    onClick={() => setIsEditing(false)}
+                                                    className="px-8 py-4 bg-white/5 text-gray-400 rounded-2xl font-black uppercase tracking-widest hover:bg-white/10 transition-all"
+                                                >
+                                                    Cancelar
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <>
+                                                {selectedTrade.currentTurn === user?.uid && (
+                                                    <button
+                                                        onClick={() => handleAcceptTrade(selectedTrade)}
+                                                        className="flex-1 flex items-center justify-center gap-3 py-4 bg-primary text-black rounded-2xl font-black uppercase tracking-widest hover:bg-white transition-all shadow-lg shadow-primary/20"
+                                                    >
+                                                        <CheckCircle2 className="h-5 w-5" /> Aceptar Canje
+                                                    </button>
+                                                )}
+                                                {selectedTrade.currentTurn === user?.uid && (
+                                                    <button
+                                                        onClick={() => {
+                                                            setEditedManifest(selectedTrade.manifest);
+                                                            setIsEditing(true);
+                                                        }}
+                                                        className="flex-1 flex items-center justify-center gap-3 py-4 bg-white/5 text-white border border-white/10 rounded-2xl font-black uppercase tracking-widest hover:bg-primary hover:text-black transition-all"
+                                                    >
+                                                        <Edit3 className="h-5 w-5" /> Mejorar Oferta
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={() => setSelectedTrade(null)}
+                                                    className="flex-1 flex items-center justify-center gap-3 py-4 bg-white/5 text-gray-500 border border-white/10 rounded-2xl font-black uppercase tracking-widest hover:bg-white/10 transition-all"
+                                                >
+                                                    Cerrar
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
+                                )}
+
+                                {selectedTrade.status === 'accepted' && (
+                                    <div className="p-6 bg-green-500/10 border border-green-500/20 rounded-[2rem] flex items-center gap-4">
+                                        <div className="p-3 bg-green-500 rounded-2xl">
+                                            <CheckCircle2 className="h-6 w-6 text-black" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="text-[10px] font-black text-green-500 uppercase tracking-widest">Canje Realizado</p>
+                                            <p className="text-sm font-bold text-white">El intercambio ha sido confirmado. Coordina la entrega por WhatsApp.</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+        </div >
+    );
 }
