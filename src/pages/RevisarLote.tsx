@@ -93,13 +93,32 @@ export default function RevisarLote() {
         try {
             showLoading("Ingresando al Búnker...");
 
-            // 1. Import or Resolve IDs for all items in the batch
-            const finalizedItems = await Promise.all(loteItems.map(async (item) => {
-                if (item.source === 'INVENTORY') {
-                    return item.id.toString();
-                } else {
-                    // Import Discogs item to get a Bunker UUID
-                    // We use minimal metadata as it will be hydrated later
+            // Split items by origin
+            const inventoryItems = loteItems.filter(i => i.source === 'INVENTORY');
+            const discogsItems = loteItems.filter(i => i.source === 'DISCOGS');
+
+            const tradeIds: string[] = [];
+
+            // --- CAMINO A: Inventory items → Direct Sale (auto-resolved) ---
+            if (inventoryItems.length > 0) {
+                const inventoryIds = inventoryItems.map(item => item.id.toString());
+                const manifestInventory = {
+                    requestedItems: batchIntent === 'COMPRAR' ? inventoryIds : [],
+                    offeredItems: batchIntent === 'VENDER' ? inventoryIds : [],
+                    cashAdjustment: totalInventory
+                };
+
+                const invTradeId = await tradeService.createTrade({
+                    participants: { senderId: uid, receiverId: ADMIN_UID },
+                    manifest: manifestInventory,
+                    tradeOrigin: 'INVENTORY'
+                });
+                tradeIds.push(invTradeId);
+            }
+
+            // --- CAMINO B: Discogs items → Exchange (negotiation, pending) ---
+            if (discogsItems.length > 0) {
+                const discogsIds = await Promise.all(discogsItems.map(async (item) => {
                     return await inventoryService.importFromDiscogs(
                         {
                             id: item.id,
@@ -108,35 +127,37 @@ export default function RevisarLote() {
                             cover_image: item.cover_image
                         } as any,
                         {
-                            stock: (item as any).source === 'INVENTORY' ? 1 : 0, // 0 for "Pedido"
+                            stock: 0,
                             price: item.price || 0,
                             condition: item.condition,
-                            status: (item as any).source === 'INVENTORY' ? 'active' : 'archived' // Archived means not in stock but exists as reference
+                            status: 'archived'
                         }
                     );
-                }
-            }));
+                }));
 
-            // 2. Create the Trade Manifest
-            // If buying: items go to requestedItems (Receiver -> Sender)
-            // If selling: items go to offeredItems (Sender -> Receiver)
-            const manifest = {
-                requestedItems: batchIntent === 'COMPRAR' ? finalizedItems : [],
-                offeredItems: batchIntent === 'VENDER' ? finalizedItems : [],
-                cashAdjustment: batchIntent === 'VENDER' ? Number(totalPrice) : calculatedTotal
-            };
+                const manifestDiscogs = {
+                    requestedItems: batchIntent === 'COMPRAR' ? discogsIds : [],
+                    offeredItems: batchIntent === 'VENDER' ? discogsIds : [],
+                    cashAdjustment: batchIntent === 'VENDER' ? Number(totalPrice) : totalEstimated
+                };
 
-            const tradeId = await tradeService.createTrade({
-                participants: {
-                    senderId: uid,
-                    receiverId: ADMIN_UID
-                },
-                manifest
-            });
+                const discogsTradeId = await tradeService.createTrade({
+                    participants: { senderId: uid, receiverId: ADMIN_UID },
+                    manifest: manifestDiscogs,
+                    tradeOrigin: 'DISCOGS'
+                });
+                tradeIds.push(discogsTradeId);
+            }
 
-            // 3. Clear Lote and Redirect
+            // --- REDIRECT ---
             clearLote();
-            navigate(`/orden/${tradeId}`);
+            if (tradeIds.length === 1) {
+                // Single order → go straight to the order page
+                navigate(`/orden/${tradeIds[0]}`);
+            } else {
+                // Mixed lote → 2 orders created, go to activity feed
+                navigate('/comercio');
+            }
 
         } catch (error) {
             console.error("Submission error:", error);
@@ -286,6 +307,22 @@ export default function RevisarLote() {
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
                 {/* List Items Column */}
                 <div className="lg:col-span-3 space-y-4">
+                    {/* Mixed Lote Banner */}
+                    {hasInventoryItems && hasDiscogsItems && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="bg-gradient-to-r from-blue-500/10 to-emerald-500/10 border border-white/10 rounded-2xl p-4 flex items-start gap-3"
+                        >
+                            <Layers className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                            <div>
+                                <p className="text-white text-sm font-bold">Lote Mixto Detectado</p>
+                                <p className="text-gray-400 text-xs mt-1">
+                                    Se crearán <span className="text-emerald-400 font-bold">1 orden de compra directa</span> (entrega inmediata) y <span className="text-blue-400 font-bold">1 orden de intercambio</span> (negociación) de forma paralela.
+                                </p>
+                            </div>
+                        </motion.div>
+                    )}
                     <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 italic">{TEXTS.common.batchReview.selectedDiscs} ({totalCount})</h3>
                     <AnimatePresence>
                         {loteItems.map((item) => (

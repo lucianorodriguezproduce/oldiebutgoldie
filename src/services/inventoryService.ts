@@ -133,11 +133,31 @@ export const inventoryService = {
             }
         }
 
+        // Parse artist and title from Discogs title format "Artist - Album"
+        let parsedArtist = discogsData.artists?.[0]?.name || discogsData.artist || "";
+        let parsedTitle = discogsData.title || "";
+
+        if (!parsedArtist && parsedTitle) {
+            // Discogs titles use "Artist - Album" format
+            if (parsedTitle.includes(' - ')) {
+                const parts = parsedTitle.split(' - ');
+                parsedArtist = parts[0].trim();
+                parsedTitle = parts.slice(1).join(' - ').trim();
+            } else if (parsedTitle.includes(' — ')) {
+                const parts = parsedTitle.split(' — ');
+                parsedArtist = parts[0].trim();
+                parsedTitle = parts.slice(1).join(' — ').trim();
+            }
+        }
+
+        // Clean up "Unknown Artist" prefix if it slipped through
+        if (parsedArtist.toLowerCase() === 'unknown artist') parsedArtist = "";
+
         const newItem: InventoryItem = {
             id: internalId,
             metadata: {
-                title: discogsData.title || "Unknown Title",
-                artist: discogsData.artists?.[0]?.name || discogsData.artist || "Unknown Artist",
+                title: parsedTitle || discogsData.title || "Unknown Title",
+                artist: parsedArtist || "Desconocido",
                 year: parseInt(discogsData.year) || 0,
                 original_year: originalYear,
                 country: discogsData.country || "Unknown",

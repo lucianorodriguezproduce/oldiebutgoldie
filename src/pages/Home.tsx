@@ -20,6 +20,7 @@ import { useLote } from "@/context/LoteContext";
 import { PremiumShowcase } from "@/components/PremiumShowcase";
 import { inventoryService } from "@/services/inventoryService";
 import { tradeService } from "@/services/tradeService";
+import { userAssetService } from "@/services/userAssetService";
 import { ADMIN_UID } from "@/constants/admin";
 import { CompactSearchCard } from "@/components/ui/CompactSearchCard";
 import React, { memo } from "react";
@@ -609,7 +610,8 @@ export default function Home() {
                     senderId: uid,
                     receiverId: ADMIN_UID
                 },
-                manifest
+                manifest,
+                tradeOrigin: 'DISCOGS'
             });
 
             // Note: createTrade() already calls resolveTrade() internally for direct_sale trades.
@@ -671,6 +673,60 @@ export default function Home() {
             scrollToTop();
         } else {
             setStep(3); // Auth step
+        }
+    };
+
+    // Handle "Añadir a Batea" — Saves Discogs item directly to user's collection
+    const handleAddToBatea = async () => {
+        if (!selectedItem) return;
+
+        if (!user) {
+            setIntent(null);
+            setStep(3); // Auth step, then retry
+            return;
+        }
+
+        showLoading("Añadiendo a tu batea...");
+        try {
+            // Parse artist from Discogs title format "Artist - Album"
+            let parsedArtist = '';
+            let parsedTitle = selectedItem.title || '';
+            if (parsedTitle.includes(' - ')) {
+                const parts = parsedTitle.split(' - ');
+                parsedArtist = parts[0].trim();
+                parsedTitle = parts.slice(1).join(' - ').trim();
+            }
+
+            await userAssetService.addAsset(user.uid, {
+                metadata: {
+                    title: parsedTitle,
+                    artist: parsedArtist || 'Desconocido',
+                    year: parseInt(selectedItem.year || '0') || 0,
+                    genres: [],
+                    styles: [],
+                    format_description: format || 'Vinyl'
+                },
+                media: {
+                    thumbnail: selectedItem.thumb || selectedItem.cover_image || '',
+                    full_res_image_url: selectedItem.cover_image || selectedItem.thumb || ''
+                },
+                originalInventoryId: String(selectedItem.id),
+                valuation: 0
+            });
+
+            trackEvent('add_to_batea', {
+                item_id: selectedItem.id,
+                item_title: selectedItem.title
+            });
+
+            alert('¡Disco añadido a tu batea!');
+            handleResetSelection();
+            scrollToTop();
+        } catch (error) {
+            console.error('Error adding to batea:', error);
+            alert('Error al añadir a tu batea. Inténtalo de nuevo.');
+        } finally {
+            hideLoading();
         }
     };
 
@@ -1268,6 +1324,13 @@ export default function Home() {
                                                 className="w-full bg-primary text-black py-6 rounded-2xl font-black uppercase text-sm tracking-widest shadow-[0_0_40px_rgba(255,184,0,0.2)] hover:scale-[1.02] active:scale-95 transition-all"
                                             >
                                                 {TEXTS.item.steps.finishOrder}
+                                            </button>
+                                            <button
+                                                onClick={handleAddToBatea}
+                                                className="w-full py-5 rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 transition-all bg-gradient-to-r from-violet-500/10 to-purple-500/10 border border-violet-500/30 text-violet-400 hover:from-violet-500/20 hover:to-purple-500/20 hover:text-violet-300"
+                                            >
+                                                <Disc className="w-4 h-4" />
+                                                AÑADIR A MI BATEA
                                             </button>
                                         </div>
 

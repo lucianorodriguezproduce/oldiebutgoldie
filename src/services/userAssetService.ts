@@ -41,6 +41,28 @@ export const userAssetService = {
     },
 
     /**
+     * Añade un ítem a la batea personal del usuario
+     */
+    async addAsset(userId: string, assetData: {
+        metadata: any;
+        media: any;
+        originalInventoryId?: string;
+        valuation?: number;
+    }) {
+        const docRef = await addDoc(collection(db, COLLECTION_NAME), {
+            ownerId: userId,
+            originalInventoryId: assetData.originalInventoryId || '',
+            metadata: assetData.metadata,
+            media: assetData.media,
+            valuation: assetData.valuation || 0,
+            isTradeable: false,
+            status: 'active',
+            acquiredAt: serverTimestamp()
+        });
+        return docRef.id;
+    },
+
+    /**
      * Obtiene todos los activos marcados como intercambiables de la comunidad
      */
     async getMarketplaceAssets(): Promise<UserAsset[]> {

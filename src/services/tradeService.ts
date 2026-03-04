@@ -91,7 +91,7 @@ const bunkerToLegacy = async (trade: any) => {
 };
 
 export const tradeService = {
-    async createTrade(trade: Omit<Trade, 'id' | 'timestamp' | 'status' | 'currentTurn' | 'negotiationHistory' | 'type'>) {
+    async createTrade(trade: Omit<Trade, 'id' | 'timestamp' | 'status' | 'currentTurn' | 'negotiationHistory' | 'type'> & { tradeOrigin?: 'INVENTORY' | 'DISCOGS' }) {
         // --- ASSET LOCKING: Verificación de disponibilidad real-time ---
         const allItems = [...(trade.manifest?.requestedItems || []), ...(trade.manifest?.offeredItems || [])];
 
@@ -112,13 +112,23 @@ export const tradeService = {
             throw new Error("ASSET_LOCKED: Uno o más ítems ya están en una negociación activa.");
         }
 
-        const isDirectSale = (trade.manifest?.offeredItems?.length || 0) === 0;
+        // --- TYPE DETERMINATION ---
+        // Direct sale ONLY if origin is INVENTORY and intent is buy (no offeredItems)
+        // Discogs items ALWAYS create exchanges (negotiations), never auto-resolve
+        const hasNoOfferedItems = (trade.manifest?.offeredItems?.length || 0) === 0;
+        const isDirectSale = trade.tradeOrigin === 'DISCOGS'
+            ? false  // Discogs = siempre intercambio
+            : trade.tradeOrigin === 'INVENTORY'
+                ? hasNoOfferedItems  // Inventory + COMPRAR = venta directa
+                : hasNoOfferedItems; // Fallback: comportamiento legacy
+
         const tradeType = isDirectSale ? "direct_sale" : "exchange";
         // FIX: Always start as "pending" — resolveTrade() will atomically transition to "completed"
         const initialStatus = "pending";
 
+        const { tradeOrigin, ...tradeWithoutOrigin } = trade;
         const tradeData = {
-            ...trade,
+            ...tradeWithoutOrigin,
             participants: {
                 ...trade.participants,
                 receiverId: trade.participants.receiverId || ADMIN_UID
@@ -127,6 +137,7 @@ export const tradeService = {
             status: initialStatus as any,
             currentTurn: trade.participants.receiverId || ADMIN_UID,
             negotiationHistory: [],
+            createdAt: serverTimestamp(),
             timestamp: serverTimestamp()
         };
         const docRef = await addDoc(collection(db, COLLECTION_NAME), tradeData);
@@ -138,10 +149,10 @@ export const tradeService = {
                 await this.resolveTrade(docRef.id, trade.manifest as any);
             } catch (error) {
                 console.error("[Bunker] Error during auto-resolution of direct sale:", error);
-                // Even if resolution fails (e.g. stock issue), the doc exists. 
-                // In a production app, we'd roll back or handle this more gracefully.
                 throw error;
             }
+        } else {
+            console.log(`[Bunker] Exchange/negotiation created: ${docRef.id} (origin: ${tradeOrigin || 'legacy'})`);
         }
 
         return docRef.id;
