@@ -21,6 +21,7 @@ import ArticleDetail from "@/pages/ArticleDetail";
 import Eventos from "@/pages/Eventos";
 import Profile from "@/pages/Profile";
 import RevisarLote from "@/pages/RevisarLote";
+import TradeConstructor from "@/pages/TradeConstructor";
 import Store from "@/pages/Store";
 import AdminLayout from "@/components/Admin/AdminLayout";
 import AdminAnalytics from "@/pages/Admin/AdminAnalytics";
@@ -93,6 +94,7 @@ function AppContent() {
 
             <Route element={<ProtectedRoute />}>
               <Route path="/perfil" element={<Profile />} />
+              <Route path="/trade/new" element={<TradeConstructor />} />
             </Route>
           </Route>
 

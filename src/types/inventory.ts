@@ -49,6 +49,8 @@ export interface TradeManifest {
     offeredItems: string[]; // Inventory IDs
     requestedItems: string[]; // Inventory IDs
     cashAdjustment: number;
+    currency?: 'ARS' | 'USD';
+    items?: any[]; // Detailed item data for display
 }
 
 export interface Trade {
