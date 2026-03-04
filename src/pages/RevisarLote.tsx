@@ -14,6 +14,7 @@ import { generateWhatsAppLink } from "@/utils/whatsapp";
 import { TEXTS } from "@/constants/texts";
 import { inventoryService } from "@/services/inventoryService";
 import { tradeService } from "@/services/tradeService";
+import { userAssetService } from "@/services/userAssetService";
 import { ADMIN_UID } from "@/constants/admin";
 import { useEffect as useReactEffect } from "react";
 
@@ -162,6 +163,50 @@ export default function RevisarLote() {
         } catch (error) {
             console.error("Submission error:", error);
             alert(TEXTS.common.batchReview.submissionError);
+        } finally {
+            hideLoading();
+        }
+    };
+
+    // Handle "Añadir a Batea" — Save all lote items to user's personal collection
+    const handleAddToBatea = async () => {
+        if (!user) return;
+
+        showLoading("Añadiendo a tu batea...");
+        try {
+            for (const item of loteItems) {
+                // Parse artist from title if needed
+                let parsedArtist = item.artist || '';
+                let parsedTitle = item.title || item.album || '';
+                if (!parsedArtist && parsedTitle.includes(' - ')) {
+                    const parts = parsedTitle.split(' - ');
+                    parsedArtist = parts[0].trim();
+                    parsedTitle = parts.slice(1).join(' - ').trim();
+                }
+
+                await userAssetService.addAsset(user.uid, {
+                    metadata: {
+                        title: parsedTitle,
+                        artist: parsedArtist || 'Desconocido',
+                        year: 0,
+                        genres: [],
+                        styles: [],
+                        format_description: item.format || 'Vinyl'
+                    },
+                    media: {
+                        thumbnail: item.cover_image || '',
+                        full_res_image_url: item.cover_image || ''
+                    },
+                    originalInventoryId: String(item.id),
+                    valuation: item.price || 0
+                });
+            }
+
+            clearLote();
+            navigate('/perfil');
+        } catch (error) {
+            console.error('Error adding to batea:', error);
+            alert('Error al añadir a tu batea. Inténtalo de nuevo.');
         } finally {
             hideLoading();
         }
@@ -508,17 +553,34 @@ export default function RevisarLote() {
                     </div>
 
                     {user ? (
-                        <button
-                            onClick={handleCheckout}
-                            disabled={isSubmitting || (hasDiscogsItems && !batchIntent) || (batchIntent === 'VENDER' && (!totalPrice || Number(totalPrice) <= 0))}
-                            className="w-full bg-primary text-black py-6 rounded-2xl font-black uppercase text-sm tracking-widest shadow-[0_0_40px_rgba(204,255,0,0.2)] hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center gap-2"
-                        >
-                            {isSubmitting ? (
-                                <div className="h-4 w-4 border-2 border-black/40 border-t-black rounded-full animate-spin" />
-                            ) : (
-                                <> <ShoppingBag className="w-4 h-4" /> {TEXTS.common.batchReview.confirmAndSend} </>
-                            )}
-                        </button>
+                        <div className="space-y-3">
+                            <button
+                                onClick={handleCheckout}
+                                disabled={isSubmitting || (hasDiscogsItems && !batchIntent) || (batchIntent === 'VENDER' && (!totalPrice || Number(totalPrice) <= 0))}
+                                className="w-full bg-primary text-black py-6 rounded-2xl font-black uppercase text-sm tracking-widest shadow-[0_0_40px_rgba(204,255,0,0.2)] hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center gap-2"
+                            >
+                                {isSubmitting ? (
+                                    <div className="h-4 w-4 border-2 border-black/40 border-t-black rounded-full animate-spin" />
+                                ) : (
+                                    <> <ShoppingBag className="w-4 h-4" /> {TEXTS.common.batchReview.confirmAndSend} </>
+                                )}
+                            </button>
+
+                            <div className="relative flex items-center gap-4 py-1">
+                                <div className="flex-1 h-px bg-white/10" />
+                                <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">o bien</span>
+                                <div className="flex-1 h-px bg-white/10" />
+                            </div>
+
+                            <button
+                                onClick={handleAddToBatea}
+                                disabled={isSubmitting}
+                                className="w-full py-4 rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 transition-all bg-gradient-to-r from-violet-500/10 to-purple-500/10 border border-violet-500/30 text-violet-400 hover:from-violet-500/20 hover:to-purple-500/20 hover:text-violet-300 disabled:opacity-50"
+                            >
+                                <Disc className="w-4 h-4" />
+                                AÑADIR TODO A MI BATEA
+                            </button>
+                        </div>
                     ) : (
                         <div className="space-y-6">
                             <button
