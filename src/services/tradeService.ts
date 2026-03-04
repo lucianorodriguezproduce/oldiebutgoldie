@@ -113,7 +113,8 @@ export const tradeService = {
 
         const isDirectSale = (trade.manifest?.offeredItems?.length || 0) === 0;
         const tradeType = isDirectSale ? "direct_sale" : "exchange";
-        const initialStatus = isDirectSale ? "completed" : "pending";
+        // FIX: Always start as "pending" — resolveTrade() will atomically transition to "completed"
+        const initialStatus = "pending";
 
         const tradeData = {
             ...trade,
@@ -252,7 +253,7 @@ export const tradeService = {
             const tradeData = tradeSnap.data() as Trade;
 
             // --- PROTECCIÓN DE CONCURRENCIA: Evitar doble procesamiento ---
-            if (tradeData.status === "accepted" || tradeData.status === "completed") {
+            if (tradeData.status === "completed") {
                 throw new Error("TRADE_ALREADY_PROCESSED");
             }
             const senderId = tradeData.participants.senderId;

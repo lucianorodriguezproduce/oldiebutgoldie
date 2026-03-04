@@ -128,7 +128,7 @@ export default function RevisarLote() {
             const tradeId = await tradeService.createTrade({
                 participants: {
                     senderId: uid,
-                    receiverId: 'oldiebutgoldie' // Admin B2C
+                    receiverId: 'MKPlxxi9JENQt0hS3V1QNeF8oOS2' // Admin UID (B2C)
                 },
                 manifest
             });
