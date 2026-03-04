@@ -37,11 +37,10 @@ export default function Store() {
     const loadItemsRef = useRef<(() => void) | null>(null);
 
     useEffect(() => {
-        showLoading(TEXTS.common.loadingGeneric);
+        setLoading(true);
         const unsubscribeInv = inventoryService.onSnapshotInventory((updatedItems: InventoryItem[]) => {
             setItems(updatedItems);
             setLoading(false);
-            hideLoading();
             setHasMore(false); // In real-time mode, we load the full active set for now
         });
 
@@ -53,7 +52,7 @@ export default function Store() {
             unsubscribeInv();
             unsubscribeTrades();
         };
-    }, [showLoading, hideLoading]);
+    }, []);
 
     const lastItemRef = useCallback((node: HTMLDivElement) => {
         // Infinite scroll disabled in real-time mode to ensure 1:1 sync

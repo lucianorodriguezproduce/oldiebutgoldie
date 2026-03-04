@@ -19,7 +19,7 @@ export const getCleanOrderMetadata = (order: any) => {
         console.log(`[Bunker-Sync] Processing sovereign data for ID: ${order.id}`);
         const first = items[0];
         return {
-            artist: first.artist || '',
+            artist: cleanString(first.artist) || '',
             album: first.album || first.title || (isBatch ? `Lote de ${items.length} discos` : 'Detalle del Disco'),
             format: first.format || 'Vinyl',
             condition: first.condition || 'N/A',

@@ -53,6 +53,7 @@ export function PremiumShowcase() {
                 .map(doc => ({ id: doc.id, ...doc.data() } as any))
                 .filter(item => {
                     const isAdmin = item.is_admin_offer === true ||
+                        item.user_id === 'MKPlxxi9JENQt0hS3V1QNeF8oOS2' ||
                         item.user_id === 'oldiebutgoldie' ||
                         item.user_email === 'admin@discography.ai';
 

@@ -22,7 +22,7 @@ export default function PublicOrders() {
 
         const startListener = async () => {
             try {
-                const q = query(collection(db, 'trades'), orderBy('timestamp', 'desc'));
+                const q = query(collection(db, 'trades'), orderBy('createdAt', 'desc'));
 
                 unsubscribe = onSnapshot(q, async (snapshot) => {
                     const tradeData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
@@ -34,7 +34,7 @@ export default function PublicOrders() {
                         status: 'active'
                     }));
 
-                    const validTrades = tradeData.filter((o: any) => o.item_id || o.isBatch || o.is_batch || (o.items && o.items.length > 0));
+                    const validTrades = tradeData.filter((o: any) => o.item_id || o.isBatch || o.is_batch || (o.items && o.items.length > 0) || (o.manifest?.requestedItems?.length > 0));
 
                     setOrders([...enrichedInventory, ...validTrades].sort((a, b) => {
                         const timeA = a.timestamp?.seconds || a.createdAt?.seconds || 0;

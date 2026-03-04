@@ -29,7 +29,7 @@ export default function PublicOrderView() {
     const [isExecuting, setIsExecuting] = useState(false);
 
     const isOwner = user?.uid === order?.user_id;
-    const isAdminOrder = order?.user_id === "oldiebutgoldie" || order?.user_email === "admin@discography.ai";
+    const isAdminOrder = order?.user_id === ADMIN_UID || order?.user_id === "oldiebutgoldie" || order?.user_email === "admin@discography.ai";
     const canSeePrice = isAdmin || isOwner || isAdminOrder;
 
     const [offerAmount, setOfferAmount] = useState<string>("");
