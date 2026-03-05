@@ -42,9 +42,10 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
     if (!order) return null;
 
     // Extracción tolerante a fallas para órdenes V1
-    const orderIntent = (order && (order.intent || order.details?.intent)) ? (order.intent || order.details.intent) : (order.type === 'direct_sale' ? 'COMPRAR' : 'VENDER');
+    const orderIntent = (order && (order.intent || order.details?.intent)) ? (order.intent || order.details.intent) : (order.type === 'direct_sale' ? 'COMPRAR' : order.type === 'exchange' ? 'INTERCAMBIO' : 'VENDER');
     const orderStatus = order?.status || 'pending';
     const orderType = order?.type || 'buy';
+    const isExchange = order?.type === 'exchange';
 
     const { user, isAdmin } = useAuth();
     const { showLoading, hideLoading } = useLoading();
@@ -151,14 +152,16 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
     const meta = getCleanOrderMetadata(order);
     const { artist, album, image, isBatch, itemsCount: itemsFromHelper } = meta;
     const isInventoryItem = meta.isInventoryItem || order.isInventoryItem;
-    const items = Array.isArray(order.items) ? order.items : [];
+    const items = Array.isArray(order.items) && order.items.length > 0 ? order.items : (Array.isArray(order.manifest?.items) ? order.manifest.items : []);
+    const manifestOffered = isExchange ? items.filter((i: any) => i.source === 'user_asset') : [];
+    const manifestRequested = isExchange ? items.filter((i: any) => i.source === 'inventory') : [];
 
     const coverImage = image;
     const title = isBatch ? `LOTE DE ${itemsFromHelper} DISCOS` : album;
 
     // Fallback intent for legacy admin orders
     const isSellerOfferLegacy = order.admin_offer_price || order.adminPrice;
-    const intent = isBatch ? (orderType === 'buy' ? TEXTS.badges.buying : TEXTS.badges.forSale) : (orderIntent || (isSellerOfferLegacy ? 'VENDER' : 'COMPRAR'));
+    const intent = isExchange ? 'INTERCAMBIO' : (isBatch ? (orderType === 'buy' ? TEXTS.badges.buying : TEXTS.badges.forSale) : (orderIntent || (isSellerOfferLegacy ? 'VENDER' : 'COMPRAR')));
     const format = isBatch ? 'Varios Formatos' : (order.details?.format || 'N/A');
     const condition = isBatch ? 'Varias Condiciones' : (order.details?.condition || 'N/A');
     const status = orderStatus;
@@ -340,8 +343,9 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 md:gap-3 mt-1">
-                        <span className={`px-2 md:px-3 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest border ${intent.includes("COMPRAR") ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-secondary/10 text-secondary border-secondary/20"
+                        <span className={`px-2 md:px-3 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest border ${isExchange ? "bg-violet-500/10 text-violet-400 border-violet-500/20" : intent.includes("COMPRAR") ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-secondary/10 text-secondary border-secondary/20"
                             }`}>
+                            {isExchange && <Handshake className="w-3 h-3 inline mr-1" />}
                             {intent}
                         </span>
                         {!isBatch && (
@@ -491,6 +495,90 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                                             </div>
                                         );
                                     })}
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
+            )}
+
+            {/* Collapsible Exchange Items Section */}
+            {isExchange && items.length > 0 && context !== 'public' && (
+                <div className="border-t border-white/5">
+                    <button
+                        onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded); }}
+                        className="w-full px-6 py-3 flex items-center justify-between bg-white/[0.01] hover:bg-white/[0.03] transition-colors"
+                    >
+                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                            <Handshake className="w-3 h-3 inline mr-1" /> Detalle del Intercambio ({items.length} ítems)
+                        </span>
+                        <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform duration-300 ${isExpanded ? "rotate-180" : ""}`} />
+                    </button>
+                    <AnimatePresence>
+                        {isExpanded && (
+                            <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: "auto", opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                className="overflow-hidden"
+                            >
+                                <div className="px-6 pb-6 pt-2 space-y-4">
+                                    {manifestOffered.length > 0 && (
+                                        <div className="space-y-2">
+                                            <span className="text-[9px] font-black text-orange-400 uppercase tracking-widest flex items-center gap-1.5">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-orange-500" /> Ofrece ({manifestOffered.length})
+                                            </span>
+                                            {manifestOffered.map((item: any, idx: number) => (
+                                                <div key={`o-${idx}`} className="flex items-center gap-3 p-2 rounded-xl bg-orange-500/5 border border-orange-500/10">
+                                                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-black/30 flex-shrink-0">
+                                                        {item.cover_image ? (
+                                                            <LazyImage src={item.cover_image} alt="" className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <div className="w-full h-full flex items-center justify-center"><Disc className="w-4 h-4 text-white/10" /></div>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-xs font-bold text-white truncate uppercase">{item.title}</p>
+                                                        {item.artist && <p className="text-[9px] text-gray-500 uppercase tracking-widest truncate">{item.artist}</p>}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {manifestRequested.length > 0 && (
+                                        <div className="space-y-2">
+                                            <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest flex items-center gap-1.5">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Solicita ({manifestRequested.length})
+                                            </span>
+                                            {manifestRequested.map((item: any, idx: number) => (
+                                                <div key={`r-${idx}`} className="flex items-center gap-3 p-2 rounded-xl bg-emerald-500/5 border border-emerald-500/10">
+                                                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-black/30 flex-shrink-0">
+                                                        {item.cover_image ? (
+                                                            <LazyImage src={item.cover_image} alt="" className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <div className="w-full h-full flex items-center justify-center"><Disc className="w-4 h-4 text-white/10" /></div>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-xs font-bold text-white truncate uppercase">{item.title}</p>
+                                                        {item.artist && <p className="text-[9px] text-gray-500 uppercase tracking-widest truncate">{item.artist}</p>}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {order.manifest?.cashAdjustment && order.manifest.cashAdjustment !== 0 && (
+                                        <div className="flex items-center justify-between p-3 rounded-xl bg-white/[0.03] border border-white/5">
+                                            <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">
+                                                {order.manifest.cashAdjustment > 0 ? "Usuario paga" : "Usuario recibe"}
+                                            </span>
+                                            <span className={`text-sm font-display font-black ${order.manifest.cashAdjustment > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+                                                {order.manifest.cashAdjustment > 0 ? '-' : '+'} {order.manifest.currency === 'USD' ? 'US$' : '$'} {Math.abs(order.manifest.cashAdjustment).toLocaleString()}
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
                             </motion.div>
                         )}

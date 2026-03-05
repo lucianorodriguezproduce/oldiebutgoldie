@@ -259,36 +259,68 @@ export const tradeService = {
         const tradeRef = doc(db, COLLECTION_NAME, tradeId);
 
         await runTransaction(db, async (transaction) => {
+            // ═══════════════════════════════════════════════════════
+            // PHASE 1: ALL READS (Firestore requires reads before writes)
+            // ═══════════════════════════════════════════════════════
+
             const tradeSnap = await transaction.get(tradeRef);
             if (!tradeSnap.exists()) throw new Error("Trade no encontrado");
 
             const tradeData = tradeSnap.data() as Trade;
 
-            // --- PROTECCIÓN DE CONCURRENCIA: Evitar doble procesamiento ---
             if (tradeData.status === "completed") {
                 throw new Error("TRADE_ALREADY_PROCESSED");
             }
             const senderId = tradeData.participants.senderId;
             const receiverId = tradeData.participants.receiverId;
 
-            // --- 1. PROCESAR ITEMS SOLICITADOS (Receiver -> Sender) ---
+            // --- Read all requested items ---
+            const requestedReads: { ref: any; snap: any; itemId: string; isAdmin: boolean }[] = [];
             for (const itemId of manifest.requestedItems) {
                 if (receiverId === ADMIN_UID) {
                     const itemRef = doc(db, "inventory", String(itemId));
                     const itemSnap = await transaction.get(itemRef);
+                    requestedReads.push({ ref: itemRef, snap: itemSnap, itemId, isAdmin: true });
+                } else {
+                    const assetRef = doc(db, "user_assets", String(itemId));
+                    const assetSnap = await transaction.get(assetRef);
+                    requestedReads.push({ ref: assetRef, snap: assetSnap, itemId, isAdmin: false });
+                }
+            }
 
-                    if (itemSnap.exists()) {
-                        const invData = itemSnap.data() as InventoryItem;
+            // --- Read all offered items ---
+            const offeredReads: { ref: any; snap: any; itemId: string; isAdmin: boolean }[] = [];
+            for (const itemId of manifest.offeredItems) {
+                if (senderId === ADMIN_UID) {
+                    const itemRef = doc(db, "inventory", String(itemId));
+                    const itemSnap = await transaction.get(itemRef);
+                    offeredReads.push({ ref: itemRef, snap: itemSnap, itemId, isAdmin: true });
+                } else {
+                    const assetRef = doc(db, "user_assets", String(itemId));
+                    const assetSnap = await transaction.get(assetRef);
+                    offeredReads.push({ ref: assetRef, snap: assetSnap, itemId, isAdmin: false });
+                }
+            }
+
+            // ═══════════════════════════════════════════════════════
+            // PHASE 2: ALL WRITES (using cached read data)
+            // ═══════════════════════════════════════════════════════
+
+            // --- Process requested items (Receiver -> Sender) ---
+            for (const { ref, snap, itemId, isAdmin } of requestedReads) {
+                if (isAdmin) {
+                    if (snap.exists()) {
+                        const invData = snap.data() as InventoryItem;
                         const currentStock = invData.logistics.stock || 0;
                         if (currentStock <= 0) throw new Error(`Stock insuficiente en Búnker: ${invData.metadata.title}`);
 
-                        transaction.update(itemRef, {
+                        transaction.update(ref, {
                             "logistics.stock": currentStock - 1,
                             "logistics.status": (currentStock - 1) === 0 ? "sold_out" : "active"
                         });
 
-                        const assetRef = doc(collection(db, "user_assets"));
-                        transaction.set(assetRef, {
+                        const newAssetRef = doc(collection(db, "user_assets"));
+                        transaction.set(newAssetRef, {
                             ownerId: senderId,
                             originalInventoryId: itemId,
                             valuation: invData.logistics.price || 0,
@@ -301,51 +333,37 @@ export const tradeService = {
                         });
                     }
                 } else {
-                    // --- PROTECCIÓN P2P: Check de Integridad Transaccional ---
-                    const assetRef = doc(db, "user_assets", String(itemId));
-                    const assetSnap = await transaction.get(assetRef);
-
-                    if (!assetSnap.exists()) throw new Error(`Activo no encontrado: ${itemId}`);
-                    const assetData = assetSnap.data() as UserAsset;
+                    if (!snap.exists()) throw new Error(`Activo no encontrado: ${itemId}`);
+                    const assetData = snap.data() as UserAsset;
 
                     if (assetData.ownerId !== receiverId) throw new Error("El vendedor ya no es dueño de este activo");
                     if (assetData.status !== "active" || !assetData.isTradeable) {
                         throw new Error(`El ítem "${assetData.metadata?.title || itemId}" ya no está disponible para intercambio`);
                     }
 
-                    transaction.update(assetRef, {
+                    transaction.update(ref, {
                         ownerId: senderId,
                         isTradeable: false,
                         acquiredAt: serverTimestamp()
                     });
-
-                    // --- RECURSIVIDAD: Transferencia de Sub-Ítems (Lotes) ---
-                    if (assetData.metadata.isBatch && assetData.items) {
-                        console.log(`Bunker: Transfiriendo sub-ítems del lote ${itemId}...`);
-                        // Aquí se asume que los sub-ítems son referencias o se manejan como parte del objeto metadata.
-                        // Si fueran documentos separados, se iteraría aquí.
-                    }
                 }
             }
 
-            // --- 2. PROCESAR ITEMS OFRECIDOS (Sender -> Receiver) ---
-            for (const itemId of manifest.offeredItems) {
-                if (senderId === ADMIN_UID) {
-                    const itemRef = doc(db, "inventory", String(itemId));
-                    const itemSnap = await transaction.get(itemRef);
-
-                    if (itemSnap.exists()) {
-                        const invData = itemSnap.data() as InventoryItem;
+            // --- Process offered items (Sender -> Receiver) ---
+            for (const { ref, snap, itemId, isAdmin } of offeredReads) {
+                if (isAdmin) {
+                    if (snap.exists()) {
+                        const invData = snap.data() as InventoryItem;
                         const currentStock = invData.logistics.stock || 0;
                         if (currentStock <= 0) throw new Error(`Stock insuficiente en Búnker: ${invData.metadata.title}`);
 
-                        transaction.update(itemRef, {
+                        transaction.update(ref, {
                             "logistics.stock": currentStock - 1,
                             "logistics.status": (currentStock - 1) === 0 ? "sold_out" : "active"
                         });
 
-                        const assetRef = doc(collection(db, "user_assets"));
-                        transaction.set(assetRef, {
+                        const newAssetRef = doc(collection(db, "user_assets"));
+                        transaction.set(newAssetRef, {
                             ownerId: receiverId,
                             originalInventoryId: itemId,
                             valuation: invData.logistics.price || 0,
@@ -358,18 +376,15 @@ export const tradeService = {
                         });
                     }
                 } else {
-                    const assetRef = doc(db, "user_assets", String(itemId));
-                    const assetSnap = await transaction.get(assetRef);
-
-                    if (!assetSnap.exists()) throw new Error(`Activo ofrecido no encontrado: ${itemId}`);
-                    const assetData = assetSnap.data() as UserAsset;
+                    if (!snap.exists()) throw new Error(`Activo ofrecido no encontrado: ${itemId}`);
+                    const assetData = snap.data() as UserAsset;
 
                     if (assetData.ownerId !== senderId) throw new Error("Ya no eres dueño del activo que intentas ofrecer");
                     if (assetData.status !== "active" || !assetData.isTradeable) {
                         throw new Error(`Tu ítem "${assetData.metadata?.title || itemId}" ya no está disponible`);
                     }
 
-                    transaction.update(assetRef, {
+                    transaction.update(ref, {
                         ownerId: receiverId,
                         isTradeable: false,
                         acquiredAt: serverTimestamp()
