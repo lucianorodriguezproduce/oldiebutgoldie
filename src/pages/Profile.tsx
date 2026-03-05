@@ -231,11 +231,15 @@ export default function Profile() {
         showLoading("Confirmando trato...");
         setIsNegotiating(true);
         try {
+            const historyAdminOffer = order.negotiationHistory?.filter((h: any) => h.sender === 'admin').pop();
+            const actualAdminPrice = historyAdminOffer?.price ?? order.adminPrice ?? order.admin_offer_price;
+            const finalPrice = actualAdminPrice ?? (order.totalPrice || 0);
+
             // MOTOR SOBERANO: Resolvemos el trade atómicamente
             await tradeService.resolveTrade(order.id, order.manifest || {
                 requestedItems: order.items?.map((i: any) => i.id) || [],
                 offeredItems: [],
-                cashAdjustment: order.adminPrice || order.admin_offer_price || order.totalPrice || 0
+                cashAdjustment: finalPrice
             });
 
             await addDoc(collection(db, "notifications"), {
@@ -403,6 +407,14 @@ export default function Profile() {
         return <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${s.color}`}>{s.label}</span>;
     };
 
+    // --- Derived Negotiation Values for the Drawer ---
+    const historyAdminOffer = selectedOrder?.negotiationHistory?.filter((h: any) => h.sender === 'admin').pop();
+    const derivedAdminPrice = historyAdminOffer?.price ?? selectedOrder?.adminPrice ?? selectedOrder?.admin_offer_price ?? selectedOrder?.manifest?.cashAdjustment;
+    const hasAdminOffer = derivedAdminPrice !== undefined && derivedAdminPrice !== null;
+    const isCounteroffered = selectedOrder?.status === 'counteroffered' || selectedOrder?.status === 'counter_offer';
+    const shouldShowActions = hasAdminOffer || isCounteroffered;
+    const derivedAdminCurrency = historyAdminOffer?.currency || selectedOrder?.adminCurrency || selectedOrder?.admin_offer_currency || selectedOrder?.manifest?.currency || "ARS";
+
     return (
         <div className="space-y-16 py-10">
             {/* Header */}
@@ -555,7 +567,7 @@ export default function Profile() {
                             {!isNegotiating && selectedOrder.status !== "completed" && selectedOrder.status !== "venta_finalizada" && (
                                 <>
                                     {/* Negotiation Buttons (if there's an offer to respond to) */}
-                                    {(selectedOrder.adminPrice || selectedOrder.admin_offer_price) && selectedOrder.status !== "contraoferta_usuario" && (
+                                    {shouldShowActions && selectedOrder.status !== "contraoferta_usuario" && (
                                         <div className="space-y-3">
                                             {!showCounterInput ? (
                                                 <div className="grid grid-cols-2 gap-3">
@@ -859,17 +871,17 @@ export default function Profile() {
                                 </div>
                             ) : (
                                 <>
-                                    {(selectedOrder.adminPrice || selectedOrder.admin_offer_price) && (
+                                    {shouldShowActions && (
                                         <div className="flex flex-col gap-4">
                                             {/* Admin Counter-Offer */}
-                                            {(selectedOrder.adminPrice || selectedOrder.admin_offer_price) && (
+                                            {hasAdminOffer && (
                                                 <div className="bg-primary/5 rounded-2xl p-6 border border-primary/20">
                                                     <div className="flex items-center gap-2 mb-2">
                                                         <BadgeDollarSign className="h-5 w-5 text-primary" />
                                                         <span className="text-xs font-black uppercase tracking-widest text-primary">Oldie but Goldie te ofrece</span>
                                                     </div>
                                                     <p className="text-4xl font-display font-black text-white tracking-tight">
-                                                        {(selectedOrder.adminCurrency || selectedOrder.admin_offer_currency) === "USD" ? "US$" : "$"} {(selectedOrder.adminPrice || selectedOrder.admin_offer_price || 0).toLocaleString()}
+                                                        {derivedAdminCurrency === "USD" ? "US$" : "$"} {derivedAdminPrice.toLocaleString()}
                                                     </p>
                                                 </div>
                                             )}
