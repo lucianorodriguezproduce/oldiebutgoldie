@@ -865,7 +865,7 @@ export default function PublicOrderView() {
                     {/* === ADMIN SALE ORDER ACTIONS (original) === */}
                     {isAdminOrder && !isExchange && (() => {
                         const isSold = ['venta_finalizada', 'completed'].includes(order.status);
-                        const isNegotiating = ['contraoferta_usuario', 'negotiating', 'quoted'].includes(order.status);
+                        const isNegotiating = ['contraoferta_usuario', 'negotiating', 'quoted', 'counter_offer'].includes(order.status);
 
                         if (isSold) {
                             return (
@@ -875,7 +875,20 @@ export default function PublicOrderView() {
                             );
                         }
 
-                        if (isNegotiating && !isOwner && !isAdmin) {
+                        if (isAdmin) {
+                            return (
+                                <div className="mt-8 p-6 md:p-8 bg-violet-500/5 border border-violet-500/20 rounded-[2.5rem] flex flex-col items-center justify-center gap-3 text-center">
+                                    <ShoppingBag className="w-6 h-6 text-violet-400" />
+                                    <h4 className="text-lg font-display font-black text-white uppercase tracking-tightest">Venta en Curso</h4>
+                                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Gestioná esta venta o pedido desde tu panel de administrador</p>
+                                    <Link to="/admin/trades" className="mt-2 px-6 py-3 bg-violet-500/20 hover:bg-violet-500/30 border border-violet-500/30 rounded-xl text-violet-300 font-black uppercase text-[10px] tracking-widest transition-all">
+                                        Ir a Ventas / Pedidos
+                                    </Link>
+                                </div>
+                            );
+                        }
+
+                        if (isNegotiating && !isOwner) {
                             return (
                                 <div className="mt-8 p-6 md:p-8 bg-blue-500/10 border border-blue-500/30 rounded-[2.5rem] flex items-center justify-center shadow-inner">
                                     <h4 className="text-2xl md:text-3xl font-display font-black text-blue-500 uppercase tracking-tightest">En Negociación</h4>

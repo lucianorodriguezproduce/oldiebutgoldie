@@ -31,6 +31,7 @@ import { db } from '@/lib/firebase';
 import { doc, updateDoc, arrayUnion, addDoc, serverTimestamp, collection } from 'firebase/firestore';
 import { getCleanOrderMetadata } from '@/utils/orderMetadata';
 import { useLoading } from '@/context/LoadingContext';
+import { tradeService } from '@/services/tradeService';
 
 interface OrderCardProps {
     order: any; // Using any or an extended OrderData to catch legacy fields without crashing
@@ -408,8 +409,39 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                     )}
 
                     {/* QuickOffer Component for Admins - Minimalist & Validated */}
-                    {context === 'admin' && status !== 'completed' && status !== 'venta_finalizada' && (
+                    {context === 'admin' && status !== 'completed' && status !== 'venta_finalizada' && status !== 'cancelled' && (
                         <div className="flex items-center gap-1.5 mt-auto group/quick" onClick={(e) => e.stopPropagation()}>
+                            {requiresAction && (
+                                <button
+                                    onClick={async (e) => {
+                                        e.stopPropagation();
+                                        if (!window.confirm("¿Aceptar esta propuesta del cliente? Esto completará la orden.")) return;
+                                        setIsSubmitting(true);
+                                        showLoading("Aceptando propuesta...");
+                                        try {
+                                            const manifestToResolve = order.manifest || {
+                                                requestedItems: items.map((i: any) => i.id || i.itemId).filter(Boolean),
+                                                offeredItems: [],
+                                                cashAdjustment: lastNegotiation?.price || order.totalPrice,
+                                                currency: lastNegotiation?.currency || order.currency || 'ARS'
+                                            };
+                                            await tradeService.resolveTrade(order.id, manifestToResolve);
+                                            // The onSnapshot will automatically update the UI since orders are mapped from real-time DB
+                                        } catch (error: any) {
+                                            console.error("Accept offer error:", error);
+                                            alert(`Error: ${error.message}`);
+                                        } finally {
+                                            setIsSubmitting(false);
+                                            hideLoading();
+                                        }
+                                    }}
+                                    disabled={isSubmitting}
+                                    className="p-2 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded-lg hover:bg-emerald-500 hover:text-black transition-all disabled:opacity-10 active:scale-95 shadow-lg shadow-emerald-500/5 mr-2"
+                                    title="Aceptar Oferta del Cliente"
+                                >
+                                    <CheckCircle2 className="h-3.5 w-3.5" />
+                                </button>
+                            )}
                             <div className="relative">
                                 <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-primary/50 group-focus-within/quick:text-primary transition-colors" />
                                 <input

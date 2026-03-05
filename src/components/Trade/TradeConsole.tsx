@@ -30,8 +30,13 @@ export default function TradeConsole({ trade, onUpdate, onClose }: TradeConsoleP
     const [isEditing, setIsEditing] = useState(false);
     const [editedManifest, setEditedManifest] = useState<TradeManifest | null>(null);
 
-    const isMyTurn = trade.currentTurn === user?.uid;
-    const canAction = trade.status !== 'accepted' && trade.status !== 'cancelled' && isMyTurn;
+    const isAdmin = user?.email === 'admin@discography.ai' || user?.uid === 'MKPlxxi9JENQt0hS3V1QNeF8oOS2';
+    // isMyTurn is true if the current turn matches the user's uid, or if it's the admin's turn and the current user is an admin.
+    const isMyTurn = trade.currentTurn === user?.uid || (trade.currentTurn === 'admin' && isAdmin);
+
+    // Admin can always action if the status is counter_offer or contraoferta_usuario
+    const canAction = (trade.status !== 'accepted' && trade.status !== 'cancelled' && isMyTurn) ||
+        (isAdmin && ['counter_offer', 'contraoferta_usuario', 'contraofertado'].includes(trade.status));
 
     const handleAcceptTrade = async () => {
         if (!trade.id) return;
