@@ -22,6 +22,7 @@ import {
 
 import { tradeService } from "@/services/tradeService";
 import { inventoryService } from "@/services/inventoryService";
+import { userAssetService } from "@/services/userAssetService";
 import type { Trade, InventoryItem, TradeManifest } from "@/types/inventory";
 import { useLoading } from "@/context/LoadingContext";
 import { useAuth } from "@/context/AuthContext";
@@ -70,11 +71,42 @@ export default function AdminTrades() {
                 }
             });
 
-            const details: Record<string, InventoryItem> = { ...itemDetails };
+            const details: Record<string, any> = { ...itemDetails };
+
+            // First, seed details from manifest.items embedded data
+            fetchedTrades.forEach(t => {
+                if (t.manifest?.items && Array.isArray(t.manifest.items)) {
+                    t.manifest.items.forEach((item: any) => {
+                        const itemId = item.userAssetId || item.id;
+                        if (itemId && !details[itemId]) {
+                            details[itemId] = {
+                                id: itemId,
+                                metadata: { title: item.title || 'Sin Título', artist: item.artist || 'Sin Artista' },
+                                media: { thumbnail: item.cover_image || '' },
+                                logistics: { price: item.price || 0 }
+                            };
+                        }
+                    });
+                }
+            });
+
+            // Then resolve remaining IDs from inventory or user_assets
             await Promise.all(Array.from(allItemIds).map(async (id: string) => {
                 if (!details[id]) {
                     const item = await inventoryService.getItemById(id);
-                    if (item) details[id] = item;
+                    if (item) {
+                        details[id] = item;
+                    } else {
+                        const asset = await userAssetService.getAssetById(id);
+                        if (asset) {
+                            details[id] = {
+                                id: asset.id,
+                                metadata: asset.metadata,
+                                media: asset.media,
+                                logistics: { price: asset.valuation || 0 }
+                            };
+                        }
+                    }
                 }
             }));
             setItemDetails(details);

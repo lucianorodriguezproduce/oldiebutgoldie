@@ -5,7 +5,7 @@ import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { db, auth } from "@/lib/firebase";
 import { SEO } from "@/components/SEO";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Music, Disc, Lock, Clock, Eye, ChevronDown, Share2, ChevronRight, Plus, Check, ShoppingBag } from "lucide-react";
+import { ChevronLeft, Music, Disc, Lock, Clock, Eye, ChevronDown, Share2, ChevronRight, Plus, Check, ShoppingBag, Handshake } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useLote } from "@/context/LoteContext";
 import { useLoading } from "@/context/LoadingContext";
@@ -216,22 +216,35 @@ export default function PublicOrderView() {
     }
 
     const { artist: displayArtist, album: displayAlbum, image: coverImage, format, condition, isBatch, itemsCount } = getCleanOrderMetadata(order);
+    const isExchange = order?.type === 'exchange';
+    const manifestItems = Array.isArray(order.manifest?.items) ? order.manifest.items : [];
+    const manifestOffered = manifestItems.filter((i: any) => i.source === 'user_asset');
+    const manifestRequested = manifestItems.filter((i: any) => i.source === 'inventory');
 
-    const items = isBatch ? (order.items || []) : [
-        {
-            title: displayAlbum || order.title || "Detalle del Disco",
-            artist: displayArtist,
-            album: displayAlbum,
-            cover_image: coverImage,
-            format: format || "N/A",
-            condition: condition || "N/A",
-            intent: order.details?.intent || order.intent || (order.adminPrice || order.admin_offer_price ? "VENDER" : "COMPRAR"),
-            label: order.details?.label || order.label,
-            country: order.details?.country || order.country,
-            year: order.details?.year || order.year,
-            genre: order.details?.genre?.length ? order.details.genre.join(", ") : (order.genre?.length ? order.genre.join(", ") : undefined),
-        }
-    ];
+    const items = isExchange
+        ? manifestItems.map((i: any) => ({
+            title: i.title || 'Sin Título',
+            artist: i.artist || '',
+            cover_image: i.cover_image || '',
+            format: i.format || 'N/A',
+            condition: i.condition || 'N/A',
+            source: i.source
+        }))
+        : isBatch ? (order.items || []) : [
+            {
+                title: displayAlbum || order.title || "Detalle del Disco",
+                artist: displayArtist,
+                album: displayAlbum,
+                cover_image: coverImage,
+                format: format || "N/A",
+                condition: condition || "N/A",
+                intent: order.details?.intent || order.intent || (order.adminPrice || order.admin_offer_price ? "VENDER" : "COMPRAR"),
+                label: order.details?.label || order.label,
+                country: order.details?.country || order.country,
+                year: order.details?.year || order.year,
+                genre: order.details?.genre?.length ? order.details.genre.join(", ") : (order.genre?.length ? order.genre.join(", ") : undefined),
+            }
+        ];
 
     const generateDescription = () => {
         if (!items || items.length === 0) return TEXTS.common.batchDescription;
@@ -336,6 +349,65 @@ export default function PublicOrderView() {
                             </button>
                         </div>
 
+                        {/* Exchange Trade Items */}
+                        {isExchange && manifestItems.length > 0 && (
+                            <div className="bg-white/[0.02] rounded-3xl border border-white/10 p-6 md:p-8 space-y-6">
+                                <div className="flex items-center gap-3">
+                                    <Handshake className="w-5 h-5 text-violet-400" />
+                                    <h3 className="text-lg font-display font-black text-white uppercase tracking-tight">Detalle del Intercambio</h3>
+                                </div>
+
+                                {manifestOffered.length > 0 && (
+                                    <div className="space-y-3">
+                                        <span className="text-[9px] font-black text-orange-400 uppercase tracking-widest flex items-center gap-1.5">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-orange-500" /> Ofrece ({manifestOffered.length})
+                                        </span>
+                                        {manifestOffered.map((item: any, idx: number) => (
+                                            <div key={`o-${idx}`} className="border-b border-white/5 pb-3 flex items-center gap-4">
+                                                <div className="w-12 h-12 rounded-lg overflow-hidden bg-white/5 flex-shrink-0 border border-orange-500/20">
+                                                    <img src={item.cover_image || 'https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png'} alt="" className="w-full h-full object-cover" />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-bold text-white truncate uppercase">{item.title}</p>
+                                                    {item.artist && <p className="text-[9px] text-gray-500 uppercase tracking-widest truncate">{item.artist}</p>}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {manifestRequested.length > 0 && (
+                                    <div className="space-y-3">
+                                        <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest flex items-center gap-1.5">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Solicita ({manifestRequested.length})
+                                        </span>
+                                        {manifestRequested.map((item: any, idx: number) => (
+                                            <div key={`r-${idx}`} className="border-b border-white/5 pb-3 flex items-center gap-4">
+                                                <div className="w-12 h-12 rounded-lg overflow-hidden bg-white/5 flex-shrink-0 border border-emerald-500/20">
+                                                    <img src={item.cover_image || 'https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png'} alt="" className="w-full h-full object-cover" />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-bold text-white truncate uppercase">{item.title}</p>
+                                                    {item.artist && <p className="text-[9px] text-gray-500 uppercase tracking-widest truncate">{item.artist}</p>}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {order.manifest?.cashAdjustment && order.manifest.cashAdjustment !== 0 && (
+                                    <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.03] border border-white/5">
+                                        <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">
+                                            {order.manifest.cashAdjustment > 0 ? 'Usuario paga' : 'Usuario recibe'}
+                                        </span>
+                                        <span className={`text-lg font-display font-black ${order.manifest.cashAdjustment > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+                                            {order.manifest.cashAdjustment > 0 ? '-' : '+'} {order.manifest.currency === 'USD' ? 'US$' : '$'} {Math.abs(order.manifest.cashAdjustment).toLocaleString()}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         {/* Header — TAREA 2 & 4 */}
                         <div className="flex flex-col gap-1 mt-6">
                             <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">ID: {order.id}</p>
@@ -366,86 +438,88 @@ export default function PublicOrderView() {
                     )}
                 </header>
 
-                <div className="space-y-0">
-                    <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 italic mb-4">
-                        {TEXTS.common.itemsInvolved} ({items.length})
-                    </h3>
+                {!isExchange && (
+                    <div className="space-y-0">
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 italic mb-4">
+                            {TEXTS.common.itemsInvolved} ({items.length})
+                        </h3>
 
-                    {!items || !Array.isArray(items) || items.length === 0 ? (
-                        <div className="bg-white/5 border border-dashed border-white/10 rounded-2xl p-12 text-center">
-                            <Music className="w-12 h-12 text-white/10 mx-auto mb-4" />
-                            <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">{TEXTS.common.noDiscsInBatch}</p>
-                        </div>
-                    ) : (
-                        <div className="space-y-0">
-                            <AnimatePresence>
-                                {(isItemsExpanded ? items : items.slice(0, 3)).map((item: any, idx: number) => (
-                                    <motion.div
-                                        key={idx}
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: idx * 0.05 }}
-                                        className="border-b border-white/10 py-5 flex items-center justify-between gap-4"
-                                    >
-                                        <div className="flex-1 min-w-0">
-                                            <h4 className="font-bold text-white uppercase text-base leading-tight truncate">
-                                                {item.title || (item.artist && item.album ? `${item.artist} - ${item.album}` : 'Sin Título')}
-                                            </h4>
-                                            {item.artist && (
-                                                <p className="text-gray-500 text-xs font-bold uppercase tracking-widest truncate">{item.artist}</p>
-                                            )}
+                        {!items || !Array.isArray(items) || items.length === 0 ? (
+                            <div className="bg-white/5 border border-dashed border-white/10 rounded-2xl p-12 text-center">
+                                <Music className="w-12 h-12 text-white/10 mx-auto mb-4" />
+                                <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">{TEXTS.common.noDiscsInBatch}</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-0">
+                                <AnimatePresence>
+                                    {(isItemsExpanded ? items : items.slice(0, 3)).map((item: any, idx: number) => (
+                                        <motion.div
+                                            key={idx}
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: idx * 0.05 }}
+                                            className="border-b border-white/10 py-5 flex items-center justify-between gap-4"
+                                        >
+                                            <div className="flex-1 min-w-0">
+                                                <h4 className="font-bold text-white uppercase text-base leading-tight truncate">
+                                                    {item.title || (item.artist && item.album ? `${item.artist} - ${item.album}` : 'Sin Título')}
+                                                </h4>
+                                                {item.artist && (
+                                                    <p className="text-gray-500 text-xs font-bold uppercase tracking-widest truncate">{item.artist}</p>
+                                                )}
 
-                                            {isAdminOrder && item.condition && (
-                                                <div className="mt-1 flex items-center gap-2 text-[10px] font-mono text-gray-400">
-                                                    <span className="text-primary/70">Media: {item.condition.split('/')[0] || item.condition}</span>
-                                                    {item.condition.includes('/') && <span className="text-gray-600">|</span>}
-                                                    {item.condition.includes('/') && <span className="text-primary/70">Cover: {item.condition.split('/')[1]}</span>}
-                                                </div>
-                                            )}
-
-                                            <div className="flex flex-wrap gap-2 mt-2">
-                                                <span className="bg-gray-800 text-gray-300 px-2 py-1 text-[9px] font-black uppercase rounded">{item.format || format}</span>
-                                                {!isAdminOrder && <span className="bg-blue-900/30 text-blue-400 px-2 py-1 text-[9px] font-black uppercase rounded border border-blue-500/20">{item.condition || condition}</span>}
-                                            </div>
-
-                                            {/* Ficha Técnica */}
-                                            {(item.label || item.country || item.year || item.genre) && (
-                                                <details className="mt-3 group cursor-pointer">
-                                                    <summary className="text-[9px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-colors outline-none flex items-center gap-1 w-max">
-                                                        {TEXTS.details.technicalSheet} <ChevronDown className="h-3 w-3 group-open:rotate-180 transition-transform" />
-                                                    </summary>
-                                                    <div className="mt-2 grid grid-cols-2 gap-2 p-3 bg-white/5 rounded-xl border border-white/5 text-[10px]">
-                                                        {item.label && <div className="flex flex-col min-w-0"><span className="text-gray-600 uppercase font-black tracking-widest text-[8px]">{TEXTS.details.label}</span><span className="text-white font-bold truncate">{item.label}</span></div>}
-                                                        {item.year && <div className="flex flex-col min-w-0"><span className="text-gray-600 uppercase font-black tracking-widest text-[8px]">{TEXTS.details.year}</span><span className="text-white font-bold truncate">{item.year}</span></div>}
-                                                        {item.country && <div className="flex flex-col min-w-0"><span className="text-gray-600 uppercase font-black tracking-widest text-[8px]">{TEXTS.details.country}</span><span className="text-white font-bold truncate">{item.country}</span></div>}
-                                                        {item.genre && <div className="flex flex-col min-w-0"><span className="text-gray-600 uppercase font-black tracking-widest text-[8px]">{TEXTS.details.genre}</span><span className="text-white font-bold truncate">{item.genre}</span></div>}
+                                                {isAdminOrder && item.condition && (
+                                                    <div className="mt-1 flex items-center gap-2 text-[10px] font-mono text-gray-400">
+                                                        <span className="text-primary/70">Media: {item.condition.split('/')[0] || item.condition}</span>
+                                                        {item.condition.includes('/') && <span className="text-gray-600">|</span>}
+                                                        {item.condition.includes('/') && <span className="text-primary/70">Cover: {item.condition.split('/')[1]}</span>}
                                                     </div>
-                                                </details>
-                                            )}
-                                        </div>
-                                        <div className="w-14 h-14 rounded-md overflow-hidden bg-white/5 border border-white/10 flex-shrink-0 shadow-sm">
-                                            <img
-                                                src={item.cover_image || item.image || item.thumb || "https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png"}
-                                                alt={item.title || "Item"}
-                                                className="w-full h-full object-cover"
-                                            />
-                                        </div>
-                                    </motion.div>
-                                ))}
-                            </AnimatePresence>
+                                                )}
 
-                            {items.length > 3 && (
-                                <button
-                                    onClick={() => setIsItemsExpanded(!isItemsExpanded)}
-                                    className="w-full mt-4 py-3 border border-white/10 rounded-xl text-gray-400 text-[10px] font-black uppercase tracking-widest hover:bg-white/5 hover:text-white transition-all flex items-center justify-center gap-2"
-                                >
-                                    {isItemsExpanded ? TEXTS.details.showLess : `${TEXTS.details.showAll} (+${items.length - 3})`}
-                                    <ChevronDown className={`h-3.5 w-3.5 transition-transform ${isItemsExpanded ? 'rotate-180' : ''}`} />
-                                </button>
-                            )}
-                        </div>
-                    )}
-                </div>
+                                                <div className="flex flex-wrap gap-2 mt-2">
+                                                    <span className="bg-gray-800 text-gray-300 px-2 py-1 text-[9px] font-black uppercase rounded">{item.format || format}</span>
+                                                    {!isAdminOrder && <span className="bg-blue-900/30 text-blue-400 px-2 py-1 text-[9px] font-black uppercase rounded border border-blue-500/20">{item.condition || condition}</span>}
+                                                </div>
+
+                                                {/* Ficha Técnica */}
+                                                {(item.label || item.country || item.year || item.genre) && (
+                                                    <details className="mt-3 group cursor-pointer">
+                                                        <summary className="text-[9px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-colors outline-none flex items-center gap-1 w-max">
+                                                            {TEXTS.details.technicalSheet} <ChevronDown className="h-3 w-3 group-open:rotate-180 transition-transform" />
+                                                        </summary>
+                                                        <div className="mt-2 grid grid-cols-2 gap-2 p-3 bg-white/5 rounded-xl border border-white/5 text-[10px]">
+                                                            {item.label && <div className="flex flex-col min-w-0"><span className="text-gray-600 uppercase font-black tracking-widest text-[8px]">{TEXTS.details.label}</span><span className="text-white font-bold truncate">{item.label}</span></div>}
+                                                            {item.year && <div className="flex flex-col min-w-0"><span className="text-gray-600 uppercase font-black tracking-widest text-[8px]">{TEXTS.details.year}</span><span className="text-white font-bold truncate">{item.year}</span></div>}
+                                                            {item.country && <div className="flex flex-col min-w-0"><span className="text-gray-600 uppercase font-black tracking-widest text-[8px]">{TEXTS.details.country}</span><span className="text-white font-bold truncate">{item.country}</span></div>}
+                                                            {item.genre && <div className="flex flex-col min-w-0"><span className="text-gray-600 uppercase font-black tracking-widest text-[8px]">{TEXTS.details.genre}</span><span className="text-white font-bold truncate">{item.genre}</span></div>}
+                                                        </div>
+                                                    </details>
+                                                )}
+                                            </div>
+                                            <div className="w-14 h-14 rounded-md overflow-hidden bg-white/5 border border-white/10 flex-shrink-0 shadow-sm">
+                                                <img
+                                                    src={item.cover_image || item.image || item.thumb || "https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png"}
+                                                    alt={item.title || "Item"}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            </div>
+                                        </motion.div>
+                                    ))}
+                                </AnimatePresence>
+
+                                {items.length > 3 && (
+                                    <button
+                                        onClick={() => setIsItemsExpanded(!isItemsExpanded)}
+                                        className="w-full mt-4 py-3 border border-white/10 rounded-xl text-gray-400 text-[10px] font-black uppercase tracking-widest hover:bg-white/5 hover:text-white transition-all flex items-center justify-center gap-2"
+                                    >
+                                        {isItemsExpanded ? TEXTS.details.showLess : `${TEXTS.details.showAll} (+${items.length - 3})`}
+                                        <ChevronDown className={`h-3.5 w-3.5 transition-transform ${isItemsExpanded ? 'rotate-180' : ''}`} />
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {/* Price & Negotiation Visibility (TAREA 4) */}
                 <div className="space-y-6 pt-6 border-t border-white/5">

@@ -36,7 +36,8 @@ export const WHATSAPP_CONFIG = {
         purchase: "¡Hola Oldie But Goldie! 📀\n\nQuiero comprar este lote de discos:\n\n{itemsList}\n\nOrden: #{orderId}\n\nLink: {canonicalUrl}",
         sale: "¡Hola! Quiero ofrecerte estos discos para que los revises:\n\n{itemsList}\n\nPrecio pretendido total: {adminPriceDisplay}\n\nReferencia: #{orderId}\n\nLink: {canonicalUrl}",
         acceptDeal: "Hola! Acepté el trato por el lote {orderId}. Coordinemos el pago y el envío.",
-        adminContact: "Hola {name}, te contacto desde la administración de Oldie But Goldie por tu gestión de {intent}. ¿Cómo procedemos con la logística de entrega?"
+        adminContact: "Hola {name}, te contacto desde la administración de Oldie But Goldie por tu gestión de {intent}. ¿Podemos coordinar?",
+        tradeProposal: "¡Hola! Acabo de enviar una propuesta de intercambio (ID: #{tradeId}). ¿Podemos coordinar?"
     }
 };
 

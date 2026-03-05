@@ -49,12 +49,20 @@ export default function ManifestEditor({
             if (!details[id]) {
                 // Try inventory first
                 let item = await inventoryService.getItemById(id);
-                // Fallback to user assets (simplified check)
-                if (!item) {
-                    // We could fetch from user_assets here if ID format allows, 
-                    // or assume metadata is already in itemDetails if added during search
+                if (item) {
+                    details[id] = item;
+                } else {
+                    // Fallback to user_assets
+                    const asset = await userAssetService.getAssetById(id);
+                    if (asset) {
+                        details[id] = {
+                            id: asset.id,
+                            metadata: asset.metadata,
+                            media: asset.media,
+                            logistics: { price: asset.valuation || 0 }
+                        };
+                    }
                 }
-                if (item) details[id] = item;
             }
         }));
         setItemDetails(details);

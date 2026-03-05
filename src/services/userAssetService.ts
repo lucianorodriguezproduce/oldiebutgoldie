@@ -5,6 +5,7 @@ import {
     where,
     getDocs,
     doc,
+    getDoc,
     updateDoc,
     addDoc,
     serverTimestamp,
@@ -73,5 +74,15 @@ export const userAssetService = {
         );
         const snapshot = await getDocs(q);
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserAsset));
+    },
+
+    /**
+     * Obtiene un activo individual por su ID de documento
+     */
+    async getAssetById(assetId: string): Promise<UserAsset | null> {
+        const docRef = doc(db, COLLECTION_NAME, assetId);
+        const snap = await getDoc(docRef);
+        if (!snap.exists()) return null;
+        return { id: snap.id, ...snap.data() } as UserAsset;
     }
 };
