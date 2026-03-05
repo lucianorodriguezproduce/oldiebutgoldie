@@ -92,10 +92,11 @@ const bunkerToLegacy = async (trade: any) => {
 
 export const tradeService = {
     async createTrade(trade: Omit<Trade, 'id' | 'timestamp' | 'status' | 'currentTurn' | 'negotiationHistory' | 'type'> & { tradeOrigin?: 'INVENTORY' | 'DISCOGS' }) {
-        // --- ASSET LOCKING: Verificación de disponibilidad real-time ---
+        // --- ASSET LOCKING: Only lock items for direct sales ---
+        // Exchange trades don't lock items — stock is checked atomically at resolution time.
+        // This allows the same store item to be in multiple pending exchange proposals.
         const allItems = [...(trade.manifest?.requestedItems || []), ...(trade.manifest?.offeredItems || [])];
 
-        // Buscamos trades activos que involucren estos mismos ítems
         const activeTradesQuery = query(
             collection(db, COLLECTION_NAME),
             where("status", "in", ["pending", "counter_offer", "accepted"])
@@ -104,12 +105,14 @@ export const tradeService = {
         const activeSnap = await getDocs(activeTradesQuery);
         const doubleBooking = activeSnap.docs.some(doc => {
             const data = doc.data() as Trade;
+            // Only block if an existing DIRECT SALE already locks these items
+            if (data.type !== 'direct_sale') return false;
             const existingItems = [...(data.manifest?.requestedItems || []), ...(data.manifest?.offeredItems || [])];
             return allItems.some(id => existingItems.includes(id));
         });
 
         if (doubleBooking) {
-            throw new Error("ASSET_LOCKED: Uno o más ítems ya están en una negociación activa.");
+            throw new Error("ASSET_LOCKED: Uno o más ítems ya están en una venta directa activa.");
         }
 
         // --- TYPE DETERMINATION ---
