@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, ArrowRight, CheckCircle2, Disc, ShoppingBag, DollarSign, Search, X, Plus, Minus } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, Disc, ShoppingBag, DollarSign, Search, X, Plus, Minus, MessageCircle } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useLoading } from "@/context/LoadingContext";
 import { userAssetService } from "@/services/userAssetService";
@@ -39,6 +39,8 @@ export default function TradeConstructor() {
     const [cashDirection, setCashDirection] = useState<CashDirection>("PAGAR");
 
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isSuccess, setIsSuccess] = useState(false);
+    const [createdTradeId, setCreatedTradeId] = useState<string | null>(null);
 
     // Load user's collection
     useEffect(() => {
@@ -128,7 +130,7 @@ export default function TradeConstructor() {
                 };
             });
 
-            await tradeService.createTrade({
+            const tradeId = await tradeService.createTrade({
                 participants: {
                     senderId: user.uid,
                     receiverId: ADMIN_UID
@@ -140,10 +142,12 @@ export default function TradeConstructor() {
                     cashAdjustment: adjustedCash,
                     currency: cashCurrency
                 },
-                tradeOrigin: 'DISCOGS' // Forces exchange type + pending status
+                tradeOrigin: 'DISCOGS'
             });
 
-            navigate('/perfil');
+            setCreatedTradeId(tradeId);
+            setIsSuccess(true);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         } catch (error: any) {
             console.error("Error creating trade:", error);
             if (error.message?.includes("ASSET_LOCKED")) {
@@ -163,8 +167,127 @@ export default function TradeConstructor() {
     }
 
     const offeredAssets = userAssets.filter(a => selectedOffered.has(a.id));
-    const requestedItems = storeItems.filter(i => selectedRequested.has(i.id));
+    const requestedItemsList = storeItems.filter(i => selectedRequested.has(i.id));
 
+    // ─── SUCCESS SCREEN ───
+    if (isSuccess) {
+        return (
+            <div className="min-h-screen py-10 flex items-center justify-center">
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+                    className="w-full max-w-lg space-y-8"
+                >
+                    {/* Success Icon */}
+                    <div className="flex flex-col items-center text-center space-y-6">
+                        <div className="relative">
+                            <div className="w-24 h-24 bg-primary rounded-full flex items-center justify-center shadow-[0_0_60px_rgba(204,255,0,0.3)]">
+                                <CheckCircle2 className="w-12 h-12 text-black" />
+                            </div>
+                            <motion.div
+                                initial={{ scale: 1 }}
+                                animate={{ scale: [1, 1.3, 1] }}
+                                transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
+                                className="absolute inset-0 w-24 h-24 bg-primary/20 rounded-full -z-10"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <h1 className="text-3xl md:text-4xl font-display font-black text-white uppercase tracking-tighter">
+                                ¡Propuesta Enviada!
+                            </h1>
+                            <p className="text-gray-500 text-sm font-bold uppercase tracking-widest">
+                                Tu solicitud de intercambio fue recibida
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Trade Summary Card */}
+                    <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 space-y-4">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">ID de Operación</span>
+                            <span className="text-[10px] font-mono text-primary">#{createdTradeId?.slice(-8).toUpperCase()}</span>
+                        </div>
+
+                        {offeredAssets.length > 0 && (
+                            <div className="pt-3 border-t border-white/5 space-y-2">
+                                <span className="text-[9px] font-black text-orange-400 uppercase tracking-widest flex items-center gap-1.5">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-orange-500" /> Ofrecés ({offeredAssets.length})
+                                </span>
+                                <div className="flex flex-wrap gap-2">
+                                    {offeredAssets.map(a => (
+                                        <div key={a.id} className="flex items-center gap-2 bg-orange-500/5 border border-orange-500/20 rounded-lg px-2 py-1">
+                                            <div className="w-6 h-6 rounded overflow-hidden">
+                                                <LazyImage src={a.media?.thumbnail || ''} alt="" className="w-full h-full object-cover" />
+                                            </div>
+                                            <span className="text-[10px] font-bold text-white truncate max-w-[100px]">{a.metadata?.title}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {requestedItemsList.length > 0 && (
+                            <div className="pt-3 border-t border-white/5 space-y-2">
+                                <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest flex items-center gap-1.5">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Querés Recibir ({requestedItemsList.length})
+                                </span>
+                                <div className="flex flex-wrap gap-2">
+                                    {requestedItemsList.map(i => (
+                                        <div key={i.id} className="flex items-center gap-2 bg-emerald-500/5 border border-emerald-500/20 rounded-lg px-2 py-1">
+                                            <div className="w-6 h-6 rounded overflow-hidden">
+                                                <LazyImage src={i.media?.thumbnail || ''} alt="" className="w-full h-full object-cover" />
+                                            </div>
+                                            <span className="text-[10px] font-bold text-white truncate max-w-[100px]">{i.metadata?.title}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="pt-3 border-t border-white/5 flex items-center justify-between">
+                            <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Estado</span>
+                            <span className="px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 text-[9px] font-black uppercase tracking-widest animate-pulse">
+                                Pendiente de Revisión
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Info Notice */}
+                    <div className="bg-blue-500/5 border border-blue-500/10 rounded-xl p-4 text-center">
+                        <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">
+                            El administrador revisará tu propuesta y te notificará el resultado
+                        </p>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="space-y-3">
+                        <Link
+                            to="/perfil"
+                            className="w-full flex items-center justify-center gap-2 bg-primary text-black py-5 rounded-2xl font-black uppercase text-sm tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-[0_0_40px_rgba(204,255,0,0.15)]"
+                        >
+                            Ver Mi Actividad
+                        </Link>
+                        <Link
+                            to={`/orden/${createdTradeId}`}
+                            className="w-full flex items-center justify-center gap-2 bg-white/5 border border-white/10 text-white py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-white/10 transition-all"
+                        >
+                            <Search className="w-4 h-4" /> Ver Orden Pública
+                        </Link>
+                        <button
+                            onClick={() => {
+                                const msg = `Hola! Acabo de enviar una propuesta de intercambio (ID: #${createdTradeId?.slice(-8).toUpperCase()}). ¿Podemos coordinar?`;
+                                window.open(`https://wa.me/5491168530876?text=${encodeURIComponent(msg)}`, '_blank');
+                            }}
+                            className="w-full flex items-center justify-center gap-2 bg-green-600/20 hover:bg-green-600/30 text-green-400 border border-green-500/20 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all"
+                        >
+                            <MessageCircle className="w-4 h-4" /> Consultar por WhatsApp
+                        </button>
+                    </div>
+                </motion.div>
+            </div>
+        );
+    }
     return (
         <div className="min-h-screen py-10 space-y-10">
             {/* Header */}
@@ -490,13 +613,13 @@ export default function TradeConstructor() {
                                 </div>
                             )}
 
-                            {requestedItems.length > 0 && (
+                            {requestedItemsList.length > 0 && (
                                 <div className="space-y-2">
                                     <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest flex items-center gap-1.5">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Quiero Recibir ({requestedItems.length})
+                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Quiero Recibir ({requestedItemsList.length})
                                     </span>
                                     <div className="flex flex-wrap gap-2">
-                                        {requestedItems.map(i => (
+                                        {requestedItemsList.map((i: InventoryItem) => (
                                             <div key={i.id} className="flex items-center gap-2 bg-emerald-500/5 border border-emerald-500/20 rounded-lg px-2 py-1">
                                                 <div className="w-6 h-6 rounded overflow-hidden">
                                                     <LazyImage src={i.media?.thumbnail || ''} alt="" className="w-full h-full object-cover" />
