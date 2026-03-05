@@ -303,24 +303,26 @@ export default function Profile() {
         }
     };
 
-    const handleAcceptTrade = async (trade: Trade) => {
+    const handleAcceptTrade = async (trade: any) => {
         if (!trade.id || !user) return;
-        if (trade.currentTurn !== user.uid) return;
+        // Validamos turnos pero no bloqueamos de forma dura si el estado lo permite
+        if (trade.currentTurn && trade.currentTurn !== user.uid && !['counter_offer', 'counteroffered'].includes(trade.status)) {
+            console.warn("No es tu turno para aceptar este intercambio.");
+        }
 
-        if (confirm("¿Aceptar esta propuesta de intercambio?")) {
+        if (confirm("¿Aceptás esta propuesta de intercambio? Se completará la transacción.")) {
             showLoading("Finalizando negociación...");
             try {
-                // If the user has requested items from the Admin (receiver), 
-                // typically the Admin's stock should be checked.
-                // But in symmetric P2P/B2C, we should ensure the turn is correct.
-
                 await tradeService.resolveTrade(trade.id, trade.manifest);
                 alert("¡Trato hecho! El intercambio ha sido aceptado.");
                 fetchTrades();
+                setSelectedOrder((prev: any) => prev ? { ...prev, status: "completed" } : null);
                 setSelectedTrade(null);
-            } catch (error) {
+            } catch (error: any) {
                 console.error("Error accepting trade:", error);
-                alert("Error al aceptar el intercambio.");
+                alert(error.message?.includes('TRADE_ALREADY_PROCESSED')
+                    ? 'Este intercambio ya fue procesado.'
+                    : `Error al aceptar el intercambio: ${error.message || 'Intenta nuevamente'}`);
             } finally {
                 hideLoading();
             }
@@ -564,26 +566,39 @@ export default function Profile() {
                     selectedOrder && (
                         <div className="space-y-4">
                             {/* Negotiation Actions Footer */}
-                            {!isNegotiating && selectedOrder.status !== "completed" && selectedOrder.status !== "venta_finalizada" && (
+                            {!isNegotiating && selectedOrder.status !== "completed" && selectedOrder.status !== "venta_finalizada" && selectedOrder.status !== "cancelled" && (
                                 <>
                                     {/* Negotiation Buttons (if there's an offer to respond to) */}
                                     {shouldShowActions && selectedOrder.status !== "contraoferta_usuario" && (
                                         <div className="space-y-3">
                                             {!showCounterInput ? (
-                                                <div className="grid grid-cols-2 gap-3">
+                                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                                                     <button
-                                                        onClick={() => handleAcceptProposal(selectedOrder)}
+                                                        onClick={() => {
+                                                            if (selectedOrder.type === 'exchange') {
+                                                                handleAcceptTrade(selectedOrder);
+                                                            } else {
+                                                                handleAcceptProposal(selectedOrder);
+                                                            }
+                                                        }}
                                                         disabled={isNegotiating}
-                                                        className="flex items-center justify-center gap-2 px-4 py-4 bg-primary text-black rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white transition-all disabled:opacity-50"
+                                                        className="flex items-center justify-center gap-2 px-3 py-3 bg-primary text-black rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white transition-all disabled:opacity-50"
                                                     >
                                                         <CheckCircle2 className="h-4 w-4" /> Aceptar
                                                     </button>
                                                     <button
                                                         onClick={() => setShowCounterInput(true)}
                                                         disabled={isNegotiating}
-                                                        className="flex items-center justify-center gap-2 px-4 py-4 bg-white/5 border border-white/10 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all disabled:opacity-50"
+                                                        className="flex items-center justify-center gap-2 px-3 py-3 bg-white/5 border border-white/10 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all disabled:opacity-50"
                                                     >
-                                                        <Handshake className="h-4 w-4" /> Contraoferta
+                                                        <Handshake className="h-4 w-4" /> Contraofertar
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleRejectOffer()}
+                                                        disabled={isNegotiating}
+                                                        className="col-span-2 md:col-span-1 flex items-center justify-center gap-2 px-3 py-3 bg-red-500/10 border border-red-500/20 text-red-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500/20 transition-all disabled:opacity-50"
+                                                    >
+                                                        <X className="h-4 w-4" /> Rechazar
                                                     </button>
                                                 </div>
                                             ) : (
@@ -592,32 +607,89 @@ export default function Profile() {
                                                     animate={{ opacity: 1, y: 0 }}
                                                     className="bg-neutral-900 border border-white/10 p-4 rounded-2xl space-y-3 shadow-2xl"
                                                 >
-                                                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">¿Cuánto pides por el lote?</p>
-                                                    <div className="flex gap-2">
-                                                        <div className="relative flex-1">
-                                                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-600" />
-                                                            <input
-                                                                type="number"
-                                                                value={counterOfferPrice}
-                                                                onChange={e => setCounterOfferPrice(e.target.value)}
-                                                                placeholder="Ej: 50000"
-                                                                className="w-full bg-white/5 border border-white/10 rounded-xl px-9 py-3 text-white font-bold text-sm focus:border-primary focus:outline-none transition-all"
-                                                            />
-                                                        </div>
+                                                    {selectedOrder.type === 'exchange' ? (
+                                                        <>
+                                                            <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Ajustar diferencia en efectivo:</p>
+                                                            <div className="flex items-center gap-2 mt-2">
+                                                                <div className="relative flex-1">
+                                                                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-600" />
+                                                                    <input
+                                                                        type="number"
+                                                                        value={counterOfferPrice}
+                                                                        onChange={e => setCounterOfferPrice(e.target.value)}
+                                                                        placeholder="Ej: 50000"
+                                                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-9 py-3 text-white font-bold text-sm focus:border-primary focus:outline-none transition-all"
+                                                                    />
+                                                                </div>
+                                                                <div className="flex flex-col gap-1 shrink-0">
+                                                                    <label className="text-[9px] text-gray-500 uppercase font-black flex items-center gap-1 cursor-pointer">
+                                                                        <input type="radio" name="counterDirectionProfile" value="pay" defaultChecked /> Pago extra
+                                                                    </label>
+                                                                    <label className="text-[9px] text-gray-500 uppercase font-black flex items-center gap-1 cursor-pointer">
+                                                                        <input type="radio" name="counterDirectionProfile" value="receive" /> Solicito extra
+                                                                    </label>
+                                                                </div>
+                                                            </div>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">¿Cuánto pides por el lote?</p>
+                                                            <div className="flex gap-2">
+                                                                <div className="relative flex-1">
+                                                                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-600" />
+                                                                    <input
+                                                                        type="number"
+                                                                        value={counterOfferPrice}
+                                                                        onChange={e => setCounterOfferPrice(e.target.value)}
+                                                                        placeholder="Ej: 50000"
+                                                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-9 py-3 text-white font-bold text-sm focus:border-primary focus:outline-none transition-all"
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        </>
+                                                    )}
+                                                    <div className="flex gap-2 pt-2">
                                                         <button
-                                                            onClick={() => handleCounterOffer(selectedOrder)}
+                                                            onClick={async () => {
+                                                                if (selectedOrder.type === 'exchange') {
+                                                                    setIsNegotiating(true);
+                                                                    showLoading('Enviando contraoferta...');
+                                                                    try {
+                                                                        const val = parseFloat(counterOfferPrice) || 0;
+                                                                        const isPay = (document.querySelector('input[name="counterDirectionProfile"]:checked') as HTMLInputElement).value === 'pay';
+                                                                        const amount = isPay ? val : -val;
+                                                                        const newManifest = {
+                                                                            ...selectedOrder.manifest,
+                                                                            cashAdjustment: amount
+                                                                        };
+                                                                        await tradeService.counterTrade(selectedOrder.id, newManifest, user!.uid);
+                                                                        setSelectedOrder((prev: any) => ({ ...prev, status: 'contraoferta_usuario', manifest: newManifest }));
+                                                                        fetchTrades();
+                                                                    } catch (err: any) {
+                                                                        console.error(err);
+                                                                        alert('Error al enviar la contraoferta');
+                                                                    } finally {
+                                                                        setIsNegotiating(false);
+                                                                        hideLoading();
+                                                                        setShowCounterInput(false);
+                                                                        setCounterOfferPrice("");
+                                                                    }
+                                                                } else {
+                                                                    handleCounterOffer(selectedOrder);
+                                                                }
+                                                            }}
                                                             disabled={!counterOfferPrice || isNegotiating}
-                                                            className="px-6 bg-primary text-black rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-white transition-all disabled:opacity-20"
+                                                            className="flex-1 px-6 bg-primary text-black rounded-xl font-black uppercase text-[10px] py-3 tracking-widest hover:bg-white transition-all disabled:opacity-20"
                                                         >
-                                                            Enviar
+                                                            Enviar Propuesta
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setShowCounterInput(false)}
+                                                            className="flex-1 py-3 bg-white/5 border border-white/10 text-center text-[10px] rounded-xl font-bold text-gray-400 uppercase tracking-widest hover:text-white transition-colors"
+                                                        >
+                                                            Cancelar
                                                         </button>
                                                     </div>
-                                                    <button
-                                                        onClick={() => setShowCounterInput(false)}
-                                                        className="w-full text-center text-[9px] font-bold text-gray-600 uppercase tracking-widest hover:text-white transition-colors"
-                                                    >
-                                                        Cancelar
-                                                    </button>
                                                 </motion.div>
                                             )}
                                         </div>
@@ -686,76 +758,183 @@ export default function Profile() {
                                     </span>
                                 </p>
                                 <div className="flex items-center gap-2 mt-1">
-                                    <span className="bg-primary/10 text-primary border border-primary/20 px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest">
-                                        {selectedOrder.status}
-                                    </span>
+                                    {getStatusBadge(selectedOrder.status)}
                                 </div>
 
                                 <span className="text-[10px] text-gray-600 uppercase tracking-widest font-bold mt-2">
-                                    Operación: <span className={selectedOrder.type === 'buy' ? 'text-green-400' : 'text-orange-400'}>
-                                        {selectedOrder.type === 'buy' ? 'Compra' : 'Venta'}
+                                    Operación: <span className={selectedOrder.type === 'exchange' ? 'text-violet-400' : selectedOrder.type === 'buy' ? 'text-emerald-400' : 'text-orange-400'}>
+                                        {selectedOrder.type === 'exchange' ? 'Intercambio' : selectedOrder.type === 'buy' ? 'Compra' : 'Venta'}
                                     </span>
                                 </span>
                             </div>
                         </div>
 
-                        {/* Negotiation Banner Removed (Phase 12) - Redundant with Offer Cards */}
+                        {/* Negotiation Summary Cards */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                            {/* Initial Offer / Latest User Offer */}
+                            {(() => {
+                                const historyUserOffer = selectedOrder.negotiationHistory?.filter((h: any) => h.sender === 'user').pop();
+                                const userPrice = historyUserOffer?.price || selectedOrder.totalPrice || selectedOrder.details?.price || (selectedOrder.type === 'exchange' ? selectedOrder.manifest?.cashAdjustment : 0);
+                                const userCurrency = historyUserOffer?.currency || selectedOrder.currency || selectedOrder.details?.currency || selectedOrder.manifest?.currency || "ARS";
+
+                                if (userPrice === undefined || userPrice === null || (selectedOrder.type === 'exchange' && !selectedOrder.manifest?.cashAdjustment)) return null;
+
+                                return (
+                                    <div className="p-6 rounded-3xl bg-secondary/5 border border-secondary/10 flex flex-col justify-between group hover:bg-secondary/10 transition-all">
+                                        <p className="text-[9px] uppercase tracking-[0.2em] font-black text-secondary/70 mb-3">
+                                            {selectedOrder.type === 'exchange' ? 'Ajuste Propuesto' : (historyUserOffer ? 'Tu Última Contraoferta' : 'Tu Oferta Inicial')}
+                                        </p>
+                                        <div className="flex items-baseline gap-2">
+                                            <span className="text-3xl font-display font-black text-white">
+                                                {userCurrency === "USD" ? "US$" : "$"} {Math.abs(userPrice).toLocaleString()}
+                                            </span>
+                                            {selectedOrder.type === 'exchange' && (
+                                                <span className="text-[10px] font-bold text-gray-500 uppercase">
+                                                    {userPrice > 0 ? '(Pagas)' : '(Recibes)'}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+
+                            {/* Admin Counter-Offer */}
+                            {(() => {
+                                const historyAdminOffer = selectedOrder.negotiationHistory?.filter((h: any) => h.sender === 'admin').pop();
+                                const adminPrice = historyAdminOffer?.price || selectedOrder.adminPrice;
+                                const adminCurrency = historyAdminOffer?.currency || selectedOrder.adminCurrency || "ARS";
+
+                                if (!adminPrice) return null;
+
+                                return (
+                                    <div className="p-6 rounded-3xl bg-primary/10 border border-primary/20 flex flex-col justify-between shadow-2xl shadow-primary/5 group hover:bg-primary/20 transition-all">
+                                        <p className="text-[9px] uppercase tracking-[0.2em] font-black text-primary mb-3">
+                                            {historyAdminOffer ? 'Última Propuesta OBG' : 'Contraoferta de OBG'}
+                                        </p>
+                                        <div className="flex items-baseline gap-2">
+                                            <span className="text-3xl font-display font-black text-white">
+                                                {adminCurrency === "USD" ? "US$" : "$"} {Math.abs(adminPrice).toLocaleString()}
+                                            </span>
+                                            {selectedOrder.type === 'exchange' && (
+                                                <span className="text-[10px] font-bold text-gray-500 uppercase">
+                                                    {adminPrice > 0 ? '(Pagas)' : '(Recibes)'}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+                        </div>
 
                         {/* Items List */}
                         <div className="space-y-0 mb-8 mt-2">
-                            <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500 italic mb-4">Detalle del Lote</h4>
-
-                            {selectedOrder.items && selectedOrder.items.length > 0 ? (
-                                selectedOrder.items.map((item: any, idx: number) => (
-                                    <div key={idx} className="border-b border-white/10 py-5 flex items-start gap-4">
-                                        {/* TAREA 2: Imagen de ítem con fallbacks robustos */}
-                                        <div className="w-16 h-16 rounded overflow-hidden flex-shrink-0 bg-white/5 border border-white/10">
-                                            <LazyImage
-                                                src={item.cover_image || item.thumb || item.image || item.cover || '/default-album.png'}
-                                                alt={item.title}
-                                                className="w-full h-full object-cover"
-                                            />
-                                        </div>
-                                        <div className="flex-1 min-w-0 space-y-2">
-                                            <div className="space-y-1">
-                                                <h4 className="font-bold text-white uppercase text-base leading-tight truncate">{item.title}</h4>
-                                                <p className="text-gray-500 text-xs font-bold uppercase tracking-widest truncate">{item.artist}</p>
-                                            </div>
-                                            <div className="flex flex-wrap gap-2 mt-1">
-                                                <span className="bg-gray-800 text-gray-300 px-2 py-1 text-[9px] font-black uppercase rounded">{item.format}</span>
-                                                <span className="bg-blue-900/30 text-blue-400 px-2 py-1 text-[9px] font-black uppercase rounded border border-blue-500/20">{item.condition}</span>
-                                            </div>
+                            {selectedOrder.type === 'exchange' ? (
+                                <div className="space-y-6">
+                                    <div className="space-y-3">
+                                        <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-orange-400 italic flex items-center gap-2">
+                                            <div className="w-2 h-2 rounded-full bg-orange-500" /> Discos Ofrecidos
+                                        </h4>
+                                        <div className="space-y-2">
+                                            {selectedOrder.manifest?.offeredItems?.map((id: string) => {
+                                                const item = itemDetails[id];
+                                                return (
+                                                    <div key={id} className="bg-orange-500/5 border border-orange-500/10 rounded-xl p-3 flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 border border-orange-500/20">
+                                                            <LazyImage src={item?.media.thumbnail || '/default-album.png'} alt="" className="w-full h-full object-cover" />
+                                                        </div>
+                                                        <div className="min-w-0 flex-1">
+                                                            <p className="text-xs font-bold text-white truncate">{item?.metadata.title || "Cargando..."}</p>
+                                                            <p className="text-[9px] text-gray-500 font-bold uppercase tracking-tighter truncate">{item?.metadata.artist || ""}</p>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                            {(!selectedOrder.manifest?.offeredItems || selectedOrder.manifest.offeredItems.length === 0) && (
+                                                <p className="text-[10px] text-gray-600 italic pl-4">Sin discos ofrecidos. (Ajuste en efectivo)</p>
+                                            )}
                                         </div>
                                     </div>
-                                ))
-                            ) : !selectedOrder.isBatch ? (
-                                <div className="border-b border-white/10 py-5 flex items-start gap-4">
-                                    <div className="w-16 h-16 rounded overflow-hidden flex-shrink-0 bg-white/5 border border-white/10">
-                                        <LazyImage
-                                            src={selectedOrder.details?.cover_image || (selectedOrder.details as any)?.thumb}
-                                            alt={selectedOrder.details?.album}
-                                            className="w-full h-full object-cover"
-                                        />
-                                    </div>
-                                    <div className="flex-1 min-w-0 space-y-2">
-                                        <div className="space-y-1">
-                                            <h4 className="font-bold text-white uppercase text-base leading-tight truncate">
-                                                {selectedOrder.details?.album}
-                                            </h4>
-                                            <p className="text-gray-500 text-xs font-bold uppercase tracking-widest truncate">
-                                                {selectedOrder.details?.artist}
-                                            </p>
-                                        </div>
-                                        <div className="flex flex-wrap gap-2 mt-1">
-                                            <span className="bg-gray-800 text-gray-300 px-2 py-1 text-[9px] font-black uppercase rounded">{selectedOrder.details?.format}</span>
-                                            <span className="bg-blue-900/30 text-blue-400 px-2 py-1 text-[9px] font-black uppercase rounded border border-blue-500/20">{selectedOrder.details?.condition}</span>
+                                    <div className="space-y-3 border-t border-white/5 pt-4">
+                                        <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-400 italic flex items-center gap-2">
+                                            <div className="w-2 h-2 rounded-full bg-emerald-500" /> Discos Solicitados
+                                        </h4>
+                                        <div className="space-y-2">
+                                            {selectedOrder.manifest?.requestedItems?.map((id: string) => {
+                                                const item = itemDetails[id];
+                                                return (
+                                                    <div key={id} className="bg-emerald-500/5 border border-emerald-500/10 rounded-xl p-3 flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 border border-emerald-500/20">
+                                                            <LazyImage src={item?.media.thumbnail || '/default-album.png'} alt="" className="w-full h-full object-cover" />
+                                                        </div>
+                                                        <div className="min-w-0 flex-1">
+                                                            <p className="text-xs font-bold text-white truncate">{item?.metadata.title || "Cargando..."}</p>
+                                                            <p className="text-[9px] text-gray-500 font-bold uppercase tracking-tighter truncate">{item?.metadata.artist || ""}</p>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                            {(!selectedOrder.manifest?.requestedItems || selectedOrder.manifest.requestedItems.length === 0) && (
+                                                <p className="text-[10px] text-gray-600 italic pl-4">Sin discos solicitados</p>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
                             ) : (
-                                <div className="p-8 text-center bg-white/[0.02] border border-dashed border-white/10 rounded-2xl">
-                                    <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">Sin ítems registrados</p>
-                                </div>
+                                <>
+                                    <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500 italic mb-4">Detalle del Lote</h4>
+                                    {selectedOrder.items && selectedOrder.items.length > 0 ? (
+                                        selectedOrder.items.map((item: any, idx: number) => (
+                                            <div key={idx} className="border-b border-white/10 py-5 flex items-start gap-4">
+                                                {/* TAREA 2: Imagen de ítem con fallbacks robustos */}
+                                                <div className="w-16 h-16 rounded overflow-hidden flex-shrink-0 bg-white/5 border border-white/10">
+                                                    <LazyImage
+                                                        src={item.cover_image || item.thumb || item.image || item.cover || '/default-album.png'}
+                                                        alt={item.title}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                </div>
+                                                <div className="flex-1 min-w-0 space-y-2">
+                                                    <div className="space-y-1">
+                                                        <h4 className="font-bold text-white uppercase text-base leading-tight truncate">{item.title}</h4>
+                                                        <p className="text-gray-500 text-xs font-bold uppercase tracking-widest truncate">{item.artist}</p>
+                                                    </div>
+                                                    <div className="flex flex-wrap gap-2 mt-1">
+                                                        <span className="bg-gray-800 text-gray-300 px-2 py-1 text-[9px] font-black uppercase rounded">{item.format}</span>
+                                                        <span className="bg-blue-900/30 text-blue-400 px-2 py-1 text-[9px] font-black uppercase rounded border border-blue-500/20">{item.condition}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : !selectedOrder.isBatch ? (
+                                        <div className="border-b border-white/10 py-5 flex items-start gap-4">
+                                            <div className="w-16 h-16 rounded overflow-hidden flex-shrink-0 bg-white/5 border border-white/10">
+                                                <LazyImage
+                                                    src={selectedOrder.details?.cover_image || (selectedOrder.details as any)?.thumb}
+                                                    alt={selectedOrder.details?.album}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            </div>
+                                            <div className="flex-1 min-w-0 space-y-2">
+                                                <div className="space-y-1">
+                                                    <h4 className="font-bold text-white uppercase text-base leading-tight truncate">
+                                                        {selectedOrder.details?.album}
+                                                    </h4>
+                                                    <p className="text-gray-500 text-xs font-bold uppercase tracking-widest truncate">
+                                                        {selectedOrder.details?.artist}
+                                                    </p>
+                                                </div>
+                                                <div className="flex flex-wrap gap-2 mt-1">
+                                                    <span className="bg-gray-800 text-gray-300 px-2 py-1 text-[9px] font-black uppercase rounded">{selectedOrder.details?.format}</span>
+                                                    <span className="bg-blue-900/30 text-blue-400 px-2 py-1 text-[9px] font-black uppercase rounded border border-blue-500/20">{selectedOrder.details?.condition}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="p-8 text-center bg-white/[0.02] border border-dashed border-white/10 rounded-2xl">
+                                            <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">Sin ítems registrados</p>
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </div>
 

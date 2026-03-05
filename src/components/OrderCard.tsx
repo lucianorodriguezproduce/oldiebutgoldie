@@ -563,15 +563,15 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                                             </span>
                                             {manifestOffered.map((item: any, idx: number) => (
                                                 <div key={`o-${idx}`} className="flex items-center gap-3 p-2 rounded-xl bg-orange-500/5 border border-orange-500/10">
-                                                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-black/30 flex-shrink-0">
-                                                        {item.cover_image ? (
-                                                            <LazyImage src={item.cover_image} alt="" className="w-full h-full object-cover" />
+                                                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-black/30 flex-shrink-0 border border-orange-500/20">
+                                                        {(item.cover_image || item.image || item.thumbnailUrl) ? (
+                                                            <LazyImage src={item.cover_image || item.image || item.thumbnailUrl} alt="" className="w-full h-full object-cover" />
                                                         ) : (
                                                             <div className="w-full h-full flex items-center justify-center"><Disc className="w-4 h-4 text-white/10" /></div>
                                                         )}
                                                     </div>
                                                     <div className="flex-1 min-w-0">
-                                                        <p className="text-xs font-bold text-white truncate uppercase">{item.title}</p>
+                                                        <p className="text-xs font-bold text-white truncate uppercase">{item.title || "Sin título"}</p>
                                                         {item.artist && <p className="text-[9px] text-gray-500 uppercase tracking-widest truncate">{item.artist}</p>}
                                                     </div>
                                                 </div>
@@ -586,15 +586,15 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                                             </span>
                                             {manifestRequested.map((item: any, idx: number) => (
                                                 <div key={`r-${idx}`} className="flex items-center gap-3 p-2 rounded-xl bg-emerald-500/5 border border-emerald-500/10">
-                                                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-black/30 flex-shrink-0">
-                                                        {item.cover_image ? (
-                                                            <LazyImage src={item.cover_image} alt="" className="w-full h-full object-cover" />
+                                                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-black/30 flex-shrink-0 border border-emerald-500/20">
+                                                        {(item.cover_image || item.image || item.thumbnailUrl) ? (
+                                                            <LazyImage src={item.cover_image || item.image || item.thumbnailUrl} alt="" className="w-full h-full object-cover" />
                                                         ) : (
                                                             <div className="w-full h-full flex items-center justify-center"><Disc className="w-4 h-4 text-white/10" /></div>
                                                         )}
                                                     </div>
                                                     <div className="flex-1 min-w-0">
-                                                        <p className="text-xs font-bold text-white truncate uppercase">{item.title}</p>
+                                                        <p className="text-xs font-bold text-white truncate uppercase">{item.title || "Sin título"}</p>
                                                         {item.artist && <p className="text-[9px] text-gray-500 uppercase tracking-widest truncate">{item.artist}</p>}
                                                     </div>
                                                 </div>
@@ -605,10 +605,10 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                                     {order.manifest?.cashAdjustment && order.manifest.cashAdjustment !== 0 && (
                                         <div className="flex items-center justify-between p-3 rounded-xl bg-white/[0.03] border border-white/5">
                                             <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">
-                                                {order.manifest.cashAdjustment > 0 ? "Usuario paga" : "Usuario recibe"}
+                                                {order.manifest.cashAdjustment > 0 ? "Ajuste (Pagas)" : "Ajuste (Recibes)"}
                                             </span>
                                             <span className={`text-sm font-display font-black ${order.manifest.cashAdjustment > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
-                                                {order.manifest.cashAdjustment > 0 ? '-' : '+'} {order.manifest.currency === 'USD' ? 'US$' : '$'} {Math.abs(order.manifest.cashAdjustment).toLocaleString()}
+                                                {order.manifest.currency === 'USD' ? 'US$' : '$'} {Math.abs(order.manifest.cashAdjustment).toLocaleString()}
                                             </span>
                                         </div>
                                     )}
