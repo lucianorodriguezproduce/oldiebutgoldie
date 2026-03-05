@@ -5,7 +5,7 @@ import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { db, auth } from "@/lib/firebase";
 import { SEO } from "@/components/SEO";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Music, Disc, Lock, Clock, Eye, ChevronDown, Share2, ChevronRight, Plus, Check, ShoppingBag, Handshake } from "lucide-react";
+import { ChevronLeft, Music, Disc, Lock, Clock, Eye, ChevronDown, Share2, ChevronRight, Plus, Check, ShoppingBag, Handshake, CheckCircle2, XCircle, MessageCircle } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useLote } from "@/context/LoteContext";
 import { useLoading } from "@/context/LoadingContext";
@@ -27,6 +27,7 @@ export default function PublicOrderView() {
     const [isItemsExpanded, setIsItemsExpanded] = useState(false);
     const { addItemFromInventory, isInLote } = useLote();
     const [isExecuting, setIsExecuting] = useState(false);
+    const [showRejectConfirm, setShowRejectConfirm] = useState(false);
 
     const isOwner = user?.uid === order?.user_id;
     const isAdminOrder = order?.user_id === ADMIN_UID || order?.user_id === "oldiebutgoldie" || order?.user_email === "admin@discography.ai";
@@ -580,7 +581,173 @@ export default function PublicOrderView() {
                     </div>
 
                     {/* Transactional Action Buttons & Ownership Shields */}
-                    {isAdminOrder && (() => {
+
+                    {/* === EXCHANGE TRADE ACTIONS (FIX-1) === */}
+                    {isExchange && (() => {
+                        const isFinal = ['completed', 'venta_finalizada'].includes(order.status);
+                        const isCancelled = order.status === 'cancelled';
+                        const hasCounterOffer = ['counter_offer', 'counteroffered'].includes(order.status);
+                        const isPending = order.status === 'pending';
+
+                        if (isFinal) {
+                            return (
+                                <div className="mt-8 p-6 md:p-8 bg-emerald-500/10 border border-emerald-500/30 rounded-[2.5rem] flex flex-col items-center justify-center gap-3 shadow-inner">
+                                    <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+                                    <h4 className="text-2xl md:text-3xl font-display font-black text-emerald-400 uppercase tracking-tightest">Intercambio Completado</h4>
+                                </div>
+                            );
+                        }
+
+                        if (isCancelled) {
+                            return (
+                                <div className="mt-8 p-6 md:p-8 bg-red-500/10 border border-red-500/30 rounded-[2.5rem] flex flex-col items-center justify-center gap-3 shadow-inner">
+                                    <XCircle className="w-8 h-8 text-red-400" />
+                                    <h4 className="text-2xl md:text-3xl font-display font-black text-red-400 uppercase tracking-tightest">Intercambio Cancelado</h4>
+                                </div>
+                            );
+                        }
+
+                        // User is the owner and there's a counter-offer → show Accept/Reject
+                        if (isOwner && hasCounterOffer) {
+                            return (
+                                <div className="mt-8 space-y-4">
+                                    <div className="p-6 md:p-8 bg-gradient-to-br from-violet-500/10 to-primary/10 border border-violet-500/30 rounded-[2.5rem] space-y-6">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-3 bg-violet-500/10 rounded-2xl">
+                                                <Handshake className="w-6 h-6 text-violet-400" />
+                                            </div>
+                                            <div>
+                                                <h4 className="text-xl font-display font-black text-white uppercase tracking-tight">Contraoferta Recibida</h4>
+                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">El administrador ha modificado los términos del intercambio</p>
+                                            </div>
+                                        </div>
+
+                                        {order.manifest?.cashAdjustment !== undefined && order.manifest.cashAdjustment !== 0 && (
+                                            <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.03] border border-white/5">
+                                                <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">
+                                                    {order.manifest.cashAdjustment > 0 ? 'Deberías abonar' : 'Recibirías'}
+                                                </span>
+                                                <span className={`text-2xl font-display font-black ${order.manifest.cashAdjustment > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+                                                    {order.manifest.currency === 'USD' ? 'US$' : '$'} {Math.abs(order.manifest.cashAdjustment).toLocaleString()}
+                                                </span>
+                                            </div>
+                                        )}
+
+                                        {!showRejectConfirm ? (
+                                            <div className="flex flex-col sm:flex-row gap-3">
+                                                <button
+                                                    onClick={async () => {
+                                                        if (isExecuting) return;
+                                                        const confirmed = window.confirm('¿Aceptás esta contraoferta? Se completará el intercambio.');
+                                                        if (!confirmed) return;
+                                                        setIsExecuting(true);
+                                                        showLoading('Completando intercambio...');
+                                                        try {
+                                                            await tradeService.resolveTrade(id!, order.manifest);
+                                                            setOrder((prev: any) => ({ ...prev, status: 'completed' }));
+                                                        } catch (error: any) {
+                                                            console.error('Accept error:', error);
+                                                            alert(error.message?.includes('TRADE_ALREADY_PROCESSED')
+                                                                ? 'Este intercambio ya fue procesado.'
+                                                                : `Error al completar: ${error.message || 'Intenta nuevamente'}`);
+                                                        } finally {
+                                                            setIsExecuting(false);
+                                                            hideLoading();
+                                                        }
+                                                    }}
+                                                    disabled={isExecuting}
+                                                    className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-black uppercase text-[10px] tracking-widest shadow-xl shadow-emerald-500/20 hover:shadow-emerald-500/40 transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                >
+                                                    <CheckCircle2 className="w-4 h-4" />
+                                                    {isExecuting ? 'Procesando...' : 'Aceptar Contraoferta'}
+                                                </button>
+                                                <button
+                                                    onClick={() => setShowRejectConfirm(true)}
+                                                    disabled={isExecuting}
+                                                    className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-2xl border border-red-500/30 text-red-400 hover:bg-red-500/10 font-black uppercase text-[10px] tracking-widest transition-all disabled:opacity-50"
+                                                >
+                                                    <XCircle className="w-4 h-4" />
+                                                    Rechazar
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="p-4 bg-red-500/5 border border-red-500/20 rounded-2xl space-y-4">
+                                                <p className="text-sm text-red-300 font-bold text-center">¿Seguro que querés rechazar esta contraoferta? El intercambio será cancelado.</p>
+                                                <div className="flex gap-3">
+                                                    <button
+                                                        onClick={async () => {
+                                                            setIsExecuting(true);
+                                                            showLoading('Cancelando intercambio...');
+                                                            try {
+                                                                await tradeService.updateTradeStatus(id!, 'cancelled');
+                                                                setOrder((prev: any) => ({ ...prev, status: 'cancelled' }));
+                                                                setShowRejectConfirm(false);
+                                                            } catch (error) {
+                                                                console.error('Reject error:', error);
+                                                                alert('Error al rechazar la contraoferta.');
+                                                            } finally {
+                                                                setIsExecuting(false);
+                                                                hideLoading();
+                                                            }
+                                                        }}
+                                                        disabled={isExecuting}
+                                                        className="flex-1 py-3 rounded-xl bg-red-500 hover:bg-red-600 text-white font-black uppercase text-[10px] tracking-widest transition-all disabled:opacity-50"
+                                                    >
+                                                        {isExecuting ? 'Procesando...' : 'Sí, Rechazar'}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setShowRejectConfirm(false)}
+                                                        className="flex-1 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white font-black uppercase text-[10px] tracking-widest transition-all"
+                                                    >
+                                                        Cancelar
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        }
+
+                        // User is the owner but trade is still pending (waiting for admin review)
+                        if (isOwner && isPending) {
+                            return (
+                                <div className="mt-8 p-6 md:p-8 bg-primary/5 border border-primary/20 rounded-[2.5rem] flex flex-col items-center justify-center gap-3 text-center">
+                                    <Clock className="w-8 h-8 text-primary animate-pulse" />
+                                    <h4 className="text-xl font-display font-black text-white uppercase tracking-tightest">Tu propuesta está en revisión</h4>
+                                    <p className="text-xs font-bold text-gray-500 uppercase tracking-widest max-w-sm">El administrador revisará tu propuesta y te responderá con una contraoferta o aceptación</p>
+                                </div>
+                            );
+                        }
+
+                        // Admin viewing the exchange
+                        if (isAdmin && (isPending || hasCounterOffer)) {
+                            return (
+                                <div className="mt-8 p-6 md:p-8 bg-violet-500/5 border border-violet-500/20 rounded-[2.5rem] flex flex-col items-center justify-center gap-3 text-center">
+                                    <Handshake className="w-6 h-6 text-violet-400" />
+                                    <h4 className="text-lg font-display font-black text-white uppercase tracking-tightest">Intercambio en Curso</h4>
+                                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Gestioná esta propuesta desde el panel de admin</p>
+                                    <Link to="/admin/trades" className="mt-2 px-6 py-3 bg-violet-500/20 hover:bg-violet-500/30 border border-violet-500/30 rounded-xl text-violet-300 font-black uppercase text-[10px] tracking-widest transition-all">
+                                        Ir a Consola de Trades
+                                    </Link>
+                                </div>
+                            );
+                        }
+
+                        // Non-owner, non-admin viewing an active exchange
+                        if (!isOwner && !isAdmin && !isFinal && !isCancelled) {
+                            return (
+                                <div className="mt-8 p-6 md:p-8 bg-blue-500/10 border border-blue-500/30 rounded-[2.5rem] flex items-center justify-center shadow-inner">
+                                    <h4 className="text-2xl md:text-3xl font-display font-black text-blue-500 uppercase tracking-tightest">En Negociación</h4>
+                                </div>
+                            );
+                        }
+
+                        return null;
+                    })()}
+
+                    {/* === ADMIN SALE ORDER ACTIONS (original) === */}
+                    {isAdminOrder && !isExchange && (() => {
                         const isSold = ['venta_finalizada', 'completed'].includes(order.status);
                         const isNegotiating = ['contraoferta_usuario', 'negotiating', 'quoted'].includes(order.status);
 
@@ -677,7 +844,6 @@ export default function PublicOrderView() {
 
                                             <button
                                                 onClick={() => {
-                                                    // This will trigger the logic in handleQuickBuy which shows login drawer
                                                     handleQuickBuy();
                                                 }}
                                                 disabled={isExecuting}

@@ -115,6 +115,7 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                 );
             case 'quoted':
             case 'counteroffered':
+            case 'counter_offer':
                 return (
                     <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/20 backdrop-blur-md">
                         <BadgeDollarSign className="w-3.5 h-3.5 text-purple-400" />

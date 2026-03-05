@@ -180,6 +180,20 @@ export const tradeService = {
             status: "counter_offer",
             currentTurn: nextTurn
         });
+
+        // Create notification for the recipient
+        const { addDoc, collection, serverTimestamp } = await import("firebase/firestore");
+        const cashLabel = newManifest.cashAdjustment
+            ? ` (${newManifest.currency === 'USD' ? 'US$' : '$'} ${Math.abs(newManifest.cashAdjustment).toLocaleString()})`
+            : '';
+        await addDoc(collection(db, "notifications"), {
+            user_id: nextTurn,
+            title: "Contraoferta Recibida",
+            message: `Se ha modificado la propuesta de intercambio #${tradeId.slice(-8).toUpperCase()}${cashLabel}. Revisá los nuevos términos.`,
+            read: false,
+            timestamp: serverTimestamp(),
+            order_id: tradeId
+        });
     },
 
 
