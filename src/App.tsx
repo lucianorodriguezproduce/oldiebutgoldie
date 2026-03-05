@@ -31,6 +31,7 @@ import DatabasePurge from "@/pages/Admin/DatabasePurge";
 import BulkUpload from "@/pages/Admin/BulkUpload";
 import BrandingPage from "@/pages/Admin/BrandingPage";
 import AdminInventory from "@/pages/Admin/AdminInventory";
+import AdminCollection from "@/pages/Admin/AdminCollection";
 import AdminTrades from "@/pages/Admin/AdminTrades";
 import Guias from "@/pages/Guias";
 import { ProtectedRoute } from "@/components/Guard/ProtectedRoute";
@@ -104,6 +105,7 @@ function AppContent() {
               <Route index element={<AdminAnalytics />} />
               <Route path="analytics" element={<AdminAnalytics />} />
               <Route path="inventory" element={<AdminInventory />} />
+              <Route path="collection" element={<AdminCollection />} />
               <Route path="trades" element={<AdminTrades />} />
               <Route path="editorial" element={<EditorialManager />} />
 

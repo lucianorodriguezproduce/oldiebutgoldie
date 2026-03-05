@@ -37,6 +37,10 @@ export default function PublicOrderView() {
     const [showOfferInput, setShowOfferInput] = useState(false);
     const [showLoginDrawer, setShowLoginDrawer] = useState(false);
 
+    // Exchange post-action state
+    const [postActionState, setPostActionState] = useState<'idle' | 'success' | 'countered' | 'rejected' | 'negotiating'>('idle');
+    const [exchangeCounterCash, setExchangeCounterCash] = useState<string>("");
+
     useEffect(() => {
         if (!id) {
             setLoading(false);
@@ -645,6 +649,7 @@ export default function PublicOrderView() {
                                                         try {
                                                             await tradeService.resolveTrade(id!, order.manifest);
                                                             setOrder((prev: any) => ({ ...prev, status: 'completed' }));
+                                                            setPostActionState('success');
                                                         } catch (error: any) {
                                                             console.error('Accept error:', error);
                                                             alert(error.message?.includes('TRADE_ALREADY_PROCESSED')
@@ -662,6 +667,14 @@ export default function PublicOrderView() {
                                                     {isExecuting ? 'Procesando...' : 'Aceptar Contraoferta'}
                                                 </button>
                                                 <button
+                                                    onClick={() => setPostActionState('negotiating')}
+                                                    disabled={isExecuting}
+                                                    className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-2xl border border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 font-black uppercase text-[10px] tracking-widest transition-all disabled:opacity-50"
+                                                >
+                                                    <MessageCircle className="w-4 h-4" />
+                                                    Contraofertar
+                                                </button>
+                                                <button
                                                     onClick={() => setShowRejectConfirm(true)}
                                                     disabled={isExecuting}
                                                     className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-2xl border border-red-500/30 text-red-400 hover:bg-red-500/10 font-black uppercase text-[10px] tracking-widest transition-all disabled:opacity-50"
@@ -669,6 +682,104 @@ export default function PublicOrderView() {
                                                     <XCircle className="w-4 h-4" />
                                                     Rechazar
                                                 </button>
+                                            </div>
+                                        ) : postActionState === 'negotiating' ? (
+                                            <div className="p-6 bg-white/[0.02] border border-white/5 rounded-2xl space-y-4">
+                                                <h5 className="text-white font-display font-black uppercase">Nueva Contraoferta</h5>
+                                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Ajustá la diferencia en efectivo para tu nueva propuesta:</p>
+
+                                                <div className="flex items-center gap-3">
+                                                    <div className="flex-1 relative">
+                                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-black">$</span>
+                                                        <input
+                                                            type="number"
+                                                            placeholder="0"
+                                                            value={exchangeCounterCash}
+                                                            onChange={(e) => setExchangeCounterCash(e.target.value)}
+                                                            className="w-full bg-black/50 border border-white/10 rounded-xl py-3 pl-8 pr-4 text-white font-black outline-none focus:border-primary/50 transition-colors"
+                                                        />
+                                                    </div>
+                                                    <div className="flex flex-col gap-1">
+                                                        <label className="text-[9px] text-gray-500 uppercase font-black flex items-center gap-1 cursor-pointer">
+                                                            <input type="radio" name="counterDirection" value="pay" defaultChecked /> Pago extra
+                                                        </label>
+                                                        <label className="text-[9px] text-gray-500 uppercase font-black flex items-center gap-1 cursor-pointer">
+                                                            <input type="radio" name="counterDirection" value="receive" /> Solicito extra
+                                                        </label>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex gap-3 pt-2">
+                                                    <button
+                                                        onClick={async () => {
+                                                            setIsExecuting(true);
+                                                            showLoading('Enviando contraoferta...');
+                                                            try {
+                                                                const val = parseFloat(exchangeCounterCash) || 0;
+                                                                const isPay = (document.querySelector('input[name="counterDirection"]:checked') as HTMLInputElement).value === 'pay';
+                                                                const amount = isPay ? val : -val;
+
+                                                                const newManifest = {
+                                                                    ...order.manifest,
+                                                                    cashAdjustment: amount
+                                                                };
+
+                                                                await tradeService.counterTrade(id!, newManifest);
+                                                                setOrder((prev: any) => ({ ...prev, status: 'counteroffered', manifest: newManifest }));
+                                                                setPostActionState('countered');
+                                                            } catch (error) {
+                                                                console.error('Counter-offer error:', error);
+                                                                alert('Error al enviar la contraoferta.');
+                                                            } finally {
+                                                                setIsExecuting(false);
+                                                                hideLoading();
+                                                            }
+                                                        }}
+                                                        disabled={isExecuting}
+                                                        className="flex-1 py-3 rounded-xl bg-gradient-to-r from-primary to-secondary text-black font-black uppercase text-[10px] tracking-widest transition-all hover:opacity-90 disabled:opacity-50"
+                                                    >
+                                                        Enviar Propuesta
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setPostActionState('idle')}
+                                                        className="py-3 px-6 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white font-black uppercase text-[10px] tracking-widest transition-all"
+                                                    >
+                                                        Cancelar
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ) : postActionState === 'success' ? (
+                                            <div className="p-8 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl flex flex-col items-center justify-center gap-4 text-center">
+                                                <div className="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center">
+                                                    <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+                                                </div>
+                                                <div>
+                                                    <h5 className="text-xl font-display font-black text-emerald-400 uppercase tracking-tightest">¡Trato Hecho!</h5>
+                                                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">El intercambio ha sido aceptado y completado.</p>
+                                                </div>
+                                                <div className="flex gap-3 mt-2">
+                                                    <Link to="/perfil" className="px-6 py-3 rounded-xl bg-emerald-500 text-black font-black uppercase text-[10px] tracking-widest hover:bg-emerald-400 transition-colors">
+                                                        Ver Mi Perfil
+                                                    </Link>
+                                                    {TEXTS.whatsapp && (
+                                                        <a href={TEXTS.whatsapp} target="_blank" rel="noopener noreferrer" className="px-6 py-3 rounded-xl border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 font-black uppercase text-[10px] tracking-widest transition-colors flex items-center gap-2">
+                                                            <MessageCircle className="w-4 h-4" /> WhatsApp
+                                                        </a>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ) : postActionState === 'countered' ? (
+                                            <div className="p-8 bg-primary/10 border border-primary/30 rounded-2xl flex flex-col items-center justify-center gap-4 text-center">
+                                                <div className="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center">
+                                                    <Clock className="w-8 h-8 text-primary" />
+                                                </div>
+                                                <div>
+                                                    <h5 className="text-xl font-display font-black text-primary uppercase tracking-tightest">Contraoferta Enviada</h5>
+                                                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">El administrador revisará tu nueva propuesta.</p>
+                                                </div>
+                                                <Link to="/comercio" className="mt-2 px-6 py-3 rounded-xl bg-white/10 text-white font-black uppercase text-[10px] tracking-widest hover:bg-white/20 transition-colors">
+                                                    Volver al Panel
+                                                </Link>
                                             </div>
                                         ) : (
                                             <div className="p-4 bg-red-500/5 border border-red-500/20 rounded-2xl space-y-4">
@@ -681,6 +792,7 @@ export default function PublicOrderView() {
                                                             try {
                                                                 await tradeService.updateTradeStatus(id!, 'cancelled');
                                                                 setOrder((prev: any) => ({ ...prev, status: 'cancelled' }));
+                                                                setPostActionState('rejected');
                                                                 setShowRejectConfirm(false);
                                                             } catch (error) {
                                                                 console.error('Reject error:', error);
@@ -696,7 +808,10 @@ export default function PublicOrderView() {
                                                         {isExecuting ? 'Procesando...' : 'Sí, Rechazar'}
                                                     </button>
                                                     <button
-                                                        onClick={() => setShowRejectConfirm(false)}
+                                                        onClick={() => {
+                                                            setShowRejectConfirm(false);
+                                                            setPostActionState('idle');
+                                                        }}
                                                         className="flex-1 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white font-black uppercase text-[10px] tracking-widest transition-all"
                                                     >
                                                         Cancelar

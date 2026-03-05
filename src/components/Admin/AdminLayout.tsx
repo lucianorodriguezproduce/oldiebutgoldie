@@ -18,6 +18,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         { label: "🚀 Ingesta Masiva", href: "/admin/bulk-upload", icon: UploadCloud },
         { label: "📦 Inventario Pro", href: "/admin/inventory", icon: Package },
         { label: "🤝 Intercambios", href: "/admin/trades", icon: Handshake },
+        { label: "💎 Colección", href: "/admin/collection", icon: ShoppingBag },
         { label: "Identidad Marca", href: "/admin/branding", icon: Shield },
         { label: "Editorial Hub", href: "/admin/editorial", icon: Newspaper },
     ];

@@ -6,6 +6,7 @@ import {
     getDocs,
     doc,
     getDoc,
+    setDoc,
     updateDoc,
     addDoc,
     serverTimestamp,
@@ -93,5 +94,53 @@ export const userAssetService = {
         const snap = await getDoc(docRef);
         if (!snap.exists()) return null;
         return { id: snap.id, ...snap.data() } as UserAsset;
+    },
+
+    /**
+     * Promueve un asset de usuario (admin collection) hacia el inventario general
+     */
+    async promoteToInventory(assetId: string, options: { price: number, condition: string, tags?: string[], format?: string }) {
+        const assetRef = doc(db, COLLECTION_NAME, assetId);
+        const snap = await getDoc(assetRef);
+        if (!snap.exists()) throw new Error("Asset no encontrado");
+
+        const assetData = snap.data() as UserAsset;
+
+        // Crear documento en inventario
+        const inventoryRef = doc(collection(db, "inventory"));
+        await setDoc(inventoryRef, {
+            metadata: {
+                ...assetData.metadata,
+                format: options.format || (assetData.metadata as any).format || "Vinilo",
+                type: "album",
+                tags: options.tags || ["Colección OBG"]
+            },
+            media: assetData.media || {
+                type: "image",
+                url: "https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png"
+            },
+            logistics: {
+                price: options.price,
+                stock: 1,
+                status: "active",
+                condition: options.condition,
+                discount: 0
+            },
+            items: assetData.items || [],
+            source: {
+                type: "obg_collection",
+                originalAssetId: assetId
+            },
+            createdAt: serverTimestamp()
+        });
+
+        // Marcar el asset original como promovido para no borrarlo pero ocultarlo
+        await updateDoc(assetRef, {
+            status: "promoted",
+            promotedInventoryId: inventoryRef.id,
+            promotedAt: serverTimestamp()
+        });
+
+        return inventoryRef.id;
     }
 };
