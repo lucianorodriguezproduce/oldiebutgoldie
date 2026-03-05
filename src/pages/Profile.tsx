@@ -235,7 +235,7 @@ export default function Profile() {
             await tradeService.resolveTrade(order.id, order.manifest || {
                 requestedItems: order.items?.map((i: any) => i.id) || [],
                 offeredItems: [],
-                cashAdjustment: order.totalPrice || 0
+                cashAdjustment: order.adminPrice || order.admin_offer_price || order.totalPrice || 0
             });
 
             await addDoc(collection(db, "notifications"), {
