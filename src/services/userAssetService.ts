@@ -109,15 +109,16 @@ export const userAssetService = {
         // Crear documento en inventario
         const inventoryRef = doc(collection(db, "inventory"));
         await setDoc(inventoryRef, {
+            id: inventoryRef.id,
             metadata: {
                 ...assetData.metadata,
-                format: options.format || (assetData.metadata as any).format || "Vinilo",
+                format_description: options.format || assetData.metadata.format_description || "Vinilo",
                 type: "album",
                 tags: options.tags || ["Colección OBG"]
             },
-            media: assetData.media || {
-                type: "image",
-                url: "https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png"
+            media: {
+                thumbnail: assetData.media?.thumbnail || "",
+                full_res_image_url: assetData.media?.full_res_image_url || "https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png"
             },
             logistics: {
                 price: options.price,
@@ -126,11 +127,18 @@ export const userAssetService = {
                 condition: options.condition,
                 discount: 0
             },
+            reference: assetData.reference || {
+                originalDiscogsId: 0,
+                originalDiscogsUrl: ""
+            },
+            tracklist: assetData.tracklist || [],
+            labels: assetData.labels || [],
             items: assetData.items || [],
             source: {
                 type: "obg_collection",
                 originalAssetId: assetId
             },
+            timestamp: serverTimestamp(),
             createdAt: serverTimestamp()
         });
 

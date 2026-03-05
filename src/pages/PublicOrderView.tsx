@@ -371,7 +371,7 @@ export default function PublicOrderView() {
                                         {manifestOffered.map((item: any, idx: number) => (
                                             <div key={`o-${idx}`} className="border-b border-white/5 pb-3 flex items-center gap-4">
                                                 <div className="w-12 h-12 rounded-lg overflow-hidden bg-white/5 flex-shrink-0 border border-orange-500/20">
-                                                    <img src={item.cover_image || 'https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png'} alt="" className="w-full h-full object-cover" />
+                                                    <img src={item.cover_image || item.thumbnailUrl || item.image || item.thumb || 'https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png'} alt="" className="w-full h-full object-cover" />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <p className="text-sm font-bold text-white truncate uppercase">{item.title}</p>
@@ -390,7 +390,7 @@ export default function PublicOrderView() {
                                         {manifestRequested.map((item: any, idx: number) => (
                                             <div key={`r-${idx}`} className="border-b border-white/5 pb-3 flex items-center gap-4">
                                                 <div className="w-12 h-12 rounded-lg overflow-hidden bg-white/5 flex-shrink-0 border border-emerald-500/20">
-                                                    <img src={item.cover_image || 'https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png'} alt="" className="w-full h-full object-cover" />
+                                                    <img src={item.cover_image || item.thumbnailUrl || item.image || item.thumb || 'https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png'} alt="" className="w-full h-full object-cover" />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <p className="text-sm font-bold text-white truncate uppercase">{item.title}</p>

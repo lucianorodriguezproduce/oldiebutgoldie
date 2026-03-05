@@ -76,7 +76,10 @@ export interface UserAsset {
     stock: number;
     metadata: InventoryItem['metadata'];
     media: InventoryItem['media'];
+    reference?: InventoryItem['reference'];
+    tracklist?: InventoryItem['tracklist'];
+    labels?: InventoryItem['labels'];
     items?: InventoryItem['items'];
     acquiredAt: any;
-    status: "active" | "traded" | "archived";
+    status: "active" | "traded" | "archived" | "promoted";
 }
