@@ -56,6 +56,7 @@ export const userAssetService = {
             metadata: assetData.metadata,
             media: assetData.media,
             valuation: assetData.valuation || 0,
+            stock: 1,
             isTradeable: false,
             status: 'active',
             acquiredAt: serverTimestamp()
@@ -74,6 +75,14 @@ export const userAssetService = {
         );
         const snapshot = await getDocs(q);
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserAsset));
+    },
+
+    /**
+     * Actualiza el stock de un activo del usuario
+     */
+    async updateStock(assetId: string, newStock: number) {
+        const docRef = doc(db, COLLECTION_NAME, assetId);
+        await updateDoc(docRef, { stock: Math.max(0, newStock) });
     },
 
     /**

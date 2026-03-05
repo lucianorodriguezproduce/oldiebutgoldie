@@ -329,6 +329,7 @@ export const tradeService = {
                             media: invData.media,
                             items: invData.items || [],
                             acquiredAt: serverTimestamp(),
+                            stock: 1,
                             status: "active"
                         });
                     }
@@ -337,7 +338,7 @@ export const tradeService = {
                     const assetData = snap.data() as UserAsset;
 
                     if (assetData.ownerId !== receiverId) throw new Error("El vendedor ya no es dueño de este activo");
-                    if (assetData.status !== "active" || !assetData.isTradeable) {
+                    if (assetData.status !== "active") {
                         throw new Error(`El ítem "${assetData.metadata?.title || itemId}" ya no está disponible para intercambio`);
                     }
 
@@ -372,6 +373,7 @@ export const tradeService = {
                             media: invData.media,
                             items: invData.items || [],
                             acquiredAt: serverTimestamp(),
+                            stock: 1,
                             status: "active"
                         });
                     }
@@ -380,15 +382,36 @@ export const tradeService = {
                     const assetData = snap.data() as UserAsset;
 
                     if (assetData.ownerId !== senderId) throw new Error("Ya no eres dueño del activo que intentas ofrecer");
-                    if (assetData.status !== "active" || !assetData.isTradeable) {
+                    const assetStock = assetData.stock ?? 1;
+                    if (assetData.status !== "active" || assetStock <= 0) {
                         throw new Error(`Tu ítem "${assetData.metadata?.title || itemId}" ya no está disponible`);
                     }
 
-                    transaction.update(ref, {
-                        ownerId: receiverId,
-                        isTradeable: false,
-                        acquiredAt: serverTimestamp()
-                    });
+                    if (assetStock <= 1) {
+                        // Last unit → transfer ownership
+                        transaction.update(ref, {
+                            ownerId: receiverId,
+                            isTradeable: false,
+                            stock: 1,
+                            acquiredAt: serverTimestamp()
+                        });
+                    } else {
+                        // Multiple stock → decrement and create new asset for receiver
+                        transaction.update(ref, { stock: assetStock - 1 });
+                        const newAssetRef = doc(collection(db, "user_assets"));
+                        transaction.set(newAssetRef, {
+                            ownerId: receiverId,
+                            originalInventoryId: assetData.originalInventoryId || '',
+                            valuation: assetData.valuation || 0,
+                            isTradeable: false,
+                            metadata: assetData.metadata,
+                            media: assetData.media,
+                            items: assetData.items || [],
+                            acquiredAt: serverTimestamp(),
+                            stock: 1,
+                            status: "active"
+                        });
+                    }
                 }
             }
 

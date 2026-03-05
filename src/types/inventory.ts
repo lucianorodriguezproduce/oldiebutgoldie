@@ -73,6 +73,7 @@ export interface UserAsset {
     originalInventoryId: string;
     valuation: number;
     isTradeable: boolean;
+    stock: number;
     metadata: InventoryItem['metadata'];
     media: InventoryItem['media'];
     items?: InventoryItem['items'];

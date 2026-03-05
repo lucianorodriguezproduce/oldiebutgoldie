@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { Disc, DollarSign, ArrowRightLeft, ShieldCheck, Tag } from "lucide-react";
+import { Disc, DollarSign, ArrowRightLeft, ShieldCheck, Tag, Minus, Plus, Package } from "lucide-react";
 import { LazyImage } from "@/components/ui/LazyImage";
 import type { UserAsset } from "@/types/inventory";
 import { userAssetService } from "@/services/userAssetService";
@@ -14,6 +14,18 @@ export default function UserAssetCard({ asset, onUpdate }: UserAssetCardProps) {
     const [isUpdating, setIsUpdating] = useState(false);
     const [showPricing, setShowPricing] = useState(false);
     const [price, setPrice] = useState(asset.valuation?.toString() || "");
+    const [localStock, setLocalStock] = useState(asset.stock ?? 1);
+
+    const handleStockChange = async (delta: number) => {
+        const newStock = Math.max(0, localStock + delta);
+        setLocalStock(newStock);
+        try {
+            await userAssetService.updateStock(asset.id, newStock);
+        } catch (error) {
+            console.error("Error updating stock:", error);
+            setLocalStock(localStock); // revert
+        }
+    };
 
     const handleToggleTradeable = async () => {
         setIsUpdating(true);
@@ -96,14 +108,38 @@ export default function UserAssetCard({ asset, onUpdate }: UserAssetCardProps) {
                     </button>
                 </div>
 
+                {/* Stock Control */}
+                <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                    <div className="flex items-center gap-1.5">
+                        <Package className="w-3 h-3 text-gray-600" />
+                        <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Stock</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                        <button
+                            onClick={() => handleStockChange(-1)}
+                            disabled={localStock <= 0}
+                            className="w-6 h-6 flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-md text-gray-400 hover:text-white transition-all disabled:opacity-20 disabled:cursor-not-allowed"
+                        >
+                            <Minus className="w-3 h-3" />
+                        </button>
+                        <span className="w-7 text-center text-xs font-black text-white tabular-nums">{localStock}</span>
+                        <button
+                            onClick={() => handleStockChange(1)}
+                            className="w-6 h-6 flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-md text-gray-400 hover:text-white transition-all"
+                        >
+                            <Plus className="w-3 h-3" />
+                        </button>
+                    </div>
+                </div>
+
                 {/* Controls */}
                 <div className="grid grid-cols-1 gap-2 pt-2">
                     <button
                         onClick={handleToggleTradeable}
                         disabled={isUpdating}
                         className={`w-full py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${asset.isTradeable
-                                ? "bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20"
-                                : "bg-primary text-black hover:bg-white"
+                            ? "bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20"
+                            : "bg-primary text-black hover:bg-white"
                             }`}
                     >
                         {isUpdating ? "Procesando..." : asset.isTradeable ? "Retirar de Comercio" : "Poner en Comercio"}
