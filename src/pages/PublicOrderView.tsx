@@ -14,6 +14,7 @@ import { TEXTS } from "@/constants/texts";
 import { pushViewItemFromOrder, pushHotOrderDetected } from "@/utils/analytics";
 import { getCleanOrderMetadata } from "@/utils/orderMetadata";
 import { tradeService } from "@/services/tradeService";
+import { generateWhatsAppAcceptDealMsg } from "@/utils/whatsapp";
 import { ADMIN_UID } from "@/constants/admin";
 
 export default function PublicOrderView() {
@@ -724,7 +725,7 @@ export default function PublicOrderView() {
                                                                     cashAdjustment: amount
                                                                 };
 
-                                                                await tradeService.counterTrade(id!, newManifest);
+                                                                await tradeService.counterTrade(id!, newManifest, user!.uid);
                                                                 setOrder((prev: any) => ({ ...prev, status: 'counteroffered', manifest: newManifest }));
                                                                 setPostActionState('countered');
                                                             } catch (error) {
@@ -761,11 +762,11 @@ export default function PublicOrderView() {
                                                     <Link to="/perfil" className="px-6 py-3 rounded-xl bg-emerald-500 text-black font-black uppercase text-[10px] tracking-widest hover:bg-emerald-400 transition-colors">
                                                         Ver Mi Perfil
                                                     </Link>
-                                                    {TEXTS.whatsapp && (
-                                                        <a href={TEXTS.whatsapp} target="_blank" rel="noopener noreferrer" className="px-6 py-3 rounded-xl border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 font-black uppercase text-[10px] tracking-widest transition-colors flex items-center gap-2">
-                                                            <MessageCircle className="w-4 h-4" /> WhatsApp
-                                                        </a>
-                                                    )}
+                                                    <button onClick={() => {
+                                                        window.open(generateWhatsAppAcceptDealMsg(order), "_blank");
+                                                    }} className="px-6 py-3 rounded-xl border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 font-black uppercase text-[10px] tracking-widest transition-colors flex items-center gap-2">
+                                                        <MessageCircle className="w-4 h-4" /> WhatsApp
+                                                    </button>
                                                 </div>
                                             </div>
                                         ) : postActionState === 'countered' ? (

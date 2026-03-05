@@ -93,9 +93,9 @@ export default function AdminCollection() {
                         <div key={asset.id} className="bg-[#111] border border-white/5 rounded-2xl overflow-hidden hover:border-white/20 transition-all group flex flex-col">
                             {/* Card Image */}
                             <div className="aspect-square relative bg-black flex items-center justify-center p-4">
-                                {asset.media?.url || asset.media?.thumbnail ? (
+                                {asset.media?.full_res_image_url || asset.media?.thumbnail ? (
                                     <img
-                                        src={asset.media.url || asset.media.thumbnail}
+                                        src={asset.media.full_res_image_url || asset.media.thumbnail}
                                         alt={asset.metadata?.title}
                                         className="w-full h-full object-cover rounded-xl shadow-2xl"
                                     />
