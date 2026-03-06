@@ -28,6 +28,8 @@ import { ADMIN_UID } from "@/constants/admin";
 import { CompactSearchCard } from "@/components/ui/CompactSearchCard";
 import React, { memo } from "react";
 import { CardSkeleton } from "@/components/ui/Skeleton";
+import ItemConfigModal from "@/components/discogs/ItemConfigModal";
+import type { BatchItem } from "@/context/LoteContext";
 
 
 
@@ -88,6 +90,8 @@ export default function Home() {
     const [recommendations, setRecommendations] = useState<DiscogsSearchResult[]>([]);
     const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
     const [publicOrder, setPublicOrder] = useState<any>(null); // For rendering the Collector Receipt
+    const [showConfigModal, setShowConfigModal] = useState(false);
+    const [selectedSearchItem, setSelectedSearchItem] = useState<any>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [hasMore, setHasMore] = useState(false);
 
@@ -437,8 +441,26 @@ export default function Home() {
         }]);
 
         if (result.type === "release" || result.type === "master") {
-            // Use Client-Side Routing to preserve UX, which also updates the URL for sharing/SEO
-            navigate(`/item/${result.type}/${result.id}`);
+            // IF LOCAL: Use existing detail view
+            if ((result as any).isLocal) {
+                navigate(`/item/${result.type}/${result.id}`);
+                return;
+            }
+
+            // IF DISCOGS: Open Wizard (V4.1)
+            showLoading(TEXTS.home.loadingDiscogs);
+            try {
+                const details = await discogsService.getReleaseDetails(String(result.id));
+                const normalized = normalizeDiscogsData({ ...result, ...details });
+                setSelectedSearchItem(normalized);
+                setShowConfigModal(true);
+                trackEvent('item_selection_wizard_open', { id: result.id, title: result.title });
+            } catch (error) {
+                console.error("Error opening wizard:", error);
+                setSearchError("No se pudo obtener detalles del disco.");
+            } finally {
+                hideLoading();
+            }
             return;
         }
 
@@ -582,6 +604,34 @@ export default function Home() {
         let result = '';
         for (let i = 0; i < 5; i++) result += chars.charAt(Math.floor(Math.random() * chars.length));
         return `#ORD-${result}`;
+    };
+
+    const handleConfigConfirm = (config: { format: string; condition: string }, action: 'another' | 'finish') => {
+        if (!selectedSearchItem) return;
+
+        addItemToBatch({
+            id: selectedSearchItem.id,
+            title: selectedSearchItem.title,
+            artist: selectedSearchItem.normalizedArtist || "",
+            album: selectedSearchItem.normalizedAlbum || selectedSearchItem.title,
+            cover_image: selectedSearchItem.cover_image || selectedSearchItem.thumb,
+            format: config.format,
+            condition: config.condition,
+            source: 'DISCOGS'
+        });
+
+        setShowConfigModal(false);
+        setSelectedSearchItem(null);
+
+        if (action === 'finish') {
+            navigate('/revisar-lote');
+        } else {
+            // "Añadir otro": Limpiar para permitir nueva captura
+            setQuery("");
+            setSearchResults([]);
+            setIsSearchActive(false);
+            if (resultsContainerRef.current) resultsContainerRef.current.scrollTop = 0;
+        }
     };
 
     const performSubmission = async (uid: string, intentOverride?: Intent) => {
@@ -905,6 +955,14 @@ export default function Home() {
                     }}
                 />
             )}
+
+            {/* ItemConfigModal Trigger (V4.1 Wizard) */}
+            <ItemConfigModal
+                isOpen={showConfigModal}
+                onClose={() => setShowConfigModal(false)}
+                item={selectedSearchItem}
+                onConfirm={handleConfigConfirm}
+            />
 
             <AnimatePresence mode="wait">
                 {!selectedItem ? (
@@ -1293,6 +1351,14 @@ export default function Home() {
                             </div>
                         )}
 
+                        {/* ItemConfigModal Trigger */}
+                        <ItemConfigModal
+                            isOpen={showConfigModal}
+                            onClose={() => setShowConfigModal(false)}
+                            item={selectedSearchItem}
+                            onConfirm={handleConfigConfirm}
+                        />
+
                         {/* Step 1: Format, Condition, Intent (REFACTORED FOR V3) */}
                         {step === 1 && !publicOrder && (
                             <motion.div
@@ -1301,7 +1367,8 @@ export default function Home() {
                                 className="space-y-8"
                             >
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    {!(selectedItem as any).isLocal ? (
+                                    {/* Legacy buttons only for local items now, as Discogs items are handled by the Wizard */}
+                                    {(selectedItem as any).isLocal && (
                                         <>
                                             <button
                                                 onClick={handleExternalOrder}
@@ -1337,41 +1404,6 @@ export default function Home() {
                                                 <div className="text-center">
                                                     <span className="block font-black uppercase text-sm tracking-widest">Intercambio</span>
                                                     <span className="block text-[10px] uppercase font-bold opacity-60">Proponer Negocio</span>
-                                                </div>
-                                            </button>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <button
-                                                onClick={handleBuyNow}
-                                                className="flex flex-col items-center justify-center gap-3 p-8 rounded-3xl bg-primary text-black hover:scale-[1.02] transition-all group"
-                                            >
-                                                <ShoppingBag className="w-8 h-8 group-hover:scale-110 transition-transform" />
-                                                <div className="text-center">
-                                                    <span className="block font-black uppercase text-sm tracking-widest">Comprar Ahora</span>
-                                                    <span className="block text-[10px] uppercase font-bold opacity-60">Fast Checkout</span>
-                                                </div>
-                                            </button>
-
-                                            <button
-                                                onClick={handleAddToCollection}
-                                                className="flex flex-col items-center justify-center gap-3 p-8 rounded-3xl bg-white/5 border border-white/10 text-white hover:bg-primary hover:text-black transition-all group"
-                                            >
-                                                <Disc className="w-8 h-8 group-hover:animate-spin-slow transition-transform" />
-                                                <div className="text-center">
-                                                    <span className="block font-black uppercase text-sm tracking-widest">A Mi Batea</span>
-                                                    <span className="block text-[10px] uppercase font-bold opacity-60">Añadir a colección</span>
-                                                </div>
-                                            </button>
-
-                                            <button
-                                                onClick={() => navigate(`/trade/new?targetItem=${(selectedItem as any).id}`)}
-                                                className="flex flex-col items-center justify-center gap-3 p-8 rounded-3xl bg-white/5 border border-white/10 text-gray-500 hover:border-primary/40 hover:text-white transition-all group"
-                                            >
-                                                <MessageCircle className="w-8 h-8 group-hover:scale-110 transition-transform" />
-                                                <div className="text-center">
-                                                    <span className="block font-black uppercase text-sm tracking-widest">Proponer Trade</span>
-                                                    <span className="block text-[10px] uppercase font-bold opacity-60">Canje / Permuta</span>
                                                 </div>
                                             </button>
                                         </>
@@ -1532,6 +1564,6 @@ export default function Home() {
                     </motion.div>
                 )}
             </AnimatePresence>
-        </div>
+        </div >
     );
 }
