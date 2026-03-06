@@ -3,7 +3,7 @@ import { TEXTS } from "@/constants/texts";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { LazyImage } from "@/components/ui/LazyImage";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, ChevronRight, CheckCircle2, Mail, Layers, DollarSign, TrendingUp, MessageCircle, X, Share, ArrowLeft, Star, Disc, Package } from "lucide-react";
+import { Search, ChevronRight, CheckCircle2, Mail, Layers, DollarSign, TrendingUp, MessageCircle, X, Share, ArrowLeft, Star, Disc, Package, ShoppingBag } from "lucide-react";
 import { db, auth } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp, query as firestoreQuery, where, getDocs, limit } from "firebase/firestore";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -20,6 +20,9 @@ import { useLote } from "@/context/LoteContext";
 import { PremiumShowcase } from "@/components/PremiumShowcase";
 import { inventoryService } from "@/services/inventoryService";
 import { tradeService } from "@/services/tradeService";
+import { purchaseRequestService } from "@/services/purchaseRequestService";
+import { fastCheckoutService } from "@/services/fastCheckoutService";
+import { userAssetService } from "@/services/userAssetService";
 import { ADMIN_UID } from "@/constants/admin";
 import { CompactSearchCard } from "@/components/ui/CompactSearchCard";
 import React, { memo } from "react";
@@ -627,6 +630,79 @@ export default function Home() {
         }
     };
 
+    // Handlers for Architecture V3.0 Desacoplamiento
+    const handleExternalOrder = async () => {
+        if (!selectedItem || !user) return;
+        showLoading("Registrando pedido privado...");
+        try {
+            await purchaseRequestService.createRequest(
+                user.uid,
+                user.email || "",
+                (user.displayName || user.email || "Usuario") as string,
+                selectedItem
+            );
+            setIsSuccess(true);
+            setSubmittedOrder({ type: 'order' });
+        } catch (error) {
+            console.error("Error creating purchase request:", error);
+            alert("Error al registrar el pedido.");
+        } finally {
+            hideLoading();
+        }
+    };
+
+    const handleAddToCollection = async () => {
+        if (!selectedItem || !user) return;
+        showLoading("Añadiendo a tu batea...");
+        try {
+            // Transform DiscogsSearchResult to initial UserAsset shape
+            await userAssetService.addAsset(user.uid, {
+                metadata: {
+                    title: (selectedItem as any).normalizedAlbum || selectedItem.title,
+                    artist: (selectedItem as any).normalizedArtist || "Varios",
+                    year: parseInt(selectedItem.year) || 0,
+                    genres: selectedItem.genre || [],
+                    styles: selectedItem.style || [],
+                    format_description: selectedItem.format?.join(", ") || "Vinyl"
+                },
+                media: {
+                    thumbnail: selectedItem.thumb,
+                    full_res_image_url: selectedItem.cover_image || selectedItem.thumb
+                },
+                originalInventoryId: selectedItem.isLocal ? selectedItem.id.toString() : ""
+            });
+            alert("¡Añadido a tu batea!");
+            handleResetSelection();
+        } catch (error) {
+            console.error("Error adding to collection:", error);
+            alert("Error al añadir a la batea.");
+        } finally {
+            hideLoading();
+        }
+    };
+
+    const handleBuyNow = async () => {
+        if (!selectedItem || !user) return;
+        if (!selectedItem.isLocal) return;
+
+        showLoading("Procesando compra instantánea...");
+        try {
+            const tradeId = await fastCheckoutService.processPurchase(
+                user.uid,
+                selectedItem.id.toString(),
+                (selectedItem as any).price || 0
+            );
+            setIsSuccess(true);
+            setSubmittedOrder({ id: tradeId, type: 'purchase' });
+            navigate(`/orden/${tradeId}`);
+        } catch (error) {
+            console.error("FastCheckout error:", error);
+            alert("Error en la compra rápida.");
+        } finally {
+            hideLoading();
+        }
+    };
+
     // Fetch market price from Discogs for the selected release
     const fetchMarketPrice = async () => {
         if (!selectedItem) return;
@@ -1204,110 +1280,96 @@ export default function Home() {
                             </div>
                         )}
 
-                        {/* Step 1: Format, Condition, Intent */}
+                        {/* Step 1: Format, Condition, Intent (REFACTORED FOR V3) */}
                         {step === 1 && !publicOrder && (
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className="space-y-8 md:space-y-12"
+                                className="space-y-8"
                             >
-                                <div className="space-y-4 md:space-y-6">
-                                    <label className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 italic block px-4"> {TEXTS.album.item.steps.format} </label>
-                                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                                        {(["VINILO", "CD", "CASSETTE", "OTROS"] as Format[]).map(f => (
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    {!(selectedItem as any).isLocal ? (
+                                        <>
                                             <button
-                                                key={f}
-                                                onClick={() => {
-                                                    setFormat(f);
-                                                    setTimeout(() => scrollToElement(conditionRef, 120), 50);
-                                                }}
-                                                className={`py-5 rounded-2xl text-xs font-black tracking-widest border-2 transition-all ${format === f ? 'bg-primary border-primary text-black' : 'bg-white/5 border-white/5 text-gray-500'}`}
+                                                onClick={handleExternalOrder}
+                                                className="flex flex-col items-center justify-center gap-3 p-8 rounded-3xl bg-primary text-black hover:scale-[1.02] transition-all group"
                                             >
-                                                {f}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="space-y-4 md:space-y-6" ref={conditionRef}>
-                                    <label className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 italic block px-4"> {TEXTS.album.item.steps.condition} </label>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                        {(["NUEVO", "USADO"] as Condition[]).map(c => (
-                                            <button
-                                                key={c}
-                                                onClick={() => {
-                                                    setCondition(c);
-                                                    setTimeout(() => scrollToElement(actionsRef, 100), 50);
-                                                }}
-                                                className={`py-5 rounded-2xl text-xs font-black tracking-widest border-2 transition-all ${condition === c ? 'bg-primary border-primary text-black' : 'bg-white/5 border-white/5 text-gray-500'}`}
-                                            >
-                                                {c === "NUEVO" ? "NUEVO / MINT" : "USADO / VG+"}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {format && condition && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        className="pt-8 border-t border-white/5 space-y-12"
-                                        ref={actionsRef}
-                                    >
-                                        <div className="flex flex-col gap-4">
-                                            <button
-                                                onClick={() => {
-                                                    handleResetSelection();
-                                                    scrollToTop();
-                                                }}
-                                                className="w-full py-6 rounded-2xl font-black uppercase text-sm tracking-widest flex items-center justify-center gap-2 transition-all bg-white/5 border border-white/10 text-white hover:bg-white/10"
-                                            >
-                                                {TEXTS.album.item.steps.addAnother}
-                                            </button>
-                                            <button
-                                                onClick={() => navigate('/revisar-lote')}
-                                                className="w-full bg-primary text-black py-6 rounded-2xl font-black uppercase text-sm tracking-widest shadow-[0_0_40px_rgba(255,184,0,0.2)] hover:scale-[1.02] active:scale-95 transition-all"
-                                            >
-                                                {TEXTS.album.item.steps.finishOrder}
-                                            </button>
-                                        </div>
-
-                                        {/* Recommendations Section - Nested here for better flow */}
-                                        {recommendations.length > 0 && (
-                                            <div className="pt-12 fade-in w-full border-t border-white/5">
-                                                <h4 className="text-xl md:text-2xl font-display font-black text-white italic uppercase tracking-tighter mb-4 md:mb-6 pl-2 border-l-4 border-primary">
-                                                    {TEXTS.album.item.recommendations}
-                                                </h4>
-                                                <div className="flex overflow-x-auto gap-4 md:gap-6 pb-6 hide-scrollbar snap-x snap-mandatory">
-                                                    {recommendations.map((rec) => (
-                                                        <motion.button
-                                                            key={`rec-${rec.id}`}
-                                                            whileTap={{ scale: 0.95 }}
-                                                            onClick={() => navigate(`/item/${rec.type}/${rec.id}`)}
-                                                            className="flex-none w-[280px] md:w-[320px] snap-center group relative overflow-hidden rounded-[2.5rem] bg-white/5 border border-white/10 backdrop-blur-xl shadow-2xl transition-all hover:border-primary/30 text-left"
-                                                        >
-                                                            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-                                                            <div className="w-full aspect-square rounded-xl overflow-hidden bg-black mb-4 relative shadow-lg">
-                                                                <img src={rec.cover_image || rec.thumb} alt={rec.title} className="w-full h-full object-cover grayscale-[0.3] group-hover:grayscale-0 transition-transform duration-700 group-hover:scale-105" />
-                                                            </div>
-                                                            <h5 className="text-lg font-bold font-display italic text-white truncate w-full group-hover:text-primary transition-colors">
-                                                                {(rec as any).normalizedAlbum || (rec.title.includes(' - ') ? rec.title.split(' - ')[1] : rec.title)}
-                                                            </h5>
-                                                            <span className="text-xs font-black text-gray-500 uppercase tracking-widest leading-none truncate w-full mt-1">
-                                                                {(rec as any).normalizedArtist || (rec.title.includes(' - ') ? rec.title.split(' - ')[0] : rec.title)}
-                                                            </span>
-                                                        </motion.button>
-                                                    ))}
-                                                    {isLoadingSearch && (
-                                                        <div className="w-[280px] md:w-[320px] flex-shrink-0 flex items-center justify-center snap-start">
-                                                            <div className="h-8 w-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
-                                                        </div>
-                                                    )}
+                                                <Package className="w-8 h-8 group-hover:rotate-12 transition-transform" />
+                                                <div className="text-center">
+                                                    <span className="block font-black uppercase text-sm tracking-widest">Pedir Disco</span>
+                                                    <span className="block text-[10px] uppercase font-bold opacity-60">Lo buscamos por vos</span>
                                                 </div>
-                                            </div>
-                                        )}
-                                    </motion.div>
-                                )}
+                                            </button>
+
+                                            <button
+                                                onClick={handleAddToCollection}
+                                                className="flex flex-col items-center justify-center gap-3 p-8 rounded-3xl bg-white/5 border border-white/10 text-white hover:bg-primary hover:text-black transition-all group"
+                                            >
+                                                <Disc className="w-8 h-8 group-hover:animate-spin-slow transition-transform" />
+                                                <div className="text-center">
+                                                    <span className="block font-black uppercase text-sm tracking-widest">A Mi Batea</span>
+                                                    <span className="block text-[10px] uppercase font-bold opacity-60">Solo para colección</span>
+                                                </div>
+                                            </button>
+
+                                            <button
+                                                onClick={() => {
+                                                    setIntent("VENDER");
+                                                    setStep(1); // Continue with legacy flow if they want to SELL/OFFER
+                                                    // Actually, for exchange, we might need a different path
+                                                }}
+                                                className="flex flex-col items-center justify-center gap-3 p-8 rounded-3xl bg-white/5 border border-white/10 text-gray-500 hover:border-primary/40 hover:text-white transition-all group"
+                                            >
+                                                <MessageCircle className="w-8 h-8 group-hover:scale-110 transition-transform" />
+                                                <div className="text-center">
+                                                    <span className="block font-black uppercase text-sm tracking-widest">Intercambio</span>
+                                                    <span className="block text-[10px] uppercase font-bold opacity-60">Proponer Negocio</span>
+                                                </div>
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <button
+                                                onClick={handleBuyNow}
+                                                className="flex flex-col items-center justify-center gap-3 p-8 rounded-3xl bg-primary text-black hover:scale-[1.02] transition-all group"
+                                            >
+                                                <ShoppingBag className="w-8 h-8 group-hover:scale-110 transition-transform" />
+                                                <div className="text-center">
+                                                    <span className="block font-black uppercase text-sm tracking-widest">Comprar Ahora</span>
+                                                    <span className="block text-[10px] uppercase font-bold opacity-60">Fast Checkout</span>
+                                                </div>
+                                            </button>
+
+                                            <button
+                                                onClick={handleAddToCollection}
+                                                className="flex flex-col items-center justify-center gap-3 p-8 rounded-3xl bg-white/5 border border-white/10 text-white hover:bg-primary hover:text-black transition-all group"
+                                            >
+                                                <Disc className="w-8 h-8 group-hover:animate-spin-slow transition-transform" />
+                                                <div className="text-center">
+                                                    <span className="block font-black uppercase text-sm tracking-widest">A Mi Batea</span>
+                                                    <span className="block text-[10px] uppercase font-bold opacity-60">Añadir a colección</span>
+                                                </div>
+                                            </button>
+
+                                            <button
+                                                onClick={() => navigate(`/trade/new?targetItem=${(selectedItem as any).id}`)}
+                                                className="flex flex-col items-center justify-center gap-3 p-8 rounded-3xl bg-white/5 border border-white/10 text-gray-500 hover:border-primary/40 hover:text-white transition-all group"
+                                            >
+                                                <MessageCircle className="w-8 h-8 group-hover:scale-110 transition-transform" />
+                                                <div className="text-center">
+                                                    <span className="block font-black uppercase text-sm tracking-widest">Proponer Trade</span>
+                                                    <span className="block text-[10px] uppercase font-bold opacity-60">Canje / Permuta</span>
+                                                </div>
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+
+                                <div className="text-center pt-8">
+                                    <button onClick={handleResetSelection} className="text-[10px] font-black uppercase tracking-widest text-gray-700 hover:text-white transition-colors underline decoration-white/20">
+                                        Elegir otro disco
+                                    </button>
+                                </div>
                             </motion.div>
                         )}
 

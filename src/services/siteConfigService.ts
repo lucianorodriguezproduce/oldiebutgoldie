@@ -4,6 +4,7 @@ import { doc, getDoc, setDoc, onSnapshot, updateDoc } from "firebase/firestore";
 export interface SiteConfig {
     allow_user_friendships: boolean;
     allow_p2p_public_offers: boolean;
+    p2p_global_enabled: boolean;
     logo?: {
         url: string;
         public_id?: string;

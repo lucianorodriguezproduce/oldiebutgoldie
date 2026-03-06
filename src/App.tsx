@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
 import { doc, onSnapshot } from "firebase/firestore";
 import { AuthProvider } from "@/context/AuthContext";
@@ -51,11 +51,16 @@ const queryClient = new QueryClient({
 });
 
 function AppContent() {
-  // Real-time Favicon sync
+  const [siteConfig, setSiteConfig] = useState<any>(null);
+
+  // Real-time Config sync
   useEffect(() => {
     const unsubscribe = onSnapshot(doc(db, "settings", "site_config"), (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.data();
+        setSiteConfig(data);
+
+        // Favicon logic
         if (data.favicon?.url) {
           let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
           if (!link) {
@@ -80,7 +85,13 @@ function AppContent() {
             <Route path="/" element={<Home />} />
             <Route path="/tienda" element={<Store />} />
             <Route path="/u/:username" element={<PublicProfile />} />
-            <Route path="/comercio" element={<PublicOrders />} />
+
+            {/* P2P Routes with Guard */}
+            <Route
+              path="/comercio"
+              element={siteConfig?.p2p_global_enabled === false ? <Navigate to="/tienda" replace /> : <PublicOrders />}
+            />
+
             <Route path="/orden/:id" element={<PublicOrderView />} />
             <Route path="/revisar-lote" element={<RevisarLote />} />
             <Route path="/item/:type/:id" element={<Home />} />
@@ -98,7 +109,10 @@ function AppContent() {
 
             <Route element={<ProtectedRoute />}>
               <Route path="/perfil" element={<Profile />} />
-              <Route path="/trade/new" element={<TradeConstructor />} />
+              <Route
+                path="/trade/new"
+                element={siteConfig?.p2p_global_enabled === false ? <Navigate to="/tienda" replace /> : <TradeConstructor />}
+              />
             </Route>
           </Route>
 

@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, ArrowRight, CheckCircle2, Disc, ShoppingBag, DollarSign, Search, X, Plus, Minus, MessageCircle } from "lucide-react";
-import { serverTimestamp } from "firebase/firestore";
+import { ArrowLeft, ArrowRight, CheckCircle2, Disc, ShoppingBag, DollarSign, Search, X, Plus, Minus, MessageCircle, AlertCircle } from "lucide-react";
+import { serverTimestamp, doc, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { useLoading } from "@/context/LoadingContext";
 import { userAssetService } from "@/services/userAssetService";
@@ -23,6 +24,15 @@ export default function TradeConstructor() {
     const { showLoading, hideLoading } = useLoading();
     const [searchParams] = useSearchParams();
     const targetTradeId = searchParams.get("targetTrade");
+    const [siteConfig, setSiteConfig] = useState<any>(null);
+
+    // Sync site config
+    useEffect(() => {
+        const unsubscribe = onSnapshot(doc(db, "settings", "site_config"), (snap) => {
+            if (snap.exists()) setSiteConfig(snap.data());
+        });
+        return () => unsubscribe();
+    }, []);
 
     // Wizard state
     const [step, setStep] = useState<Step>(1);
@@ -131,6 +141,8 @@ export default function TradeConstructor() {
                     userAssetId: id
                 };
             });
+
+            const totalValue = Array.from(selectedRequested).reduce((acc, id) => acc + (storeItems.find(i => i.id === id)?.logistics.price || 0), 0);
 
             const requestedDetails = Array.from(selectedRequested).map(id => {
                 const item = storeItems.find(i => i.id === id);
