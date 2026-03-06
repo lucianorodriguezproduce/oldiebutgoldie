@@ -11,6 +11,7 @@ import { tradeService } from '@/services/tradeService';
 import { inventoryService } from '@/services/inventoryService';
 
 import OrderCard from '@/components/OrderCard';
+import SocialRadar from '@/components/Profile/SocialRadar';
 
 // Fetch the clean generic OrderData
 export default function PublicOrders() {
@@ -102,6 +103,10 @@ export default function PublicOrders() {
                         {TEXTS.comercio.publicActivity.exploreDiscs}
                     </motion.p>
                 </header>
+
+                <div className="py-6 border-y border-white/5 bg-black/50 backdrop-blur-md">
+                    <SocialRadar />
+                </div>
 
                 {/* Grid */}
                 {loading ? (

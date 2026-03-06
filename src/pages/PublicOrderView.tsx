@@ -12,6 +12,7 @@ import { useLoading } from "@/context/LoadingContext";
 import { formatDate, getReadableDate } from "@/utils/date";
 import { TEXTS } from "@/constants/texts";
 import { pushViewItemFromOrder, pushHotOrderDetected } from "@/utils/analytics";
+import UsernameClaimModal from "@/components/Profile/UsernameClaimModal";
 import { getCleanOrderMetadata } from "@/utils/orderMetadata";
 import { tradeService } from "@/services/tradeService";
 import { generateWhatsAppAcceptDealMsg } from "@/utils/whatsapp";
@@ -20,7 +21,7 @@ import { ADMIN_UID } from "@/constants/admin";
 export default function PublicOrderView() {
     const { id } = useParams<{ id: string }>();
     const [searchParams] = useSearchParams();
-    const { user, isAdmin } = useAuth();
+    const { user, dbUser, isAdmin } = useAuth();
     const { showLoading, hideLoading } = useLoading();
     const navigate = useNavigate();
     const [order, setOrder] = useState<any>(null);
@@ -37,6 +38,9 @@ export default function PublicOrderView() {
     const [offerAmount, setOfferAmount] = useState<string>("");
     const [showOfferInput, setShowOfferInput] = useState(false);
     const [showLoginDrawer, setShowLoginDrawer] = useState(false);
+
+    // Pasaporte del Coliseo Identity Guard
+    const [showIdentityGuard, setShowIdentityGuard] = useState(false);
 
     // Exchange post-action state
     const [postActionState, setPostActionState] = useState<'idle' | 'success' | 'countered' | 'rejected' | 'negotiating'>('idle');
@@ -853,8 +857,27 @@ export default function PublicOrderView() {
                         // Non-owner, non-admin viewing an active exchange
                         if (!isOwner && !isAdmin && !isFinal && !isCancelled) {
                             return (
-                                <div className="mt-8 p-6 md:p-8 bg-blue-500/10 border border-blue-500/30 rounded-[2.5rem] flex items-center justify-center shadow-inner">
-                                    <h4 className="text-2xl md:text-3xl font-display font-black text-blue-500 uppercase tracking-tightest">En Negociación</h4>
+                                <div className="mt-8 p-6 md:p-8 bg-blue-500/10 border border-blue-500/30 rounded-[2.5rem] flex flex-col items-center justify-center shadow-inner gap-4">
+                                    <MessageCircle className="w-8 h-8 text-blue-400" />
+                                    <h4 className="text-2xl md:text-3xl font-display font-black text-blue-500 uppercase tracking-tightest">Mercado Abierto</h4>
+                                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest text-center mt-1">Este intercambio está recibiendo ofertas. ¿Quieres hacer una propuesta competitiva?</p>
+
+                                    <button
+                                        onClick={() => {
+                                            if (!user) {
+                                                setShowLoginDrawer(true);
+                                            } else if (!dbUser?.username) {
+                                                setShowIdentityGuard(true);
+                                            } else {
+                                                // Redirect to trade constructor to initiate a counter trade targeting this deal
+                                                // For V2: Navigate targeting the original trade ID
+                                                navigate(`/creator?targetTrade=${id}`);
+                                            }
+                                        }}
+                                        className="mt-4 px-8 py-4 rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-black uppercase text-[10px] tracking-widest transition-all shadow-xl shadow-blue-500/20 hover:scale-105"
+                                    >
+                                        Ofrecer Intercambio
+                                    </button>
                                 </div>
                             );
                         }
@@ -1071,6 +1094,17 @@ export default function PublicOrderView() {
                     </>
                 )}
             </AnimatePresence>
+
+            {/* Passport Identity Guard */}
+            {showIdentityGuard && dbUser && (
+                <UsernameClaimModal
+                    user={dbUser}
+                    onSuccess={() => {
+                        setShowIdentityGuard(false);
+                        navigate(`/creator?targetTrade=${id}`);
+                    }}
+                />
+            )}
         </div >
     );
 }
