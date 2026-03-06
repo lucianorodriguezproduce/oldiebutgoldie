@@ -23,6 +23,7 @@ import Profile from "@/pages/Profile";
 import RevisarLote from "@/pages/RevisarLote";
 import TradeConstructor from "@/pages/TradeConstructor";
 import Store from "@/pages/Store";
+import PublicProfile from "@/pages/PublicProfile";
 import AdminLayout from "@/components/Admin/AdminLayout";
 import AdminAnalytics from "@/pages/Admin/AdminAnalytics";
 import EditorialManager from "@/pages/Admin/EditorialManager";
@@ -77,6 +78,7 @@ function AppContent() {
           <Route element={<Layout />}>
             <Route path="/" element={<Home />} />
             <Route path="/tienda" element={<Store />} />
+            <Route path="/u/:username" element={<PublicProfile />} />
             <Route path="/comercio" element={<PublicOrders />} />
             <Route path="/orden/:id" element={<PublicOrderView />} />
             <Route path="/revisar-lote" element={<RevisarLote />} />
