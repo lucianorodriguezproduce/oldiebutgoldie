@@ -35,32 +35,32 @@ export default function Admin() {
         <div className="space-y-10 p-6">
             <header>
                 <h1 className="text-5xl font-display font-black text-white tracking-tightest">
-                    {TEXTS.global.common.adminDashboard.title.split(' ').slice(0, -1).join(' ')} <span className="text-primary">{TEXTS.global.common.adminDashboard.title.split(' ').slice(-1)}</span>
+                    {TEXTS.admin.admin.adminDashboard.title.split(' ').slice(0, -1).join(' ')} <span className="text-primary">{TEXTS.admin.admin.adminDashboard.title.split(' ').slice(-1)}</span>
                 </h1>
-                <p className="text-gray-500 mt-2 font-medium">{TEXTS.global.common.adminDashboard.description}</p>
+                <p className="text-gray-500 mt-2 font-medium">{TEXTS.admin.admin.adminDashboard.description}</p>
             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <StatCard
-                    title={TEXTS.global.common.adminDashboard.liveInteractions}
+                    title={TEXTS.admin.admin.adminDashboard.liveInteractions}
                     value={stats?.totalInteractions || 0}
                     icon={<TrendingUp className="text-primary h-5 w-5" />}
                     loading={isLoading}
                 />
                 <StatCard
-                    title={TEXTS.global.common.adminDashboard.uniqueSpectators}
+                    title={TEXTS.admin.admin.adminDashboard.uniqueSpectators}
                     value={stats?.uniqueVisitors || 0}
                     icon={<Users className="text-secondary h-5 w-5" />}
                     loading={isLoading}
                 />
                 <StatCard
-                    title={TEXTS.global.common.adminDashboard.argentinaLeads}
+                    title={TEXTS.admin.admin.adminDashboard.argentinaLeads}
                     value={stats?.totalLeads || 0}
                     icon={<Archive className="text-blue-400 h-5 w-5" />}
                     loading={isLoading}
                 />
                 <StatCard
-                    title={TEXTS.global.common.adminDashboard.targetRegions}
+                    title={TEXTS.admin.admin.adminDashboard.targetRegions}
                     value={stats?.topCities?.length || 0}
                     icon={<MapPin className="text-orange-400 h-5 w-5" />}
                     loading={isLoading}
@@ -72,7 +72,7 @@ export default function Admin() {
                     <CardHeader className="p-8 border-b border-white/5">
                         <CardTitle className="text-2xl font-bold text-white flex items-center gap-3">
                             <MapPin className="h-6 w-6 text-primary" />
-                            {TEXTS.global.common.adminDashboard.geographicHotspots}
+                            {TEXTS.admin.admin.adminDashboard.geographicHotspots}
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="p-8 space-y-6">
@@ -84,7 +84,7 @@ export default function Admin() {
                                     </div>
                                     <span className="text-gray-300 font-bold group-hover:text-white transition-colors">{city}</span>
                                 </div>
-                                <span className="text-gray-600 font-black">{count} {TEXTS.global.common.adminDashboard.hits}</span>
+                                <span className="text-gray-600 font-black">{count} {TEXTS.admin.admin.adminDashboard.hits}</span>
                             </div>
                         ))}
                     </CardContent>
@@ -94,12 +94,12 @@ export default function Admin() {
                     <div className="w-20 h-20 bg-primary rounded-3xl shadow-2xl shadow-primary/20 flex items-center justify-center mb-6">
                         <Archive className="text-black h-10 w-10" />
                     </div>
-                    <h2 className="text-3xl font-black text-white mb-4">{TEXTS.global.common.adminDashboard.harvesterActive}</h2>
+                    <h2 className="text-3xl font-black text-white mb-4">{TEXTS.admin.admin.adminDashboard.harvesterActive}</h2>
                     <p className="text-gray-400 max-w-sm">
-                        {TEXTS.global.common.adminDashboard.harvesterDescription}
+                        {TEXTS.admin.admin.adminDashboard.harvesterDescription}
                     </p>
                     <button className="mt-8 px-10 py-4 bg-primary text-black font-black uppercase tracking-widest rounded-2xl hover:bg-white transition-all shadow-xl shadow-primary/10">
-                        {TEXTS.global.common.adminDashboard.viewLeadDatabase}
+                        {TEXTS.admin.admin.adminDashboard.viewLeadDatabase}
                     </button>
                 </Card>
             </div>
