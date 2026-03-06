@@ -32,7 +32,7 @@ export default function Editorial() {
     const [isSubscribing, setIsSubscribing] = useState(false);
 
     useEffect(() => {
-        showLoading(TEXTS.global.common.syncingEditorial);
+        showLoading(TEXTS.comunidad.syncingEditorial);
         const q = query(
             collection(db, "editorial"),
             where("status", "==", "published"),
@@ -59,11 +59,11 @@ export default function Editorial() {
                 email,
                 subscribedAt: serverTimestamp()
             });
-            alert(TEXTS.global.common.transmissionProtocolEstablished);
+            alert(TEXTS.comunidad.transmissionProtocolEstablished);
             setEmail("");
         } catch (error) {
             console.error("Error subscribing:", error);
-            alert(TEXTS.global.common.connectionError);
+            alert(TEXTS.comunidad.connectionError);
         } finally {
             setIsSubscribing(false);
             hideLoading();
@@ -103,8 +103,8 @@ export default function Editorial() {
             <div className="py-20 md:py-40 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[3rem] space-y-6 text-center px-4">
                 <Search className="h-12 w-12 text-gray-700" />
                 <div className="space-y-2">
-                    <p className="text-xl font-display font-medium text-gray-500">{TEXTS.global.common.culturalArchiveEmpty}</p>
-                    <p className="text-gray-600 text-sm">{TEXTS.global.common.nextSyncCycle}</p>
+                    <p className="text-xl font-display font-medium text-gray-500">{TEXTS.comunidad.culturalArchiveEmpty}</p>
+                    <p className="text-gray-600 text-sm">{TEXTS.comunidad.nextSyncCycle}</p>
                 </div>
                 <button
                     onClick={handleSeed}
@@ -119,16 +119,16 @@ export default function Editorial() {
     return (
         <div className="space-y-16 md:space-y-24 py-6 md:py-12">
             <SEO
-                title={TEXTS.global.common.seo.editorial.title}
-                description={TEXTS.global.common.seo.editorial.desc}
-                image={TEXTS.global.common.seo.editorial.ogImage}
+                title={TEXTS.comunidad.seo.editorial.title}
+                description={TEXTS.comunidad.seo.editorial.desc}
+                image={TEXTS.comunidad.seo.editorial.ogImage}
                 url="https://oldiebutgoldie.com.ar/comunidad"
                 schema={{
                     "@context": "https://schema.org",
                     "@type": "Blog",
-                    "name": TEXTS.global.common.seo.editorial.title,
-                    "description": TEXTS.global.common.seo.editorial.desc,
-                    "keywords": TEXTS.global.common.seo.editorial.keys
+                    "name": TEXTS.comunidad.seo.editorial.title,
+                    "description": TEXTS.comunidad.seo.editorial.desc,
+                    "keywords": TEXTS.comunidad.seo.editorial.keys
                 }}
             />
             {/* Hero Section */}
@@ -154,7 +154,7 @@ export default function Editorial() {
                                 className="max-w-3xl space-y-6 md:space-y-8"
                             >
                                 <Badge className="bg-primary text-black font-black uppercase tracking-widest px-4 md:px-6 py-1.5 md:py-2 rounded-full text-[10px] md:text-xs shadow-xl shadow-primary/20 self-start">
-                                    {featured.featured ? TEXTS.global.common.featured : TEXTS.global.common.novelty}
+                                    {featured.featured ? TEXTS.comunidad.featured : TEXTS.comunidad.novelty}
                                 </Badge>
                                 <h1 className="text-3xl md:text-[6rem] font-display font-black text-white tracking-tightest leading-[1] md:leading-[1.1] uppercase">
                                     {featured.title}
@@ -168,7 +168,7 @@ export default function Editorial() {
                                             <User className="h-4 w-4 md:h-6 md:w-6 text-primary" />
                                         </div>
                                         <div>
-                                            <p className="text-[8px] md:text-[10px] font-black text-gray-500 uppercase tracking-widest mb-0.5 md:mb-1">{TEXTS.global.common.analyst}</p>
+                                            <p className="text-[8px] md:text-[10px] font-black text-gray-500 uppercase tracking-widest mb-0.5 md:mb-1">{TEXTS.comunidad.analyst}</p>
                                             <span className="text-xs md:text-sm font-bold text-white uppercase tracking-widest">{featured.author}</span>
                                         </div>
                                     </div>
@@ -177,13 +177,13 @@ export default function Editorial() {
                                             <Clock className="h-4 w-4 md:h-6 md:w-6 text-primary" />
                                         </div>
                                         <div>
-                                            <p className="text-[8px] md:text-[10px] font-black text-gray-500 uppercase tracking-widest mb-0.5 md:mb-1">{TEXTS.global.common.readingTime}</p>
+                                            <p className="text-[8px] md:text-[10px] font-black text-gray-500 uppercase tracking-widest mb-0.5 md:mb-1">{TEXTS.comunidad.readingTime}</p>
                                             <span className="text-xs md:text-sm font-bold text-white uppercase tracking-widest">{featured.readTime}</span>
                                         </div>
                                     </div>
                                     <Link to={`/editorial/${generateSlug(featured.title)}`} className="w-full md:w-auto mt-4 md:mt-0">
                                         <button className="w-full md:ml-auto bg-white text-black px-8 md:px-12 py-4 md:py-5 rounded-2xl md:rounded-[2rem] font-black uppercase text-[10px] md:text-xs tracking-[0.2em] hover:bg-primary transition-all flex items-center justify-center gap-4 group/btn">
-                                            {TEXTS.global.common.readArticle} <ArrowRight className="h-4 w-4 md:h-5 md:w-5 group-hover/btn:translate-x-2 transition-transform" />
+                                            {TEXTS.comunidad.readArticle} <ArrowRight className="h-4 w-4 md:h-5 md:w-5 group-hover/btn:translate-x-2 transition-transform" />
                                         </button>
                                     </Link>
                                 </div>
@@ -197,11 +197,11 @@ export default function Editorial() {
             <section className="space-y-12 md:space-y-16 px-4 md:px-0">
                 <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-white/5 pb-8 md:pb-12 gap-6">
                     <div>
-                        <h2 className="text-4xl md:text-5xl font-display font-black text-white tracking-tightest leading-none uppercase">{TEXTS.global.common.intelDispatches.split(' ')[0]} <span className="text-primary">{TEXTS.global.common.intelDispatches.split(' ')[1]}</span></h2>
-                        <p className="text-gray-500 mt-2 md:mt-4 text-lg md:text-xl font-medium">{TEXTS.global.common.monthlyMetadata}</p>
+                        <h2 className="text-4xl md:text-5xl font-display font-black text-white tracking-tightest leading-none uppercase">{TEXTS.comunidad.intelDispatches.split(' ')[0]} <span className="text-primary">{TEXTS.comunidad.intelDispatches.split(' ')[1]}</span></h2>
+                        <p className="text-gray-500 mt-2 md:mt-4 text-lg md:text-xl font-medium">{TEXTS.comunidad.monthlyMetadata}</p>
                     </div>
                     <div className="flex flex-wrap gap-2 md:gap-4">
-                        {[TEXTS.global.common.all, TEXTS.global.common.interviews, TEXTS.global.common.culture, TEXTS.global.common.equipment].map((tag) => (
+                        {[TEXTS.comunidad.all, TEXTS.comunidad.interviews, TEXTS.comunidad.culture, TEXTS.comunidad.equipment].map((tag) => (
                             <button key={tag} className="px-4 md:px-6 py-1.5 md:py-2 rounded-lg md:rounded-xl bg-white/5 text-[8px] md:text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white hover:bg-white/10 transition-all border border-white/5">
                                 {tag}
                             </button>
@@ -247,7 +247,7 @@ export default function Editorial() {
                                         {article.excerpt}
                                     </p>
                                     <button className="flex items-center gap-2 md:gap-3 text-primary font-black uppercase text-[10px] md:text-[11px] tracking-[0.3em] pt-6 md:pt-8 group-hover:gap-6 transition-all">
-                                        {TEXTS.global.common.seeNote} <ArrowRight className="h-4 w-4 md:h-5 md:w-5" />
+                                        {TEXTS.comunidad.seeNote} <ArrowRight className="h-4 w-4 md:h-5 md:w-5" />
                                     </button>
                                 </div>
                             </Link>
@@ -263,15 +263,15 @@ export default function Editorial() {
                     <div className="absolute bottom-0 left-0 translate-y-1/2 -translate-x-1/4 w-[300px] md:w-[600px] h-[300px] md:h-[600px] bg-white/10 blur-[60px] md:blur-[100px] rounded-full pointer-events-none" />
 
                     <div className="relative z-10 max-w-2xl space-y-6 md:space-y-8 text-center md:text-left">
-                        <Badge className="bg-black text-white font-black uppercase tracking-widest px-4 md:px-6 py-1.5 md:py-2 rounded-full text-[8px] md:text-[10px] inline-block">{TEXTS.global.common.newsDesk}</Badge>
+                        <Badge className="bg-black text-white font-black uppercase tracking-widest px-4 md:px-6 py-1.5 md:py-2 rounded-full text-[8px] md:text-[10px] inline-block">{TEXTS.comunidad.newsDesk}</Badge>
                         <h2 className="text-5xl md:text-[8rem] font-display font-black text-black tracking-tighter leading-[0.9] md:leading-[0.85] uppercase">
-                            {TEXTS.global.common.joinProtocol.split(' ').map((word: string, i: number, arr: string[]) => (
+                            {TEXTS.comunidad.joinProtocol.split(' ').map((word: string, i: number, arr: string[]) => (
                                 <span key={i}>
                                     {word}{i < arr.length - 1 && <br />}
                                 </span>
                             ))}
                         </h2>
-                        <p className="text-black/70 text-lg md:text-2xl font-bold leading-relaxed max-w-lg mx-auto md:mx-0">{TEXTS.global.common.highFidelityDespatches}</p>
+                        <p className="text-black/70 text-lg md:text-2xl font-bold leading-relaxed max-w-lg mx-auto md:mx-0">{TEXTS.comunidad.highFidelityDespatches}</p>
                     </div>
 
                     <div className="relative z-10 w-full md:w-[500px]">
@@ -281,7 +281,7 @@ export default function Editorial() {
                                     type="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    placeholder={TEXTS.global.common.terminalID}
+                                    placeholder={TEXTS.comunidad.terminalID}
                                     className="bg-transparent border-0 focus:ring-0 text-white placeholder:text-white/30 font-black uppercase tracking-widest text-xs md:text-sm px-6 md:px-8 py-4 md:py-0 w-full outline-none"
                                     required
                                 />
@@ -290,10 +290,10 @@ export default function Editorial() {
                                     disabled={isSubscribing}
                                     className="bg-primary text-black px-8 md:px-12 py-4 md:py-6 rounded-xl md:rounded-[2rem] font-black uppercase tracking-widest text-[10px] md:text-xs hover:scale-105 active:scale-95 transition-all shadow-xl shadow-black/40 disabled:opacity-50"
                                 >
-                                    {isSubscribing ? TEXTS.global.common.linking : TEXTS.global.common.initialize}
+                                    {isSubscribing ? TEXTS.comunidad.linking : TEXTS.comunidad.initialize}
                                 </button>
                             </div>
-                            <p className="text-[8px] md:text-[10px] font-black text-black/40 uppercase tracking-widest text-center">{TEXTS.global.common.encryptedVia}</p>
+                            <p className="text-[8px] md:text-[10px] font-black text-black/40 uppercase tracking-widest text-center">{TEXTS.comunidad.encryptedVia}</p>
                         </form>
                     </div>
                 </div>
