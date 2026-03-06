@@ -22,16 +22,16 @@ export function Footer() {
                     </div>
                     <div className="flex flex-wrap gap-x-8 gap-y-4 text-sm text-gray-400 justify-center">
                         <Link to="/tienda" className="hover:text-primary transition-colors uppercase tracking-widest text-[10px] font-black">
-                            {TEXTS.navigation.tienda}
+                            {TEXTS.global.navigation.tienda}
                         </Link>
                         <Link to="/comercio" className="hover:text-primary transition-colors uppercase tracking-widest text-[10px] font-black">
-                            {TEXTS.navigation.activity}
+                            {TEXTS.global.navigation.activity}
                         </Link>
                         <Link to="/comunidad" className="hover:text-primary transition-colors uppercase tracking-widest text-[10px] font-black">
-                            {TEXTS.navigation.editorial}
+                            {TEXTS.global.navigation.editorial}
                         </Link>
                         <Link to="/guias" className="hover:text-primary transition-colors uppercase tracking-widest text-[10px] font-black">
-                            {TEXTS.navigation.guias}
+                            {TEXTS.global.navigation.guias}
                         </Link>
                         {["About", "API Status", "Terms", "Privacy"].map((item) => (
                             <a

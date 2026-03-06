@@ -438,7 +438,7 @@ export default function Home() {
             return;
         }
 
-        showLoading(TEXTS.common.loadingGeneric);
+        showLoading(TEXTS.global.common.loadingGeneric);
         // Force the filter visual state to 'álbumes' as we dive into entities' discographies
         setSearchFilter("álbumes");
         // Re-brand the input query text to denote the user is now browsing this entity
@@ -569,7 +569,7 @@ export default function Home() {
             }
         } else {
             navigator.clipboard.writeText(`${text} ${url}`);
-            alert(TEXTS.common.confirm || 'Enlace copiado al portapapeles');
+            alert(TEXTS.global.common.confirm || 'Enlace copiado al portapapeles');
         }
     };
 
@@ -621,7 +621,7 @@ export default function Home() {
 
         } catch (error) {
             console.error("Error creating trade/inventory:", error);
-            alert(TEXTS.profile.genericError || "Error al procesar la operación.");
+            alert(TEXTS.perfil.profile.genericError || "Error al procesar la operación.");
         } finally {
             hideLoading();
         }
@@ -678,7 +678,7 @@ export default function Home() {
     // Handle price confirmation for VENDER
     const handlePriceConfirm = () => {
         if (!price || parseFloat(price) <= 0) {
-            alert(TEXTS.negotiation.priceLabel || "Ingresa un precio válido.");
+            alert(TEXTS.perfil.negotiation.priceLabel || "Ingresa un precio válido.");
             return;
         }
 
@@ -692,7 +692,7 @@ export default function Home() {
     };
 
     const handleGoogleSignIn = async () => {
-        showLoading(TEXTS.auth.googleSignIn);
+        showLoading(TEXTS.login.auth.googleSignIn);
         try {
             const googleUser = await signInWithGoogle();
             if (googleUser) {
@@ -702,7 +702,7 @@ export default function Home() {
             }
         } catch (error) {
             console.error("Google Auth error:", error);
-            alert(TEXTS.profile.genericError);
+            alert(TEXTS.perfil.profile.genericError);
         } finally {
             hideLoading();
         }
@@ -712,7 +712,7 @@ export default function Home() {
         if (e) e.preventDefault();
         if (!email || !password) return;
 
-        showLoading(TEXTS.common.loadingGeneric);
+        showLoading(TEXTS.global.common.loadingGeneric);
         try {
             const loggedUser = await authenticateUser(email, password);
             if (loggedUser) {
@@ -722,7 +722,7 @@ export default function Home() {
             }
         } catch (error) {
             console.error("Manual Auth error:", error);
-            alert(TEXTS.profile.genericError);
+            alert(TEXTS.perfil.profile.genericError);
         } finally {
             hideLoading();
         }
@@ -739,9 +739,9 @@ export default function Home() {
                     <CheckCircle2 className="h-12 w-12 text-black" />
                 </motion.div>
                 <div className="space-y-4">
-                    <h2 className="text-4xl md:text-6xl font-display font-black text-white uppercase tracking-tighter">{TEXTS.success.orderRegistered}</h2>
+                    <h2 className="text-4xl md:text-6xl font-display font-black text-white uppercase tracking-tighter">{TEXTS.global.success.orderRegistered}</h2>
                     <p className="text-gray-500 text-lg md:text-xl max-w-md mx-auto font-medium">
-                        {TEXTS.success.successMessage}
+                        {TEXTS.global.success.successMessage}
                     </p>
                 </div>
                 <div className="flex flex-col items-center gap-4 w-full max-w-sm mx-auto">
@@ -754,7 +754,7 @@ export default function Home() {
                             className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-500 text-white px-8 py-4 rounded-2xl font-black uppercase text-xs tracking-widest transition-all shadow-lg shadow-green-500/20"
                         >
                             <MessageCircle className="h-5 w-5" />
-                            {TEXTS.success.contactWhatsApp}
+                            {TEXTS.global.success.contactWhatsApp}
                         </button>
                     )}
                     <button
@@ -765,7 +765,7 @@ export default function Home() {
                         }}
                         className="w-full bg-white/5 border border-white/10 text-white px-8 py-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-white/10 transition-all"
                     >
-                        {TEXTS.success.newSearch}
+                        {TEXTS.global.success.newSearch}
                     </button>
                 </div>
             </div>
@@ -803,16 +803,16 @@ export default function Home() {
                 />
             ) : (
                 <SEO
-                    title={TEXTS.common.seo.home.title}
-                    description={TEXTS.common.seo.home.desc}
-                    image={TEXTS.common.seo.home.ogImage}
+                    title={TEXTS.global.common.seo.home.title}
+                    description={TEXTS.global.common.seo.home.desc}
+                    image={TEXTS.global.common.seo.home.ogImage}
                     url="https://oldiebutgoldie.com.ar"
                     schema={{
                         "@context": "https://schema.org",
                         "@type": "WebSite",
-                        "name": TEXTS.navigation.brand,
-                        "description": TEXTS.common.seo.home.desc,
-                        "keywords": TEXTS.common.seo.home.keys
+                        "name": TEXTS.global.navigation.brand,
+                        "description": TEXTS.global.common.seo.home.desc,
+                        "keywords": TEXTS.global.common.seo.home.keys
                     }}
                 />
             )}
@@ -839,7 +839,7 @@ export default function Home() {
                                         <div className="flex items-center justify-center gap-2">
                                             <Star className="h-3 w-3 text-primary fill-primary" />
                                             <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/80">
-                                                {TEXTS.showcase.subtitle}
+                                                {TEXTS.home.showcase.subtitle}
                                             </span>
                                         </div>
                                         <h1 className="text-4xl md:text-7xl font-display font-black text-white uppercase tracking-tightest leading-[0.85] px-4">
@@ -1052,7 +1052,7 @@ export default function Home() {
                         className="space-y-8 md:space-y-16 w-full"
                     >
                         <header className="text-center md:text-left">
-                            <h2 className="text-2xl md:text-5xl font-display font-black text-white uppercase tracking-tighter">{TEXTS.item.detailTitle}</h2>
+                            <h2 className="text-2xl md:text-5xl font-display font-black text-white uppercase tracking-tighter">{TEXTS.album.item.detailTitle}</h2>
                         </header>
 
                         {/* Collector Receipt View Extracted Logic */}
@@ -1062,10 +1062,10 @@ export default function Home() {
                                     <button
                                         onClick={handleShare}
                                         className="h-10 px-4 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 backdrop-blur-md flex items-center justify-center gap-2 transition-all group"
-                                        title={TEXTS.item.share}
+                                        title={TEXTS.album.item.share}
                                     >
                                         <Share className="h-4 w-4 text-gray-300 group-hover:text-white transition-colors" />
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-300 group-hover:text-white transition-colors hidden sm:block">{TEXTS.item.share}</span>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-300 group-hover:text-white transition-colors hidden sm:block">{TEXTS.album.item.share}</span>
                                     </button>
                                     <div className={`px-4 py-2 rounded-full border backdrop-blur-md flex items-center gap-2 ${publicOrder.status === 'sold' ? 'bg-primary/10 border-primary/20 text-primary' :
                                         publicOrder.status === 'quoted' ? 'bg-blue-500/10 border-blue-500/20 text-blue-400' :
@@ -1076,9 +1076,9 @@ export default function Home() {
                                                 'bg-gray-400'
                                             } animate-pulse`} />
                                         <span className="text-xs font-black uppercase tracking-widest">
-                                            {publicOrder.status === 'sold' ? TEXTS.admin.statusOptions.venta_finalizada :
-                                                publicOrder.status === 'quoted' ? TEXTS.admin.statusOptions.quoted :
-                                                    TEXTS.item.toConfirm}
+                                            {publicOrder.status === 'sold' ? TEXTS.admin.admin.statusOptions.venta_finalizada :
+                                                publicOrder.status === 'quoted' ? TEXTS.admin.admin.statusOptions.quoted :
+                                                    TEXTS.album.item.toConfirm}
                                         </span>
                                     </div>
                                 </div>
@@ -1096,7 +1096,7 @@ export default function Home() {
 
                                     <div className="flex-1 p-8 md:p-12 space-y-10 flex flex-col justify-center border-l border-white/5 z-20 bg-[#0A0A0A]">
                                         <div className="space-y-4">
-                                            <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500">{TEXTS.item.receiptTitle}</h4>
+                                            <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500">{TEXTS.album.item.receiptTitle}</h4>
                                             <h3 className="text-3xl lg:text-5xl font-display font-black text-white uppercase tracking-tighter leading-none">
                                                 {(selectedItem as any).normalizedArtist} <br />
                                                 <span className="text-primary">{(selectedItem as any).normalizedAlbum}</span>
@@ -1106,28 +1106,28 @@ export default function Home() {
 
                                         <div className="grid grid-cols-2 gap-8 py-8 border-y border-white/5">
                                             <div className="space-y-2">
-                                                <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">{TEXTS.item.registrationDate}</p>
+                                                <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">{TEXTS.album.item.registrationDate}</p>
                                                 <p className="text-white font-mono">{publicOrder.timestamp.toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
                                             </div>
                                             {publicOrder.isOwner && (
                                                 <div className="space-y-2">
-                                                    <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">{TEXTS.item.userPrice}</p>
-                                                    <p className="text-primary font-bold font-mono text-lg">{publicOrder.price ? `$${publicOrder.price.toLocaleString('es-AR')}` : TEXTS.item.toConfirm}</p>
+                                                    <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">{TEXTS.album.item.userPrice}</p>
+                                                    <p className="text-primary font-bold font-mono text-lg">{publicOrder.price ? `$${publicOrder.price.toLocaleString('es-AR')}` : TEXTS.album.item.toConfirm}</p>
                                                 </div>
                                             )}
                                             <div className="space-y-2">
-                                                <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">{TEXTS.item.format}</p>
+                                                <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">{TEXTS.album.item.format}</p>
                                                 <p className="text-white font-bold">{publicOrder.format || "N/A"}</p>
                                             </div>
                                             <div className="space-y-2">
-                                                <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">{TEXTS.item.condition}</p>
+                                                <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">{TEXTS.album.item.condition}</p>
                                                 <p className="text-white font-bold">{publicOrder.condition || "N/A"}</p>
                                             </div>
                                             <div className="space-y-2 flex flex-col items-start">
-                                                <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest mb-1">{TEXTS.item.operation}</p>
+                                                <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest mb-1">{TEXTS.album.item.operation}</p>
                                                 <div className={`px-2 py-0.5 rounded-[4px] border backdrop-blur-md ${publicOrder.intent === 'VENDER' ? 'bg-amber-500/10 border-amber-500/30 text-amber-500' : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'}`}>
                                                     <span className="text-[10px] uppercase tracking-widest font-black">
-                                                        {publicOrder.intent === 'VENDER' ? TEXTS.item.sellIntent : TEXTS.item.buyIntent}
+                                                        {publicOrder.intent === 'VENDER' ? TEXTS.album.item.sellIntent : TEXTS.album.item.buyIntent}
                                                     </span>
                                                 </div>
                                             </div>
@@ -1143,19 +1143,19 @@ export default function Home() {
                                                     className="w-full bg-primary text-black py-6 rounded-xl font-black uppercase text-xs tracking-widest shadow-[0_0_30px_rgba(204,255,0,0.15)] hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
                                                 >
                                                     <MessageCircle className="w-4 h-4" />
-                                                    {TEXTS.item.contactOrder}
+                                                    {TEXTS.album.item.contactOrder}
                                                 </button>
                                             ) : (
                                                 <button
                                                     onClick={() => setPublicOrder(null)} // Returns to standard step 1 logic
                                                     className="w-full bg-white/10 hover:bg-white/20 text-white py-6 rounded-xl font-black uppercase text-xs tracking-widest transition-all"
                                                 >
-                                                    {TEXTS.item.consultSimilar}
+                                                    {TEXTS.album.item.consultSimilar}
                                                 </button>
                                             )}
 
                                             <div className="text-center pt-2">
-                                                <button onClick={handleResetSelection} className="text-[10px] font-black uppercase tracking-widest text-gray-700 hover:text-white transition-colors underline decoration-white/20">{TEXTS.item.changeTitle}</button>
+                                                <button onClick={handleResetSelection} className="text-[10px] font-black uppercase tracking-widest text-gray-700 hover:text-white transition-colors underline decoration-white/20">{TEXTS.album.item.changeTitle}</button>
                                             </div>
                                         </div>
                                     </div>
@@ -1180,25 +1180,25 @@ export default function Home() {
                                                 title="Compartir"
                                             >
                                                 <Share className="h-4 w-4 text-gray-300 group-hover:text-white transition-colors" />
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-gray-300 group-hover:text-white transition-colors hidden sm:block">{TEXTS.item.share}</span>
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-gray-300 group-hover:text-white transition-colors hidden sm:block">{TEXTS.album.item.share}</span>
                                             </button>
                                         </div>
                                         <h3 className="text-3xl lg:text-4xl font-display font-black text-white uppercase tracking-tighter leading-none mt-4 md:mt-0">{selectedItem.title}</h3>
                                         <div className="grid grid-cols-2 gap-6">
                                             {selectedItem.year && selectedItem.year !== "0" && selectedItem.year.toUpperCase() !== "N/A" && (
                                                 <div>
-                                                    <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">{TEXTS.item.year}</p>
+                                                    <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">{TEXTS.album.item.year}</p>
                                                     <p className="text-white font-bold">{selectedItem.year}</p>
                                                 </div>
                                             )}
                                             {selectedItem.genre && selectedItem.genre.length > 0 && selectedItem.genre[0].toUpperCase() !== "N/A" && (
                                                 <div>
-                                                    <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">{TEXTS.item.genre}</p>
+                                                    <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">{TEXTS.album.item.genre}</p>
                                                     <p className="text-primary font-bold">{selectedItem.genre[0]}</p>
                                                 </div>
                                             )}
                                         </div>
-                                        <button onClick={handleResetSelection} className="text-[10px] font-black uppercase tracking-widest text-gray-700 hover:text-primary transition-colors underline decoration-primary/20">{TEXTS.item.changeSelection}</button>
+                                        <button onClick={handleResetSelection} className="text-[10px] font-black uppercase tracking-widest text-gray-700 hover:text-primary transition-colors underline decoration-primary/20">{TEXTS.album.item.changeSelection}</button>
                                     </div>
                                 </div>
                             </div>
@@ -1212,7 +1212,7 @@ export default function Home() {
                                 className="space-y-8 md:space-y-12"
                             >
                                 <div className="space-y-4 md:space-y-6">
-                                    <label className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 italic block px-4"> {TEXTS.item.steps.format} </label>
+                                    <label className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 italic block px-4"> {TEXTS.album.item.steps.format} </label>
                                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                                         {(["VINILO", "CD", "CASSETTE", "OTROS"] as Format[]).map(f => (
                                             <button
@@ -1230,7 +1230,7 @@ export default function Home() {
                                 </div>
 
                                 <div className="space-y-4 md:space-y-6" ref={conditionRef}>
-                                    <label className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 italic block px-4"> {TEXTS.item.steps.condition} </label>
+                                    <label className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 italic block px-4"> {TEXTS.album.item.steps.condition} </label>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                         {(["NUEVO", "USADO"] as Condition[]).map(c => (
                                             <button
@@ -1262,13 +1262,13 @@ export default function Home() {
                                                 }}
                                                 className="w-full py-6 rounded-2xl font-black uppercase text-sm tracking-widest flex items-center justify-center gap-2 transition-all bg-white/5 border border-white/10 text-white hover:bg-white/10"
                                             >
-                                                {TEXTS.item.steps.addAnother}
+                                                {TEXTS.album.item.steps.addAnother}
                                             </button>
                                             <button
                                                 onClick={() => navigate('/revisar-lote')}
                                                 className="w-full bg-primary text-black py-6 rounded-2xl font-black uppercase text-sm tracking-widest shadow-[0_0_40px_rgba(255,184,0,0.2)] hover:scale-[1.02] active:scale-95 transition-all"
                                             >
-                                                {TEXTS.item.steps.finishOrder}
+                                                {TEXTS.album.item.steps.finishOrder}
                                             </button>
                                         </div>
 
@@ -1276,7 +1276,7 @@ export default function Home() {
                                         {recommendations.length > 0 && (
                                             <div className="pt-12 fade-in w-full border-t border-white/5">
                                                 <h4 className="text-xl md:text-2xl font-display font-black text-white italic uppercase tracking-tighter mb-4 md:mb-6 pl-2 border-l-4 border-primary">
-                                                    {TEXTS.item.recommendations}
+                                                    {TEXTS.album.item.recommendations}
                                                 </h4>
                                                 <div className="flex overflow-x-auto gap-4 md:gap-6 pb-6 hide-scrollbar snap-x snap-mandatory">
                                                     {recommendations.map((rec) => (
@@ -1319,27 +1319,27 @@ export default function Home() {
                                 className="bg-[#0A0A0A] border-2 border-primary/40 rounded-[2rem] p-8 md:p-12 space-y-10 shadow-2xl"
                             >
                                 <div className="text-center space-y-4">
-                                    <h3 className="text-3xl md:text-4xl font-display font-black text-white uppercase tracking-tighter">{TEXTS.negotiation.sellPriceTitle}</h3>
-                                    <p className="text-[10px] font-black text-gray-600 uppercase tracking-widest italic">{TEXTS.negotiation.marketValueSubtitle}</p>
+                                    <h3 className="text-3xl md:text-4xl font-display font-black text-white uppercase tracking-tighter">{TEXTS.perfil.negotiation.sellPriceTitle}</h3>
+                                    <p className="text-[10px] font-black text-gray-600 uppercase tracking-widest italic">{TEXTS.perfil.negotiation.marketValueSubtitle}</p>
                                 </div>
 
                                 {/* Market Price Anchor */}
                                 {isLoadingMarket ? (
                                     <div className="flex items-center justify-center gap-3 py-4 px-6 bg-white/[0.02] border border-white/5 rounded-xl">
                                         <div className="h-3 w-3 border-2 border-primary/40 border-t-primary rounded-full animate-spin" />
-                                        <span className="text-[10px] font-mono font-bold text-gray-600 uppercase tracking-widest">{TEXTS.negotiation.consultingMarket}</span>
+                                        <span className="text-[10px] font-mono font-bold text-gray-600 uppercase tracking-widest">{TEXTS.perfil.negotiation.consultingMarket}</span>
                                     </div>
                                 ) : marketPrice !== null && (
                                     <div className="flex items-center gap-3 py-4 px-6 bg-primary/[0.04] border border-primary/10 rounded-xl">
                                         <TrendingUp className="h-4 w-4 text-primary/70 flex-shrink-0" />
                                         <span className="text-[11px] font-mono font-bold text-primary/80 uppercase tracking-wider">
-                                            {TEXTS.negotiation.marketRef} {marketPrice.toFixed(2)}
+                                            {TEXTS.perfil.negotiation.marketRef} {marketPrice.toFixed(2)}
                                         </span>
                                     </div>
                                 )}
 
                                 <div className="space-y-6">
-                                    <label className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 italic block px-4"> {TEXTS.negotiation.currencyLabel} </label>
+                                    <label className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 italic block px-4"> {TEXTS.perfil.negotiation.currencyLabel} </label>
                                     <div className="grid grid-cols-2 gap-3">
                                         {(["ARS", "USD"] as Currency[]).map(c => (
                                             <button
@@ -1348,14 +1348,14 @@ export default function Home() {
                                                 className={`py-5 rounded-2xl text-xs font-black tracking-widest border-2 transition-all flex items-center justify-center gap-2 ${currency === c ? 'bg-primary border-primary text-black' : 'bg-white/5 border-white/5 text-gray-500'}`}
                                             >
                                                 <DollarSign className="h-4 w-4" />
-                                                {c === "ARS" ? TEXTS.negotiation.currencyARS : TEXTS.negotiation.currencyUSD}
+                                                {c === "ARS" ? TEXTS.perfil.negotiation.currencyARS : TEXTS.perfil.negotiation.currencyUSD}
                                             </button>
                                         ))}
                                     </div>
                                 </div>
 
                                 <div className="space-y-6">
-                                    <label className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 italic block px-4"> {TEXTS.negotiation.priceLabel} </label>
+                                    <label className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 italic block px-4"> {TEXTS.perfil.negotiation.priceLabel} </label>
                                     <div className="relative">
                                         <span className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-500 font-black text-lg">
                                             {currency === "ARS" ? "$" : "US$"}
@@ -1380,12 +1380,12 @@ export default function Home() {
                                     disabled={!price}
                                     className="w-full bg-primary text-black py-8 rounded-2xl font-black uppercase text-xs tracking-widest shadow-[0_0_40px_rgba(255,184,0,0.2)] hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
                                 >
-                                    {TEXTS.negotiation.addSellBatch}
+                                    {TEXTS.perfil.negotiation.addSellBatch}
                                 </button>
 
                                 <div ref={actionsRef} />
 
-                                <button onClick={() => { setIntent(null); setStep(1); }} className="w-full text-[10px] font-black uppercase text-gray-700 hover:text-white transition-colors">{TEXTS.negotiation.back}</button>
+                                <button onClick={() => { setIntent(null); setStep(1); }} className="w-full text-[10px] font-black uppercase text-gray-700 hover:text-white transition-colors">{TEXTS.perfil.negotiation.back}</button>
                             </motion.div>
                         )}
 
@@ -1397,8 +1397,8 @@ export default function Home() {
                                 className="bg-[#0A0A0A] border-2 border-primary/40 rounded-[2rem] p-8 md:p-12 space-y-10 shadow-2xl"
                             >
                                 <div className="text-center space-y-4">
-                                    <h3 className="text-3xl md:text-4xl font-display font-black text-white uppercase tracking-tighter">{TEXTS.auth.syncNetwork}</h3>
-                                    <p className="text-[10px] font-black text-gray-600 uppercase tracking-widest italic">{TEXTS.auth.securityProtocol}</p>
+                                    <h3 className="text-3xl md:text-4xl font-display font-black text-white uppercase tracking-tighter">{TEXTS.login.auth.syncNetwork}</h3>
+                                    <p className="text-[10px] font-black text-gray-600 uppercase tracking-widest italic">{TEXTS.login.auth.securityProtocol}</p>
                                 </div>
 
                                 <div className="space-y-6">
@@ -1407,12 +1407,12 @@ export default function Home() {
                                         className="w-full bg-white text-black py-6 rounded-2xl font-black uppercase text-xs flex items-center justify-center gap-4 hover:bg-primary transition-all"
                                     >
                                         <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="" className="w-5 h-5" />
-                                        {TEXTS.auth.googleSignIn}
+                                        {TEXTS.login.auth.googleSignIn}
                                     </button>
 
                                     <div className="relative flex items-center gap-4 py-2">
                                         <div className="flex-1 h-px bg-white/10" />
-                                        <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">{TEXTS.auth.manualCredentials}</span>
+                                        <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">{TEXTS.login.auth.manualCredentials}</span>
                                         <div className="flex-1 h-px bg-white/10" />
                                     </div>
 
@@ -1425,7 +1425,7 @@ export default function Home() {
                                                 type="email"
                                                 value={email}
                                                 onChange={e => setEmail(e.target.value)}
-                                                placeholder={TEXTS.auth.emailPlaceholder}
+                                                placeholder={TEXTS.login.auth.emailPlaceholder}
                                                 className="w-full bg-white/5 border-2 border-white/5 rounded-2xl py-6 pl-16 pr-8 text-white focus:border-primary/40 focus:outline-none transition-all"
                                             />
                                         </div>
@@ -1437,7 +1437,7 @@ export default function Home() {
                                                 type="password"
                                                 value={password}
                                                 onChange={e => setPassword(e.target.value)}
-                                                placeholder={TEXTS.auth.passwordPlaceholder}
+                                                placeholder={TEXTS.login.auth.passwordPlaceholder}
                                                 className="w-full bg-white/5 border-2 border-white/5 rounded-2xl py-6 pl-16 pr-8 text-white focus:border-primary/40 focus:outline-none transition-all"
                                             />
                                         </div>
@@ -1446,11 +1446,11 @@ export default function Home() {
                                             disabled={isSubmitting}
                                             className="w-full bg-primary text-black py-8 rounded-2xl font-black uppercase text-xs tracking-widest shadow-[0_0_40px_rgba(255,184,0,0.2)] hover:scale-[1.02] active:scale-95 transition-all"
                                         >
-                                            {isSubmitting ? TEXTS.auth.connecting : TEXTS.auth.registerAndLink}
+                                            {isSubmitting ? TEXTS.login.auth.connecting : TEXTS.login.auth.registerAndLink}
                                         </button>
                                     </form>
 
-                                    <button onClick={() => setStep(intent === "VENDER" ? 2 : 1)} className="w-full text-[10px] font-black uppercase text-gray-700 hover:text-white transition-colors">{TEXTS.negotiation.back}</button>
+                                    <button onClick={() => setStep(intent === "VENDER" ? 2 : 1)} className="w-full text-[10px] font-black uppercase text-gray-700 hover:text-white transition-colors">{TEXTS.perfil.negotiation.back}</button>
                                 </div>
                             </motion.div>
                         )}

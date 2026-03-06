@@ -80,7 +80,7 @@ export default function ArticleDetail() {
 
     useEffect(() => {
         if (isLoading) {
-            showLoading(TEXTS.common.loadingArticle);
+            showLoading(TEXTS.global.common.loadingArticle);
         } else {
             hideLoading();
         }
@@ -94,9 +94,9 @@ export default function ArticleDetail() {
     if (!article) {
         return (
             <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-6">
-                <h1 className="text-4xl font-display font-bold text-white">{TEXTS.common.articleNotFound}</h1>
+                <h1 className="text-4xl font-display font-bold text-white">{TEXTS.global.common.articleNotFound}</h1>
                 <Link to="/editorial">
-                    <button className="text-primary uppercase font-black tracking-widest hover:underline">{TEXTS.common.backToEditorial}</button>
+                    <button className="text-primary uppercase font-black tracking-widest hover:underline">{TEXTS.global.common.backToEditorial}</button>
                 </Link>
             </div>
         );
@@ -115,7 +115,7 @@ export default function ArticleDetail() {
             />
             <Link to="/editorial" className="inline-flex items-center gap-2 text-gray-500 hover:text-primary transition-colors mb-12 group">
                 <ChevronLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" />
-                <span className="text-[10px] font-black uppercase tracking-widest">{TEXTS.common.backToEditorial}</span>
+                <span className="text-[10px] font-black uppercase tracking-widest">{TEXTS.global.common.backToEditorial}</span>
             </Link>
 
             <header className="space-y-8 md:space-y-12 mb-12 md:mb-16">
@@ -137,7 +137,7 @@ export default function ArticleDetail() {
                             <User className="h-5 w-5 text-primary" />
                         </div>
                         <div>
-                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">{TEXTS.common.author}</p>
+                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">{TEXTS.login.author}</p>
                             <span className="text-sm font-bold text-white uppercase tracking-widest">{article.author}</span>
                         </div>
                     </div>
@@ -146,13 +146,13 @@ export default function ArticleDetail() {
                             <Clock className="h-5 w-5 text-primary" />
                         </div>
                         <div>
-                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">{TEXTS.common.readingTime}</p>
+                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">{TEXTS.global.common.readingTime}</p>
                             <span className="text-sm font-bold text-white uppercase tracking-widest">{article.readTime}</span>
                         </div>
                     </div>
                     <button className="ml-auto flex items-center gap-3 text-gray-500 hover:text-white transition-colors">
                         <Share2 className="h-5 w-5" />
-                        <span className="text-[10px] font-black uppercase tracking-widest">{TEXTS.common.share}</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest">{TEXTS.global.common.share}</span>
                     </button>
                 </div>
             </header>
@@ -175,11 +175,11 @@ export default function ArticleDetail() {
             <Separator className="bg-white/5 my-24 md:my-32" />
 
             <footer className="text-center space-y-8 pb-24 md:pb-32">
-                <h3 className="text-2xl md:text-3xl font-display font-bold text-white uppercase tracking-widest">{TEXTS.common.endOfDispatch}</h3>
-                <p className="text-gray-500 font-medium">{TEXTS.common.stayTuned}</p>
+                <h3 className="text-2xl md:text-3xl font-display font-bold text-white uppercase tracking-widest">{TEXTS.global.common.endOfDispatch}</h3>
+                <p className="text-gray-500 font-medium">{TEXTS.global.common.stayTuned}</p>
                 <Link to="/editorial">
                     <button className="mt-8 bg-white text-black px-10 py-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-primary transition-all">
-                        {TEXTS.common.exploreOtherArticles}
+                        {TEXTS.global.common.exploreOtherArticles}
                     </button>
                 </Link>
             </footer>

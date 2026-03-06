@@ -30,7 +30,7 @@ export default function Eventos() {
                     {
                         id: 'welcome',
                         role: 'model',
-                        text: TEXTS.common.events.welcome
+                        text: TEXTS.eventos.events.welcome
                     }
                 ]);
             } else if (!session && messages.length === 0) {
@@ -38,7 +38,7 @@ export default function Eventos() {
                     {
                         id: 'error',
                         role: 'model',
-                        text: TEXTS.common.events.connectionError
+                        text: TEXTS.eventos.events.connectionError
                     }
                 ]);
             }
@@ -80,7 +80,7 @@ export default function Eventos() {
             const errorMsg: Message = {
                 id: (Date.now() + 1).toString(),
                 role: 'model',
-                text: TEXTS.common.events.interference
+                text: TEXTS.eventos.events.interference
             };
             setMessages(prev => [...prev, errorMsg]);
         } finally {
@@ -93,7 +93,7 @@ export default function Eventos() {
     };
 
     const handleClearChat = () => {
-        if (!window.confirm(TEXTS.common.events.purgeConfirm)) return;
+        if (!window.confirm(TEXTS.eventos.events.purgeConfirm)) return;
 
         const newSession = getEventosChatSession();
         setChatSession(newSession);
@@ -101,7 +101,7 @@ export default function Eventos() {
             {
                 id: Date.now().toString(),
                 role: 'model',
-                text: TEXTS.common.events.reset
+                text: TEXTS.eventos.events.reset
             }
         ]);
         setInput('');
@@ -129,15 +129,15 @@ export default function Eventos() {
                         <Activity className="w-4 h-4 text-primary relative z-10" />
                     </div>
                     <div>
-                        <h1 className="text-lg md:text-xl font-display font-black text-white uppercase tracking-tighter leading-none">{TEXTS.common.events.title}</h1>
-                        <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest leading-none mt-1">{TEXTS.common.events.subtitle}</p>
+                        <h1 className="text-lg md:text-xl font-display font-black text-white uppercase tracking-tighter leading-none">{TEXTS.eventos.events.title}</h1>
+                        <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest leading-none mt-1">{TEXTS.eventos.events.subtitle}</p>
                     </div>
                 </div>
 
                 <button
                     onClick={handleClearChat}
                     className="h-10 w-10 flex items-center justify-center rounded-full text-gray-500 hover:text-red-500 hover:bg-white/5 transition-colors active:scale-90"
-                    title={TEXTS.common.events.clearChat}
+                    title={TEXTS.eventos.events.clearChat}
                 >
                     <Trash2 className="w-4 h-4" />
                 </button>
@@ -201,7 +201,7 @@ export default function Eventos() {
                             type="text"
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
-                            placeholder={TEXTS.common.events.inputPlaceholder}
+                            placeholder={TEXTS.eventos.events.inputPlaceholder}
                             className="flex-1 bg-transparent py-5 px-4 text-white text-sm md:text-base focus:outline-none font-mono placeholder:font-sans placeholder:text-gray-600"
                             disabled={isLoading}
                         />

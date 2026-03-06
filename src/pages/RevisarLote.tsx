@@ -162,7 +162,7 @@ export default function RevisarLote() {
 
         } catch (error) {
             console.error("Submission error:", error);
-            alert(TEXTS.common.batchReview.submissionError);
+            alert(TEXTS.revisarLote.batchReview.submissionError);
         } finally {
             hideLoading();
         }
@@ -216,11 +216,11 @@ export default function RevisarLote() {
         if (isSubmitting) return; // Prevent double clicks
 
         if (!batchIntent) {
-            alert(TEXTS.common.batchReview.confirmIntent);
+            alert(TEXTS.revisarLote.batchReview.confirmIntent);
             return;
         }
         if (batchIntent === 'VENDER' && (!totalPrice || Number(totalPrice) <= 0)) {
-            alert(TEXTS.common.batchReview.validPriceRequired);
+            alert(TEXTS.revisarLote.batchReview.validPriceRequired);
             return;
         }
         if (user) {
@@ -230,14 +230,14 @@ export default function RevisarLote() {
 
     const handleGoogleSignIn = async () => {
         if (!batchIntent) {
-            alert(TEXTS.common.batchReview.confirmIntent);
+            alert(TEXTS.revisarLote.batchReview.confirmIntent);
             return;
         }
         if (batchIntent === 'VENDER' && (!totalPrice || Number(totalPrice) <= 0)) {
-            alert(TEXTS.common.batchReview.validPriceRequired);
+            alert(TEXTS.revisarLote.batchReview.validPriceRequired);
             return;
         }
-        showLoading(TEXTS.common.batchReview.syncingGoogle);
+        showLoading(TEXTS.revisarLote.batchReview.syncingGoogle);
         try {
             const googleUser = await signInWithGoogle();
             if (googleUser) {
@@ -246,7 +246,7 @@ export default function RevisarLote() {
             }
         } catch (error) {
             console.error("Google Auth error:", error);
-            alert(TEXTS.common.batchReview.googleLinkError);
+            alert(TEXTS.revisarLote.batchReview.googleLinkError);
         } finally {
             hideLoading();
         }
@@ -256,15 +256,15 @@ export default function RevisarLote() {
         if (e) e.preventDefault();
         if (!email || !password) return;
         if (!batchIntent) {
-            alert(TEXTS.common.batchReview.confirmIntent);
+            alert(TEXTS.revisarLote.batchReview.confirmIntent);
             return;
         }
         if (batchIntent === 'VENDER' && (!totalPrice || Number(totalPrice) <= 0)) {
-            alert(TEXTS.common.batchReview.validPriceRequired);
+            alert(TEXTS.revisarLote.batchReview.validPriceRequired);
             return;
         }
 
-        showLoading(TEXTS.common.batchReview.authenticatingUser);
+        showLoading(TEXTS.revisarLote.batchReview.authenticatingUser);
         try {
             const loggedUser = await authenticateUser(email, password);
             if (loggedUser) {
@@ -273,7 +273,7 @@ export default function RevisarLote() {
             }
         } catch (error) {
             console.error("Manual Auth error:", error);
-            alert(TEXTS.common.batchReview.authError);
+            alert(TEXTS.revisarLote.batchReview.authError);
         } finally {
             hideLoading();
         }
@@ -290,9 +290,9 @@ export default function RevisarLote() {
                     <CheckCircle2 className="h-12 w-12 text-black" />
                 </motion.div>
                 <div className="space-y-4">
-                    <h2 className="text-4xl md:text-6xl font-display font-black text-white uppercase tracking-tighter">{TEXTS.common.batchReview.batchRegistered}</h2>
+                    <h2 className="text-4xl md:text-6xl font-display font-black text-white uppercase tracking-tighter">{TEXTS.revisarLote.batchReview.batchRegistered}</h2>
                     <p className="text-gray-500 text-lg md:text-xl max-w-md mx-auto font-medium">
-                        {TEXTS.common.batchReview.intentionsRegistered.split('Oldie but Goldie')[0]}<span className="text-primary">Oldie but Goldie</span>{TEXTS.common.batchReview.intentionsRegistered.split('Oldie but Goldie')[1]}
+                        {TEXTS.revisarLote.batchReview.intentionsRegistered.split('Oldie but Goldie')[0]}<span className="text-primary">Oldie but Goldie</span>{TEXTS.revisarLote.batchReview.intentionsRegistered.split('Oldie but Goldie')[1]}
                     </p>
                 </div>
                 <div className="flex flex-col items-center gap-4 w-full max-w-sm mx-auto">
@@ -305,14 +305,14 @@ export default function RevisarLote() {
                             className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-500 text-white px-8 py-4 rounded-2xl font-black uppercase text-xs tracking-widest transition-all shadow-lg shadow-green-500/20"
                         >
                             <MessageCircle className="h-5 w-5" />
-                            {TEXTS.common.batchReview.contactWhatsApp}
+                            {TEXTS.revisarLote.batchReview.contactWhatsApp}
                         </button>
                     )}
                     <button
                         onClick={() => navigate('/')}
                         className="w-full bg-white/5 border border-white/10 text-white px-8 py-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-white/10 transition-all"
                     >
-                        {TEXTS.common.batchReview.backToStart}
+                        {TEXTS.revisarLote.batchReview.backToStart}
                     </button>
                 </div>
             </div>
@@ -323,12 +323,12 @@ export default function RevisarLote() {
         return (
             <div className="min-h-[60vh] flex flex-col items-center justify-center text-center px-4">
                 <ShoppingBag className="h-20 w-20 text-white/10 mb-6" />
-                <h2 className="text-3xl font-display font-black text-white uppercase tracking-tighter mb-4">{TEXTS.common.batchReview.batchEmpty}</h2>
+                <h2 className="text-3xl font-display font-black text-white uppercase tracking-tighter mb-4">{TEXTS.revisarLote.batchReview.batchEmpty}</h2>
                 <button
                     onClick={() => navigate('/')}
                     className="bg-primary text-black px-8 py-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:scale-105 transition-all"
                 >
-                    {TEXTS.common.batchReview.exploreCatalog}
+                    {TEXTS.revisarLote.batchReview.exploreCatalog}
                 </button>
             </div>
         );
@@ -345,7 +345,7 @@ export default function RevisarLote() {
                     <ChevronLeft className="h-5 w-5" />
                 </button>
                 <h1 className="text-4xl md:text-5xl font-display font-black text-white uppercase tracking-tighter">
-                    {TEXTS.common.batchReview.reviewBatch.split(' ').slice(0, -1).join(' ')} <span className="text-primary">{TEXTS.common.batchReview.reviewBatch.split(' ').slice(-1)}</span>
+                    {TEXTS.revisarLote.batchReview.reviewBatch.split(' ').slice(0, -1).join(' ')} <span className="text-primary">{TEXTS.revisarLote.batchReview.reviewBatch.split(' ').slice(-1)}</span>
                 </h1>
             </header>
 
@@ -368,7 +368,7 @@ export default function RevisarLote() {
                             </div>
                         </motion.div>
                     )}
-                    <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 italic">{TEXTS.common.batchReview.selectedDiscs} ({totalCount})</h3>
+                    <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 italic">{TEXTS.revisarLote.batchReview.selectedDiscs} ({totalCount})</h3>
                     <AnimatePresence>
                         {loteItems.map((item) => (
                             <motion.div
@@ -406,7 +406,7 @@ export default function RevisarLote() {
                                 <button
                                     onClick={() => toggleItem(item)}
                                     className="absolute right-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all opacity-0 group-hover:opacity-100"
-                                    title={TEXTS.common.close}
+                                    title={TEXTS.global.common.close}
                                 >
                                     <X className="h-4 w-4" />
                                 </button>
@@ -420,9 +420,9 @@ export default function RevisarLote() {
                     <div className="bg-[#0A0A0A] border-2 border-primary/40 rounded-[2rem] p-6 md:p-8 space-y-6 sticky top-24 shadow-2xl">
                         <div className="space-y-4">
                             <div className="space-y-2">
-                                <h3 className="text-2xl font-display font-black text-white uppercase tracking-tighter">{TEXTS.common.batchReview.processOrder}</h3>
+                                <h3 className="text-2xl font-display font-black text-white uppercase tracking-tighter">{TEXTS.revisarLote.batchReview.processOrder}</h3>
                                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest leading-relaxed">
-                                    {TEXTS.common.batchReview.processDescription}
+                                    {TEXTS.revisarLote.batchReview.processDescription}
                                 </p>
                             </div>
 
@@ -529,7 +529,7 @@ export default function RevisarLote() {
                                 animate={{ opacity: 1, height: 'auto' }}
                                 className="pt-4 space-y-2 border-t border-white/5"
                             >
-                                <h4 className="text-white font-black uppercase text-[10px] tracking-widest text-center">{TEXTS.common.batchReview.intendedPrice}</h4>
+                                <h4 className="text-white font-black uppercase text-[10px] tracking-widest text-center">{TEXTS.revisarLote.batchReview.intendedPrice}</h4>
                                 <div className="flex flex-col md:flex-row bg-black/50 p-1.5 rounded-xl gap-2 w-full">
                                     <select
                                         value={currency}
@@ -562,7 +562,7 @@ export default function RevisarLote() {
                                 {isSubmitting ? (
                                     <div className="h-4 w-4 border-2 border-black/40 border-t-black rounded-full animate-spin" />
                                 ) : (
-                                    <> <ShoppingBag className="w-4 h-4" /> {TEXTS.common.batchReview.confirmAndSend} </>
+                                    <> <ShoppingBag className="w-4 h-4" /> {TEXTS.revisarLote.batchReview.confirmAndSend} </>
                                 )}
                             </button>
 
@@ -589,12 +589,12 @@ export default function RevisarLote() {
                                 className="w-full bg-white text-black py-4 rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-3 hover:bg-primary transition-all shadow-lg disabled:opacity-50"
                             >
                                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="" className="w-4 h-4" />
-                                {TEXTS.common.batchReview.linkGoogle}
+                                {TEXTS.revisarLote.batchReview.linkGoogle}
                             </button>
 
                             <div className="relative flex items-center gap-4 py-2">
                                 <div className="flex-1 h-px bg-white/10" />
-                                <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">{TEXTS.common.batchReview.manualAuth}</span>
+                                <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">{TEXTS.revisarLote.batchReview.manualAuth}</span>
                                 <div className="flex-1 h-px bg-white/10" />
                             </div>
 
@@ -605,7 +605,7 @@ export default function RevisarLote() {
                                         type="email"
                                         value={email}
                                         onChange={e => setEmail(e.target.value)}
-                                        placeholder={`${TEXTS.common.auth.emailPlaceholder}...`}
+                                        placeholder={`${TEXTS.login.auth.emailPlaceholder}...`}
                                         className="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-sm text-white focus:border-primary/40 focus:outline-none transition-all"
                                     />
                                 </div>
@@ -624,7 +624,7 @@ export default function RevisarLote() {
                                     disabled={isSubmitting || !batchIntent || (batchIntent === 'VENDER' && (!totalPrice || Number(totalPrice) <= 0))}
                                     className="w-full bg-primary text-black py-4 rounded-xl font-black uppercase text-[10px] tracking-widest hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
                                 >
-                                    {isSubmitting ? TEXTS.common.batchReview.connecting : TEXTS.common.batchReview.registerAndSend}
+                                    {isSubmitting ? TEXTS.revisarLote.batchReview.connecting : TEXTS.revisarLote.batchReview.registerAndSend}
                                 </button>
                             </form>
                         </div>

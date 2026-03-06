@@ -89,8 +89,8 @@ export default function Profile() {
 
     const handleAcceptOffer = async () => {
         if (!selectedOrder || isLoading) return;
-        if (confirm(TEXTS.profile.confirmAcceptProposal)) {
-            showLoading(TEXTS.profile.acceptingProposal);
+        if (confirm(TEXTS.perfil.profile.confirmAcceptProposal)) {
+            showLoading(TEXTS.perfil.profile.acceptingProposal);
             try {
                 // MOTOR SOBERANO: Usamos resolveTrade para completar la operación
                 await tradeService.resolveTrade(selectedOrder.id, selectedOrder.manifest || {
@@ -99,10 +99,10 @@ export default function Profile() {
                     cashAdjustment: selectedOrder.totalPrice || 0
                 });
 
-                setSuccessMessage(TEXTS.profile.proposalAccepted);
+                setSuccessMessage(TEXTS.perfil.profile.proposalAccepted);
             } catch (error) {
                 console.error("Error accepting proposal:", error);
-                alert(TEXTS.profile.acceptError);
+                alert(TEXTS.perfil.profile.acceptError);
             } finally {
                 hideLoading();
             }
@@ -266,7 +266,7 @@ export default function Profile() {
         const priceVal = parseFloat(counterOfferPrice);
         if (isNaN(priceVal) || priceVal <= 0) return;
 
-        showLoading(TEXTS.profile.sendingCounterOffer);
+        showLoading(TEXTS.perfil.profile.sendingCounterOffer);
         setIsNegotiating(true);
         try {
             await updateDoc(doc(db, "trades", order.id), {
@@ -277,7 +277,7 @@ export default function Profile() {
                     currency: order.currency || order.details?.currency || "ARS",
                     sender: 'user',
                     timestamp: new Date(),
-                    message: TEXTS.profile.userCounterOffer,
+                    message: TEXTS.perfil.profile.userCounterOffer,
                 })
             });
 
@@ -293,10 +293,10 @@ export default function Profile() {
             setSelectedOrder((prev: any) => prev ? { ...prev, totalPrice: priceVal, status: "contraoferta_usuario" } : null);
             setCounterOfferPrice("");
             setShowCounterInput(false);
-            setSuccessMessage(TEXTS.profile.counterOfferSent);
+            setSuccessMessage(TEXTS.perfil.profile.counterOfferSent);
         } catch (error) {
             console.error("Error sending counter-offer:", error);
-            alert(TEXTS.profile.genericError);
+            alert(TEXTS.perfil.profile.genericError);
         } finally {
             setIsNegotiating(false);
             hideLoading();
@@ -500,8 +500,8 @@ export default function Profile() {
                                 <div className="py-20 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[3rem] space-y-6 text-center">
                                     <ShoppingBag className="h-12 w-12 text-gray-700" />
                                     <div className="space-y-2">
-                                        <p className="text-white font-black uppercase tracking-widest">{TEXTS.profile.noActivity}</p>
-                                        <p className="text-gray-600 text-xs font-bold uppercase tracking-widest max-w-xs">{TEXTS.profile.noActivitySub}</p>
+                                        <p className="text-white font-black uppercase tracking-widest">{TEXTS.perfil.profile.noActivity}</p>
+                                        <p className="text-gray-600 text-xs font-bold uppercase tracking-widest max-w-xs">{TEXTS.perfil.profile.noActivitySub}</p>
                                     </div>
                                     <Link to="/tienda" className="bg-primary text-black px-8 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:scale-105 transition-all">
                                         Explorar Búnker
@@ -744,7 +744,7 @@ export default function Profile() {
                         {/* Header — TAREA 2 & 4 */}
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
                             <div className="space-y-1">
-                                <h4 className="text-xl md:text-3xl font-display font-black text-white uppercase tracking-tighter">{TEXTS.profile.recentOrders}</h4>
+                                <h4 className="text-xl md:text-3xl font-display font-black text-white uppercase tracking-tighter">{TEXTS.perfil.profile.recentOrders}</h4>
                             </div>
                             <div className="flex items-center gap-6 text-[10px] font-black uppercase tracking-widest text-gray-500 overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
                                 <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">ID: {selectedOrder.id}</p>
@@ -1002,9 +1002,9 @@ export default function Profile() {
                                                 <CheckCircle2 className="w-8 h-8 text-black" />
                                             </div>
                                             <div className="space-y-2">
-                                                <h3 className="text-2xl font-display font-black text-white uppercase tracking-tighter">{TEXTS.profile.saleFinished}</h3>
+                                                <h3 className="text-2xl font-display font-black text-white uppercase tracking-tighter">{TEXTS.perfil.profile.saleFinished}</h3>
                                                 <p className="text-gray-400 text-sm font-medium leading-relaxed">
-                                                    {TEXTS.profile.saleSuccess}
+                                                    {TEXTS.perfil.profile.saleSuccess}
                                                 </p>
                                             </div>
                                         </div>
@@ -1032,7 +1032,7 @@ export default function Profile() {
                                                 className="w-full flex items-center justify-center gap-3 bg-green-600 hover:bg-green-500 text-white px-8 py-4 rounded-2xl font-black uppercase text-xs tracking-widest transition-all shadow-lg shadow-green-500/20"
                                             >
                                                 <MessageCircle className="h-5 w-5" />
-                                                {TEXTS.success.contactWhatsApp}
+                                                {TEXTS.global.success.contactWhatsApp}
                                             </button>
                                             <button
                                                 onClick={() => window.print()}

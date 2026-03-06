@@ -98,7 +98,7 @@ export default function BulkUpload() {
     };
 
     const handleClearWorkspace = () => {
-        if (window.confirm(TEXTS.bulk.clearWorkspaceConfirm)) {
+        if (window.confirm(TEXTS.admin.bulk.clearWorkspaceConfirm)) {
             setRows([]);
             localStorage.removeItem(STAGING_KEY);
         }
@@ -124,7 +124,7 @@ export default function BulkUpload() {
             reader.readAsArrayBuffer(file);
         } else {
             setIsProcessing(false);
-            alert(TEXTS.bulk.unsupportedFormat);
+            alert(TEXTS.admin.bulk.unsupportedFormat);
         }
     };
 
@@ -309,7 +309,7 @@ export default function BulkUpload() {
                 });
                 setRows(newRows);
                 pushBulkUploadCompleted(batchItems.length);
-                alert(TEXTS.bulk.operationFinished);
+                alert(TEXTS.admin.bulk.operationFinished);
             } catch (error: any) {
                 console.error("Batch publish error", error);
                 alert("Error al crear el lote: " + (error.message || "Error desconocido"));
@@ -348,7 +348,7 @@ export default function BulkUpload() {
 
             setRows(newRows);
             pushBulkUploadCompleted(publishCount);
-            alert(TEXTS.bulk.operationFinished);
+            alert(TEXTS.admin.bulk.operationFinished);
         } catch (error: any) {
             console.error("Publish error", error);
             const isPermissionError = error.code === 'permission-denied' || error.message?.includes('permissions');
@@ -368,10 +368,10 @@ export default function BulkUpload() {
             <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div className="flex flex-col gap-2">
                     <h1 className="text-4xl md:text-5xl font-display font-black tracking-tight text-white uppercase drop-shadow-xl">
-                        {TEXTS.bulk.title}
+                        {TEXTS.admin.bulk.title}
                     </h1>
                     <p className="text-sm font-bold text-gray-500 uppercase tracking-widest max-w-xl">
-                        {TEXTS.bulk.subtitle}
+                        {TEXTS.admin.bulk.subtitle}
                     </p>
                 </div>
                 <div className="flex items-center gap-4">
@@ -427,8 +427,8 @@ export default function BulkUpload() {
                     <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mb-6 shadow-2xl shadow-primary/20">
                         <FileSpreadsheet className="w-10 h-10 text-primary" />
                     </div>
-                    <p className="text-xl font-display font-black text-white mb-2 tracking-tight">{TEXTS.bulk.dropTitle}</p>
-                    <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">{TEXTS.bulk.dropSubtitle}</p>
+                    <p className="text-xl font-display font-black text-white mb-2 tracking-tight">{TEXTS.admin.bulk.dropTitle}</p>
+                    <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">{TEXTS.admin.bulk.dropSubtitle}</p>
                 </div>
             )}
 
@@ -436,9 +436,9 @@ export default function BulkUpload() {
                 <div className="max-w-4xl p-6 rounded-3xl bg-secondary/5 border border-secondary/20 flex flex-col sm:flex-row items-start gap-4 shadow-inner">
                     <AlertCircle className="w-6 h-6 text-secondary shrink-0 mt-0.5" />
                     <div className="space-y-2">
-                        <h4 className="text-sm font-black text-secondary uppercase tracking-widest">{TEXTS.bulk.columnRequirements}</h4>
+                        <h4 className="text-sm font-black text-secondary uppercase tracking-widest">{TEXTS.admin.bulk.columnRequirements}</h4>
                         <p className="text-xs text-secondary/80 font-bold leading-relaxed">
-                            {TEXTS.bulk.columnRequirementsDesc}
+                            {TEXTS.admin.bulk.columnRequirementsDesc}
                         </p>
                     </div>
                 </div>
@@ -448,7 +448,7 @@ export default function BulkUpload() {
                 <div className="max-w-4xl p-8 rounded-[2.5rem] bg-white/5 border border-white/10 space-y-6">
                     <div className="flex items-center justify-between">
                         <h3 className="text-xl font-display font-black text-white tracking-tight flex items-center gap-3">
-                            <span className="w-3 h-3 rounded-full bg-primary animate-ping" /> {TEXTS.bulk.processingBatch}
+                            <span className="w-3 h-3 rounded-full bg-primary animate-ping" /> {TEXTS.admin.bulk.processingBatch}
                         </h3>
                         <span className="text-primary font-mono font-bold">{progress}%</span>
                     </div>
@@ -456,7 +456,7 @@ export default function BulkUpload() {
                         <div className="h-full bg-primary transition-all duration-300 ease-out" style={{ width: `${progress}%` }} />
                     </div>
                     <p className="text-xs text-gray-500 font-bold uppercase tracking-widest flex items-center gap-2">
-                        <Lock className="w-3 h-3" /> {TEXTS.bulk.rateLimiting}
+                        <Lock className="w-3 h-3" /> {TEXTS.admin.bulk.rateLimiting}
                     </p>
                 </div>
             )}
@@ -465,12 +465,12 @@ export default function BulkUpload() {
             {rows.length > 0 && !isProcessing && (
                 <div className="space-y-4">
                     <div className="flex items-center justify-between flex-wrap gap-4 mb-8">
-                        <h3 className="text-xl font-display font-black text-white uppercase">{rows.length} {TEXTS.bulk.itemsTotal}</h3>
+                        <h3 className="text-xl font-display font-black text-white uppercase">{rows.length} {TEXTS.admin.bulk.itemsTotal}</h3>
                         <div className="flex items-center gap-4 flex-wrap">
                             <div className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase">
-                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500" /> {rows.filter(r => r.status === 'MATCH_FOUND').length} {TEXTS.bulk.ready}</span>
-                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-yellow-500 ml-2" /> {rows.filter(r => r.status === 'AMBIGUOUS').length} {TEXTS.bulk.doubt}</span>
-                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 ml-2" /> {rows.filter(r => r.status === 'NOT_FOUND').length} {TEXTS.bulk.fail}</span>
+                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500" /> {rows.filter(r => r.status === 'MATCH_FOUND').length} {TEXTS.admin.bulk.ready}</span>
+                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-yellow-500 ml-2" /> {rows.filter(r => r.status === 'AMBIGUOUS').length} {TEXTS.admin.bulk.doubt}</span>
+                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 ml-2" /> {rows.filter(r => r.status === 'NOT_FOUND').length} {TEXTS.admin.bulk.fail}</span>
                             </div>
                             <button
                                 onClick={handleClearWorkspace}
@@ -502,7 +502,7 @@ export default function BulkUpload() {
                                 <div className="flex-1 mt-auto pt-4 border-t border-white/5 z-10 relative">
                                     {row.published ? (
                                         <div className="flex items-center justify-center gap-2 text-green-500 font-bold uppercase text-[10px] tracking-widest h-16 bg-green-500/10 rounded-2xl">
-                                            <CheckCircle2 className="w-4 h-4" /> {TEXTS.bulk.operationFinished}
+                                            <CheckCircle2 className="w-4 h-4" /> {TEXTS.admin.bulk.operationFinished}
                                         </div>
                                     ) : row.status === 'MATCH_FOUND' && row.selectedMatch ? (
                                         <div className="flex flex-col gap-3 h-full justify-between">
@@ -527,7 +527,7 @@ export default function BulkUpload() {
                                                     : "bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white border border-white/10"
                                                     }`}
                                             >
-                                                {row.inBatch ? `✔ ${TEXTS.bulk.workspace}` : `+ ${TEXTS.bulk.workspace}`}
+                                                {row.inBatch ? `✔ ${TEXTS.admin.bulk.workspace}` : `+ ${TEXTS.admin.bulk.workspace}`}
                                             </button>
                                         </div>
                                     ) : row.status === 'AMBIGUOUS' ? (
@@ -565,7 +565,7 @@ export default function BulkUpload() {
                                         </div>
                                     ) : (
                                         <div className="space-y-3">
-                                            <p className="text-[10px] font-black uppercase text-red-500 tracking-widest mb-1">{TEXTS.bulk.noIdentity}</p>
+                                            <p className="text-[10px] font-black uppercase text-red-500 tracking-widest mb-1">{TEXTS.admin.bulk.noIdentity}</p>
                                             <div className="flex items-center gap-2">
                                                 <input
                                                     type="text"
@@ -602,8 +602,8 @@ export default function BulkUpload() {
                                 <List className="w-6 h-6" />
                             </div>
                             <div>
-                                <h4 className="text-white font-black uppercase tracking-tight">{TEXTS.bulk.workspace}</h4>
-                                <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">{rows.filter(r => r.inBatch).length} {TEXTS.bulk.registeredOfficially}</p>
+                                <h4 className="text-white font-black uppercase tracking-tight">{TEXTS.admin.bulk.workspace}</h4>
+                                <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">{rows.filter(r => r.inBatch).length} {TEXTS.admin.bulk.registeredOfficially}</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-4 w-full md:w-auto">
@@ -649,15 +649,15 @@ export default function BulkUpload() {
                                     onClick={() => setPublishMode("individual")}
                                     className={`p-4 rounded-2xl border transition-all text-left space-y-2 ${publishMode === "individual" ? "bg-primary/10 border-primary" : "bg-white/5 border-white/10 opacity-50"}`}
                                 >
-                                    <h4 className="text-white font-black uppercase text-[10px] tracking-widest">{TEXTS.bulk.individualMode}</h4>
-                                    <p className="text-[9px] text-gray-400 font-bold leading-tight">{TEXTS.bulk.individualModeDesc}</p>
+                                    <h4 className="text-white font-black uppercase text-[10px] tracking-widest">{TEXTS.admin.bulk.individualMode}</h4>
+                                    <p className="text-[9px] text-gray-400 font-bold leading-tight">{TEXTS.admin.bulk.individualModeDesc}</p>
                                 </button>
                                 <button
                                     onClick={() => setPublishMode("bundle")}
                                     className={`p-4 rounded-2xl border transition-all text-left space-y-2 ${publishMode === "bundle" ? "bg-primary/10 border-primary" : "bg-white/5 border-white/10 opacity-50"}`}
                                 >
-                                    <h4 className="text-white font-black uppercase text-[10px] tracking-widest">{TEXTS.bulk.bundleMode}</h4>
-                                    <p className="text-[9px] text-gray-400 font-bold leading-tight">{TEXTS.bulk.bundleModeDesc}</p>
+                                    <h4 className="text-white font-black uppercase text-[10px] tracking-widest">{TEXTS.admin.bulk.bundleMode}</h4>
+                                    <p className="text-[9px] text-gray-400 font-bold leading-tight">{TEXTS.admin.bulk.bundleModeDesc}</p>
                                 </button>
                             </div>
 
@@ -675,7 +675,7 @@ export default function BulkUpload() {
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
-                                            <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">{TEXTS.bulk.priceAdjustment}</label>
+                                            <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">{TEXTS.admin.bulk.priceAdjustment}</label>
                                             <input
                                                 type="number"
                                                 value={batchPrice}
@@ -706,7 +706,7 @@ export default function BulkUpload() {
                                 onClick={handlePublishStrategy}
                                 className="w-full py-6 rounded-2xl bg-primary text-black font-black uppercase tracking-[0.2em] transition-all hover:brightness-110 shadow-xl shadow-primary/20"
                             >
-                                {publishMode === "bundle" ? TEXTS.bulk.publishBundle : "Registrar Individuales"}
+                                {publishMode === "bundle" ? TEXTS.admin.bulk.publishBundle : "Registrar Individuales"}
                             </button>
                         </div>
                     </div>

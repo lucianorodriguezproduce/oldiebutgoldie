@@ -88,9 +88,9 @@ export default function AlbumDetail() {
                 animate={{ opacity: 1 }}
                 className="text-center py-40 bg-white/[0.02] rounded-[3rem] border border-dashed border-white/10"
             >
-                <p className="text-red-400 font-bold mb-8 text-xl tracking-tight">{TEXTS.common.sonicConnectionLost}</p>
+                <p className="text-red-400 font-bold mb-8 text-xl tracking-tight">{TEXTS.global.common.sonicConnectionLost}</p>
                 <Link to="/">
-                    <Button variant="outline" className="rounded-full px-10 h-14 font-bold border-white/20 hover:bg-white hover:text-black">{TEXTS.common.backToDiscovery}</Button>
+                    <Button variant="outline" className="rounded-full px-10 h-14 font-bold border-white/20 hover:bg-white hover:text-black">{TEXTS.global.common.backToDiscovery}</Button>
                 </Link>
             </motion.div>
         );
@@ -106,7 +106,7 @@ export default function AlbumDetail() {
 
             <nav className="flex mb-16 text-[10px] font-black uppercase tracking-[0.2em] text-gray-600">
                 <ol className="flex items-center space-x-4">
-                    <li><Link to="/" className="hover:text-primary transition-colors">{TEXTS.navigation.brand}</Link></li>
+                    <li><Link to="/" className="hover:text-primary transition-colors">{TEXTS.global.navigation.brand}</Link></li>
                     <li><ChevronRight className="h-3 w-3 text-gray-800" /></li>
                     <li className="text-gray-400">{album.artists?.[0]?.name || "Artista"}</li>
                     <li><ChevronRight className="h-3 w-3 text-gray-800" /></li>
@@ -139,9 +139,9 @@ export default function AlbumDetail() {
                         <div className="grid grid-cols-2 gap-4">
                             <Button
                                 onClick={async () => {
-                                    if (!user) return alert(TEXTS.common.syncToCollect);
+                                    if (!user) return alert(TEXTS.global.common.syncToCollect);
                                     const isAdding = !isInCollection(album.id.toString());
-                                    showLoading(isAdding ? TEXTS.common.archivingCollection : TEXTS.common.removingCollection);
+                                    showLoading(isAdding ? TEXTS.global.common.archivingCollection : TEXTS.global.common.removingCollection);
                                     try {
                                         await toggleCollection(album.id.toString(), { title: album.title, cover_image: album.images?.[0]?.uri || album.thumb });
                                     } finally {
@@ -154,13 +154,13 @@ export default function AlbumDetail() {
                                     }`}
                             >
                                 <Library className={`mr-3 h-6 w-6 relative z-10 ${isInCollection(album.id.toString()) ? "text-primary" : ""}`} />
-                                <span className="relative z-10">{isInCollection(album.id.toString()) ? TEXTS.common.archived : TEXTS.common.collect}</span>
+                                <span className="relative z-10">{isInCollection(album.id.toString()) ? TEXTS.global.common.archived : TEXTS.global.common.collect}</span>
                             </Button>
                             <Button
                                 onClick={async () => {
-                                    if (!user) return alert(TEXTS.common.syncToWantlist);
+                                    if (!user) return alert(TEXTS.global.common.syncToWantlist);
                                     const isAdding = !isInWantlist(album.id.toString());
-                                    showLoading(isAdding ? TEXTS.common.searchingFavorites : TEXTS.common.removingFavorites);
+                                    showLoading(isAdding ? TEXTS.global.common.searchingFavorites : TEXTS.global.common.removingFavorites);
                                     try {
                                         await toggleWantlist(album.id.toString(), { title: album.title, cover_image: album.images?.[0]?.uri || album.thumb });
                                     } finally {
@@ -174,7 +174,7 @@ export default function AlbumDetail() {
                                     }`}
                             >
                                 <Heart className={`mr-3 h-6 w-6 ${isInWantlist(album.id.toString()) ? "fill-secondary text-secondary" : ""}`} />
-                                {isInWantlist(album.id.toString()) ? TEXTS.common.target : TEXTS.common.favorites}
+                                {isInWantlist(album.id.toString()) ? TEXTS.global.common.target : TEXTS.global.common.favorites}
                             </Button>
                         </div>
 
@@ -206,7 +206,7 @@ export default function AlbumDetail() {
                         )}
 
                         <Button variant="ghost" className="h-14 text-gray-500 hover:text-white hover:bg-white/5 rounded-2xl font-black uppercase tracking-[0.15em] text-[11px] border border-white/5 transition-all">
-                            <Share2 className="mr-3 h-5 w-5" /> {TEXTS.common.transmissionLink}
+                            <Share2 className="mr-3 h-5 w-5" /> {TEXTS.global.common.transmissionLink}
                         </Button>
                     </div>
 
@@ -219,30 +219,30 @@ export default function AlbumDetail() {
                         <div className="absolute -top-10 -right-10 w-40 h-40 bg-primary/10 blur-[80px] rounded-full group-hover:bg-primary/20 transition-colors duration-1000" />
                         <div className="flex items-center justify-between mb-10">
                             <h3 className="text-2xl font-display font-bold text-white flex items-center gap-4">
-                                <Store className="h-7 w-7 text-primary" /> {TEXTS.common.marketLogic}
+                                <Store className="h-7 w-7 text-primary" /> {TEXTS.global.common.marketLogic}
                             </h3>
                             <Badge variant="secondary" className="bg-primary/5 text-primary border-primary/20 rounded-lg font-mono text-[10px] font-black px-3 py-1.5 tracking-tighter">APP_ESTABLE_V1</Badge>
                         </div>
                         <div className="space-y-8 font-mono">
                             <div className="flex justify-between items-end border-b border-white/[0.04] pb-6">
-                                <span className="text-gray-500 text-xs font-bold uppercase tracking-widest">{TEXTS.common.basePrice}</span>
+                                <span className="text-gray-500 text-xs font-bold uppercase tracking-widest">{TEXTS.global.common.basePrice}</span>
                                 <span className="text-3xl font-black text-white tracking-widest">
                                     {album.lowest_price ? `$${album.lowest_price.toFixed(2)}` : "—"}
                                 </span>
                             </div>
                             <div className="flex justify-between items-end border-b border-white/[0.04] pb-6">
-                                <span className="text-gray-500 text-xs font-bold uppercase tracking-widest">{TEXTS.common.resonance}</span>
+                                <span className="text-gray-500 text-xs font-bold uppercase tracking-widest">{TEXTS.global.common.resonance}</span>
                                 <div className="flex flex-col items-end">
                                     <span className="text-3xl font-black text-primary tracking-widest">
                                         {album.community?.rating?.average?.toFixed(1) || "5.0"}
                                     </span>
-                                    <span className="text-[9px] text-gray-700 uppercase font-black mt-1">{album.community?.rating?.count || 0} {TEXTS.common.communityVotes}</span>
+                                    <span className="text-[9px] text-gray-700 uppercase font-black mt-1">{album.community?.rating?.count || 0} {TEXTS.global.common.communityVotes}</span>
                                 </div>
                             </div>
                         </div>
                         <a href={album.uri} target="_blank" rel="noopener noreferrer" className="block w-full">
                             <Button className="w-full mt-10 bg-black/40 border border-white/10 text-white hover:bg-white hover:text-black transition-all rounded-[1.25rem] py-8 font-black uppercase tracking-widest text-[11px] h-16">
-                                {TEXTS.common.analyzeOnDiscogs}
+                                {TEXTS.global.common.analyzeOnDiscogs}
                             </Button>
                         </a>
                     </motion.div>
@@ -258,7 +258,7 @@ export default function AlbumDetail() {
                         <div className="flex flex-wrap items-center gap-4 mb-8">
                             <div className="flex items-center gap-2 bg-secondary/10 px-5 py-2 rounded-full border border-secondary/20">
                                 <Music className="h-3.5 w-3.5 text-secondary" />
-                                <span className="text-[10px] font-black text-secondary uppercase tracking-[0.1em]">{album.formats?.[0]?.name || TEXTS.common.lp}</span>
+                                <span className="text-[10px] font-black text-secondary uppercase tracking-[0.1em]">{album.formats?.[0]?.name || TEXTS.global.common.lp}</span>
                             </div>
                             <div className="flex items-center gap-2 bg-white/5 px-5 py-2 rounded-full border border-white/10">
                                 <Globe className="h-3.5 w-3.5 text-gray-500" />
@@ -267,7 +267,7 @@ export default function AlbumDetail() {
                             {album.community?.have > 1000 && (
                                 <div className="flex items-center gap-2 bg-primary/10 px-5 py-2 rounded-full border border-primary/20">
                                     <Award className="h-3.5 w-3.5 text-primary" />
-                                    <span className="text-[10px] font-black text-primary uppercase">{TEXTS.common.eliteFavorite}</span>
+                                    <span className="text-[10px] font-black text-primary uppercase">{TEXTS.global.common.eliteFavorite}</span>
                                 </div>
                             )}
                         </div>
@@ -278,10 +278,10 @@ export default function AlbumDetail() {
 
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-10 p-10 bg-white/[0.02] rounded-[3rem] border border-white/[0.04] backdrop-blur-2xl">
                             {[
-                                { label: TEXTS.common.label, value: album.labels?.[0]?.name },
-                                { label: TEXTS.common.catNo, value: album.labels?.[0]?.catno },
-                                { label: TEXTS.common.genre, value: album.genres?.[0] },
-                                { label: TEXTS.common.country, value: album.country },
+                                { label: TEXTS.global.common.label, value: album.labels?.[0]?.name },
+                                { label: TEXTS.global.common.catNo, value: album.labels?.[0]?.catno },
+                                { label: TEXTS.global.common.genre, value: album.genres?.[0] },
+                                { label: TEXTS.global.common.country, value: album.country },
                             ].map((item) => (
                                 <div key={item.label}>
                                     <span className="block text-[10px] text-gray-600 uppercase font-black tracking-[0.2em] mb-3">{item.label}</span>
@@ -340,8 +340,8 @@ export default function AlbumDetail() {
                         ) : (
                             <div className="space-y-6">
                                 <div className="flex items-center justify-between mb-10 border-b border-white/[0.05] pb-6">
-                                    <h3 className="text-4xl font-display font-bold text-white tracking-tightest">{TEXTS.common.tracklist}</h3>
-                                    <span className="font-mono text-[11px] text-gray-700 uppercase font-black tracking-widest bg-white/5 px-4 py-2 rounded-xl">{album.tracklist?.length || 0} {TEXTS.common.totalTracks}</span>
+                                    <h3 className="text-4xl font-display font-bold text-white tracking-tightest">{TEXTS.global.common.tracklist}</h3>
+                                    <span className="font-mono text-[11px] text-gray-700 uppercase font-black tracking-widest bg-white/5 px-4 py-2 rounded-xl">{album.tracklist?.length || 0} {TEXTS.global.common.totalTracks}</span>
                                 </div>
                                 <div className="grid grid-cols-1 gap-2">
                                     {album.tracklist?.map((track: any, index: number) => (
@@ -369,7 +369,7 @@ export default function AlbumDetail() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-12 pb-32">
                         <div className="bg-gradient-to-tr from-white/[0.02] to-transparent p-10 rounded-[3rem] border border-white/[0.04]">
-                            <h4 className="text-gray-600 font-black mb-10 uppercase tracking-[0.25em] text-[10px]">{TEXTS.common.sonicSpectrum}</h4>
+                            <h4 className="text-gray-600 font-black mb-10 uppercase tracking-[0.25em] text-[10px]">{TEXTS.global.common.sonicSpectrum}</h4>
                             <div className="flex flex-wrap gap-3">
                                 {album.styles?.map((style: string) => (
                                     <Badge key={style} variant="outline" className="text-gray-300 border-white/10 bg-black/40 font-black text-[10px] px-5 py-2.5 rounded-xl uppercase tracking-widest hover:border-primary/50 transition-colors">{style}</Badge>
@@ -377,15 +377,15 @@ export default function AlbumDetail() {
                             </div>
                         </div>
                         <div className="bg-gradient-to-tr from-white/[0.02] to-transparent p-10 rounded-[3rem] border border-white/[0.04]">
-                            <h4 className="text-gray-600 font-black mb-10 uppercase tracking-[0.25em] text-[10px]">{TEXTS.common.ownershipData}</h4>
+                            <h4 className="text-gray-600 font-black mb-10 uppercase tracking-[0.25em] text-[10px]">{TEXTS.global.common.ownershipData}</h4>
                             <div className="grid grid-cols-2 gap-8">
                                 <div className="flex flex-col">
                                     <span className="text-5xl font-black text-white tracking-widest">{album.community?.have || 0}</span>
-                                    <span className="text-[10px] uppercase font-black tracking-[0.15em] text-gray-500 mt-3">{TEXTS.common.collectors}</span>
+                                    <span className="text-[10px] uppercase font-black tracking-[0.15em] text-gray-500 mt-3">{TEXTS.global.common.collectors}</span>
                                 </div>
                                 <div className="flex flex-col">
                                     <span className="text-5xl font-black text-secondary tracking-widest">{album.community?.want || 0}</span>
-                                    <span className="text-[10px] uppercase font-black tracking-[0.15em] text-gray-500 mt-3">{TEXTS.common.wanted}</span>
+                                    <span className="text-[10px] uppercase font-black tracking-[0.15em] text-gray-500 mt-3">{TEXTS.global.common.wanted}</span>
                                 </div>
                             </div>
                         </div>

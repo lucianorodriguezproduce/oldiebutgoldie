@@ -119,7 +119,7 @@ export default function Store() {
     return (
         <div className="min-h-screen bg-[#050505] text-white pt-24 pb-20 px-4 md:px-8">
             <SEO
-                title={`${TEXTS.showcase.title} - Oldie But Goldie`}
+                title={`${TEXTS.home.showcase.title} - Oldie But Goldie`}
                 description="Explora nuestro catálogo completo de vinilos, CDs y cassettes en stock."
             />
 
@@ -132,17 +132,17 @@ export default function Store() {
                             className="flex items-center gap-2 text-gray-500 hover:text-primary transition-colors group"
                         >
                             <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" />
-                            <span className="text-[10px] font-black uppercase tracking-widest">{TEXTS.common.back}</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest">{TEXTS.global.common.back}</span>
                         </button>
                         <div className="space-y-1">
                             <div className="flex items-center gap-2">
                                 <Star className="h-4 w-4 text-primary fill-primary" />
                                 <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/80">
-                                    {TEXTS.navigation.brand}
+                                    {TEXTS.global.navigation.brand}
                                 </span>
                             </div>
                             <h1 className="text-4xl md:text-6xl font-display font-black uppercase tracking-tighter">
-                                {TEXTS.showcase.title}
+                                {TEXTS.home.showcase.title}
                             </h1>
                         </div>
                     </div>

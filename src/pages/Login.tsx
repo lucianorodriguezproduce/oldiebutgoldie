@@ -29,11 +29,11 @@ export default function Login() {
         e.preventDefault();
 
         if (!isLogin && password.length < 6) {
-            setError(TEXTS.common.auth.passwordTooShort);
+            setError(TEXTS.login.auth.passwordTooShort);
             return;
         }
 
-        showLoading(isLogin ? TEXTS.common.auth.syncArchive : TEXTS.common.auth.initProtocol);
+        showLoading(isLogin ? TEXTS.login.auth.syncArchive : TEXTS.login.auth.initProtocol);
         setLoading(true);
         setError(null);
         try {
@@ -49,13 +49,13 @@ export default function Login() {
         } catch (err: any) {
             console.error(err);
             if (err.code === "auth/invalid-credential") {
-                setError(TEXTS.common.auth.invalidCredentials);
+                setError(TEXTS.login.auth.invalidCredentials);
             } else if (err.code === "auth/weak-password") {
-                setError(TEXTS.common.auth.weakPassword);
+                setError(TEXTS.login.auth.weakPassword);
             } else if (err.code === "auth/unauthorized-domain") {
-                setError(TEXTS.common.auth.unauthorizedDomain);
+                setError(TEXTS.login.auth.unauthorizedDomain);
             } else {
-                setError(err.message || TEXTS.common.auth.authFailed);
+                setError(err.message || TEXTS.login.auth.authFailed);
             }
         } finally {
             setLoading(false);
@@ -64,7 +64,7 @@ export default function Login() {
     };
 
     const handleGoogleSignIn = async () => {
-        showLoading(TEXTS.common.auth.syncGoogle);
+        showLoading(TEXTS.login.auth.syncGoogle);
         setLoading(true);
         setError(null);
         try {
@@ -77,7 +77,7 @@ export default function Login() {
             }
         } catch (err: any) {
             console.error(err);
-            setError(TEXTS.common.auth.googleSignInFailed);
+            setError(TEXTS.login.auth.googleSignInFailed);
         } finally {
             setLoading(false);
             hideLoading();
@@ -106,12 +106,12 @@ export default function Login() {
                             </div>
                         </motion.div>
                         <CardTitle className="text-4xl font-display font-bold text-white tracking-tightest mb-2">
-                            {isLogin ? TEXTS.common.auth.welcomeBack : TEXTS.common.auth.createAccount}
+                            {isLogin ? TEXTS.login.auth.welcomeBack : TEXTS.login.auth.createAccount}
                         </CardTitle>
                         <CardDescription className="text-gray-500 font-medium">
                             {isLogin
-                                ? TEXTS.common.auth.accessArchive
-                                : TEXTS.common.auth.joinCommunity}
+                                ? TEXTS.login.auth.accessArchive
+                                : TEXTS.login.auth.joinCommunity}
                         </CardDescription>
                     </CardHeader>
 
@@ -125,7 +125,7 @@ export default function Login() {
                                         id="email-input"
                                         name="email"
                                         type="email"
-                                        placeholder={TEXTS.common.auth.emailPlaceholder}
+                                        placeholder={TEXTS.login.auth.emailPlaceholder}
                                         className="pl-12 bg-black/40 border-white/5 h-14 rounded-xl text-white focus-visible:ring-primary"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
@@ -140,7 +140,7 @@ export default function Login() {
                                     id="password-input"
                                     name="password"
                                     type="password"
-                                    placeholder={TEXTS.common.auth.passwordPlaceholder}
+                                    placeholder={TEXTS.login.auth.passwordPlaceholder}
                                     className="bg-black/40 border-white/5 h-14 rounded-xl text-white focus-visible:ring-primary px-6"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
@@ -167,7 +167,7 @@ export default function Login() {
                                 className="w-full h-16 bg-primary text-black hover:bg-white font-black text-sm uppercase tracking-widest rounded-2xl transition-all shadow-lg shadow-primary/10 group"
                                 disabled={loading}
                             >
-                                {isLogin ? TEXTS.common.auth.synchronize : TEXTS.common.auth.initialize}
+                                {isLogin ? TEXTS.login.auth.synchronize : TEXTS.login.auth.initialize}
                                 <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                             </Button>
                         </form>
@@ -177,7 +177,7 @@ export default function Login() {
                                 <span className="w-full border-t border-white/5" />
                             </div>
                             <div className="relative flex justify-center text-xs uppercase">
-                                <span className="bg-[#0c0c0c] px-4 text-gray-600 font-black tracking-widest">{TEXTS.common.auth.protocol}</span>
+                                <span className="bg-[#0c0c0c] px-4 text-gray-600 font-black tracking-widest">{TEXTS.login.auth.protocol}</span>
                             </div>
                         </div>
 
@@ -188,24 +188,24 @@ export default function Login() {
                                 onClick={handleGoogleSignIn}
                                 disabled={loading}
                             >
-                                <Chrome className="h-4 w-4" /> {TEXTS.common.auth.google}
+                                <Chrome className="h-4 w-4" /> {TEXTS.login.auth.google}
                             </Button>
                             <Button
                                 variant="outline"
                                 className="h-14 bg-black/40 border-white/5 hover:bg-white/5 text-white rounded-xl font-bold gap-3"
                                 disabled={true} // Placeholder for Github
                             >
-                                <Github className="h-4 w-4" /> {TEXTS.common.auth.github}
+                                <Github className="h-4 w-4" /> {TEXTS.login.auth.github}
                             </Button>
                         </div>
 
                         <p className="text-center text-xs text-gray-600 font-medium">
-                            {isLogin ? TEXTS.common.auth.noAccount : TEXTS.common.auth.hasAccount}{" "}
+                            {isLogin ? TEXTS.login.auth.noAccount : TEXTS.login.auth.hasAccount}{" "}
                             <button
                                 onClick={() => setIsLogin(!isLogin)}
                                 className="text-primary hover:underline font-bold transition-all underline-offset-4"
                             >
-                                {isLogin ? TEXTS.common.auth.createIndex : TEXTS.common.auth.loginSignal}
+                                {isLogin ? TEXTS.login.auth.createIndex : TEXTS.login.auth.loginSignal}
                             </button>
                         </p>
                     </CardContent>

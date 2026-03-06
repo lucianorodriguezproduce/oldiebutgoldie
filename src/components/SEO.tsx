@@ -12,8 +12,8 @@ interface SEOProps {
 }
 
 export function SEO({
-    title = TEXTS.common.seo.defaultTitle,
-    description = TEXTS.common.seo.defaultDescription,
+    title = TEXTS.global.common.seo.defaultTitle,
+    description = TEXTS.global.common.seo.defaultDescription,
     image = 'https://www.oldiebutgoldie.com.ar/og-image.jpg',
     url,
     type = 'website',

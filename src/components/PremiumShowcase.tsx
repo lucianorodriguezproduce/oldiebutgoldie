@@ -103,16 +103,16 @@ export function PremiumShowcase() {
         <section className="w-full py-2 space-y-6 mt-4 relative">
             <div className="px-6 text-center">
                 <div className="space-y-1">
-                    {TEXTS.showcase.subtitle && (
+                    {TEXTS.home.showcase.subtitle && (
                         <div className="flex items-center justify-center gap-2">
                             <Star className="h-3 w-3 text-primary fill-primary" />
                             <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/80">
-                                {TEXTS.showcase.subtitle}
+                                {TEXTS.home.showcase.subtitle}
                             </span>
                         </div>
                     )}
                     <h2 className="text-3xl md:text-5xl font-display font-black text-white uppercase tracking-tighter">
-                        {TEXTS.showcase.title}
+                        {TEXTS.home.showcase.title}
                     </h2>
                 </div>
             </div>
@@ -179,7 +179,7 @@ export function PremiumShowcase() {
                         <div className="flex items-center gap-3 relative z-10">
                             <ShoppingBag className="h-5 w-5 text-gray-400 group-hover:text-primary transition-colors" />
                             <span className="text-xs font-black uppercase tracking-[0.3em] text-white group-hover:text-primary transition-colors">
-                                {TEXTS.showcase.viewMore}
+                                {TEXTS.home.showcase.viewMore}
                             </span>
                             <ChevronRight className="h-4 w-4 text-gray-600 group-hover:text-primary transition-transform group-hover:translate-x-1" />
                         </div>

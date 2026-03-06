@@ -59,16 +59,16 @@ export default function PublicOrders() {
     return (
         <div className="min-h-screen bg-black pt-12">
             <SEO
-                title={TEXTS.common.seo.activity.title}
-                description={TEXTS.common.seo.activity.desc}
-                image={TEXTS.common.seo.activity.ogImage}
+                title={TEXTS.global.common.seo.activity.title}
+                description={TEXTS.global.common.seo.activity.desc}
+                image={TEXTS.global.common.seo.activity.ogImage}
                 url="https://oldiebutgoldie.com.ar/comercio"
                 schema={{
                     "@context": "https://schema.org",
                     "@type": "CollectionPage",
-                    "name": TEXTS.common.publicActivity.activityName,
-                    "description": TEXTS.common.publicActivity.activityFeedDesc,
-                    "keywords": TEXTS.common.seo.activity.keys
+                    "name": TEXTS.comercio.publicActivity.activityName,
+                    "description": TEXTS.comercio.publicActivity.activityFeedDesc,
+                    "keywords": TEXTS.global.common.seo.activity.keys
                 }}
             />
 
@@ -81,7 +81,7 @@ export default function PublicOrders() {
                         className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10"
                     >
                         <ShieldCheck className="w-4 h-4 text-primary" />
-                        <span className="text-xs font-mono text-gray-300 uppercase tracking-wider">{TEXTS.common.publicActivity.verifiedFeed}</span>
+                        <span className="text-xs font-mono text-gray-300 uppercase tracking-wider">{TEXTS.comercio.publicActivity.verifiedFeed}</span>
                     </motion.div>
 
                     <motion.h1
@@ -90,7 +90,7 @@ export default function PublicOrders() {
                         transition={{ delay: 0.1 }}
                         className="text-4xl md:text-5xl font-black font-display tracking-tightest leading-tight"
                     >
-                        {TEXTS.common.publicActivity.recentActivity.split(' ').slice(0, -1).join(' ')} <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-white/40">{TEXTS.common.publicActivity.recentActivity.split(' ').slice(-1)}</span>
+                        {TEXTS.comercio.publicActivity.recentActivity.split(' ').slice(0, -1).join(' ')} <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-white/40">{TEXTS.comercio.publicActivity.recentActivity.split(' ').slice(-1)}</span>
                     </motion.h1>
 
                     <motion.p
@@ -99,7 +99,7 @@ export default function PublicOrders() {
                         transition={{ delay: 0.2 }}
                         className="text-gray-400 max-w-xl text-sm leading-relaxed"
                     >
-                        {TEXTS.common.publicActivity.exploreDiscs}
+                        {TEXTS.comercio.publicActivity.exploreDiscs}
                     </motion.p>
                 </header>
 
@@ -130,8 +130,8 @@ export default function PublicOrders() {
                         ) : (
                             <div className="py-20 flex flex-col items-center justify-center text-center">
                                 <Disc className="w-16 h-16 text-white/10 mb-4 animate-[spin_10s_linear_infinite]" />
-                                <h3 className="text-xl font-display font-black text-white uppercase tracking-widest mb-2">{TEXTS.common.publicActivity.noActivity}</h3>
-                                <p className="text-gray-500 font-medium">{TEXTS.common.publicActivity.noPublicOrders}</p>
+                                <h3 className="text-xl font-display font-black text-white uppercase tracking-widest mb-2">{TEXTS.comercio.publicActivity.noActivity}</h3>
+                                <p className="text-gray-500 font-medium">{TEXTS.comercio.publicActivity.noPublicOrders}</p>
                             </div>
                         )}
                     </motion.section>

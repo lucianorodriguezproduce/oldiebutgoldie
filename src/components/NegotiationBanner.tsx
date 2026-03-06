@@ -47,20 +47,20 @@ export const NegotiationBanner: React.FC<NegotiationBannerProps> = ({
                     <div className="flex items-center justify-center md:justify-start gap-2">
                         <span className="bg-orange-500/10 text-orange-400 border border-orange-500/20 px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1">
                             <Handshake className="h-3 w-3" />
-                            {TEXTS.common.negotiation.obgOffer}
+                            {TEXTS.global.common.negotiation.obgOffer}
                         </span>
                     </div>
                     <h3 className="text-xl md:text-2xl font-display font-black text-white uppercase tracking-tighter">
-                        {TEXTS.common.negotiation.proposalReceived}
+                        {TEXTS.global.common.negotiation.proposalReceived}
                     </h3>
                     <p className="text-sm text-gray-400 font-medium">
-                        {TEXTS.common.negotiation.definedPrice}
+                        {TEXTS.global.common.negotiation.definedPrice}
                     </p>
                 </div>
 
                 {/* Price Display */}
                 <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col items-center justify-center min-w-[140px]">
-                    <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">{TEXTS.common.negotiation.finalPrice}</span>
+                    <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">{TEXTS.global.common.negotiation.finalPrice}</span>
                     <span className="text-2xl font-mono font-black text-primary">
                         {currency === 'USD' ? 'US$' : '$'}{adminPrice.toLocaleString()}
                     </span>
@@ -78,7 +78,7 @@ export const NegotiationBanner: React.FC<NegotiationBannerProps> = ({
                         ) : (
                             <>
                                 <CheckCircle2 className="h-4 w-4" />
-                                {TEXTS.common.negotiation.acceptOffer}
+                                {TEXTS.global.common.negotiation.acceptOffer}
                             </>
                         )}
                     </button>
@@ -88,7 +88,7 @@ export const NegotiationBanner: React.FC<NegotiationBannerProps> = ({
                         className="flex-1 sm:flex-none bg-white/5 hover:bg-white/10 text-white border border-white/10 px-6 py-4 rounded-xl font-black uppercase text-xs tracking-widest transition-all flex items-center justify-center gap-2"
                     >
                         <XCircle className="h-4 w-4" />
-                        {TEXTS.common.negotiation.rejectOffer}
+                        {TEXTS.global.common.negotiation.rejectOffer}
                     </button>
                 </div>
             </div>

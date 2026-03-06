@@ -84,19 +84,19 @@ export default function NotificationBell() {
     };
 
     const formatTime = (timestamp: any) => {
-        if (!timestamp) return TEXTS.common.now;
+        if (!timestamp) return TEXTS.global.common.now;
         try {
             const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
             const diff = Date.now() - date.getTime();
             const mins = Math.floor(diff / 60000);
-            if (mins < 1) return TEXTS.common.now;
+            if (mins < 1) return TEXTS.global.common.now;
             if (mins < 60) return `${mins}m`;
             const hours = Math.floor(mins / 60);
             if (hours < 24) return `${hours}h`;
             const days = Math.floor(hours / 24);
             return `${days}d`;
         } catch {
-            return TEXTS.common.recent;
+            return TEXTS.global.common.recent;
         }
     };
 
@@ -108,7 +108,7 @@ export default function NotificationBell() {
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className="relative p-2 text-gray-500 hover:text-white hover:bg-white/5 rounded-xl transition-all"
-                title={TEXTS.common.notifications}
+                title={TEXTS.global.common.notifications}
             >
                 <Bell className="h-5 w-5" />
                 {unreadCount > 0 && (
@@ -135,7 +135,7 @@ export default function NotificationBell() {
                         {/* Header */}
                         <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
                             <span className="text-[10px] font-black uppercase tracking-widest text-white">
-                                {TEXTS.common.notifications}
+                                {TEXTS.global.common.notifications}
                                 {unreadCount > 0 && (
                                     <span className="ml-2 text-primary">({unreadCount})</span>
                                 )}
@@ -145,7 +145,7 @@ export default function NotificationBell() {
                                     onClick={markAllAsRead}
                                     className="text-[9px] font-black uppercase tracking-widest text-primary hover:text-white transition-colors"
                                 >
-                                    {TEXTS.common.readAll}
+                                    {TEXTS.global.common.readAll}
                                 </button>
                             )}
                         </div>
@@ -155,7 +155,7 @@ export default function NotificationBell() {
                             {notifications.length === 0 ? (
                                 <div className="py-12 text-center">
                                     <Bell className="h-8 w-8 text-gray-800 mx-auto mb-3" />
-                                    <p className="text-gray-600 text-xs font-bold">{TEXTS.common.noNotifications}</p>
+                                    <p className="text-gray-600 text-xs font-bold">{TEXTS.global.common.noNotifications}</p>
                                 </div>
                             ) : (
                                 notifications.map((notif) => (

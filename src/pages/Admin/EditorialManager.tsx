@@ -108,7 +108,7 @@ export default function EditorialManager() {
     };
 
     const handleDelete = async (id: string) => {
-        if (confirm(TEXTS.admin.editorial.deleteDispatchConfirm)) {
+        if (confirm(TEXTS.admin.admin.editorial.deleteDispatchConfirm)) {
             await deleteDoc(doc(db, "editorial", id));
         }
     };
@@ -124,23 +124,23 @@ export default function EditorialManager() {
             <header className="flex items-end justify-between">
                 <div>
                     <h1 className="text-6xl font-display font-black text-white tracking-tightest leading-none">
-                        {TEXTS.admin.editorial.title.split(' ').slice(0, -1).join(' ')} <span className="text-primary">{TEXTS.admin.editorial.title.split(' ').slice(-1)}</span>
+                        {TEXTS.admin.admin.editorial.title.split(' ').slice(0, -1).join(' ')} <span className="text-primary">{TEXTS.admin.admin.editorial.title.split(' ').slice(-1)}</span>
                     </h1>
-                    <p className="text-gray-500 mt-4 text-lg font-medium max-w-2xl">{TEXTS.admin.editorial.description}</p>
+                    <p className="text-gray-500 mt-4 text-lg font-medium max-w-2xl">{TEXTS.admin.admin.editorial.description}</p>
                 </div>
                 <Button
                     onClick={() => { setCurrentArticle({}); setIsEditing(true); }}
                     className="bg-primary text-black font-black uppercase tracking-widest px-8 py-6 rounded-2xl hover:scale-105 transition-all shadow-xl shadow-primary/20"
                 >
-                    <Plus className="mr-2 h-5 w-5" /> {TEXTS.admin.editorial.newDispatch}
+                    <Plus className="mr-2 h-5 w-5" /> {TEXTS.admin.admin.editorial.newDispatch}
                 </Button>
             </header>
 
             {/* Navigation Tabs */}
             <div className="flex border-b border-white/5 space-x-12">
                 {[
-                    { id: "articles", label: TEXTS.admin.editorial.intelDispatches, icon: FileText },
-                    { id: "subscribers", label: TEXTS.admin.editorial.protocolSubscribers, icon: Users },
+                    { id: "articles", label: TEXTS.admin.admin.editorial.intelDispatches, icon: FileText },
+                    { id: "subscribers", label: TEXTS.admin.admin.editorial.protocolSubscribers, icon: Users },
                 ].map((tab) => (
                     <button
                         key={tab.id}
@@ -168,11 +168,11 @@ export default function EditorialManager() {
                     {activeSubTab === "articles" ? (
                         <div className="grid grid-cols-1 gap-6">
                             {loading ? (
-                                <div className="py-20 text-center text-gray-500 font-black uppercase tracking-widest">{TEXTS.admin.syncing}</div>
+                                <div className="py-20 text-center text-gray-500 font-black uppercase tracking-widest">{TEXTS.admin.admin.syncing}</div>
                             ) : articles.length === 0 ? (
                                 <div className="py-40 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[3rem] space-y-6 text-center">
                                     <FileText className="h-12 w-12 text-gray-700" />
-                                    <p className="text-xl font-display font-medium text-gray-500">{TEXTS.admin.editorial.noDispatches}</p>
+                                    <p className="text-xl font-display font-medium text-gray-500">{TEXTS.admin.admin.editorial.noDispatches}</p>
                                 </div>
                             ) : (
                                 articles.map((article) => (
@@ -247,13 +247,13 @@ export default function EditorialManager() {
                                             <th className="px-10 py-8 text-[10px] font-black text-gray-500 uppercase tracking-widest">Subscriber ID</th>
                                             <th className="px-10 py-8 text-[10px] font-black text-gray-500 uppercase tracking-widest">Connection Node</th>
                                             <th className="px-10 py-8 text-[10px] font-black text-gray-500 uppercase tracking-widest">Protocol Date</th>
-                                            <th className="px-10 py-8 text-[10px] font-black text-gray-500 uppercase tracking-widest text-right">{TEXTS.admin.filterAll}</th>
+                                            <th className="px-10 py-8 text-[10px] font-black text-gray-500 uppercase tracking-widest text-right">{TEXTS.admin.admin.filterAll}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {subscribers.length === 0 ? (
                                             <tr>
-                                                <td colSpan={4} className="px-10 py-20 text-center text-gray-500 font-bold">{TEXTS.admin.editorial.noSubscribers}</td>
+                                                <td colSpan={4} className="px-10 py-20 text-center text-gray-500 font-bold">{TEXTS.admin.admin.editorial.noSubscribers}</td>
                                             </tr>
                                         ) : (
                                             subscribers.map((sub) => (
@@ -273,7 +273,7 @@ export default function EditorialManager() {
                                                             variant="ghost"
                                                             size="icon"
                                                             onClick={async () => {
-                                                                if (confirm(TEXTS.admin.editorial.terminateSubConfirm)) {
+                                                                if (confirm(TEXTS.admin.admin.editorial.terminateSubConfirm)) {
                                                                     await deleteDoc(doc(db, "subscribers", sub.id));
                                                                 }
                                                             }}
@@ -312,7 +312,7 @@ export default function EditorialManager() {
                         >
                             <div className="p-10 border-b border-white/5 flex items-center justify-between">
                                 <h2 className="text-3xl font-black text-white uppercase tracking-tightest">
-                                    {currentArticle?.id ? TEXTS.admin.editorial.modifyDispatch : TEXTS.admin.editorial.initialiseDispatch}
+                                    {currentArticle?.id ? TEXTS.admin.admin.editorial.modifyDispatch : TEXTS.admin.admin.editorial.initialiseDispatch}
                                 </h2>
                                 <Button variant="ghost" size="icon" onClick={() => setIsEditing(false)} className="text-gray-500 hover:text-white">
                                     <X className="h-8 w-8" />
@@ -322,7 +322,7 @@ export default function EditorialManager() {
                             <form onSubmit={handleSave} className="p-10 space-y-8 max-h-[70vh] overflow-y-auto custom-scrollbar">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     <div className="space-y-2">
-                                        <label htmlFor="article-title" className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-4">{TEXTS.admin.editorial.dispatchTitle}</label>
+                                        <label htmlFor="article-title" className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-4">{TEXTS.admin.admin.editorial.dispatchTitle}</label>
                                         <input
                                             id="article-title"
                                             name="title"
@@ -334,7 +334,7 @@ export default function EditorialManager() {
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <label htmlFor="article-category" className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-4">{TEXTS.admin.editorial.intelCategory}</label>
+                                        <label htmlFor="article-category" className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-4">{TEXTS.admin.admin.editorial.intelCategory}</label>
                                         <select
                                             id="article-category"
                                             name="category"
@@ -354,7 +354,7 @@ export default function EditorialManager() {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <label htmlFor="article-excerpt" className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-4">{TEXTS.admin.editorial.briefExcerpt}</label>
+                                    <label htmlFor="article-excerpt" className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-4">{TEXTS.admin.admin.editorial.briefExcerpt}</label>
                                     <textarea
                                         id="article-excerpt"
                                         name="excerpt"
@@ -368,7 +368,7 @@ export default function EditorialManager() {
 
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                                     <div className="space-y-2">
-                                        <label htmlFor="article-author" className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-4">{TEXTS.admin.editorial.authorName}</label>
+                                        <label htmlFor="article-author" className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-4">{TEXTS.admin.admin.editorial.authorName}</label>
                                         <input
                                             id="article-author"
                                             name="author"
@@ -382,7 +382,7 @@ export default function EditorialManager() {
                                     <div className="space-y-4 md:col-span-3">
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                             <div className="space-y-2">
-                                                <label htmlFor="article-image" className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-4">{TEXTS.admin.editorial.imageSource}</label>
+                                                <label htmlFor="article-image" className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-4">{TEXTS.admin.admin.editorial.imageSource}</label>
                                                 <input
                                                     id="article-image"
                                                     name="image"
@@ -394,7 +394,7 @@ export default function EditorialManager() {
                                                 />
                                             </div>
                                             <div className="space-y-2">
-                                                <label htmlFor="article-readTime" className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-4">{TEXTS.admin.editorial.readDuration}</label>
+                                                <label htmlFor="article-readTime" className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-4">{TEXTS.admin.admin.editorial.readDuration}</label>
                                                 <input
                                                     id="article-readTime"
                                                     name="readTime"
@@ -416,7 +416,7 @@ export default function EditorialManager() {
 
                                 <div className="flex items-center gap-12 pt-4">
                                     <div className="flex items-center gap-4">
-                                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{TEXTS.admin.editorial.protocolStatus}:</label>
+                                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{TEXTS.admin.admin.editorial.protocolStatus}:</label>
                                         <div className="flex bg-white/5 p-1 rounded-xl">
                                             {['draft', 'published'].map((s) => (
                                                 <button
@@ -434,10 +434,10 @@ export default function EditorialManager() {
 
                                 <div className="p-10 border-t border-white/5 bg-black/40 -mx-10 -mb-10 flex justify-end gap-4">
                                     <Button type="button" variant="ghost" onClick={() => setIsEditing(false)} className="text-gray-500 hover:text-white font-bold h-14 px-8 rounded-2xl">
-                                        {TEXTS.admin.editorial.escAbort}
+                                        {TEXTS.admin.admin.editorial.escAbort}
                                     </Button>
                                     <Button type="submit" className="bg-primary text-black font-black uppercase tracking-widest h-14 px-12 rounded-2xl hover:scale-105 transition-all shadow-xl shadow-primary/20">
-                                        <Save className="mr-2 h-5 w-5" /> {TEXTS.admin.editorial.commitDispatch}
+                                        <Save className="mr-2 h-5 w-5" /> {TEXTS.admin.admin.editorial.commitDispatch}
                                     </Button>
                                 </div>
                             </form>

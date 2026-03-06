@@ -83,7 +83,7 @@ export default function OrderDetailsDrawer({ isOpen, onClose, title, children, f
                         {/* Header */}
                         <div className="flex-none flex items-center justify-between px-5 sm:px-8 py-4 sm:py-5 border-b border-white/5 safe-area-top">
                             <span className="text-sm font-mono font-bold text-gray-400 uppercase tracking-widest truncate">
-                                {title || TEXTS.profile.orderDetail}
+                                {title || TEXTS.perfil.profile.orderDetail}
                             </span>
                         </div>
 

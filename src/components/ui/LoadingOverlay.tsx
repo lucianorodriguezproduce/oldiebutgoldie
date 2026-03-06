@@ -54,7 +54,7 @@ export function LoadingOverlay() {
                                 />
                             </div>
                             <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em] leading-relaxed max-w-[200px]">
-                                {TEXTS.common.loading.safetyInstruction}
+                                {TEXTS.global.common.loading.safetyInstruction}
                             </p>
                         </div>
                     </div>

@@ -63,7 +63,7 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
         if (isNaN(priceVal) || priceVal <= 0 || isSubmitting) return;
 
         setIsSubmitting(true);
-        showLoading(TEXTS.admin.updatingStatus);
+        showLoading(TEXTS.admin.admin.updatingStatus);
         try {
             const currency = order.adminCurrency || order.currency || order.details?.currency || "ARS";
             await updateDoc(doc(db, "trades", order.id), {
@@ -81,7 +81,7 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
             const currSymbol = currency === "USD" ? "US$" : "$";
             await addDoc(collection(db, "notifications"), {
                 user_id: (order.participants?.senderId || order.user_id),
-                title: TEXTS.admin.counterOfferReceived,
+                title: TEXTS.admin.admin.counterOfferReceived,
                 message: `Oldie but Goldie propone ${currSymbol} ${priceVal.toLocaleString()} para tu operación.`,
                 read: false,
                 timestamp: serverTimestamp(),
@@ -103,7 +103,7 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
 
 
     const getStatusBadge = (status: string) => {
-        const statusLabel = TEXTS.admin.statusOptions[status as keyof typeof TEXTS.admin.statusOptions] || status;
+        const statusLabel = TEXTS.admin.admin.statusOptions[status as keyof typeof TEXTS.admin.admin.statusOptions] || status;
         switch (status) {
             case 'sold':
             case 'completed':
@@ -163,7 +163,7 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
 
     // Fallback intent for legacy admin orders
     const isSellerOfferLegacy = order.admin_offer_price || order.adminPrice;
-    const intent = isExchange ? 'INTERCAMBIO' : (isBatch ? (orderType === 'buy' ? TEXTS.badges.buying : TEXTS.badges.forSale) : (orderIntent || (isSellerOfferLegacy ? 'VENDER' : 'COMPRAR')));
+    const intent = isExchange ? 'INTERCAMBIO' : (isBatch ? (orderType === 'buy' ? TEXTS.global.badges.buying : TEXTS.global.badges.forSale) : (orderIntent || (isSellerOfferLegacy ? 'VENDER' : 'COMPRAR')));
     const format = isBatch ? 'Varios Formatos' : (order.details?.format || 'N/A');
     const condition = isBatch ? 'Varias Condiciones' : (order.details?.condition || 'N/A');
     const status = orderStatus;
@@ -214,7 +214,7 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                 {/* Legacy admin_offer_price for backward compatibility */}
                 {!adminPrice && order.admin_offer_price && (
                     <div className={`bg-purple-500/10 border border-purple-500/20 px-3 py-2 rounded-xl flex flex-col items-end shadow-sm shadow-purple-500/5 ${context === 'admin' ? "mr-4" : ""}`}>
-                        <span className="text-[9px] font-black uppercase tracking-widest text-purple-400">{TEXTS.admin.ourOffer}</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-purple-400">{TEXTS.admin.admin.ourOffer}</span>
                         <span className="text-sm font-black text-white">
                             {order.admin_offer_currency === "USD" ? "US$" : "$"} {(order.admin_offer_price || 0).toLocaleString()}
                         </span>
@@ -318,11 +318,11 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                         {(isBatch || order.is_admin_offer) && (
                             order.is_admin_offer || order.user_id === 'MKPlxxi9JENQt0hS3V1QNeF8oOS2' || order.user_id === 'oldiebutgoldie' || order.user_email === 'admin@discography.ai' ? (
                                 <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-primary/20 to-primary/40 border border-primary/50 text-primary text-[9px] font-black uppercase tracking-widest shadow-[0_0_10px_rgba(255,184,0,0.2)]">
-                                    {TEXTS.badges.storeObg}
+                                    {TEXTS.global.badges.storeObg}
                                 </span>
                             ) : (
                                 <span className="px-2 py-0.5 rounded-full bg-slate-500/10 border border-slate-500/30 text-slate-400 text-[9px] font-black uppercase tracking-widest">
-                                    {TEXTS.badges.user_label}
+                                    {TEXTS.global.badges.user_label}
                                 </span>
                             )
                         )}
@@ -366,7 +366,7 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                                 {canSeePrice ? (
                                     `${(order.details?.currency || order.currency) === "USD" ? "US$" : "$"} ${((order.details?.price || order.totalPrice) || 0).toLocaleString()}`
                                 ) : (
-                                    <span className="text-primary/50 italic text-[10px]">{TEXTS.common.private}</span>
+                                    <span className="text-primary/50 italic text-[10px]">{TEXTS.global.common.private}</span>
                                 )}
                             </span>
                         )}

@@ -82,9 +82,9 @@ export default function AdminDashboard() {
         <div className="space-y-8 animate-in fade-in duration-500 pb-12">
             <header className="mb-8">
                 <h1 className="text-3xl font-display font-black text-white italic uppercase tracking-tighter">
-                    {TEXTS.admin.dashboard.title}
+                    {TEXTS.admin.admin.dashboard.title}
                 </h1>
-                <p className="text-gray-400 font-medium">{TEXTS.admin.dashboard.subtitle}</p>
+                <p className="text-gray-400 font-medium">{TEXTS.admin.admin.dashboard.subtitle}</p>
             </header>
 
             {/* Industrial KPI Cards */}
@@ -208,13 +208,13 @@ export default function AdminDashboard() {
                 <div className="p-6 border-b border-white/10 bg-black/40 flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <h2 className="text-xl font-bold text-white flex items-center gap-2">
                         <LineChart className="w-5 h-5 text-primary" />
-                        {TEXTS.admin.dashboard.dominantKeywords}
+                        {TEXTS.admin.admin.dashboard.dominantKeywords}
                     </h2>
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
                         <input
                             type="text"
-                            placeholder={TEXTS.admin.dashboard.searchPlaceholder}
+                            placeholder={TEXTS.admin.admin.dashboard.searchPlaceholder}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="bg-black/50 border border-white/10 rounded-lg pl-9 pr-4 py-2 text-sm text-white focus:outline-none focus:border-primary/50 w-full md:w-64 transition-colors"
