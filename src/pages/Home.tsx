@@ -13,6 +13,7 @@ import { trackEvent } from "@/components/AnalyticsProvider";
 import { useAuth } from "@/context/AuthContext";
 import { useLoading } from "@/context/LoadingContext";
 import { generateWhatsAppLink } from "@/utils/whatsapp";
+import { whatsappService } from "@/services/whatsappService";
 import type { OrderData } from "@/utils/whatsapp";
 import { pushViewItem, pushViewItemFromOrder, pushWhatsAppContactFromOrder } from "@/utils/analytics";
 import { SEO } from "@/components/SEO";
@@ -57,7 +58,7 @@ type Condition = "NUEVO" | "USADO";
 type Currency = "ARS" | "USD";
 
 export default function Home() {
-    const { user } = useAuth();
+    const { user, dbUser } = useAuth();
     const { type: routeType, id: routeId } = useParams<{ type: string, id: string }>();
     const navigate = useNavigate();
     const { addItemToBatch, isInLote, totalCount, loteItems } = useLote();
@@ -825,7 +826,19 @@ export default function Home() {
                         <button
                             onClick={() => {
                                 pushWhatsAppContactFromOrder(submittedOrder);
-                                window.open(generateWhatsAppLink(submittedOrder), "_blank");
+                                if (intent === "COMPRAR") {
+                                    window.open(whatsappService.generatePurchaseLink({
+                                        id: selectedItem?.id?.toString() || '',
+                                        title: selectedItem?.title || '',
+                                        artist: (selectedItem as any)?.artist || (selectedItem as any)?.normalizedArtist || 'Desconocido'
+                                    }), "_blank");
+                                } else {
+                                    window.open(whatsappService.generateRequestLink({
+                                        id: selectedItem?.id?.toString() || '',
+                                        title: selectedItem?.title || '',
+                                        artist: (selectedItem as any)?.artist || (selectedItem as any)?.normalizedArtist || 'Desconocido'
+                                    }, dbUser?.username || "Usuario"), "_blank");
+                                }
                             }}
                             className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-500 text-white px-8 py-4 rounded-2xl font-black uppercase text-xs tracking-widest transition-all shadow-lg shadow-green-500/20"
                         >

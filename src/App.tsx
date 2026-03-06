@@ -24,6 +24,8 @@ import RevisarLote from "@/pages/RevisarLote";
 import TradeConstructor from "@/pages/TradeConstructor";
 import Store from "@/pages/Store";
 import PublicProfile from "@/pages/PublicProfile";
+import Archivo from "@/pages/Archivo";
+import ArchivoItem from "@/pages/ArchivoItem";
 import AdminLayout from "@/components/Admin/AdminLayout";
 import AdminAnalytics from "@/pages/Admin/AdminAnalytics";
 import EditorialManager from "@/pages/Admin/EditorialManager";
@@ -101,6 +103,8 @@ function AppContent() {
             <Route path="/comunidad/:id" element={<ArticleDetail />} />
             <Route path="/guias" element={<Guias />} />
             <Route path="/eventos" element={<Eventos />} />
+            <Route path="/archivo" element={<Archivo />} />
+            <Route path="/archivo/:id" element={<ArchivoItem />} />
 
             {/* Redirecciones Legales / SEO */}
             <Route path="/actividad" element={<Navigate to="/comercio" replace />} />

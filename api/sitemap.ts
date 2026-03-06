@@ -53,17 +53,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             urlList.push(`<url><loc>${xmlEscape(loc)}</loc><lastmod>${updatedAt}</lastmod><changefreq>weekly</changefreq><priority>0.9</priority></url>`);
         });
 
-        // 3. Artículos Editoriales
-        const articlesSnap = await db.collection('articles').limit(100).get();
+        // 4. El Archivo (The SEO Funnel)
+        urlList.push(`<url><loc>${xmlEscape(baseUrl)}/archivo</loc><changefreq>always</changefreq><priority>0.9</priority></url>`);
 
-        articlesSnap.forEach(doc => {
+        // Fetch all items from inventory and user_assets for the Archive
+        const [archiveInvSnap, archiveAssetSnap] = await Promise.all([
+            db.collection('inventory').where('logistics.status', '==', 'active').limit(1000).get(),
+            db.collection('user_assets').where('status', '==', 'active').limit(1000).get()
+        ]);
+
+        archiveInvSnap.forEach(doc => {
             const data = doc.data();
-            const updatedAt = safeDate(data.updatedAt || data.timestamp || data.date);
-            const loc = `${baseUrl}/comunidad/${doc.id}`;
-            urlList.push(`<url><loc>${xmlEscape(loc)}</loc><lastmod>${updatedAt}</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>`);
+            const updatedAt = safeDate(data.updatedAt || data.timestamp);
+            const loc = `${baseUrl}/archivo/${doc.id}`;
+            urlList.push(`<url><loc>${xmlEscape(loc)}</loc><lastmod>${updatedAt}</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>`);
         });
 
-        // 4. Construcción Final (Sin espacios iniciales)
+        archiveAssetSnap.forEach(doc => {
+            const data = doc.data();
+            const updatedAt = safeDate(data.acquiredAt || data.timestamp);
+            const loc = `${baseUrl}/archivo/${doc.id}`;
+            urlList.push(`<url><loc>${xmlEscape(loc)}</loc><lastmod>${updatedAt}</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>`);
+        });
+
+        // 5. Construcción Final (Sin espacios iniciales)
         const sitemap = `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urlList.join('')}</urlset>`;
 
         return res.status(200).send(sitemap.trim());

@@ -39,7 +39,7 @@ import { TEXTS } from "@/constants/texts";
 import { CardSkeleton } from "@/components/ui/Skeleton";
 import { Link, useSearchParams } from "react-router-dom";
 import OrderDetailsDrawer from "@/components/OrderDetailsDrawer";
-import { generateWhatsAppLink, generateWhatsAppAcceptDealMsg } from '@/utils/whatsapp';
+import { whatsappService } from '@/services/whatsappService';
 import type { OrderData } from '@/utils/whatsapp';
 import OrderCard from '@/components/OrderCard';
 import { pushWhatsAppContactFromOrder } from "@/utils/analytics";
@@ -704,7 +704,7 @@ export default function Profile() {
                                     <button
                                         onClick={() => {
                                             pushWhatsAppContactFromOrder(selectedOrder);
-                                            window.open(generateWhatsAppLink(selectedOrder), "_blank");
+                                            window.open(whatsappService.generateTradeLink(selectedOrder.id), "_blank");
                                         }}
                                         className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-green-600/20 hover:bg-green-600/30 text-green-500 border border-green-500/20 rounded-xl text-xs font-black uppercase tracking-widest active:scale-95 transition-all"
                                     >
@@ -1026,8 +1026,7 @@ export default function Profile() {
                                             <button
                                                 onClick={() => {
                                                     pushWhatsAppContactFromOrder(selectedOrder);
-                                                    const link = generateWhatsAppAcceptDealMsg(selectedOrder);
-                                                    window.open(link, "_blank");
+                                                    window.open(whatsappService.generateAcceptDealLink(selectedOrder.id), "_blank");
                                                 }}
                                                 className="w-full flex items-center justify-center gap-3 bg-green-600 hover:bg-green-500 text-white px-8 py-4 rounded-2xl font-black uppercase text-xs tracking-widest transition-all shadow-lg shadow-green-500/20"
                                             >

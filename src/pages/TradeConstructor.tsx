@@ -9,7 +9,7 @@ import { useLoading } from "@/context/LoadingContext";
 import { userAssetService } from "@/services/userAssetService";
 import { inventoryService } from "@/services/inventoryService";
 import { tradeService } from "@/services/tradeService";
-import { WHATSAPP_CONFIG } from "@/utils/whatsapp";
+import { whatsappService } from "@/services/whatsappService";
 import { ADMIN_UID } from "@/constants/admin";
 import { LazyImage } from "@/components/ui/LazyImage";
 import UsernameClaimModal from "@/components/Profile/UsernameClaimModal";
@@ -319,8 +319,7 @@ export default function TradeConstructor() {
                         </Link>
                         <button
                             onClick={() => {
-                                const msg = WHATSAPP_CONFIG.templates.tradeProposal.replace('{tradeId}', createdTradeId?.slice(-8).toUpperCase() || '');
-                                window.open(`https://wa.me/${WHATSAPP_CONFIG.phoneNumber}?text=${encodeURIComponent(msg)}`, '_blank');
+                                window.open(whatsappService.generateTradeLink(createdTradeId || ''), '_blank');
                             }}
                             className="w-full flex items-center justify-center gap-2 bg-green-600/20 hover:bg-green-600/30 text-green-400 border border-green-500/20 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all"
                         >

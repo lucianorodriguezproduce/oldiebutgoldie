@@ -10,7 +10,7 @@ import { db, auth } from "@/lib/firebase";
 import { LazyImage } from "@/components/ui/LazyImage";
 import { collection, addDoc, serverTimestamp, query, where, getDocs } from "firebase/firestore";
 import { pushWhatsAppContactFromOrder } from "@/utils/analytics";
-import { generateWhatsAppLink } from "@/utils/whatsapp";
+import { whatsappService } from "@/services/whatsappService";
 import { TEXTS } from "@/constants/texts";
 import { inventoryService } from "@/services/inventoryService";
 import { tradeService } from "@/services/tradeService";
@@ -319,7 +319,7 @@ export default function RevisarLote() {
                         <button
                             onClick={() => {
                                 pushWhatsAppContactFromOrder(submittedOrder);
-                                window.open(generateWhatsAppLink(submittedOrder), "_blank");
+                                window.open(whatsappService.generateTradeLink(submittedOrder.id), "_blank");
                             }}
                             className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-500 text-white px-8 py-4 rounded-2xl font-black uppercase text-xs tracking-widest transition-all shadow-lg shadow-green-500/20"
                         >
