@@ -9,7 +9,7 @@ import { collection, addDoc, serverTimestamp, query as firestoreQuery, where, ge
 import { useDebounce } from "@/hooks/useDebounce";
 import { discogsService, type DiscogsSearchResult } from "@/lib/discogs";
 import { authenticateUser, signInWithGoogle } from "@/lib/auth";
-import { trackEvent } from "@/components/AnalyticsProvider";
+
 import { useAuth } from "@/context/AuthContext";
 import { useLoading } from "@/context/LoadingContext";
 import { generateWhatsAppLink } from "@/utils/whatsapp";
@@ -454,7 +454,7 @@ export default function Home() {
                 const normalized = normalizeDiscogsData({ ...result, ...details });
                 setSelectedSearchItem(normalized);
                 setShowConfigModal(true);
-                trackEvent('item_selection_wizard_open', { id: result.id, title: result.title });
+
             } catch (error) {
                 console.error("Error opening wizard:", error);
                 setSearchError("No se pudo obtener detalles del disco.");
@@ -664,6 +664,7 @@ export default function Home() {
                     receiverId: ADMIN_UID
                 },
                 manifest,
+                type: 'exchange',
                 tradeOrigin: 'DISCOGS'
             });
 
@@ -776,11 +777,7 @@ export default function Home() {
     // Handle intent selection (Add to Lote)
     const handleIntentSelect = (selectedIntent: Intent) => {
         setIntent(selectedIntent);
-        trackEvent('initiate_offer', {
-            intent: selectedIntent,
-            item_id: selectedItem?.id,
-            item_title: selectedItem?.title
-        });
+
 
         if (selectedIntent === "VENDER") {
             fetchMarketPrice();

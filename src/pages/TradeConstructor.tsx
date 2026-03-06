@@ -185,6 +185,7 @@ export default function TradeConstructor() {
                         cashAdjustment: adjustedCash,
                         currency: cashCurrency
                     },
+                    type: 'exchange',
                     tradeOrigin: 'DISCOGS'
                 });
                 setCreatedTradeId(tradeId);

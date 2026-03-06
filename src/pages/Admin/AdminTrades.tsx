@@ -129,6 +129,7 @@ export default function AdminTrades() {
                     receiverId: targetUserEmail // For now using email as proxy for ID if not found, or ideally a real ID
                 },
                 manifest: wizardManifest,
+                type: activeView
             });
 
             if (autoApprove) {

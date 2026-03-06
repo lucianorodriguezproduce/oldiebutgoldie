@@ -21,27 +21,29 @@ import { ADMIN_UID } from '@/constants/admin';
 export default function PublicOrders() {
     const { user, isAdmin } = useAuth();
     const [config, setConfig] = useState<SiteConfig | null>(null);
+    const [orders, setOrders] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
 
+    // 1. Listen for Config
+    useEffect(() => {
+        const unsubscribe = siteConfigService.onSnapshotConfig(setConfig);
+        return () => unsubscribe();
+    }, []);
+
+    // 2. Listen for Trades & Inventory
     useEffect(() => {
         let unsubscribeTrades: (() => void) | undefined;
-        let unsubscribeConfig: (() => void) | undefined;
 
-        const startListeners = async () => {
+        const startTradesListener = async () => {
             try {
-                // 1. Listen for Config
-                unsubscribeConfig = siteConfigService.onSnapshotConfig(setConfig);
-
-                // 2. Listen for Trades
                 const q = query(collection(db, 'trades'), orderBy('createdAt', 'desc'));
                 unsubscribeTrades = onSnapshot(q, async (snapshot) => {
                     const tradeData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
 
                     // Filter based on Elastic Visibility Rules
                     const filteredTrades = tradeData.filter((o: any) => {
-                        // Admin sees everything
                         if (isAdmin) return true;
 
-                        // Check if it's a valid trade structure
                         const isValidStructure = o.item_id || o.isBatch || o.is_batch ||
                             (o.items && o.items.length > 0) ||
                             (o.manifest?.requestedItems?.length > 0) ||
@@ -50,19 +52,12 @@ export default function PublicOrders() {
 
                         if (!isValidStructure) return false;
 
-                        // Ownership check
                         const isOwner = user && (o.user_id === user.uid || o.participants?.senderId === user.uid || o.participants?.receiverId === user.uid);
-
-                        // Visibility rule
                         const isMarketOpen = config?.p2p_global_enabled ?? false;
 
-                        // Show if:
-                        // 1. User is the owner (regardless of market state)
-                        // 2. Market is open AND it's a public order
                         return isOwner || (isMarketOpen && (o.isPublicOrder === true));
                     });
 
-                    // Admin offers from inventory are always public
                     const inventoryItems = await inventoryService.getRecentAdditions(15);
                     const enrichedInventory = inventoryItems.map(item => ({
                         ...item,
@@ -79,16 +74,14 @@ export default function PublicOrders() {
                     setLoading(false);
                 });
             } catch (error) {
-                console.error("Error fetching public activity feed", error);
+                console.error("Error fetching trades:", error);
                 setLoading(false);
             }
         };
 
-        startListeners();
-
+        startTradesListener();
         return () => {
             if (unsubscribeTrades) unsubscribeTrades();
-            if (unsubscribeConfig) unsubscribeConfig.then(unsub => unsub?.());
         };
     }, [isAdmin, user?.uid, config?.p2p_global_enabled]);
 
