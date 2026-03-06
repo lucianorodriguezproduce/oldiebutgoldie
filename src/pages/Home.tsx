@@ -660,7 +660,7 @@ export default function Home() {
                 metadata: {
                     title: (selectedItem as any).normalizedAlbum || selectedItem.title,
                     artist: (selectedItem as any).normalizedArtist || "Varios",
-                    year: parseInt(selectedItem.year) || 0,
+                    year: parseInt(selectedItem.year || "0") || 0,
                     genres: selectedItem.genre || [],
                     styles: selectedItem.style || [],
                     format_description: selectedItem.format?.join(", ") || "Vinyl"

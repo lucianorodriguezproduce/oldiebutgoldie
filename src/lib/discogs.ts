@@ -35,6 +35,11 @@ export interface DiscogsSearchResult {
     resource_url: string;
     type: string;
     uri: string;
+    // UI Augmented Fields
+    isLocal?: boolean;
+    normalizedArtist?: string;
+    normalizedAlbum?: string;
+    price?: number;
 }
 
 export const discogsService = {
