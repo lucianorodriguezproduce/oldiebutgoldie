@@ -119,16 +119,16 @@ export default function Editorial() {
     return (
         <div className="space-y-16 md:space-y-24 py-6 md:py-12">
             <SEO
-                title={TEXTS.comunidad.seo.editorial.title}
-                description={TEXTS.comunidad.seo.editorial.desc}
-                image={TEXTS.comunidad.seo.editorial.ogImage}
+                title={TEXTS.global.common.seo.editorial.title}
+                description={TEXTS.global.common.seo.editorial.desc}
+                image={TEXTS.global.common.seo.editorial.ogImage}
                 url="https://oldiebutgoldie.com.ar/comunidad"
                 schema={{
                     "@context": "https://schema.org",
                     "@type": "Blog",
-                    "name": TEXTS.comunidad.seo.editorial.title,
-                    "description": TEXTS.comunidad.seo.editorial.desc,
-                    "keywords": TEXTS.comunidad.seo.editorial.keys
+                    "name": TEXTS.global.common.seo.editorial.title,
+                    "description": TEXTS.global.common.seo.editorial.desc,
+                    "keywords": TEXTS.global.common.seo.editorial.keys
                 }}
             />
             {/* Hero Section */}

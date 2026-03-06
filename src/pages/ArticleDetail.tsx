@@ -137,7 +137,7 @@ export default function ArticleDetail() {
                             <User className="h-5 w-5 text-primary" />
                         </div>
                         <div>
-                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">{TEXTS.login.author}</p>
+                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">{TEXTS.comunidad.author}</p>
                             <span className="text-sm font-bold text-white uppercase tracking-widest">{article.author}</span>
                         </div>
                     </div>
