@@ -901,7 +901,7 @@ export default function PublicOrderView() {
                                                 alert("Las ofertas P2P están temporalmente desactivadas por el administrador.");
                                             } else {
                                                 // Redirect to trade constructor to initiate a counter trade targeting this deal
-                                                navigate(`/creator?targetTrade=${id}`);
+                                                navigate(`/trade/new?targetTrade=${id}`);
                                             }
                                         }}
                                         className={`mt-4 px-8 py-4 rounded-xl text-white font-black uppercase text-[10px] tracking-widest transition-all shadow-xl shadow-blue-500/20 hover:scale-105 ${(!config?.allow_p2p_public_offers && !isAdmin) ? 'bg-gray-700 cursor-not-allowed grayscale' : 'bg-blue-500 hover:bg-blue-600'}`}
@@ -1232,7 +1232,7 @@ export default function PublicOrderView() {
                     onClose={() => setShowIdentityGuard(false)}
                     onSuccess={() => {
                         setShowIdentityGuard(false);
-                        navigate(`/creator?targetTrade=${id}`);
+                        navigate(`/trade/new?targetTrade=${id}`);
                     }}
                 />
             )}

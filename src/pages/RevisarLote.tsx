@@ -17,14 +17,16 @@ import { tradeService } from "@/services/tradeService";
 import { userAssetService } from "@/services/userAssetService";
 import { ADMIN_UID } from "@/constants/admin";
 import { useEffect as useReactEffect } from "react";
+import UsernameClaimModal from "@/components/Profile/UsernameClaimModal";
 
 export default function RevisarLote() {
     const { loteItems, toggleItem, clearLote, totalCount } = useLote();
-    const { user } = useAuth();
+    const { user, dbUser } = useAuth();
     const { showLoading, hideLoading, isLoading: isSubmitting } = useLoading();
     const navigate = useNavigate();
 
     const [isSuccess, setIsSuccess] = useState(false);
+    const [showIdentityGuard, setShowIdentityGuard] = useState(false);
     const [submittedOrder, setSubmittedOrder] = useState<any>(null);
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -219,6 +221,15 @@ export default function RevisarLote() {
             alert(TEXTS.revisarLote.batchReview.confirmIntent);
             return;
         }
+
+        // --- IDENTITY GUARD FOR V2 P2P (Hard Logic Lock) ---
+        // If the batch contains Discogs items, it counts as a trade/negotiation
+        // and requires a claimed username.
+        if (hasDiscogsItems && !dbUser?.username) {
+            setShowIdentityGuard(true);
+            return;
+        }
+
         if (batchIntent === 'VENDER' && (!totalPrice || Number(totalPrice) <= 0)) {
             alert(TEXTS.revisarLote.batchReview.validPriceRequired);
             return;
@@ -241,8 +252,13 @@ export default function RevisarLote() {
         try {
             const googleUser = await signInWithGoogle();
             if (googleUser) {
-                await performSubmission(googleUser.uid);
-                setIsSuccess(true);
+                // Zero-Friction: Auto-submit ONLY if it's a direct inventory sale
+                if (!hasDiscogsItems) {
+                    await performSubmission(googleUser.uid);
+                    setIsSuccess(true);
+                }
+                // If hasDiscogsItems, the UI will re-render in authenticated state
+                // and the user will click "Confirm", triggering the Identity Guard.
             }
         } catch (error) {
             console.error("Google Auth error:", error);
@@ -268,8 +284,11 @@ export default function RevisarLote() {
         try {
             const loggedUser = await authenticateUser(email, password);
             if (loggedUser) {
-                await performSubmission(loggedUser.uid);
-                setIsSuccess(true);
+                // Zero-Friction: Auto-submit ONLY if it's a direct inventory sale
+                if (!hasDiscogsItems) {
+                    await performSubmission(loggedUser.uid);
+                    setIsSuccess(true);
+                }
             }
         } catch (error) {
             console.error("Manual Auth error:", error);
@@ -631,6 +650,17 @@ export default function RevisarLote() {
                     )}
                 </div>
             </div>
+            {/* Identity Guard for P2P / Discogs Trades */}
+            {showIdentityGuard && (
+                <UsernameClaimModal
+                    isOpen={showIdentityGuard}
+                    onClose={() => setShowIdentityGuard(false)}
+                    onSuccess={() => {
+                        setShowIdentityGuard(false);
+                        handleCheckout(); // Resume flow
+                    }}
+                />
+            )}
         </div>
     );
 }

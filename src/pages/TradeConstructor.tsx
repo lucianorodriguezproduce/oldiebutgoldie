@@ -100,6 +100,11 @@ export default function TradeConstructor() {
         if (!user || isSubmitting) return;
 
         // --- IDENTITY GUARD FOR V2 P2P ---
+        if (!dbUser?.username) {
+            setShowIdentityGuard(true);
+            return;
+        }
+
         if (selectedOffered.size === 0 && selectedRequested.size === 0) {
             alert("Debes seleccionar al menos un ítem para ofrecer o solicitar.");
             return;
