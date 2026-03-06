@@ -34,6 +34,7 @@ import BrandingPage from "@/pages/Admin/BrandingPage";
 import AdminInventory from "@/pages/Admin/AdminInventory";
 import AdminCollection from "@/pages/Admin/AdminCollection";
 import AdminTrades from "@/pages/Admin/AdminTrades";
+import PermissionConsole from "@/pages/Admin/PermissionConsole";
 import Guias from "@/pages/Guias";
 import { ProtectedRoute } from "@/components/Guard/ProtectedRoute";
 import { Navigate } from "react-router-dom";
@@ -113,6 +114,7 @@ function AppContent() {
 
               <Route path="bulk-upload" element={<BulkUpload />} />
               <Route path="branding" element={<BrandingPage />} />
+              <Route path="permissions" element={<PermissionConsole />} />
               <Route path="purge" element={<DatabasePurge />} />
             </Route>
           </Route>

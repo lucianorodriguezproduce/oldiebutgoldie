@@ -8,22 +8,19 @@ import NotificationBell from "@/components/NotificationBell";
 import { db } from "@/lib/firebase";
 import { doc, onSnapshot } from "firebase/firestore";
 import { useOrderNotifications } from "@/hooks/useOrderNotifications";
+import { siteConfigService } from "@/services/siteConfigService";
+import type { SiteConfig } from "@/services/siteConfigService";
 
 export const Navbar = () => {
     const location = useLocation();
     const { user, logout } = useAuth();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const { hasActiveOffer } = useOrderNotifications();
-    const [branding, setBranding] = useState<{ logo?: { url: string } }>({});
+    const [config, setConfig] = useState<SiteConfig | null>(null);
 
-    // Real-time branding sync
+    // Phase III: Real-time Config Sync
     useEffect(() => {
-        const unsubscribe = onSnapshot(doc(db, "settings", "site_config"), (snapshot) => {
-            if (snapshot.exists()) {
-                setBranding(snapshot.data());
-            }
-        });
-        return () => unsubscribe();
+        return siteConfigService.onSnapshotConfig(setConfig);
     }, []);
 
     const navItems = [
@@ -57,9 +54,9 @@ export const Navbar = () => {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between h-20">
                     <Link to="/" className="flex items-center gap-3 group">
-                        {branding.logo?.url ? (
+                        {config?.logo?.url ? (
                             <img
-                                src={branding.logo.url}
+                                src={config.logo.url}
                                 alt={TEXTS.global.navigation.brand}
                                 className="h-10 w-auto object-contain max-w-[180px] group-hover:scale-105 transition-transform duration-500"
                             />

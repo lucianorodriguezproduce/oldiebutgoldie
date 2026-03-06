@@ -60,7 +60,7 @@ export interface Trade {
         receiverId: string; // Default to Admin
     };
     manifest: TradeManifest;
-    status: "pending" | "accepted" | "counter_offer" | "completed" | "cancelled";
+    status: "pending" | "accepted" | "counter_offer" | "completed" | "cancelled" | "resolved" | "rejected";
     type: "direct_sale" | "exchange";
     currentTurn: string; // UID of the user who must decide
     negotiationHistory: TradeManifest[]; // Previous versions of the manifest

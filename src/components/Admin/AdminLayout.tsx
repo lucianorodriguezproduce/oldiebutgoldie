@@ -20,6 +20,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         { label: "🤝 Intercambios", href: "/admin/trades", icon: Handshake },
         { label: "💎 Colección", href: "/admin/collection", icon: ShoppingBag },
         { label: "Identidad Marca", href: "/admin/branding", icon: Shield },
+        { label: "Permisos", href: "/admin/permissions", icon: Terminal },
         { label: "Editorial Hub", href: "/admin/editorial", icon: Newspaper },
     ];
 

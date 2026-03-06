@@ -7,6 +7,8 @@ import { ShieldAlert, User as UserIcon, Lock, Users, ArrowRight, Clock, Ban } fr
 import type { DbUser } from "@/types/user";
 import { useAuth } from "@/context/AuthContext";
 import { getConnectionStatus, requestConnection, acceptConnection, breakConnection } from "@/services/connectionService";
+import { siteConfigService } from "@/services/siteConfigService";
+import type { SiteConfig } from "@/services/siteConfigService";
 import type { ConnectionStatus } from "@/types/connection";
 
 export default function PublicProfile() {
@@ -18,9 +20,10 @@ export default function PublicProfile() {
     const [notFound, setNotFound] = useState(false);
 
     // Auth & Connections
-    const { dbUser } = useAuth();
+    const { dbUser, isAdmin } = useAuth();
     const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus | null>(null);
     const [isActionLoading, setIsActionLoading] = useState(false);
+    const [config, setConfig] = useState<SiteConfig | null>(null);
 
     useEffect(() => {
         if (!username) {
@@ -69,6 +72,11 @@ export default function PublicProfile() {
         };
         checkStatus();
     }, [dbUser, profileUser]);
+
+    // Phase III: Subscribe to Site Config
+    useEffect(() => {
+        return siteConfigService.onSnapshotConfig(setConfig);
+    }, []);
 
     const handleConnectionAction = async () => {
         if (!dbUser || !profileUser) return;
@@ -134,7 +142,7 @@ export default function PublicProfile() {
                 </div>
 
                 {/* Connection Controls */}
-                {dbUser && dbUser.uid !== profileUser.uid && (
+                {dbUser && dbUser.uid !== profileUser.uid && (config?.allow_user_friendships || isAdmin) && (
                     <div className="pt-4 flex flex-col items-center space-y-3">
                         <button
                             onClick={handleConnectionAction}
@@ -155,6 +163,14 @@ export default function PublicProfile() {
                                             <><Users className="w-4 h-4" /> Conectar</>
                             }
                         </button>
+                    </div>
+                )}
+
+                {dbUser && dbUser.uid !== profileUser.uid && !config?.allow_user_friendships && !isAdmin && (
+                    <div className="pt-4 px-6 py-2 bg-red-500/5 border border-red-500/10 rounded-xl">
+                        <p className="text-[10px] font-black text-red-400 uppercase tracking-widest text-center">
+                            Conexiones temporalmente restringidas
+                        </p>
                     </div>
                 )}
             </div>

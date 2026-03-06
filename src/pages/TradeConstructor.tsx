@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, ArrowRight, CheckCircle2, Disc, ShoppingBag, DollarSign, Search, X, Plus, Minus, MessageCircle } from "lucide-react";
+import { serverTimestamp } from "firebase/firestore";
 import { useAuth } from "@/context/AuthContext";
 import { useLoading } from "@/context/LoadingContext";
 import { userAssetService } from "@/services/userAssetService";
@@ -20,6 +21,8 @@ export default function TradeConstructor() {
     const { user, dbUser } = useAuth();
     const navigate = useNavigate();
     const { showLoading, hideLoading } = useLoading();
+    const [searchParams] = useSearchParams();
+    const targetTradeId = searchParams.get("targetTrade");
 
     // Wizard state
     const [step, setStep] = useState<Step>(1);
@@ -138,22 +141,38 @@ export default function TradeConstructor() {
                 };
             });
 
-            const tradeId = await tradeService.createTrade({
-                participants: {
+            if (targetTradeId) {
+                // PHASE III: PROPOSAL SYSTEM
+                await tradeService.createProposal(targetTradeId, {
                     senderId: user.uid,
-                    receiverId: ADMIN_UID
-                },
-                manifest: {
-                    items: [...offeredDetails, ...requestedDetails],
-                    offeredItems: offeredDetails.map(i => i.userAssetId || i.id),
-                    requestedItems: requestedDetails.map(i => i.id),
-                    cashAdjustment: adjustedCash,
-                    currency: cashCurrency
-                },
-                tradeOrigin: 'DISCOGS'
-            });
-
-            setCreatedTradeId(tradeId);
+                    senderName: dbUser?.username || user.displayName || user.email,
+                    manifest: {
+                        items: [...offeredDetails, ...requestedDetails],
+                        offeredItems: offeredDetails.map(i => i.userAssetId || i.id),
+                        requestedItems: requestedDetails.map(i => i.id),
+                        cashAdjustment: adjustedCash,
+                        currency: cashCurrency
+                    },
+                    timestamp: serverTimestamp()
+                });
+                setCreatedTradeId(targetTradeId);
+            } else {
+                const tradeId = await tradeService.createTrade({
+                    participants: {
+                        senderId: user.uid,
+                        receiverId: ADMIN_UID
+                    },
+                    manifest: {
+                        items: [...offeredDetails, ...requestedDetails],
+                        offeredItems: offeredDetails.map(i => i.userAssetId || i.id),
+                        requestedItems: requestedDetails.map(i => i.id),
+                        cashAdjustment: adjustedCash,
+                        currency: cashCurrency
+                    },
+                    tradeOrigin: 'DISCOGS'
+                });
+                setCreatedTradeId(tradeId);
+            }
             setIsSuccess(true);
             window.scrollTo({ top: 0, behavior: 'smooth' });
         } catch (error: any) {

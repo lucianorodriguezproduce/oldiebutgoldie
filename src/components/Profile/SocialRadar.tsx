@@ -3,6 +3,9 @@ import { Search, User, ShieldAlert, Loader2 } from "lucide-react";
 import { collection, query, where, getDocs, limit, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
+import { siteConfigService } from "@/services/siteConfigService";
+import type { SiteConfig } from "@/services/siteConfigService";
 import type { DbUser } from "@/types/user";
 
 export default function SocialRadar() {
@@ -10,6 +13,12 @@ export default function SocialRadar() {
     const [isSearching, setIsSearching] = useState(false);
     const [results, setResults] = useState<DbUser[]>([]);
     const [hasAttempted, setHasAttempted] = useState(false);
+    const { isAdmin } = useAuth();
+    const [config, setConfig] = useState<SiteConfig | null>(null);
+
+    useEffect(() => {
+        return siteConfigService.onSnapshotConfig(setConfig);
+    }, []);
 
     useEffect(() => {
         if (searchTerm.trim().length < 3) {
@@ -58,13 +67,22 @@ export default function SocialRadar() {
                     type="text"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Radar P2P: Busca por @username..."
-                    className="w-full bg-black/40 border border-white/10 rounded-2xl pl-12 pr-4 py-4 text-white placeholder-gray-500 font-mono focus:outline-none focus:border-primary/50 transition-colors"
+                    disabled={!config?.allow_user_friendships && !isAdmin}
+                    placeholder={(!config?.allow_user_friendships && !isAdmin) ? "Radar Desactivado" : "Radar P2P: Busca por @username..."}
+                    className={`w-full bg-black/40 border border-white/10 rounded-2xl pl-12 pr-4 py-4 text-white placeholder-gray-500 font-mono focus:outline-none focus:border-primary/50 transition-colors ${(!config?.allow_user_friendships && !isAdmin) ? 'opacity-50 cursor-not-allowed' : ''}`}
                 />
                 {isSearching && (
                     <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 animate-spin" />
                 )}
             </div>
+
+            {(!config?.allow_user_friendships && !isAdmin) && (
+                <div className="bg-red-500/5 border border-red-500/10 rounded-2xl p-6 text-center space-y-2">
+                    <ShieldAlert className="w-8 h-8 text-red-400 mx-auto" />
+                    <p className="text-red-400 font-bold text-sm tracking-widest uppercase">Frecuencia Restringida</p>
+                    <p className="text-[10px] text-gray-600 font-medium">Las conexiones sociales han sido desactivadas por el administrador.</p>
+                </div>
+            )}
 
             {hasAttempted && !isSearching && results.length === 0 && searchTerm.length >= 3 && (
                 <div className="bg-white/5 border border-white/5 rounded-2xl p-6 text-center space-y-2 translate-y-2 opacity-0 animate-[fade-in-up_0.3s_ease-out_forwards]">

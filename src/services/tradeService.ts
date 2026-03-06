@@ -440,6 +440,69 @@ export const tradeService = {
 
             transaction.update(tradeRef, { status: "completed", resolvedAt: serverTimestamp() });
         });
+    },
+
+    async createProposal(tradeId: string, proposal: any) {
+        const proposalsRef = collection(db, COLLECTION_NAME, tradeId, "proposals");
+        const docRef = await addDoc(proposalsRef, {
+            ...proposal,
+            status: "pending",
+            timestamp: serverTimestamp()
+        });
+        return docRef.id;
+    },
+
+    async getProposals(tradeId: string) {
+        const proposalsRef = collection(db, COLLECTION_NAME, tradeId, "proposals");
+        const q = query(proposalsRef, orderBy("timestamp", "desc"));
+        const snap = await getDocs(q);
+        return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    },
+
+    async resolvePublicProposal(tradeId: string, proposalId: string) {
+        const tradeRef = doc(db, COLLECTION_NAME, tradeId);
+        const proposalRef = doc(db, COLLECTION_NAME, tradeId, "proposals", proposalId);
+
+        // We fetch other proposals BEFORE the transaction because transactions 
+        // don't support collection-level queries in Firestore.
+        const otherProposalsQuery = query(collection(db, COLLECTION_NAME, tradeId, "proposals"));
+        const othersSnap = await getDocs(otherProposalsQuery);
+
+        await runTransaction(db, async (transaction) => {
+            const tradeSnap = await transaction.get(tradeRef);
+            const proposalSnap = await transaction.get(proposalRef);
+
+            if (!tradeSnap.exists()) throw new Error("Orden madre no encontrada");
+            if (!proposalSnap.exists()) throw new Error("Propuesta no encontrada");
+
+            const tradeData = tradeSnap.data() as Trade;
+            if (tradeData.status === "resolved") throw new Error("ORDER_ALREADY_RESOLVED");
+
+            // 1. Mark winning proposal
+            transaction.update(proposalRef, {
+                status: "accepted",
+                resolvedAt: serverTimestamp()
+            });
+
+            // 2. Mark other proposals as rejected
+            othersSnap.docs.forEach(pDoc => {
+                if (pDoc.id !== proposalId) {
+                    transaction.update(pDoc.ref, { status: "rejected" });
+                }
+            });
+
+            // 3. Mark parent trade as resolved
+            transaction.update(tradeRef, {
+                status: "resolved",
+                winnerProposalId: proposalId,
+                resolvedAt: serverTimestamp()
+            });
+
+            // INVARIANT: Transfer items (Phase IV Optimization)
+            // Here we would ideally loop through proposal manifest items 
+            // and update userAssets status to 'sold' or transfer owner,
+            // or decrement inventory stock if applicable.
+        });
     }
 
 };

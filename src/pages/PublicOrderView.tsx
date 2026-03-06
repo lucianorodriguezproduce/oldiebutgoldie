@@ -9,6 +9,7 @@ import { ChevronLeft, Music, Disc, Lock, Clock, Eye, ChevronDown, Share2, Chevro
 import { useAuth } from "@/context/AuthContext";
 import { useLote } from "@/context/LoteContext";
 import { useLoading } from "@/context/LoadingContext";
+import { query, orderBy } from "firebase/firestore";
 import { formatDate, getReadableDate } from "@/utils/date";
 import { TEXTS } from "@/constants/texts";
 import { pushViewItemFromOrder, pushHotOrderDetected } from "@/utils/analytics";
@@ -17,6 +18,9 @@ import { getCleanOrderMetadata } from "@/utils/orderMetadata";
 import { tradeService } from "@/services/tradeService";
 import { generateWhatsAppAcceptDealMsg } from "@/utils/whatsapp";
 import { ADMIN_UID } from "@/constants/admin";
+import { siteConfigService } from "@/services/siteConfigService";
+import type { SiteConfig } from "@/services/siteConfigService";
+import { Trash2, Trophy, Star } from "lucide-react";
 
 export default function PublicOrderView() {
     const { id } = useParams<{ id: string }>();
@@ -45,6 +49,11 @@ export default function PublicOrderView() {
     // Exchange post-action state
     const [postActionState, setPostActionState] = useState<'idle' | 'success' | 'countered' | 'rejected' | 'negotiating'>('idle');
     const [exchangeCounterCash, setExchangeCounterCash] = useState<string>("");
+
+    // Phase III: Proposals & Config
+    const [config, setConfig] = useState<SiteConfig | null>(null);
+    const [proposals, setProposals] = useState<any[]>([]);
+    const [loadingProposals, setLoadingProposals] = useState(false);
 
     useEffect(() => {
         if (!id) {
@@ -81,6 +90,26 @@ export default function PublicOrderView() {
 
         return () => unsub();
     }, [id]);
+
+    // Live Config & Proposals
+    useEffect(() => {
+        const unsubConfig = siteConfigService.onSnapshotConfig(setConfig);
+
+        let unsubProposals: any;
+        if (id && isOwner) {
+            setLoadingProposals(true);
+            const proposalsRef = collection(db, "trades", id, "proposals");
+            unsubProposals = onSnapshot(query(proposalsRef, orderBy("timestamp", "desc")), (snap) => {
+                setProposals(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+                setLoadingProposals(false);
+            });
+        }
+
+        return () => {
+            unsubConfig();
+            if (unsubProposals) unsubProposals();
+        };
+    }, [id, isOwner]);
 
     // Handle incoming buy intents via URL params
     useEffect(() => {
@@ -868,15 +897,16 @@ export default function PublicOrderView() {
                                                 setShowLoginDrawer(true);
                                             } else if (!dbUser?.username) {
                                                 setShowIdentityGuard(true);
+                                            } else if (!config?.allow_p2p_public_offers && !isAdmin) {
+                                                alert("Las ofertas P2P están temporalmente desactivadas por el administrador.");
                                             } else {
                                                 // Redirect to trade constructor to initiate a counter trade targeting this deal
-                                                // For V2: Navigate targeting the original trade ID
                                                 navigate(`/creator?targetTrade=${id}`);
                                             }
                                         }}
-                                        className="mt-4 px-8 py-4 rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-black uppercase text-[10px] tracking-widest transition-all shadow-xl shadow-blue-500/20 hover:scale-105"
+                                        className={`mt-4 px-8 py-4 rounded-xl text-white font-black uppercase text-[10px] tracking-widest transition-all shadow-xl shadow-blue-500/20 hover:scale-105 ${(!config?.allow_p2p_public_offers && !isAdmin) ? 'bg-gray-700 cursor-not-allowed grayscale' : 'bg-blue-500 hover:bg-blue-600'}`}
                                     >
-                                        Ofrecer Intercambio
+                                        {(!config?.allow_p2p_public_offers && !isAdmin) ? "Ofertas Desactivadas" : "Ofrecer Intercambio"}
                                     </button>
                                 </div>
                             );
@@ -884,6 +914,106 @@ export default function PublicOrderView() {
 
                         return null;
                     })()}
+
+                    {/* === OWNER PROPOSAL LIST (BATTLEGROUND) === */}
+                    {isOwner && order.status !== 'resolved' && (
+                        <div className="mt-12 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                                <div className="flex items-center gap-3">
+                                    <Trophy className="w-6 h-6 text-yellow-400" />
+                                    <h3 className="text-2xl font-display font-black text-white uppercase tracking-tight">Propuestas Recibidas</h3>
+                                </div>
+                                <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] font-black text-gray-400 uppercase">
+                                    {proposals.length} OFERTAS
+                                </span>
+                            </div>
+
+                            {loadingProposals ? (
+                                <div className="py-20 text-center space-y-4">
+                                    <Clock className="w-8 h-8 text-primary/20 mx-auto animate-spin" />
+                                    <p className="text-[10px] font-black text-gray-600 uppercase tracking-widest">Escaneando el Coliseo...</p>
+                                </div>
+                            ) : proposals.length === 0 ? (
+                                <div className="py-16 text-center bg-white/[0.02] border border-dashed border-white/10 rounded-3xl space-y-4">
+                                    <Disc className="w-12 h-12 text-white/5 mx-auto" />
+                                    <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Todavía no hay propuestas para tu orden</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    {proposals.map((prop) => (
+                                        <div key={prop.id} className="p-6 bg-white/[0.03] border border-white/10 rounded-3xl hover:bg-white/[0.05] transition-all group">
+                                            <div className="flex flex-col md:flex-row justify-between gap-6">
+                                                <div className="flex-1 space-y-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center border border-primary/20">
+                                                            <span className="text-primary font-black uppercase">{prop.senderName?.charAt(0)}</span>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Ofertado por</p>
+                                                            <p className="text-white font-black">@{prop.senderName}</p>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {prop.manifest?.items?.filter((i: any) => i.source === 'user_asset').map((item: any, idx: number) => (
+                                                            <div key={idx} className="flex items-center gap-2 bg-orange-500/10 border border-orange-500/20 rounded-xl px-3 py-2">
+                                                                <Disc className="w-3 h-3 text-orange-400" />
+                                                                <span className="text-[10px] font-bold text-white uppercase truncate max-w-[120px]">{item.title}</span>
+                                                            </div>
+                                                        ))}
+                                                        {prop.manifest?.cashAdjustment !== 0 && (
+                                                            <div className={`px-3 py-2 rounded-xl text-[10px] font-black border ${prop.manifest.cashAdjustment > 0 ? 'bg-red-500/10 border-red-500/20 text-red-400' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'}`}>
+                                                                {prop.manifest.cashAdjustment > 0 ? '-' : '+'} ${Math.abs(prop.manifest.cashAdjustment).toLocaleString()}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex md:flex-col justify-end gap-2">
+                                                    <button
+                                                        onClick={async () => {
+                                                            if (isExecuting) return;
+                                                            const ok = window.confirm("¿Aceptar esta oferta? Se cerrará la orden y se rechazarán las demás.");
+                                                            if (!ok) return;
+
+                                                            setIsExecuting(true);
+                                                            showLoading("Resolviendo Coliseo...");
+                                                            try {
+                                                                await tradeService.resolvePublicProposal(id!, prop.id);
+                                                            } catch (err: any) {
+                                                                alert(err.message === 'ORDER_ALREADY_RESOLVED' ? "Esta orden ya fue resuelta." : "Error al resolver.");
+                                                            } finally {
+                                                                setIsExecuting(false);
+                                                                hideLoading();
+                                                            }
+                                                        }}
+                                                        className="px-6 py-3 bg-primary text-black font-black uppercase text-[10px] tracking-widest rounded-xl hover:scale-105 transition-all shadow-lg shadow-primary/20 flex items-center gap-2"
+                                                    >
+                                                        <Star className="w-4 h-4 fill-current" /> Aceptar Ganador
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {order.status === 'resolved' && (
+                        <div className="mt-8 p-12 bg-yellow-400/10 border-2 border-yellow-400/30 rounded-[3rem] text-center space-y-4 animate-in zoom-in duration-500">
+                            <Trophy className="w-16 h-16 text-yellow-400 mx-auto drop-shadow-[0_0_20px_rgba(250,204,21,0.5)]" />
+                            <div>
+                                <h4 className="text-3xl font-display font-black text-white uppercase tracking-tighter">Orden Resuelta</h4>
+                                <p className="text-xs font-bold text-gray-500 uppercase tracking-[0.3em] mt-2">EL COLISEO TIENE UN GANADOR</p>
+                            </div>
+                            <div className="pt-6">
+                                <Link to="/perfil" className="px-8 py-4 bg-white/10 hover:bg-white/20 rounded-2xl text-white font-black uppercase text-[10px] tracking-widest transition-all">
+                                    Ver Resultado en Mi Perfil
+                                </Link>
+                            </div>
+                        </div>
+                    )}
 
                     {/* === ADMIN SALE ORDER ACTIONS (original) === */}
                     {isAdminOrder && !isExchange && (() => {
