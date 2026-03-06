@@ -100,7 +100,6 @@ export default function TradeConstructor() {
         if (!user || isSubmitting) return;
 
         // --- IDENTITY GUARD FOR V2 P2P ---
-        const { dbUser } = useAuth(); // Actually we need this to be pulled carefully from hook above
         if (selectedOffered.size === 0 && selectedRequested.size === 0) {
             alert("Debes seleccionar al menos un ítem para ofrecer o solicitar.");
             return;
