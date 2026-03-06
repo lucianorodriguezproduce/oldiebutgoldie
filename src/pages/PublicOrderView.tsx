@@ -1098,7 +1098,8 @@ export default function PublicOrderView() {
             {/* Passport Identity Guard */}
             {showIdentityGuard && dbUser && (
                 <UsernameClaimModal
-                    user={dbUser}
+                    isOpen={showIdentityGuard}
+                    onClose={() => setShowIdentityGuard(false)}
                     onSuccess={() => {
                         setShowIdentityGuard(false);
                         navigate(`/creator?targetTrade=${id}`);
