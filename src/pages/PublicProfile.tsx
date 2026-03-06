@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useLoading } from "@/context/LoadingContext";
 import { ShieldAlert, User as UserIcon, Lock, Users, ArrowRight, Clock, Ban } from "lucide-react";
@@ -34,19 +34,24 @@ export default function PublicProfile() {
         const fetchProfile = async () => {
             showLoading("Buscando identificador...");
             try {
-                const q = query(
-                    collection(db, "users"),
-                    where("username", "==", username.toLowerCase())
-                );
-                const snapshot = await getDocs(q);
+                // HOTFIX: Use usernames registry to find UID (more secure than listing the users collection)
+                const usernameRef = doc(db, "usernames", username.toLowerCase());
+                const usernameSnap = await getDoc(usernameRef);
 
-                if (snapshot.empty) {
+                if (!usernameSnap.exists()) {
                     setNotFound(true);
-                    // UX Rule: Delay redirect slightly so they see the missing profile message
+                    setTimeout(() => navigate("/tienda"), 3000);
+                    return;
+                }
+
+                const uid = usernameSnap.data().uid;
+                const userSnap = await getDoc(doc(db, "users", uid));
+
+                if (!userSnap.exists()) {
+                    setNotFound(true);
                     setTimeout(() => navigate("/tienda"), 3000);
                 } else {
-                    const doc = snapshot.docs[0];
-                    setProfileUser({ id: doc.id, ...doc.data() } as unknown as DbUser);
+                    setProfileUser({ id: userSnap.id, ...userSnap.data() } as unknown as DbUser);
                 }
             } catch (error) {
                 console.error("Error fetching public profile:", error);

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Search, User, ShieldAlert, Loader2 } from "lucide-react";
-import { collection, query, where, getDocs, limit, orderBy } from "firebase/firestore";
+import { collection, query, where, getDocs, limit, orderBy, doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -31,23 +31,30 @@ export default function SocialRadar() {
             setIsSearching(true);
             setHasAttempted(true);
             try {
-                // To allow basic prefix search in Firestore without third-party services like Algolia:
-                // we search users whose username is >= term and <= term + '\uf8ff'
                 const searchLower = searchTerm.toLowerCase();
-
+                // HOTFIX: Search in 'usernames' collection instead of 'users' to avoid permission errors
                 const q = query(
-                    collection(db, "users"),
-                    where("username", ">=", searchLower),
-                    where("username", "<=", searchLower + "\uf8ff"),
+                    collection(db, "usernames"),
+                    where("__name__", ">=", searchLower),
+                    where("__name__", "<=", searchLower + "\uf8ff"),
                     limit(5)
                 );
 
                 const snap = await getDocs(q);
-                const found: DbUser[] = [];
-                snap.forEach(doc => {
-                    found.push({ id: doc.id, ...doc.data() } as unknown as DbUser);
+                const resultsWithData: DbUser[] = [];
+
+                // For each username found, fetch the corresponding user data
+                const userPromises = snap.docs.map(async (uDoc) => {
+                    const uid = uDoc.data().uid;
+                    const uSnap = await getDoc(doc(db, "users", uid));
+                    if (uSnap.exists()) {
+                        return { id: uSnap.id, ...uSnap.data() } as unknown as DbUser;
+                    }
+                    return null;
                 });
-                setResults(found);
+
+                const usersData = await Promise.all(userPromises);
+                setResults(usersData.filter(u => u !== null) as DbUser[]);
             } catch (err) {
                 console.error("Radar Search failed:", err);
             } finally {

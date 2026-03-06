@@ -39,10 +39,11 @@ export default function UsernameClaimModal({ isOpen, onSuccess, onClose, forceCl
         const checkAvailability = async () => {
             setIsChecking(true);
             try {
-                const q = query(collection(db, "users"), where("username", "==", username));
-                const snap = await getDocs(q);
-                // Important: Also check if the current user already somehow has this username
-                if (!snap.empty && snap.docs[0].id !== user?.uid) {
+                // HOTFIX: Consult usernames registry instead of searching the users collection (avoids permission errors)
+                const usernameRef = doc(db, "usernames", username.toLowerCase());
+                const snap = await getDoc(usernameRef);
+
+                if (snap.exists() && snap.data().uid !== user?.uid) {
                     setIsAvailable(false);
                     setError("Este identificador ya está en uso.");
                 } else {
@@ -65,11 +66,23 @@ export default function UsernameClaimModal({ isOpen, onSuccess, onClose, forceCl
 
         setIsSubmitting(true);
         try {
+            const batch = []; // We use parallel writes for simplicity or runTransaction if strict atomic required
             const userRef = doc(db, "users", user.uid);
-            await updateDoc(userRef, {
-                username: username,
+            const usernameRef = doc(db, "usernames", username.toLowerCase());
+
+            // 1. Update user document
+            const updateUser = updateDoc(userRef, {
+                username: username.toLowerCase(),
                 updatedAt: serverTimestamp()
             });
+
+            // 2. Register uniqueness bridge
+            const registerUsername = setDoc(usernameRef, {
+                uid: user.uid,
+                claimedAt: serverTimestamp()
+            });
+
+            await Promise.all([updateUser, registerUsername]);
 
             // Re-check doc to ensure it was saved
             onSuccess();
