@@ -135,11 +135,8 @@ export default function RevisarLote() {
                 // (Optional) We could alert if inventory items were present but skip them or handle them
             }
 
-            // 3. Logic for OFRECER (Exchange trade for everything)
+            // 3. Logic for OFRECER (C2B Negotiation)
             if (action === 'OFRECER') {
-                // If it's an offer, we treat everything as offeredItems for a trade
-                // Actually, "OFRECER" in this context usually means the user wants to offer these 
-                // but usually they are requesting them first. Let's assume an exchange manifest.
                 const allInventoryIds = inventoryItems.map(i => i.id.toString());
 
                 // For Discogs, we must import them first as archived inventory to use in trade
@@ -151,9 +148,12 @@ export default function RevisarLote() {
                     participants: { senderId: uid, receiverId: ADMIN_UID },
                     manifest: {
                         requestedItems: [...allInventoryIds, ...importedDiscogsIds],
-                        offeredItems: [], // The user will add offers in the next step or via price negotiation
-                        cashAdjustment: Number(totalPrice) || calculatedTotal
+                        offeredItems: [],
+                        cashAdjustment: Number(totalPrice) || calculatedTotal,
+                        currency: currency || 'ARS'
                     },
+                    type: 'admin_negotiation',
+                    isPublicOrder: false,
                     tradeOrigin: discogsItems.length > 0 ? 'DISCOGS' : 'INVENTORY',
                     transactionId
                 } as any);

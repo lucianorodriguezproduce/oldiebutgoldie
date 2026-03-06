@@ -255,7 +255,7 @@ export default function PublicOrderView() {
     }
 
     const { artist: displayArtist, album: displayAlbum, image: coverImage, format, condition, isBatch, itemsCount } = getCleanOrderMetadata(order);
-    const isExchange = order?.type === 'exchange';
+    const isExchange = order?.type === 'exchange' || order?.type === 'admin_negotiation';
     const manifestItems = Array.isArray(order.manifest?.items) ? order.manifest.items : [];
     const manifestOffered = manifestItems.filter((i: any) => i.source === 'user_asset');
     const manifestRequested = manifestItems.filter((i: any) => i.source === 'inventory');
@@ -869,16 +869,115 @@ export default function PublicOrderView() {
                             );
                         }
 
-                        // Admin viewing the exchange
+                        // Admin viewing the exchange/negotiation
                         if (isAdmin && (isPending || hasCounterOffer)) {
+                            // If it's the admin's turn (or if we want admin to always have the power here)
+                            // The current logic in Trade system uses currentTurn UID.
+                            const isAdminTurn = order.currentTurn === ADMIN_UID;
+
                             return (
-                                <div className="mt-8 p-6 md:p-8 bg-violet-500/5 border border-violet-500/20 rounded-[2.5rem] flex flex-col items-center justify-center gap-3 text-center">
-                                    <Handshake className="w-6 h-6 text-violet-400" />
-                                    <h4 className="text-lg font-display font-black text-white uppercase tracking-tightest">Intercambio en Curso</h4>
-                                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Gestioná esta propuesta desde el panel de admin</p>
-                                    <Link to="/admin/trades" className="mt-2 px-6 py-3 bg-violet-500/20 hover:bg-violet-500/30 border border-violet-500/30 rounded-xl text-violet-300 font-black uppercase text-[10px] tracking-widest transition-all">
-                                        Ir a Consola de Trades
-                                    </Link>
+                                <div className="mt-8 space-y-4">
+                                    <div className="p-6 md:p-8 bg-violet-500/10 border border-violet-500/30 rounded-[2.5rem] space-y-6">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-3 bg-violet-500/10 rounded-2xl">
+                                                <Handshake className="w-6 h-6 text-violet-400" />
+                                            </div>
+                                            <div>
+                                                <h4 className="text-xl font-display font-black text-white uppercase tracking-tight">Consola de Negociación (Admin)</h4>
+                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Estás gestionando este trato como administrador</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex flex-col sm:flex-row gap-3">
+                                            <button
+                                                onClick={async () => {
+                                                    if (isExecuting) return;
+                                                    const confirmed = window.confirm('¿Aceptar esta propuesta tal cual? Se completará la transacción.');
+                                                    if (!confirmed) return;
+                                                    setIsExecuting(true);
+                                                    showLoading('Completando transacción...');
+                                                    try {
+                                                        await tradeService.resolveTrade(id!, order.manifest);
+                                                        setOrder((prev: any) => ({ ...prev, status: 'completed' }));
+                                                        setPostActionState('success');
+                                                    } catch (error: any) {
+                                                        console.error('Admin accept error:', error);
+                                                        alert(`Error: ${error.message || 'No se pudo completar'}`);
+                                                    } finally {
+                                                        setIsExecuting(false);
+                                                        hideLoading();
+                                                    }
+                                                }}
+                                                className="flex-1 px-6 py-4 rounded-2xl bg-emerald-500 text-black font-black uppercase text-[10px] tracking-widest transition-all"
+                                            >
+                                                Aceptar Propuesta
+                                            </button>
+                                            <button
+                                                onClick={() => setPostActionState('negotiating')}
+                                                className="flex-1 px-6 py-4 rounded-2xl bg-primary text-black font-black uppercase text-[10px] tracking-widest transition-all"
+                                            >
+                                                Contraofertar
+                                            </button>
+                                            <button
+                                                onClick={async () => {
+                                                    const confirmed = window.confirm('¿Rechazar definitivamente este trato?');
+                                                    if (!confirmed) return;
+                                                    setIsExecuting(true);
+                                                    try {
+                                                        await tradeService.updateTradeStatus(id!, 'rejected');
+                                                        setOrder((prev: any) => ({ ...prev, status: 'rejected' }));
+                                                    } catch (error) {
+                                                        console.error('Admin reject error:', error);
+                                                    } finally {
+                                                        setIsExecuting(false);
+                                                    }
+                                                }}
+                                                className="flex-1 px-6 py-4 rounded-2xl bg-red-500/20 border border-red-500/30 text-red-500 font-black uppercase text-[10px] tracking-widest transition-all"
+                                            >
+                                                Rechazar
+                                            </button>
+                                        </div>
+
+                                        {postActionState === 'negotiating' && (
+                                            <div className="p-6 bg-white/[0.02] border border-white/5 rounded-2xl space-y-4 mt-4 animate-in fade-in slide-in-from-top-4">
+                                                <h5 className="text-white font-display font-black uppercase">Nueva Contraoferta Admin</h5>
+                                                <div className="flex items-center gap-3">
+                                                    <div className="flex-1 relative">
+                                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-black">$</span>
+                                                        <input
+                                                            type="number"
+                                                            placeholder="Monto final"
+                                                            value={exchangeCounterCash}
+                                                            onChange={(e) => setExchangeCounterCash(e.target.value)}
+                                                            className="w-full bg-black/50 border border-white/10 rounded-xl py-3 pl-8 pr-4 text-white font-black"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={async () => {
+                                                        const val = parseFloat(exchangeCounterCash);
+                                                        if (isNaN(val)) return;
+                                                        setIsExecuting(true);
+                                                        showLoading('Enviando contraoferta...');
+                                                        try {
+                                                            const newManifest = { ...order.manifest, cashAdjustment: val };
+                                                            await tradeService.counterTrade(id!, newManifest, ADMIN_UID);
+                                                            setOrder((prev: any) => ({ ...prev, status: 'counter_offer', manifest: newManifest, currentTurn: order.user_id }));
+                                                            setPostActionState('countered');
+                                                        } catch (error) {
+                                                            console.error('Admin counter error:', error);
+                                                        } finally {
+                                                            setIsExecuting(false);
+                                                            hideLoading();
+                                                        }
+                                                    }}
+                                                    className="w-full py-4 bg-gradient-to-r from-primary to-secondary text-black font-black uppercase text-[10px] tracking-widest rounded-xl"
+                                                >
+                                                    Enviar Contraoferta al Usuario
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             );
                         }

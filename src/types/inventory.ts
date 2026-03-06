@@ -61,7 +61,8 @@ export interface Trade {
     };
     manifest: TradeManifest;
     status: "pending" | "accepted" | "counter_offer" | "completed" | "cancelled" | "resolved" | "rejected";
-    type: "direct_sale" | "exchange";
+    type: "direct_sale" | "exchange" | "admin_negotiation" | "p2p_market";
+    isPublicOrder?: boolean; // True if it should appear in the global market
     currentTurn: string; // UID of the user who must decide
     negotiationHistory: TradeManifest[]; // Previous versions of the manifest
     timestamp: any;

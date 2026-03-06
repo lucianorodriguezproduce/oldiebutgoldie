@@ -98,8 +98,11 @@ async function runTabulaRasa() {
         'trades',
         'purchase_requests',
         'user_assets',
-        'inventory',
-        'connections'
+        'connections',
+        'leads',
+        'interactions',
+        'missed_searches',
+        'notifications'
     ];
 
     try {
@@ -108,9 +111,21 @@ async function runTabulaRasa() {
             await deleteCollectionRecursive(collection);
         }
 
+        console.log('📦 Recalibrating Inventory...');
+        const invSnap = await db.collection('inventory').get();
+        const batch = db.batch();
+        invSnap.docs.forEach(doc => {
+            batch.update(doc.ref, {
+                'logistics.stock': 1,
+                'logistics.status': 'active'
+            });
+        });
+        await batch.commit();
+        console.log(`✅ ${invSnap.size} items recalibrated.`);
+
         console.log('\n✨ OPERACIÓN FINALIZADA CON ÉXITO');
-        console.log('Identidades (@usernames) preservadas.');
-        console.log('El motor está listo para el reincio total.');
+        console.log('Identidades (@usernames) y Catálogo preservados (Stock reset a 1).');
+        console.log('El motor está listo para el reinicio total.');
 
     } catch (error) {
         console.error('\n❌ ERROR DURANTE EL SANEAMIENTO:', error);

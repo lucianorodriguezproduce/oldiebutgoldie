@@ -16,6 +16,7 @@ import {
     deleteDoc
 } from "firebase/firestore";
 
+import { pushLeadGenerated } from "@/utils/analytics";
 
 import type { Trade, InventoryItem, UserAsset } from "@/types/inventory";
 
@@ -59,7 +60,9 @@ const bunkerToLegacy = async (trade: any) => {
         "counter_offer": "counteroffered",
         "accepted": "completed",
         "completed": "completed",
-        "cancelled": "cancelled"
+        "cancelled": "cancelled",
+        "resolved": "completed",
+        "rejected": "cancelled"
     };
 
     return {
@@ -91,7 +94,7 @@ const bunkerToLegacy = async (trade: any) => {
 };
 
 export const tradeService = {
-    async createTrade(trade: Omit<Trade, 'id' | 'timestamp' | 'status' | 'currentTurn' | 'negotiationHistory' | 'type'> & { tradeOrigin?: 'INVENTORY' | 'DISCOGS' }) {
+    async createTrade(trade: Omit<Trade, 'id' | 'timestamp' | 'status' | 'currentTurn' | 'negotiationHistory'> & { tradeOrigin?: 'INVENTORY' | 'DISCOGS' }) {
         // --- ASSET LOCKING: Only lock items for direct sales ---
         // Exchange trades don't lock items — stock is checked atomically at resolution time.
         // This allows the same store item to be in multiple pending exchange proposals.
@@ -125,7 +128,7 @@ export const tradeService = {
                 ? hasNoOfferedItems  // Inventory + COMPRAR = venta directa
                 : hasNoOfferedItems; // Fallback: comportamiento legacy
 
-        const tradeType = isDirectSale ? "direct_sale" : "exchange";
+        const tradeType = trade.type || (isDirectSale ? "direct_sale" : "exchange");
         // FIX: Always start as "pending" — resolveTrade() will atomically transition to "completed"
         const initialStatus = "pending";
 
@@ -137,6 +140,7 @@ export const tradeService = {
                 receiverId: trade.participants.receiverId || ADMIN_UID
             },
             type: tradeType,
+            isPublicOrder: trade.isPublicOrder || false,
             status: initialStatus as any,
             currentTurn: trade.participants.receiverId || ADMIN_UID,
             negotiationHistory: [],
@@ -144,6 +148,11 @@ export const tradeService = {
             timestamp: serverTimestamp()
         };
         const docRef = await addDoc(collection(db, COLLECTION_NAME), tradeData);
+
+        // Tracking DataLayer
+        if (tradeData.type === 'admin_negotiation') {
+            pushLeadGenerated('c2b_offer', tradeData.manifest?.cashAdjustment || 0, tradeData.manifest?.items?.length || 1, docRef.id);
+        }
 
         // --- AUTO-RESOLUTION: For direct sales, decrement stock immediately ---
         if (isDirectSale) {

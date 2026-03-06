@@ -1,5 +1,6 @@
 import { tradeService } from "./tradeService";
 import { ADMIN_UID } from "@/constants/admin";
+import { pushPurchaseSuccess } from "@/utils/analytics";
 
 export const fastCheckoutService = {
     /**
@@ -23,8 +24,12 @@ export const fastCheckoutService = {
                     cashAdjustment: price,
                     currency: 'ARS'
                 },
+                type: 'direct_sale',
                 tradeOrigin: 'INVENTORY'
             });
+
+            // Tracking DataLayer
+            pushPurchaseSuccess(tradeId, price, 1);
 
             return tradeId;
         } catch (error) {

@@ -9,7 +9,6 @@ import { LoteProvider } from "@/context/LoteContext";
 import { LoadingProvider } from "@/context/LoadingContext";
 import { FloatingCartCounter } from "@/components/FloatingCartCounter";
 import { LoadingOverlay } from "@/components/ui/LoadingOverlay";
-import { AnalyticsProvider } from "@/components/AnalyticsProvider";
 import Layout from "@/components/Layout/Layout";
 import Login from "@/pages/Login";
 import Home from "@/pages/Home";
@@ -79,65 +78,63 @@ function AppContent() {
 
   return (
     <BrowserRouter>
-      <AnalyticsProvider>
-        <LoadingOverlay />
-        <FloatingCartCounter />
-        <Routes>
-          <Route element={<Layout />}>
-            <Route path="/" element={<Home />} />
-            <Route path="/tienda" element={<Store />} />
-            <Route path="/u/:username" element={<PublicProfile />} />
+      <LoadingOverlay />
+      <FloatingCartCounter />
+      <Routes>
+        <Route element={<Layout />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/tienda" element={<Store />} />
+          <Route path="/u/:username" element={<PublicProfile />} />
 
-            {/* P2P Routes with Guard */}
+          {/* P2P Routes with Guard */}
+          <Route
+            path="/comercio"
+            element={siteConfig?.p2p_global_enabled === false ? <Navigate to="/tienda" replace /> : <PublicOrders />}
+          />
+
+          <Route path="/orden/:id" element={<PublicOrderView />} />
+          <Route path="/revisar-lote" element={<RevisarLote />} />
+          <Route path="/item/:type/:id" element={<Home />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/album/:id" element={<AlbumDetail />} />
+          <Route path="/comunidad" element={<Editorial />} />
+          <Route path="/comunidad/:id" element={<ArticleDetail />} />
+          <Route path="/guias" element={<Guias />} />
+          <Route path="/eventos" element={<Eventos />} />
+          <Route path="/archivo" element={<Archivo />} />
+          <Route path="/archivo/:id" element={<ArchivoItem />} />
+
+          {/* Redirecciones Legales / SEO */}
+          <Route path="/actividad" element={<Navigate to="/comercio" replace />} />
+          <Route path="/editorial" element={<Navigate to="/comunidad" replace />} />
+          <Route path="/profile" element={<Navigate to="/perfil" replace />} />
+
+          <Route element={<ProtectedRoute />}>
+            <Route path="/perfil" element={<Profile />} />
             <Route
-              path="/comercio"
-              element={siteConfig?.p2p_global_enabled === false ? <Navigate to="/tienda" replace /> : <PublicOrders />}
+              path="/trade/new"
+              element={siteConfig?.p2p_global_enabled === false ? <Navigate to="/tienda" replace /> : <TradeConstructor />}
             />
-
-            <Route path="/orden/:id" element={<PublicOrderView />} />
-            <Route path="/revisar-lote" element={<RevisarLote />} />
-            <Route path="/item/:type/:id" element={<Home />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/album/:id" element={<AlbumDetail />} />
-            <Route path="/comunidad" element={<Editorial />} />
-            <Route path="/comunidad/:id" element={<ArticleDetail />} />
-            <Route path="/guias" element={<Guias />} />
-            <Route path="/eventos" element={<Eventos />} />
-            <Route path="/archivo" element={<Archivo />} />
-            <Route path="/archivo/:id" element={<ArchivoItem />} />
-
-            {/* Redirecciones Legales / SEO */}
-            <Route path="/actividad" element={<Navigate to="/comercio" replace />} />
-            <Route path="/editorial" element={<Navigate to="/comunidad" replace />} />
-            <Route path="/profile" element={<Navigate to="/perfil" replace />} />
-
-            <Route element={<ProtectedRoute />}>
-              <Route path="/perfil" element={<Profile />} />
-              <Route
-                path="/trade/new"
-                element={siteConfig?.p2p_global_enabled === false ? <Navigate to="/tienda" replace /> : <TradeConstructor />}
-              />
-            </Route>
           </Route>
+        </Route>
 
-          {/* Nested Admin Routes */}
-          <Route element={<ProtectedRoute adminOnly={true} />}>
-            <Route path="/admin" element={<AdminLayout><Outlet /></AdminLayout>}>
-              <Route index element={<AdminAnalytics />} />
-              <Route path="analytics" element={<AdminAnalytics />} />
-              <Route path="inventory" element={<AdminInventory />} />
-              <Route path="collection" element={<AdminCollection />} />
-              <Route path="trades" element={<AdminTrades />} />
-              <Route path="editorial" element={<EditorialManager />} />
+        {/* Nested Admin Routes */}
+        <Route element={<ProtectedRoute adminOnly={true} />}>
+          <Route path="/admin" element={<AdminLayout><Outlet /></AdminLayout>}>
+            <Route index element={<AdminAnalytics />} />
+            <Route path="analytics" element={<AdminAnalytics />} />
+            <Route path="inventory" element={<AdminInventory />} />
+            <Route path="collection" element={<AdminCollection />} />
+            <Route path="trades" element={<AdminTrades />} />
+            <Route path="editorial" element={<EditorialManager />} />
 
-              <Route path="bulk-upload" element={<BulkUpload />} />
-              <Route path="branding" element={<BrandingPage />} />
-              <Route path="permissions" element={<PermissionConsole />} />
-              <Route path="purge" element={<DatabasePurge />} />
-            </Route>
+            <Route path="bulk-upload" element={<BulkUpload />} />
+            <Route path="branding" element={<BrandingPage />} />
+            <Route path="permissions" element={<PermissionConsole />} />
+            <Route path="purge" element={<DatabasePurge />} />
           </Route>
-        </Routes>
-      </AnalyticsProvider>
+        </Route>
+      </Routes>
     </BrowserRouter>
   );
 }

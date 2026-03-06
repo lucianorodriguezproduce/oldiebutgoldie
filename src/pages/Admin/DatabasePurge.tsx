@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { Trash2, AlertTriangle, ShieldCheck, Database, RefreshCw } from "lucide-react";
 import { useLote } from "@/context/LoteContext";
 
-const TARGET_COLLECTIONS = ["orders", "trades_purgados", "assets_saneados", "stock_recalibrado"];
+const TARGET_COLLECTIONS = ["orders", "trades", "purchase_requests", "user_assets", "leads", "interactions", "missed_searches", "inventory"];
 
 export default function DatabasePurge() {
     const [isPurging, setIsPurging] = useState(false);
@@ -19,74 +19,35 @@ export default function DatabasePurge() {
         const newResults: { [key: string]: number } = {};
 
         try {
-            // 1. ELIMINACIÓN TOTAL DE 'ORDERS'
-            const ordersSnap = await getDocs(collection(db, "orders"));
-            const ordersBatch = writeBatch(db);
-            ordersSnap.docs.forEach(d => ordersBatch.delete(d.ref));
-            await ordersBatch.commit();
-            newResults["orders"] = ordersSnap.size;
+            // 1. BORRADO TOTAL: Transaccional & Social
+            const collectionsToDelete = ["orders", "trades", "purchase_requests", "leads", "interactions", "missed_searches", "user_assets", "notifications"];
 
-            // 2. PURGA DE TRADES INCONSISTENTES (Pre-V1.5)
-            // Borramos trades sin timestamp o de fechas anteriores al debug de hoy
-            const tradesSnap = await getDocs(collection(db, "trades"));
-            const tradesBatch = writeBatch(db);
-            let tradesCount = 0;
-            const today = new Date("2026-03-02").getTime();
-
-            tradesSnap.docs.forEach(d => {
-                const data = d.data();
-                const ts = data.timestamp?.seconds ? data.timestamp.seconds * 1000 : 0;
-                if (ts < today || !data.manifest || data.status === 'cancelled') {
-                    tradesBatch.delete(d.ref);
-                    tradesCount++;
-                }
-            });
-            await tradesBatch.commit();
-            newResults["trades_purgados"] = tradesCount;
-
-            // 3. SANEAMIENTO DE USER_ASSETS & RECALIBRACIÓN DE STOCK
-            // Si un asset no tiene un trade 'accepted'/'completed' o el item original volvió a 'active', lo borramos.
-            const assetsSnap = await getDocs(collection(db, "user_assets"));
-            const assetsBatch = writeBatch(db);
-            let assetsCount = 0;
-
-            for (const assetDoc of assetsSnap.docs) {
-                const assetData = assetDoc.data();
-                const invId = assetData.originalInventoryId;
-
-                if (invId) {
-                    const invSnap = await getDocs(query(collection(db, "inventory"), where("__name__", "==", invId)));
-                    if (!invSnap.empty) {
-                        const invData = invSnap.docs[0].data();
-                        // Si el ítem está 'active' en el búnker, no puede ser un asset del usuario (duplicidad física)
-                        if (invData.logistics?.status === 'active') {
-                            assetsBatch.delete(assetDoc.ref);
-                            assetsCount++;
-                        }
-                    }
+            for (const coll of collectionsToDelete) {
+                const snap = await getDocs(collection(db, coll));
+                if (!snap.empty) {
+                    const batch = writeBatch(db);
+                    snap.docs.forEach(d => batch.delete(d.ref));
+                    await batch.commit();
+                    newResults[coll] = snap.size;
+                } else {
+                    newResults[coll] = 0;
                 }
             }
-            await assetsBatch.commit();
-            newResults["assets_saneados"] = assetsCount;
 
-            // 4. RECALIBRACIÓN DE STOCK (Inventory)
-            // Todos los items que quedaron como sold_out por error vuelven a estar activos
+            // 2. RECALIBRACIÓN: Inventario (Bunker Preservation)
             const invSnap = await getDocs(collection(db, "inventory"));
             const itemsBatch = writeBatch(db);
             let invCount = 0;
 
             invSnap.docs.forEach(d => {
-                const data = d.data();
-                if (data.logistics?.status === 'sold_out' || data.logistics?.stock === 0) {
-                    itemsBatch.update(d.ref, {
-                        "logistics.stock": 1,
-                        "logistics.status": "active"
-                    });
-                    invCount++;
-                }
+                itemsBatch.update(d.ref, {
+                    "logistics.stock": 1,
+                    "logistics.status": "active"
+                });
+                invCount++;
             });
             await itemsBatch.commit();
-            newResults["stock_recalibrado"] = invCount;
+            newResults["inventory"] = invCount;
 
             // Client side reset
             clearLote();

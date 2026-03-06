@@ -53,8 +53,8 @@ export default function ArchivoItem() {
     return (
         <div className="min-h-screen bg-black pt-28 pb-20 px-6">
             <SEO
-                title={`${item.artist} - ${item.title} | Archivo Oldie But Goldie`}
-                description={`Encontrá ${item.title} de ${item.artist} y más discos en el búnker de Oldie But Goldie. Compras, ventas e intercambios de cd/dvd/casette/vinilos.`}
+                title={`Vinilo ${item.artist} - ${item.title} (${item.condition || 'N/A'}) | Oldie But Goldie`}
+                description={`Encontrá ${item.title} de ${item.artist} en el búnker. Formato: ${item.format}. Estado: ${item.condition}. Explorá el catálogo histórico de Oldie But Goldie.`}
                 image={item.image}
             />
 

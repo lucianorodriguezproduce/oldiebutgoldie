@@ -14,6 +14,7 @@ export interface UnifiedItem {
     genres?: string[];
     styles?: string[];
     format?: string;
+    condition?: string;
 }
 
 export const archivoService = {
@@ -33,7 +34,8 @@ export const archivoService = {
                 price: data.logistics.price,
                 genres: data.metadata.genres,
                 styles: data.metadata.styles,
-                format: data.metadata.format_description
+                format: data.metadata.format_description,
+                condition: data.logistics.condition
             };
         }
 
@@ -52,7 +54,8 @@ export const archivoService = {
                 valuation: data.valuation,
                 genres: data.metadata.genres,
                 styles: data.metadata.styles,
-                format: data.metadata.format_description
+                format: data.metadata.format_description,
+                condition: (data.metadata as any).condition || 'USADO'
             };
         }
 

@@ -12,21 +12,57 @@ import { inventoryService } from '@/services/inventoryService';
 
 import OrderCard from '@/components/OrderCard';
 import SocialRadar from '@/components/Profile/SocialRadar';
+import { useAuth } from '@/context/AuthContext';
+import { siteConfigService } from '@/services/siteConfigService';
+import type { SiteConfig } from '@/services/siteConfigService';
+import { ADMIN_UID } from '@/constants/admin';
 
 // Fetch the clean generic OrderData
 export default function PublicOrders() {
-    const [orders, setOrders] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
+    const { user, isAdmin } = useAuth();
+    const [config, setConfig] = useState<SiteConfig | null>(null);
 
     useEffect(() => {
-        let unsubscribe: (() => void) | undefined;
+        let unsubscribeTrades: (() => void) | undefined;
+        let unsubscribeConfig: (() => void) | undefined;
 
-        const startListener = async () => {
+        const startListeners = async () => {
             try {
-                const q = query(collection(db, 'trades'), orderBy('createdAt', 'desc'));
+                // 1. Listen for Config
+                unsubscribeConfig = siteConfigService.onSnapshotConfig(setConfig);
 
-                unsubscribe = onSnapshot(q, async (snapshot) => {
+                // 2. Listen for Trades
+                const q = query(collection(db, 'trades'), orderBy('createdAt', 'desc'));
+                unsubscribeTrades = onSnapshot(q, async (snapshot) => {
                     const tradeData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+
+                    // Filter based on Elastic Visibility Rules
+                    const filteredTrades = tradeData.filter((o: any) => {
+                        // Admin sees everything
+                        if (isAdmin) return true;
+
+                        // Check if it's a valid trade structure
+                        const isValidStructure = o.item_id || o.isBatch || o.is_batch ||
+                            (o.items && o.items.length > 0) ||
+                            (o.manifest?.requestedItems?.length > 0) ||
+                            (o.manifest?.offeredItems?.length > 0) ||
+                            (o.manifest?.items?.length > 0);
+
+                        if (!isValidStructure) return false;
+
+                        // Ownership check
+                        const isOwner = user && (o.user_id === user.uid || o.participants?.senderId === user.uid || o.participants?.receiverId === user.uid);
+
+                        // Visibility rule
+                        const isMarketOpen = config?.p2p_global_enabled ?? false;
+
+                        // Show if:
+                        // 1. User is the owner (regardless of market state)
+                        // 2. Market is open AND it's a public order
+                        return isOwner || (isMarketOpen && (o.isPublicOrder === true));
+                    });
+
+                    // Admin offers from inventory are always public
                     const inventoryItems = await inventoryService.getRecentAdditions(15);
                     const enrichedInventory = inventoryItems.map(item => ({
                         ...item,
@@ -35,9 +71,7 @@ export default function PublicOrders() {
                         status: 'active'
                     }));
 
-                    const validTrades = tradeData.filter((o: any) => o.item_id || o.isBatch || o.is_batch || (o.items && o.items.length > 0) || (o.manifest?.requestedItems?.length > 0) || (o.manifest?.offeredItems?.length > 0) || (o.manifest?.items?.length > 0));
-
-                    setOrders([...enrichedInventory, ...validTrades].sort((a, b) => {
+                    setOrders([...enrichedInventory, ...filteredTrades].sort((a, b) => {
                         const timeA = a.timestamp?.seconds || a.createdAt?.seconds || 0;
                         const timeB = b.timestamp?.seconds || b.createdAt?.seconds || 0;
                         return timeB - timeA;
@@ -50,12 +84,13 @@ export default function PublicOrders() {
             }
         };
 
-        startListener();
+        startListeners();
 
         return () => {
-            if (unsubscribe) unsubscribe();
+            if (unsubscribeTrades) unsubscribeTrades();
+            if (unsubscribeConfig) unsubscribeConfig.then(unsub => unsub?.());
         };
-    }, []);
+    }, [isAdmin, user?.uid, config?.p2p_global_enabled]);
 
     return (
         <div className="min-h-screen bg-black pt-12">
@@ -133,10 +168,16 @@ export default function PublicOrders() {
                                 ))}
                             </AnimatePresence>
                         ) : (
-                            <div className="py-20 flex flex-col items-center justify-center text-center">
-                                <Disc className="w-16 h-16 text-white/10 mb-4 animate-[spin_10s_linear_infinite]" />
-                                <h3 className="text-xl font-display font-black text-white uppercase tracking-widest mb-2">{TEXTS.comercio.publicActivity.noActivity}</h3>
-                                <p className="text-gray-500 font-medium">{TEXTS.comercio.publicActivity.noPublicOrders}</p>
+                            <div className="py-20 flex flex-col items-center justify-center text-center space-y-4">
+                                <Disc className="w-16 h-16 text-white/10 mb-2 animate-[spin_10s_linear_infinite]" />
+                                <h3 className="text-xl font-display font-black text-white uppercase tracking-widest">
+                                    {config?.p2p_global_enabled === false ? "Mercado en Mantenimiento" : TEXTS.comercio.publicActivity.noActivity}
+                                </h3>
+                                <p className="text-gray-500 font-medium max-w-md">
+                                    {config?.p2p_global_enabled === false
+                                        ? "El mercado global P2P está desactivado temporalmente. Solo podés ver tus propias negociaciones privadas en este momento."
+                                        : TEXTS.comercio.publicActivity.noPublicOrders}
+                                </p>
                             </div>
                         )}
                     </motion.section>

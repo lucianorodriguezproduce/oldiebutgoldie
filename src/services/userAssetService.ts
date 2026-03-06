@@ -13,6 +13,7 @@ import {
     orderBy
 } from "firebase/firestore";
 import type { UserAsset } from "@/types/inventory";
+import { pushAssetCreated } from "@/utils/analytics";
 
 const COLLECTION_NAME = "user_assets";
 
@@ -62,6 +63,10 @@ export const userAssetService = {
             status: 'active',
             acquiredAt: serverTimestamp()
         });
+
+        // Tracking DataLayer
+        pushAssetCreated(userId, docRef.id, assetData.metadata?.title || 'Sin Título');
+
         return docRef.id;
     },
 

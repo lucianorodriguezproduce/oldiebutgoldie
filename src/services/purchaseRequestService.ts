@@ -1,5 +1,6 @@
 import { db } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp, query, where, getDocs, orderBy } from "firebase/firestore";
+import { pushLeadGenerated } from "@/utils/analytics";
 
 const COLLECTION_NAME = "purchase_requests";
 
@@ -43,6 +44,10 @@ export const purchaseRequestService = {
         };
 
         const docRef = await addDoc(collection(db, COLLECTION_NAME), requestData);
+
+        // Tracking DataLayer
+        pushLeadGenerated('discogs_request', 0, 1, docRef.id);
+
         return docRef.id;
     },
 

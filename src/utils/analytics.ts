@@ -103,11 +103,49 @@ export const pushHotOrderDetected = (order: any, viewCount: number) => {
 export const pushBulkUploadCompleted = (itemCount: number) => {
     if (typeof window !== 'undefined') {
         window.dataLayer = window.dataLayer || [];
-
         window.dataLayer.push({
             'event': 'bulk_upload_completed',
             'item_count': itemCount,
             'source': 'admin_dashboard'
+        });
+    }
+};
+
+export const pushPurchaseSuccess = (transactionId: string, value: number, itemsCount: number) => {
+    if (typeof window !== 'undefined') {
+        window.dataLayer = window.dataLayer || [];
+        window.dataLayer.push({
+            'event': 'purchase_success',
+            'transactionId': transactionId,
+            'value': value,
+            'currency': 'ARS',
+            'items_count': itemsCount
+        });
+    }
+};
+
+export const pushLeadGenerated = (type: 'discogs_request' | 'c2b_offer' | 'other', value: number = 0, itemsCount: number = 1, transactionId?: string) => {
+    if (typeof window !== 'undefined') {
+        window.dataLayer = window.dataLayer || [];
+        window.dataLayer.push({
+            'event': 'lead_generated',
+            'lead_type': type,
+            'value': value,
+            'currency': 'ARS',
+            'items_count': itemsCount,
+            'transactionId': transactionId
+        });
+    }
+};
+
+export const pushAssetCreated = (userId: string, itemId: string, itemName: string) => {
+    if (typeof window !== 'undefined') {
+        window.dataLayer = window.dataLayer || [];
+        window.dataLayer.push({
+            'event': 'asset_created',
+            'userId': userId,
+            'item_id': itemId,
+            'item_name': itemName
         });
     }
 };
