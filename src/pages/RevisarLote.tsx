@@ -15,6 +15,7 @@ import { TEXTS } from "@/constants/texts";
 import { inventoryService } from "@/services/inventoryService";
 import { tradeService } from "@/services/tradeService";
 import { userAssetService } from "@/services/userAssetService";
+import { purchaseRequestService } from "@/services/purchaseRequestService";
 import { ADMIN_UID } from "@/constants/admin";
 import { useEffect as useReactEffect } from "react";
 import UsernameClaimModal from "@/components/Profile/UsernameClaimModal";
@@ -30,7 +31,7 @@ export default function RevisarLote() {
     const [submittedOrder, setSubmittedOrder] = useState<any>(null);
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const [batchIntent, setBatchIntent] = useState<'COMPRAR' | 'VENDER' | null>(null);
+    const [batchIntent, setBatchIntent] = useState<'COMPRAR' | 'PEDIR' | 'OFRECER' | null>(null);
     const [totalPrice, setTotalPrice] = useState("");
     const [currency, setCurrency] = useState<'ARS' | 'USD'>("ARS");
 
@@ -90,81 +91,87 @@ export default function RevisarLote() {
         return `#LOTE-${result}`;
     };
 
-    const performSubmission = async (uid: string) => {
-        const currentUser = user || { email: "Sin email", displayName: "Usuario Registrado", photoURL: "" };
+    const performSubmission = async (uid: string, action: 'PEDIR' | 'OFRECER' | 'COMPRAR') => {
+        const currentUser = user || { email: "Sin email", displayName: "Usuario Registrado" };
+        const transactionId = `TX-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`.toUpperCase();
 
         try {
-            showLoading("Ingresando al Búnker...");
+            showLoading("Procesando lote...");
 
-            // Split items by origin
             const inventoryItems = loteItems.filter(i => i.source === 'INVENTORY');
             const discogsItems = loteItems.filter(i => i.source === 'DISCOGS');
 
-            const tradeIds: string[] = [];
+            const createdDocs: string[] = [];
 
-            // --- CAMINO A: Inventory items → Direct Sale (auto-resolved) ---
-            if (inventoryItems.length > 0) {
-                const inventoryIds = inventoryItems.map(item => item.id.toString());
-                const manifestInventory = {
-                    requestedItems: batchIntent === 'COMPRAR' ? inventoryIds : [],
-                    offeredItems: batchIntent === 'VENDER' ? inventoryIds : [],
-                    cashAdjustment: totalInventory
-                };
+            // 1. Logic for COMPRAR (Direct Sale for Inventory, Request for Discogs)
+            if (action === 'COMPRAR') {
+                if (inventoryItems.length > 0) {
+                    const invTradeId = await tradeService.createTrade({
+                        participants: { senderId: uid, receiverId: ADMIN_UID },
+                        manifest: {
+                            requestedItems: inventoryItems.map(i => i.id.toString()),
+                            offeredItems: [],
+                            cashAdjustment: totalInventory
+                        },
+                        tradeOrigin: 'INVENTORY',
+                        transactionId
+                    } as any);
+                    createdDocs.push(invTradeId);
+                }
 
-                const invTradeId = await tradeService.createTrade({
-                    participants: { senderId: uid, receiverId: ADMIN_UID },
-                    manifest: manifestInventory,
-                    tradeOrigin: 'INVENTORY'
-                });
-                tradeIds.push(invTradeId);
+                // Discogs items in a "COMPRAR" context become Purchase Requests
+                for (const item of discogsItems) {
+                    const reqId = await purchaseRequestService.createRequest(uid, currentUser.email || "", currentUser.displayName || "", item, transactionId);
+                    createdDocs.push(reqId);
+                }
             }
 
-            // --- CAMINO B: Discogs items → Exchange (negotiation, pending) ---
-            if (discogsItems.length > 0) {
-                const discogsIds = await Promise.all(discogsItems.map(async (item) => {
-                    return await inventoryService.importFromDiscogs(
-                        {
-                            id: item.id,
-                            title: item.title || `${item.artist} - ${item.album}`,
-                            thumb: item.cover_image,
-                            cover_image: item.cover_image
-                        } as any,
-                        {
-                            stock: 0,
-                            price: item.price || 0,
-                            condition: item.condition,
-                            status: 'archived'
-                        }
-                    );
+            // 2. Logic for PEDIR (Only for External items)
+            if (action === 'PEDIR') {
+                for (const item of discogsItems) {
+                    const reqId = await purchaseRequestService.createRequest(uid, currentUser.email || "", currentUser.displayName || "", item, transactionId);
+                    createdDocs.push(reqId);
+                }
+                // (Optional) We could alert if inventory items were present but skip them or handle them
+            }
+
+            // 3. Logic for OFRECER (Exchange trade for everything)
+            if (action === 'OFRECER') {
+                // If it's an offer, we treat everything as offeredItems for a trade
+                // Actually, "OFRECER" in this context usually means the user wants to offer these 
+                // but usually they are requesting them first. Let's assume an exchange manifest.
+                const allInventoryIds = inventoryItems.map(i => i.id.toString());
+
+                // For Discogs, we must import them first as archived inventory to use in trade
+                const importedDiscogsIds = await Promise.all(discogsItems.map(async (item) => {
+                    return await inventoryService.importFromDiscogs(item as any, { stock: 0, price: item.price || 0, condition: item.condition, status: 'archived' });
                 }));
 
-                const manifestDiscogs = {
-                    requestedItems: batchIntent === 'COMPRAR' ? discogsIds : [],
-                    offeredItems: batchIntent === 'VENDER' ? discogsIds : [],
-                    cashAdjustment: batchIntent === 'VENDER' ? Number(totalPrice) : totalEstimated
-                };
-
-                const discogsTradeId = await tradeService.createTrade({
+                const tradeId = await tradeService.createTrade({
                     participants: { senderId: uid, receiverId: ADMIN_UID },
-                    manifest: manifestDiscogs,
-                    tradeOrigin: 'DISCOGS'
-                });
-                tradeIds.push(discogsTradeId);
+                    manifest: {
+                        requestedItems: [...allInventoryIds, ...importedDiscogsIds],
+                        offeredItems: [], // The user will add offers in the next step or via price negotiation
+                        cashAdjustment: Number(totalPrice) || calculatedTotal
+                    },
+                    tradeOrigin: discogsItems.length > 0 ? 'DISCOGS' : 'INVENTORY',
+                    transactionId
+                } as any);
+                createdDocs.push(tradeId);
             }
 
-            // --- REDIRECT ---
             clearLote();
-            if (tradeIds.length === 1) {
-                // Single order → go straight to the order page
-                navigate(`/orden/${tradeIds[0]}`);
+
+            if (createdDocs.length === 1 && action !== 'PEDIR') {
+                navigate(`/orden/${createdDocs[0]}`);
             } else {
-                // Mixed lote → 2 orders created, go to activity feed
+                // For mixed or multiple requests, go to commerce/activity feed
                 navigate('/comercio');
             }
 
         } catch (error) {
             console.error("Submission error:", error);
-            alert(TEXTS.revisarLote.batchReview.submissionError);
+            alert("Error al procesar la orden. Inténtalo de nuevo.");
         } finally {
             hideLoading();
         }
@@ -174,9 +181,17 @@ export default function RevisarLote() {
     const handleAddToBatea = async () => {
         if (!user) return;
 
+        const discogsItems = loteItems.filter(item => item.source === 'DISCOGS');
+        const inventoryItems = loteItems.filter(item => item.source === 'INVENTORY');
+
+        if (discogsItems.length === 0) {
+            alert("Tu batea personal ya contiene los ítems de la tienda. Solo puedes añadir hallazgos externos (Discogs) de forma directa.");
+            return;
+        }
+
         showLoading("Añadiendo a tu batea...");
         try {
-            for (const item of loteItems) {
+            for (const item of discogsItems) {
                 // Parse artist from title if needed
                 let parsedArtist = item.artist || '';
                 let parsedTitle = item.title || item.album || '';
@@ -204,6 +219,10 @@ export default function RevisarLote() {
                 });
             }
 
+            if (inventoryItems.length > 0) {
+                alert("Tus hallazgos de Discogs se guardaron en tu batea. Los ítems de la tienda no se duplicaron; siguen disponibles para compra o intercambio.");
+            }
+
             clearLote();
             navigate('/perfil');
         } catch (error) {
@@ -215,27 +234,26 @@ export default function RevisarLote() {
     };
 
     const handleCheckout = async () => {
-        if (isSubmitting) return; // Prevent double clicks
+        if (isSubmitting) return;
 
         if (!batchIntent) {
             alert(TEXTS.revisarLote.batchReview.confirmIntent);
             return;
         }
 
-        // --- IDENTITY GUARD FOR V2 P2P (Hard Logic Lock) ---
-        // If the batch contains Discogs items, it counts as a trade/negotiation
-        // and requires a claimed username.
-        if (hasDiscogsItems && !dbUser?.username) {
+        // --- IDENTITY GUARD ---
+        // All transactional paths (PEDIR, OFRECER, COMPRAR) require identity
+        if (!dbUser?.username) {
             setShowIdentityGuard(true);
             return;
         }
 
-        if (batchIntent === 'VENDER' && (!totalPrice || Number(totalPrice) <= 0)) {
+        if (batchIntent === 'OFRECER' && (!totalPrice || Number(totalPrice) <= 0)) {
             alert(TEXTS.revisarLote.batchReview.validPriceRequired);
             return;
         }
         if (user) {
-            await performSubmission(user.uid);
+            await performSubmission(user.uid, batchIntent);
         }
     };
 
@@ -244,7 +262,7 @@ export default function RevisarLote() {
             alert(TEXTS.revisarLote.batchReview.confirmIntent);
             return;
         }
-        if (batchIntent === 'VENDER' && (!totalPrice || Number(totalPrice) <= 0)) {
+        if (batchIntent === 'OFRECER' && (!totalPrice || Number(totalPrice) <= 0)) {
             alert(TEXTS.revisarLote.batchReview.validPriceRequired);
             return;
         }
@@ -252,13 +270,11 @@ export default function RevisarLote() {
         try {
             const googleUser = await signInWithGoogle();
             if (googleUser) {
-                // Zero-Friction: Auto-submit ONLY if it's a direct inventory sale
-                if (!hasDiscogsItems) {
-                    await performSubmission(googleUser.uid);
+                // Zero-Friction: Auto-submit ONLY if it's a direct inventory sale (COMPRAR without Discogs)
+                if (batchIntent === 'COMPRAR' && !hasDiscogsItems) {
+                    await performSubmission(googleUser.uid, 'COMPRAR');
                     setIsSuccess(true);
                 }
-                // If hasDiscogsItems, the UI will re-render in authenticated state
-                // and the user will click "Confirm", triggering the Identity Guard.
             }
         } catch (error) {
             console.error("Google Auth error:", error);
@@ -275,7 +291,7 @@ export default function RevisarLote() {
             alert(TEXTS.revisarLote.batchReview.confirmIntent);
             return;
         }
-        if (batchIntent === 'VENDER' && (!totalPrice || Number(totalPrice) <= 0)) {
+        if (batchIntent === 'OFRECER' && (!totalPrice || Number(totalPrice) <= 0)) {
             alert(TEXTS.revisarLote.batchReview.validPriceRequired);
             return;
         }
@@ -285,8 +301,8 @@ export default function RevisarLote() {
             const loggedUser = await authenticateUser(email, password);
             if (loggedUser) {
                 // Zero-Friction: Auto-submit ONLY if it's a direct inventory sale
-                if (!hasDiscogsItems) {
-                    await performSubmission(loggedUser.uid);
+                if (batchIntent === 'COMPRAR' && !hasDiscogsItems) {
+                    await performSubmission(loggedUser.uid, 'COMPRAR');
                     setIsSuccess(true);
                 }
             }
@@ -494,160 +510,158 @@ export default function RevisarLote() {
                             </div>
                         </div>
 
-                        {/* Global Action Selector - ONLY show if there are Discogs items */}
-                        {hasDiscogsItems ? (
-                            <div className="space-y-3">
-                                <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] block mb-2 px-1">
-                                    ¿Qué quieres hacer con tus pedidos?
-                                </span>
-                                <div className="grid grid-cols-2 gap-2">
-                                    <button
-                                        onClick={() => setBatchIntent('COMPRAR')}
-                                        className={`p-3 rounded-2xl border transition-all flex flex-col items-center gap-1.5 ${batchIntent === 'COMPRAR'
-                                            ? 'bg-primary/20 border-primary text-primary'
-                                            : 'bg-white/[0.03] border-white/10 text-gray-400 hover:border-white/20'
-                                            }`}
-                                    >
-                                        <div className={`p-1.5 rounded-lg ${batchIntent === 'COMPRAR' ? 'bg-primary text-black' : 'bg-white/5 text-gray-500'}`}>
-                                            <ShoppingBag className="w-3.5 h-3.5" />
-                                        </div>
-                                        <span className="text-[10px] font-black uppercase tracking-widest">Quiero Comprar</span>
-                                    </button>
-                                    <button
-                                        onClick={() => setBatchIntent('VENDER')}
-                                        className={`p-3 rounded-2xl border transition-all flex flex-col items-center gap-1.5 ${batchIntent === 'VENDER'
-                                            ? 'bg-orange-500/20 border-orange-500 text-orange-400'
-                                            : 'bg-white/[0.03] border-white/10 text-gray-400 hover:border-white/20'
-                                            }`}
-                                    >
-                                        <div className={`p-1.5 rounded-lg ${batchIntent === 'VENDER' ? 'bg-orange-500 text-black' : 'bg-white/5 text-gray-500'}`}>
-                                            <Disc className="w-3.5 h-3.5" />
-                                        </div>
-                                        <span className="text-[10px] font-black uppercase tracking-widest">Quiero Vender</span>
-                                    </button>
-                                </div>
-                                {batchIntent === null && (
-                                    <p className="text-[9px] text-orange-400 font-bold px-1 animate-pulse">
-                                        ⚠️ Por favor, define si quieres comprar o vender tus pedidos para continuar.
-                                    </p>
-                                )}
-                            </div>
-                        ) : (
-                            // No intent selection needed for inventory-only, but inform the user or keep it silent
-                            <div className="px-1 py-1">
-                                <span className="text-[9px] font-black text-emerald-500 uppercase tracking-[0.2em] flex items-center gap-2">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                                    Venta Directa: {totalCount} {totalCount === 1 ? 'ítem' : 'ítems'} listos para el Búnker
-                                </span>
-                            </div>
-                        )}
-
-                        {batchIntent === 'VENDER' && (
-                            <motion.div
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: 'auto' }}
-                                className="pt-4 space-y-2 border-t border-white/5"
-                            >
-                                <h4 className="text-white font-black uppercase text-[10px] tracking-widest text-center">{TEXTS.revisarLote.batchReview.intendedPrice}</h4>
-                                <div className="flex flex-col md:flex-row bg-black/50 p-1.5 rounded-xl gap-2 w-full">
-                                    <select
-                                        value={currency}
-                                        onChange={(e) => setCurrency(e.target.value as 'ARS' | 'USD')}
-                                        className="w-full md:w-[30%] bg-[#111] border border-white/10 text-white rounded-lg px-3 py-3 md:py-4 text-xs font-bold focus:outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/40 text-center cursor-pointer"
-                                    >
-                                        <option value="ARS">ARS $</option>
-                                        <option value="USD">USD $</option>
-                                    </select>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        value={totalPrice}
-                                        onChange={(e) => setTotalPrice(e.target.value)}
-                                        placeholder="Ej: 50000"
-                                        className="w-full md:w-[70%] bg-white/5 border border-white/10 text-white rounded-lg px-4 py-3 md:py-4 text-sm font-bold focus:outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/40 text-center"
-                                    />
-                                </div>
-                            </motion.div>
-                        )}
-                    </div>
-
-                    {user ? (
-                        <div className="space-y-3">
-                            <button
-                                onClick={handleCheckout}
-                                disabled={isSubmitting || (hasDiscogsItems && !batchIntent) || (batchIntent === 'VENDER' && (!totalPrice || Number(totalPrice) <= 0))}
-                                className="w-full bg-primary text-black py-6 rounded-2xl font-black uppercase text-sm tracking-widest shadow-[0_0_40px_rgba(204,255,0,0.2)] hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center gap-2"
-                            >
-                                {isSubmitting ? (
-                                    <div className="h-4 w-4 border-2 border-black/40 border-t-black rounded-full animate-spin" />
-                                ) : (
-                                    <> <ShoppingBag className="w-4 h-4" /> {TEXTS.revisarLote.batchReview.confirmAndSend} </>
-                                )}
-                            </button>
-
-                            <div className="relative flex items-center gap-4 py-1">
-                                <div className="flex-1 h-px bg-white/10" />
-                                <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">o bien</span>
-                                <div className="flex-1 h-px bg-white/10" />
-                            </div>
-
-                            <button
-                                onClick={handleAddToBatea}
-                                disabled={isSubmitting}
-                                className="w-full py-4 rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 transition-all bg-gradient-to-r from-violet-500/10 to-purple-500/10 border border-violet-500/30 text-violet-400 hover:from-violet-500/20 hover:to-purple-500/20 hover:text-violet-300 disabled:opacity-50"
-                            >
-                                <Disc className="w-4 h-4" />
-                                AÑADIR TODO A MI BATEA
-                            </button>
-                        </div>
-                    ) : (
+                        {/* Smart Action Area (Phase V4.2) */}
                         <div className="space-y-6">
-                            <button
-                                onClick={handleGoogleSignIn}
-                                disabled={!batchIntent || (batchIntent === 'VENDER' && (!totalPrice || Number(totalPrice) <= 0))}
-                                className="w-full bg-white text-black py-4 rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-3 hover:bg-primary transition-all shadow-lg disabled:opacity-50"
-                            >
-                                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="" className="w-4 h-4" />
-                                {TEXTS.revisarLote.batchReview.linkGoogle}
-                            </button>
+                            {user ? (
+                                <div className="space-y-4">
+                                    <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-2 px-1">
+                                        Centro de Mando: Definí tu Acción
+                                    </span>
 
-                            <div className="relative flex items-center gap-4 py-2">
-                                <div className="flex-1 h-px bg-white/10" />
-                                <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">{TEXTS.revisarLote.batchReview.manualAuth}</span>
-                                <div className="flex-1 h-px bg-white/10" />
-                            </div>
+                                    <div className="grid grid-cols-1 gap-3">
+                                        {/* CAMINO 1: COMPRAR (Direct Sale - Only if Inventory exists) */}
+                                        {hasInventoryItems && (
+                                            <button
+                                                onClick={() => { setBatchIntent('COMPRAR'); setTimeout(handleCheckout, 50); }}
+                                                disabled={isSubmitting}
+                                                className="w-full bg-primary text-black py-5 rounded-2xl font-black uppercase text-xs tracking-widest shadow-[0_0_30px_rgba(204,255,0,0.2)] hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3"
+                                            >
+                                                <ShoppingBag className="w-4 h-4" />
+                                                [COMPRAR] {inventoryOnly ? 'AHORA' : 'LOTE MIXTO'}
+                                            </button>
+                                        )}
 
-                            <form onSubmit={handleAuthAction} className="space-y-4">
-                                <div className="relative">
-                                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-700" />
-                                    <input
-                                        type="email"
-                                        value={email}
-                                        onChange={e => setEmail(e.target.value)}
-                                        placeholder={`${TEXTS.login.auth.emailPlaceholder}...`}
-                                        className="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-sm text-white focus:border-primary/40 focus:outline-none transition-all"
-                                    />
+                                        {/* CAMINO 2: PEDIR (Discogs/External Items) */}
+                                        {hasDiscogsItems && (
+                                            <button
+                                                onClick={() => { setBatchIntent('PEDIR'); setTimeout(handleCheckout, 50); }}
+                                                disabled={isSubmitting}
+                                                className="w-full bg-blue-500/10 border border-blue-500/30 text-blue-400 py-5 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-blue-500/20 transition-all flex items-center justify-center gap-3"
+                                            >
+                                                <MessageCircle className="w-4 h-4" />
+                                                [PEDIR] HALLAZGOS EXTERNOS
+                                            </button>
+                                        )}
+
+                                        {/* CAMINO 3: OFRECER (Exchange / Negotiation) */}
+                                        <div className="space-y-2">
+                                            <button
+                                                onClick={() => setBatchIntent(batchIntent === 'OFRECER' ? null : 'OFRECER')}
+                                                className={`w-full py-5 rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-3 transition-all ${batchIntent === 'OFRECER'
+                                                    ? 'bg-orange-500 text-black shadow-[0_0_30px_rgba(249,115,22,0.3)]'
+                                                    : 'bg-white/5 border border-white/10 text-gray-400 hover:border-orange-500/40'
+                                                    }`}
+                                            >
+                                                <Disc className="w-4 h-4" />
+                                                [OFRECER] INTERCAMBIO
+                                            </button>
+
+                                            {batchIntent === 'OFRECER' && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, height: 0 }}
+                                                    animate={{ opacity: 1, height: 'auto' }}
+                                                    className="p-4 bg-orange-500/5 border border-orange-500/20 rounded-2xl space-y-3"
+                                                >
+                                                    <p className="text-[9px] font-bold text-orange-400 uppercase tracking-widest text-center">Definí el valor de tu oferta</p>
+                                                    <div className="flex bg-black/40 p-1 rounded-xl gap-2">
+                                                        <select
+                                                            value={currency}
+                                                            onChange={(e) => setCurrency(e.target.value as 'ARS' | 'USD')}
+                                                            className="bg-transparent text-white text-[10px] font-bold px-2 focus:outline-none"
+                                                        >
+                                                            <option value="ARS">ARS</option>
+                                                            <option value="USD">USD</option>
+                                                        </select>
+                                                        <input
+                                                            type="number"
+                                                            value={totalPrice}
+                                                            onChange={(e) => setTotalPrice(e.target.value)}
+                                                            placeholder="Ej: 50000"
+                                                            className="flex-1 bg-transparent text-white text-xs font-bold py-2 focus:outline-none text-right pr-2"
+                                                        />
+                                                    </div>
+                                                    <button
+                                                        onClick={handleCheckout}
+                                                        disabled={!totalPrice || Number(totalPrice) <= 0}
+                                                        className="w-full bg-orange-500 text-black py-3 rounded-xl font-black uppercase text-[10px] tracking-widest"
+                                                    >
+                                                        CONFIRMAR OFERTA
+                                                    </button>
+                                                </motion.div>
+                                            )}
+                                        </div>
+
+                                        <div className="relative flex items-center gap-4 py-1">
+                                            <div className="flex-1 h-px bg-white/10" />
+                                            <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">Colección Personal</span>
+                                            <div className="flex-1 h-px bg-white/10" />
+                                        </div>
+
+                                        {/* CAMINO 4: A MI BATEA (Personal Collection - Only for Discogs) */}
+                                        <button
+                                            onClick={handleAddToBatea}
+                                            disabled={isSubmitting}
+                                            className="w-full py-5 rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-3 transition-all bg-gradient-to-r from-violet-500/10 to-purple-500/10 border border-violet-500/30 text-violet-400 hover:from-violet-500/20 hover:to-purple-500/20 hover:text-violet-300 disabled:opacity-50"
+                                        >
+                                            <Layers className="w-4 h-4" />
+                                            [A MI BATEA]
+                                        </button>
+                                    </div>
                                 </div>
-                                <div className="relative">
-                                    <Layers className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-700" />
-                                    <input
-                                        type="password"
-                                        value={password}
-                                        onChange={e => setPassword(e.target.value)}
-                                        placeholder="Clave..."
-                                        className="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-sm text-white focus:border-primary/40 focus:outline-none transition-all"
-                                    />
+                            ) : (
+                                <div className="space-y-6 pt-4 border-t border-white/5">
+                                    <div className="px-1 text-center">
+                                        <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Inicia Sesión para Procesar tu Lote</span>
+                                    </div>
+
+                                    <button
+                                        onClick={handleGoogleSignIn}
+                                        disabled={isSubmitting || (batchIntent === 'OFRECER' && (!totalPrice || Number(totalPrice) <= 0))}
+                                        className="w-full bg-white text-black py-4 rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-3 hover:bg-primary transition-all shadow-lg disabled:opacity-50"
+                                    >
+                                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="" className="w-4 h-4" />
+                                        {TEXTS.revisarLote.batchReview.linkGoogle}
+                                    </button>
+
+                                    <div className="relative flex items-center gap-4 py-1">
+                                        <div className="flex-1 h-px bg-white/10" />
+                                        <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">{TEXTS.revisarLote.batchReview.manualAuth}</span>
+                                        <div className="flex-1 h-px bg-white/10" />
+                                    </div>
+
+                                    <form onSubmit={handleAuthAction} className="space-y-4">
+                                        <div className="relative">
+                                            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-700" />
+                                            <input
+                                                type="email"
+                                                value={email}
+                                                onChange={e => setEmail(e.target.value)}
+                                                placeholder={`${TEXTS.login.auth.emailPlaceholder}...`}
+                                                className="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-sm text-white focus:border-primary/40 focus:outline-none transition-all"
+                                            />
+                                        </div>
+                                        <div className="relative">
+                                            <Layers className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-700" />
+                                            <input
+                                                type="password"
+                                                value={password}
+                                                onChange={e => setPassword(e.target.value)}
+                                                placeholder="Clave..."
+                                                className="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-sm text-white focus:border-primary/40 focus:outline-none transition-all"
+                                            />
+                                        </div>
+                                        <button
+                                            type="submit"
+                                            disabled={isSubmitting || (batchIntent === 'OFRECER' && (!totalPrice || Number(totalPrice) <= 0))}
+                                            className="w-full bg-primary text-black py-4 rounded-xl font-black uppercase text-[10px] tracking-widest hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
+                                        >
+                                            {isSubmitting ? TEXTS.revisarLote.batchReview.connecting : TEXTS.revisarLote.batchReview.registerAndSend}
+                                        </button>
+                                    </form>
                                 </div>
-                                <button
-                                    type="submit"
-                                    disabled={isSubmitting || !batchIntent || (batchIntent === 'VENDER' && (!totalPrice || Number(totalPrice) <= 0))}
-                                    className="w-full bg-primary text-black py-4 rounded-xl font-black uppercase text-[10px] tracking-widest hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
-                                >
-                                    {isSubmitting ? TEXTS.revisarLote.batchReview.connecting : TEXTS.revisarLote.batchReview.registerAndSend}
-                                </button>
-                            </form>
+                            )}
                         </div>
-                    )}
+                    </div>
                 </div>
             </div>
             {/* Identity Guard for P2P / Discogs Trades */}

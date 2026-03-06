@@ -65,6 +65,7 @@ export interface Trade {
     currentTurn: string; // UID of the user who must decide
     negotiationHistory: TradeManifest[]; // Previous versions of the manifest
     timestamp: any;
+    transactionId?: string; // Links segmented orders from a mixed lote
 }
 
 export interface UserAsset {

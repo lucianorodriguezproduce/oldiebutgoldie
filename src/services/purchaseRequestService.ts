@@ -20,10 +20,11 @@ export interface PurchaseRequest {
     timestamp: any;
     lastUpdated?: any;
     notes?: string;
+    transactionId?: string; // Relation field
 }
 
 export const purchaseRequestService = {
-    async createRequest(uid: string, userEmail: string, userName: string, item: any) {
+    async createRequest(uid: string, userEmail: string, userName: string, item: any, transactionId?: string) {
         const requestData: Omit<PurchaseRequest, 'id'> = {
             uid,
             userEmail,
@@ -37,7 +38,8 @@ export const purchaseRequestService = {
                 uri: item.uri || ""
             },
             status: 'pending',
-            timestamp: serverTimestamp()
+            timestamp: serverTimestamp(),
+            transactionId
         };
 
         const docRef = await addDoc(collection(db, COLLECTION_NAME), requestData);
