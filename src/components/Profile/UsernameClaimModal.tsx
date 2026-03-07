@@ -71,11 +71,14 @@ export default function UsernameClaimModal({ isOpen, onSuccess, onClose, forceCl
             const userRef = doc(db, "users", user.uid);
             const usernameRef = doc(db, "usernames", username.toLowerCase());
 
-            // 1. Update user document
-            const updateUser = updateDoc(userRef, {
+            // 1. Update user document (Ensure it exists with setDoc + merge)
+            const updateUser = setDoc(userRef, {
+                uid: user.uid,
+                email: user.email || "",
+                display_name: user.displayName || user.email?.split('@')[0] || "Usuario",
                 username: username.toLowerCase(),
                 updatedAt: serverTimestamp()
-            });
+            }, { merge: true });
 
             // 2. Register uniqueness bridge
             const registerUsername = setDoc(usernameRef, {

@@ -411,10 +411,17 @@ export default function Profile() {
 
     // --- Derived Negotiation Values for the Drawer ---
     const historyAdminOffer = selectedOrder?.negotiationHistory?.filter((h: any) => h.sender === 'admin').pop();
-    const derivedAdminPrice = historyAdminOffer?.price ?? selectedOrder?.adminPrice ?? selectedOrder?.admin_offer_price ?? selectedOrder?.manifest?.cashAdjustment;
+    // CRITICAL FIX: No fallback to manifest.cashAdjustment here because that represents the current state (often the user's initial proposal),
+    // not an explicit intervention from the admin.
+    const derivedAdminPrice = historyAdminOffer?.price ?? selectedOrder?.adminPrice ?? selectedOrder?.admin_offer_price;
     const hasAdminOffer = derivedAdminPrice !== undefined && derivedAdminPrice !== null;
-    const isCounteroffered = selectedOrder?.status === 'counteroffered' || selectedOrder?.status === 'counter_offer';
-    const shouldShowActions = hasAdminOffer || isCounteroffered;
+
+    // Statuses that represent an active OBG response waiting for user action
+    const isWaitingUserAction = ['counteroffered', 'counter_offer', 'quoted'].includes(selectedOrder?.status);
+
+    // User should only see "Accept/Counter" if OBG has actually moved or the status is explicitly waiting for them.
+    // If the status is 'pending' or 'contraoferta_usuario', the user is the one who moved last.
+    const shouldShowActions = isWaitingUserAction || (hasAdminOffer && !['pending', 'contraoferta_usuario'].includes(selectedOrder?.status));
     const derivedAdminCurrency = historyAdminOffer?.currency || selectedOrder?.adminCurrency || selectedOrder?.admin_offer_currency || selectedOrder?.manifest?.currency || "ARS";
 
     return (
