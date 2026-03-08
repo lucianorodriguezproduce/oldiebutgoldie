@@ -30,6 +30,9 @@ interface Article {
     readTime: string;
     featured: boolean;
     status: 'draft' | 'published';
+    ai_summary?: string;
+    tags_entidades?: string[];
+    linked_items?: string[];
     createdAt: any;
 }
 
@@ -361,9 +364,44 @@ export default function EditorialManager() {
                                         value={currentArticle?.excerpt || ""}
                                         onChange={e => setCurrentArticle({ ...currentArticle, excerpt: e.target.value })}
                                         className="w-full bg-white/5 border-white/5 rounded-2xl px-6 py-4 text-white focus:border-primary transition-all outline-none h-24 resize-none"
-                                        placeholder="..."
+                                        placeholder="Resumen corto para el feed..."
                                         required
                                     />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label htmlFor="article-ai-summary" className="text-[10px] font-black text-primary uppercase tracking-widest px-4">AI Summary (Generative SEO)</label>
+                                    <textarea
+                                        id="article-ai-summary"
+                                        name="ai_summary"
+                                        value={currentArticle?.ai_summary || ""}
+                                        onChange={e => setCurrentArticle({ ...currentArticle, ai_summary: e.target.value })}
+                                        className="w-full bg-white/5 border-white/10 rounded-2xl px-6 py-4 text-white focus:border-primary transition-all outline-none h-32 resize-none"
+                                        placeholder="Resumen denso para motores de búsqueda e IA..."
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="space-y-2">
+                                        <label htmlFor="article-tags" className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-4">Entidades / Tags (comma separated)</label>
+                                        <input
+                                            id="article-tags"
+                                            value={currentArticle?.tags_entidades?.join(", ") || ""}
+                                            onChange={e => setCurrentArticle({ ...currentArticle, tags_entidades: e.target.value.split(",").map(s => s.trim()) })}
+                                            className="w-full bg-white/5 border-white/5 rounded-2xl px-6 py-4 text-white focus:border-primary transition-all outline-none"
+                                            placeholder="Charly Garcia, Spinetta, Rock Nacional..."
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label htmlFor="article-linked" className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-4">Linked Item IDs (comma separated)</label>
+                                        <input
+                                            id="article-linked"
+                                            value={currentArticle?.linked_items?.join(", ") || ""}
+                                            onChange={e => setCurrentArticle({ ...currentArticle, linked_items: e.target.value.split(",").map(s => s.trim()) })}
+                                            className="w-full bg-white/5 border-white/5 rounded-2xl px-6 py-4 text-white focus:border-primary transition-all outline-none"
+                                            placeholder="id1, id2, id3..."
+                                        />
+                                    </div>
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">

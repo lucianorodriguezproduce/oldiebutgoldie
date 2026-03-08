@@ -149,3 +149,17 @@ export const pushAssetCreated = (userId: string, itemId: string, itemName: strin
         });
     }
 };
+
+export const pushEditorialView = (article: any) => {
+    if (typeof window !== 'undefined') {
+        window.dataLayer = window.dataLayer || [];
+        window.dataLayer.push({
+            'event': 'editorial_view',
+            'article_id': article.id,
+            'title': article.title,
+            'category': article.category,
+            'author': article.author,
+            'read_time': article.readTime
+        });
+    }
+};

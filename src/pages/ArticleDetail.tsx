@@ -11,6 +11,8 @@ import { useEffect } from "react";
 import { LazyImage } from "@/components/ui/LazyImage";
 import { TEXTS } from "@/constants/texts";
 import { SEO } from "@/components/SEO";
+import { ShortcodeRenderer } from "@/components/Editorial/ShortcodeRenderer";
+import { pushEditorialView } from "@/utils/analytics";
 
 
 interface Article {
@@ -24,6 +26,9 @@ interface Article {
     image: string;
     createdAt: any;
     slug?: string;
+    tags_entidades?: string[];
+    linked_items?: string[];
+    ai_summary?: string;
     _redirectUrl?: string;
 }
 
@@ -68,9 +73,13 @@ export default function ArticleDetail() {
             showLoading(TEXTS.comunidad.loadingArticle);
         } else {
             hideLoading();
+            if (article) {
+                // Tracking Editorial View
+                pushEditorialView(article);
+            }
         }
         return () => hideLoading();
-    }, [isLoading]);
+    }, [isLoading, article]);
 
     if (isLoading || article?._redirectUrl) {
         return null;
@@ -95,9 +104,34 @@ export default function ArticleDetail() {
         >
             <SEO
                 title={`${article.title} | Editorial Oldie but Goldie`}
-                description={article.excerpt}
+                description={article.ai_summary || article.excerpt}
                 image={article.image}
             />
+
+            {/* JSON-LD CreativeWork Schema */}
+            <script type="application/ld+json">
+                {JSON.stringify({
+                    "@context": "https://schema.org",
+                    "@type": "BlogPosting",
+                    "headline": article.title,
+                    "image": article.image,
+                    "author": {
+                        "@type": "Person",
+                        "name": article.author
+                    },
+                    "description": article.ai_summary || article.excerpt,
+                    "datePublished": article.createdAt?.toDate().toISOString(),
+                    "keywords": article.tags_entidades?.join(", "),
+                    "publisher": {
+                        "@type": "Organization",
+                        "name": "Oldie But Goldie",
+                        "logo": {
+                            "@type": "ImageObject",
+                            "url": "https://www.oldiebutgoldie.com.ar/logo.png"
+                        }
+                    }
+                })}
+            </script>
             <Link to="/editorial" className="inline-flex items-center gap-2 text-gray-500 hover:text-primary transition-colors mb-12 group">
                 <ChevronLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" />
                 <span className="text-[10px] font-black uppercase tracking-widest">{TEXTS.comunidad.backToEditorial}</span>
@@ -150,11 +184,8 @@ export default function ArticleDetail() {
                 />
             </div>
 
-            <article className="prose prose-invert prose-lg max-w-none">
-                <div
-                    className="text-gray-300 leading-[1.8] text-xl md:text-2xl font-serif space-y-8 md:space-y-12"
-                    dangerouslySetInnerHTML={{ __html: article.content || article.excerpt }}
-                />
+            <article className="mb-24 md:mb-32 overflow-hidden">
+                <ShortcodeRenderer content={article.content || article.excerpt} />
             </article>
 
             <Separator className="bg-white/5 my-24 md:my-32" />
