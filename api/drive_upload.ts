@@ -1,6 +1,17 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { uploadToBunker } from './_lib/bunker.js';
 
+const sanitizeFileName = (name: string) => {
+    return name
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9\-_.]/g, '')
+        .replace(/-+/g, '-');
+};
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
@@ -11,10 +22,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(400).json({ error: 'Missing file data' });
         }
 
-        console.log(`Editorial: Centralizing upload for ${fileName} to Firebase Storage...`);
+        const sanitizedName = sanitizeFileName(fileName);
+        console.log(`Editorial: Centralizing upload for ${sanitizedName} to Firebase Storage...`);
 
         // Use the new Bunker Storage logic for Editorial
-        const storagePath = `editorial/${Date.now()}_${fileName}`;
+        const storagePath = `editorial/${Date.now()}_${sanitizedName}`;
         const result = await uploadToBunker(file, storagePath, fileType || 'image/jpeg');
 
         return res.status(200).json({

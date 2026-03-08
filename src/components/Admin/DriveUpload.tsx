@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { UploadService } from "@/services/UploadService";
 import { Upload, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -33,12 +34,14 @@ export const DriveUpload = ({ onUploadSuccess }: DriveUploadProps) => {
                 reader.onerror = () => reject(new Error("Error leyendo el archivo"));
             });
 
+            const sanitizedName = UploadService.sanitizeFileName(file.name);
+
             const response = await fetch('/api/drive_upload', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     file: base64Content,
-                    fileName: file.name,
+                    fileName: sanitizedName,
                     fileType: file.type
                 })
             });
