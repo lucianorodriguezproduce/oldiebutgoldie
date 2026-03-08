@@ -6,7 +6,6 @@ import { archivoService, type UnifiedItem } from "@/services/archivoService";
 import { LazyImage } from "@/components/ui/LazyImage";
 import { SEO } from "@/components/SEO";
 import { useLoading } from "@/context/LoadingContext";
-import ReactMarkdown from 'react-markdown';
 
 export default function ArchivoItem() {
     const { id } = useParams();
@@ -203,7 +202,7 @@ export default function ArchivoItem() {
                                 <div className="relative z-10">
                                     <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary mb-4">Crónica del Curador</h3>
                                     <div className="prose prose-invert prose-sm max-w-none prose-p:leading-relaxed prose-p:text-zinc-400 prose-p:font-serif prose-p:italic prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-strong:text-zinc-200">
-                                        <ReactMarkdown>{item.notes}</ReactMarkdown>
+                                        <div style={{ whiteSpace: 'pre-line' }}>{item.notes}</div>
                                     </div>
                                 </div>
                             </div>
