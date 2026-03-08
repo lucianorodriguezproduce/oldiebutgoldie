@@ -78,13 +78,15 @@ const EnergyModeIndicator = () => {
   );
 };
 
+const AnalyticsWrapper = ({ children }: { children: React.ReactNode }) => {
+  useAnalytics(); // El radar se activa aquí
+  return <>{children}</>;
+};
+
 function AppContent() {
   const { isAdmin, user } = useAuth();
   const { health } = useHealth();
   const [siteConfig, setSiteConfig] = useState<any>(null);
-
-  // Activar Telemetría Soberana (V8.4)
-  useAnalytics();
 
   // Sync User context with Sentry
   useEffect(() => {
@@ -126,61 +128,63 @@ function AppContent() {
       <LoadingOverlay />
       <FloatingCartCounter />
       <Suspense fallback={<LoadingOverlay />}>
-        <Routes>
-          <Route element={<Layout />}>
-            <Route path="/" element={<Home />} />
-            <Route path="/tienda" element={<Store />} />
-            <Route path="/u/:username" element={<PublicProfile />} />
+        <AnalyticsWrapper>
+          <Routes>
+            <Route element={<Layout />}>
+              <Route path="/" element={<Home />} />
+              <Route path="/tienda" element={<Store />} />
+              <Route path="/u/:username" element={<PublicProfile />} />
 
-            {/* P2P Routes with Guard */}
-            <Route
-              path="/comercio"
-              element={siteConfig?.allow_p2p_public_offers === false && !isAdmin ? <Navigate to="/tienda" replace /> : <PublicOrders />}
-            />
-
-            <Route path="/orden/:id" element={<PublicOrderView />} />
-            <Route path="/revisar-lote" element={<RevisarLote />} />
-            <Route path="/item/:type/:id" element={<Home />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/album/:id" element={<AlbumDetail />} />
-            <Route path="/comunidad" element={<Editorial />} />
-            <Route path="/comunidad/:id" element={<ArticleDetail />} />
-            <Route path="/guias" element={<Guias />} />
-            <Route path="/eventos" element={<Eventos />} />
-            <Route path="/archivo" element={<Archivo />} />
-            <Route path="/archivo/:id" element={<ArchivoItem />} />
-
-            {/* Redirecciones Legales / SEO */}
-            <Route path="/actividad" element={<Navigate to="/comercio" replace />} />
-            <Route path="/editorial" element={<Navigate to="/comunidad" replace />} />
-            <Route path="/profile" element={<Navigate to="/perfil" replace />} />
-
-            <Route element={<ProtectedRoute />}>
-              <Route path="/perfil" element={<Profile />} />
+              {/* P2P Routes with Guard */}
               <Route
-                path="/trade/new"
-                element={siteConfig?.p2p_global_enabled === false ? <Navigate to="/tienda" replace /> : <TradeConstructor />}
+                path="/comercio"
+                element={siteConfig?.allow_p2p_public_offers === false && !isAdmin ? <Navigate to="/tienda" replace /> : <PublicOrders />}
               />
-            </Route>
-          </Route>
 
-          {/* Nested Admin Routes */}
-          <Route element={<ProtectedRoute adminOnly={true} />}>
-            <Route path="/admin" element={<AdminLayout><Outlet /></AdminLayout>}>
-              <Route index element={<AdminStats />} />
-              <Route path="analytics" element={<AdminStats />} />
-              <Route path="inventory" element={<AdminInventory />} />
-              <Route path="collection" element={<AdminCollection />} />
-              <Route path="trades" element={<AdminTrades />} />
-              <Route path="editorial" element={<EditorialManager />} />
+              <Route path="/orden/:id" element={<PublicOrderView />} />
+              <Route path="/revisar-lote" element={<RevisarLote />} />
+              <Route path="/item/:type/:id" element={<Home />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/album/:id" element={<AlbumDetail />} />
+              <Route path="/comunidad" element={<Editorial />} />
+              <Route path="/comunidad/:id" element={<ArticleDetail />} />
+              <Route path="/guias" element={<Guias />} />
+              <Route path="/eventos" element={<Eventos />} />
+              <Route path="/archivo" element={<Archivo />} />
+              <Route path="/archivo/:id" element={<ArchivoItem />} />
 
-              <Route path="bulk-upload" element={<BulkUpload />} />
-              <Route path="branding" element={<BrandingPage />} />
-              <Route path="permissions" element={<PermissionConsole />} />
-              <Route path="purge" element={<DatabasePurge />} />
+              {/* Redirecciones Legales / SEO */}
+              <Route path="/actividad" element={<Navigate to="/comercio" replace />} />
+              <Route path="/editorial" element={<Navigate to="/comunidad" replace />} />
+              <Route path="/profile" element={<Navigate to="/perfil" replace />} />
+
+              <Route element={<ProtectedRoute />}>
+                <Route path="/perfil" element={<Profile />} />
+                <Route
+                  path="/trade/new"
+                  element={siteConfig?.p2p_global_enabled === false ? <Navigate to="/tienda" replace /> : <TradeConstructor />}
+                />
+              </Route>
             </Route>
-          </Route>
-        </Routes>
+
+            {/* Nested Admin Routes */}
+            <Route element={<ProtectedRoute adminOnly={true} />}>
+              <Route path="/admin" element={<AdminLayout><Outlet /></AdminLayout>}>
+                <Route index element={<AdminStats />} />
+                <Route path="analytics" element={<AdminStats />} />
+                <Route path="inventory" element={<AdminInventory />} />
+                <Route path="collection" element={<AdminCollection />} />
+                <Route path="trades" element={<AdminTrades />} />
+                <Route path="editorial" element={<EditorialManager />} />
+
+                <Route path="bulk-upload" element={<BulkUpload />} />
+                <Route path="branding" element={<BrandingPage />} />
+                <Route path="permissions" element={<PermissionConsole />} />
+                <Route path="purge" element={<DatabasePurge />} />
+              </Route>
+            </Route>
+          </Routes>
+        </AnalyticsWrapper>
       </Suspense>
       <EnergyModeIndicator />
     </>

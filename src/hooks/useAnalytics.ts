@@ -1,32 +1,24 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 
-declare global {
-    interface Window {
-        gtag: (...args: any[]) => void;
-        dataLayer: any[];
-    }
-}
-
-/**
- * Hook soberano para el rastreo automático de rutas en SPAs.
- * Centraliza el rastreo en GTM vía DataLayer para mayor flexibilidad.
- */
 export const useAnalytics = () => {
     const location = useLocation();
 
     useEffect(() => {
-        if (typeof window.dataLayer !== 'undefined') {
-            window.dataLayer.push({
-                event: 'page_view',
-                page_path: location.pathname + location.search,
-                page_location: window.location.href,
-                page_title: document.title
-            });
+        // Reporte automático al DataLayer en cada cambio de ruta
+        window.dataLayer = window.dataLayer || [];
+        window.dataLayer.push({
+            event: 'virtual_pageview',
+            page_path: location.pathname + location.search,
+            page_title: document.title,
+        });
 
-            if (import.meta.env.DEV) {
-                console.log(`[GTM PageView]: ${location.pathname}${location.search}`);
-            }
+        // Telemetría para Google Analytics directo
+        if (typeof window.gtag === 'function') {
+            window.gtag('event', 'page_view', {
+                page_path: location.pathname,
+                send_to: 'G-S9KW4RX9W0'
+            });
         }
     }, [location]);
 };
