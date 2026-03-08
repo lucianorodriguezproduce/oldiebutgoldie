@@ -15,6 +15,11 @@ export interface UnifiedItem {
     styles?: string[];
     format?: string;
     condition?: string;
+    // V12.0 Extended Metadata
+    tracklist?: { position: string; title: string; duration: string }[];
+    labels?: { name: string; catno: string }[];
+    youtube_id?: string;
+    notes?: string;
 }
 
 import { emitHealthEvent } from "@/context/HealthContext";
@@ -49,7 +54,11 @@ export const archivoService = {
                     genres: data.metadata.genres,
                     styles: data.metadata.styles,
                     format: data.metadata.format_description,
-                    condition: data.logistics.condition
+                    condition: data.logistics.condition,
+                    tracklist: data.tracklist,
+                    labels: data.labels,
+                    youtube_id: (data as any).youtube_id, // Soporte temporal o extendido
+                    notes: (data as any).notes
                 };
                 localStorage.setItem(cacheKey, JSON.stringify(result));
                 return result;
@@ -70,7 +79,11 @@ export const archivoService = {
                     genres: data.metadata.genres,
                     styles: data.metadata.styles,
                     format: data.metadata.format_description,
-                    condition: (data.metadata as any).condition || 'USADO'
+                    condition: (data.metadata as any).condition || 'USADO',
+                    tracklist: data.tracklist,
+                    labels: data.labels,
+                    youtube_id: (data as any).youtube_id,
+                    notes: (data as any).notes
                 };
                 localStorage.setItem(cacheKey, JSON.stringify(result));
                 return result;
