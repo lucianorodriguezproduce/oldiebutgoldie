@@ -65,7 +65,7 @@ export default function AdminStats() {
                         style={{ border: 0 }}
                         allowFullScreen
                         loading="lazy"
-                        sandbox="allow-storage-access-by-user-activation allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+                        sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
                         className="absolute inset-0 w-full h-full"
                     />
                 </div>
