@@ -187,22 +187,27 @@ function AppContent() {
   );
 }
 
+import { HealthProvider } from './context/HealthContext';
+import { GTMProvider } from './context/GTMContext';
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <LoadingProvider>
         <AuthProvider>
-          <TelemetryProvider>
-            <LoteProvider>
-              <Sentry.ErrorBoundary fallback={({ error, resetError, eventId }) => (
-                <ErrorFallback error={error as any} resetErrorBoundary={resetError} eventId={eventId} />
-              )}>
-                <AppContent />
-              </Sentry.ErrorBoundary>
-              <Analytics />
-              <SpeedInsights />
-            </LoteProvider>
-          </TelemetryProvider>
+          <GTMProvider>
+            <TelemetryProvider>
+              <LoteProvider>
+                <Sentry.ErrorBoundary fallback={({ error, resetError, eventId }) => (
+                  <ErrorFallback error={error as any} resetErrorBoundary={resetError} eventId={eventId} />
+                )}>
+                  <AppContent />
+                </Sentry.ErrorBoundary>
+                <Analytics />
+                <SpeedInsights />
+              </LoteProvider>
+            </TelemetryProvider>
+          </GTMProvider>
         </AuthProvider>
       </LoadingProvider>
     </QueryClientProvider>

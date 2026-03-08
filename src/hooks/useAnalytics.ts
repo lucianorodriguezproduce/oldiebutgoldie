@@ -10,21 +10,23 @@ declare global {
 
 /**
  * Hook soberano para el rastreo automático de rutas en SPAs.
- * Elimina los puntos ciegos de GTM ejecutando page_view en cada cambio de location.
+ * Centraliza el rastreo en GTM vía DataLayer para mayor flexibilidad.
  */
 export const useAnalytics = () => {
     const location = useLocation();
 
     useEffect(() => {
-        if (typeof window.gtag === 'function') {
-            window.gtag('event', 'page_view', {
+        if (typeof window.dataLayer !== 'undefined') {
+            window.dataLayer.push({
+                event: 'page_view',
                 page_path: location.pathname + location.search,
                 page_location: window.location.href,
                 page_title: document.title
             });
 
-            // Log táctico para verificación en consola (V8.4)
-            console.log(`[Analytics] Page View: ${location.pathname}${location.search}`);
+            if (import.meta.env.DEV) {
+                console.log(`[GTM PageView]: ${location.pathname}${location.search}`);
+            }
         }
     }, [location]);
 };

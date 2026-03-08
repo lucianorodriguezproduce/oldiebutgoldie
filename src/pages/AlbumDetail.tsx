@@ -17,6 +17,7 @@ import { inventoryService } from "@/services/inventoryService";
 import { TEXTS } from "@/constants/texts";
 import { useLote } from "@/context/LoteContext";
 import { ShoppingBag, Check } from "lucide-react";
+import { useGTM } from "@/context/GTMContext";
 
 export default function AlbumDetail() {
     const { id } = useParams<{ id: string }>();
@@ -26,6 +27,7 @@ export default function AlbumDetail() {
     const { trackEvent } = useTelemetry();
     const { showLoading, hideLoading } = useLoading();
     const { addItemFromInventory, isInLote } = useLote();
+    const { pushEvent } = useGTM();
 
     const { data: album, isLoading, error } = useQuery({
         queryKey: ["release", id],
@@ -74,8 +76,19 @@ export default function AlbumDetail() {
                 title: album.title,
                 artist: album.artists?.[0]?.name
             });
+
+            // GTM Soberano (V9.1) - Inyección de variables de producto
+            pushEvent("view_item", {
+                item_id: id,
+                item_name: album.title,
+                artist_name: album.artists?.[0]?.name || "Desconocido",
+                vinyl_genre: album.genres?.[0] || "No especificado",
+                vinyl_condition: album.isLocal ? (album.raw?.condition || "N/A") : "Discogs Standard",
+                price: album.lowest_price,
+                currency: "ARS"
+            });
         }
-    }, [album, id]);
+    }, [album, id, pushEvent]);
 
     if (isLoading) {
         return <AlbumDetailSkeleton />;
