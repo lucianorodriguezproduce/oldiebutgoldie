@@ -1,5 +1,5 @@
 import { db } from "@/lib/firebase";
-import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, serverTimestamp, runTransaction } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, serverTimestamp, runTransaction, addDoc } from "firebase/firestore";
 import { generateConnectionId } from "@/types/connection";
 import type { Connection, ConnectionStatus } from "@/types/connection";
 import type { DbUser } from "@/types/user";
@@ -42,6 +42,18 @@ export const requestConnection = async (requester: DbUser, receiverId: string) =
         };
 
         transaction.set(docRef, newConnection);
+
+        // Add notification for receiver
+        const notifRef = doc(collection(db, "notifications"));
+        transaction.set(notifRef, {
+            user_id: receiverId,
+            title: "Nueva Solicitud de Conexión",
+            message: `@${requester.username} quiere conectar con vos.`,
+            read: false,
+            timestamp: serverTimestamp(),
+            type: "connection_request",
+            requesterId: requester.uid
+        });
     });
 };
 
@@ -55,6 +67,17 @@ export const acceptConnection = async (userId: string, targetId: string) => {
     await updateDoc(docRef, {
         status: "accepted",
         updatedAt: serverTimestamp()
+    });
+
+    // Add notification for requester
+    await addDoc(collection(db, "notifications"), {
+        user_id: targetId,
+        title: "Conexión Aceptada",
+        message: "Tu solicitud de conexión ha sido aceptada. Ahora podés ver su colección completa.",
+        read: false,
+        timestamp: serverTimestamp(),
+        type: "connection_accepted",
+        acceptedBy: userId
     });
 };
 
