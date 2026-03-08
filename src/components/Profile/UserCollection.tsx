@@ -8,9 +8,10 @@ import { CardSkeleton } from "@/components/ui/Skeleton";
 
 interface UserCollectionProps {
     userId: string;
+    readonly?: boolean;
 }
 
-export default function UserCollection({ userId }: UserCollectionProps) {
+export default function UserCollection({ userId, readonly = false }: UserCollectionProps) {
     const [assets, setAssets] = useState<UserAsset[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
@@ -52,7 +53,7 @@ export default function UserCollection({ userId }: UserCollectionProps) {
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                     <input
                         type="text"
-                        placeholder="Buscar en mi búnker..."
+                        placeholder={readonly ? "Buscar en la colección..." : "Buscar en mi búnker..."}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full bg-white/5 border border-white/10 rounded-2xl px-12 py-4 text-sm text-white focus:border-primary/40 focus:outline-none transition-all"
@@ -72,6 +73,7 @@ export default function UserCollection({ userId }: UserCollectionProps) {
                                 key={asset.id}
                                 asset={asset}
                                 onUpdate={loadAssets}
+                                readonly={readonly}
                             />
                         ))}
                     </AnimatePresence>
@@ -81,7 +83,7 @@ export default function UserCollection({ userId }: UserCollectionProps) {
                     <Disc className="h-12 w-12 text-gray-700 animate-[spin_10s_linear_infinite]" />
                     <div className="space-y-2">
                         <p className="text-xl font-display font-medium text-gray-500">
-                            {searchQuery ? "No se encontraron discos para esta búsqueda" : "Tu búnker personal está vacío"}
+                            {searchQuery ? "No se encontraron discos para esta búsqueda" : (readonly ? "Esta colección aún está vacía" : "Tu búnker personal está vacío")}
                         </p>
                         {!searchQuery && (
                             <p className="text-[10px] font-black uppercase tracking-widest text-primary/60">

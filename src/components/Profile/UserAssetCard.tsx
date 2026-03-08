@@ -8,9 +8,10 @@ import { userAssetService } from "@/services/userAssetService";
 interface UserAssetCardProps {
     asset: UserAsset;
     onUpdate: () => void;
+    readonly?: boolean;
 }
 
-export default function UserAssetCard({ asset, onUpdate }: UserAssetCardProps) {
+export default function UserAssetCard({ asset, onUpdate, readonly = false }: UserAssetCardProps) {
     const [isUpdating, setIsUpdating] = useState(false);
     const [showPricing, setShowPricing] = useState(false);
     const [price, setPrice] = useState(asset.valuation?.toString() || "");
@@ -100,12 +101,14 @@ export default function UserAssetCard({ asset, onUpdate }: UserAssetCardProps) {
                         <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Valoración</span>
                         <span className="text-xs font-black text-white">${asset.valuation?.toLocaleString()}</span>
                     </div>
-                    <button
-                        onClick={() => setShowPricing(!showPricing)}
-                        className="p-2 hover:bg-white/5 rounded-xl transition-colors"
-                    >
-                        <Tag className="w-4 h-4 text-gray-400" />
-                    </button>
+                    {!readonly && (
+                        <button
+                            onClick={() => setShowPricing(!showPricing)}
+                            className="p-2 hover:bg-white/5 rounded-xl transition-colors"
+                        >
+                            <Tag className="w-4 h-4 text-gray-400" />
+                        </button>
+                    )}
                 </div>
 
                 {/* Stock Control */}
@@ -115,36 +118,44 @@ export default function UserAssetCard({ asset, onUpdate }: UserAssetCardProps) {
                         <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Stock</span>
                     </div>
                     <div className="flex items-center gap-1">
-                        <button
-                            onClick={() => handleStockChange(-1)}
-                            disabled={localStock <= 0}
-                            className="w-6 h-6 flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-md text-gray-400 hover:text-white transition-all disabled:opacity-20 disabled:cursor-not-allowed"
-                        >
-                            <Minus className="w-3 h-3" />
-                        </button>
-                        <span className="w-7 text-center text-xs font-black text-white tabular-nums">{localStock}</span>
-                        <button
-                            onClick={() => handleStockChange(1)}
-                            className="w-6 h-6 flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-md text-gray-400 hover:text-white transition-all"
-                        >
-                            <Plus className="w-3 h-3" />
-                        </button>
+                        {!readonly ? (
+                            <>
+                                <button
+                                    onClick={() => handleStockChange(-1)}
+                                    disabled={localStock <= 0}
+                                    className="w-6 h-6 flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-md text-gray-400 hover:text-white transition-all disabled:opacity-20 disabled:cursor-not-allowed"
+                                >
+                                    <Minus className="w-3 h-3" />
+                                </button>
+                                <span className="w-7 text-center text-xs font-black text-white tabular-nums">{localStock}</span>
+                                <button
+                                    onClick={() => handleStockChange(1)}
+                                    className="w-6 h-6 flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-md text-gray-400 hover:text-white transition-all"
+                                >
+                                    <Plus className="w-3 h-3" />
+                                </button>
+                            </>
+                        ) : (
+                            <span className="text-xs font-black text-white px-2">{localStock}</span>
+                        )}
                     </div>
                 </div>
 
                 {/* Controls */}
-                <div className="grid grid-cols-1 gap-2 pt-2">
-                    <button
-                        onClick={handleToggleTradeable}
-                        disabled={isUpdating}
-                        className={`w-full py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${asset.isTradeable
-                            ? "bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20"
-                            : "bg-primary text-black hover:bg-white"
-                            }`}
-                    >
-                        {isUpdating ? "Procesando..." : asset.isTradeable ? "Retirar de Comercio" : "Poner en Comercio"}
-                    </button>
-                </div>
+                {!readonly && (
+                    <div className="grid grid-cols-1 gap-2 pt-2">
+                        <button
+                            onClick={handleToggleTradeable}
+                            disabled={isUpdating}
+                            className={`w-full py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${asset.isTradeable
+                                ? "bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20"
+                                : "bg-primary text-black hover:bg-white"
+                                }`}
+                        >
+                            {isUpdating ? "Procesando..." : asset.isTradeable ? "Retirar de Comercio" : "Poner en Comercio"}
+                        </button>
+                    </div>
+                )}
             </div>
 
             {/* Pricing Overlay */}

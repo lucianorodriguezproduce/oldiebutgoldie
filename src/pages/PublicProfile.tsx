@@ -10,6 +10,7 @@ import { getConnectionStatus, requestConnection, acceptConnection, breakConnecti
 import { siteConfigService } from "@/services/siteConfigService";
 import type { SiteConfig } from "@/services/siteConfigService";
 import type { Connection, ConnectionStatus } from "@/types/connection";
+import UserCollection from "@/components/Profile/UserCollection";
 
 export default function PublicProfile() {
     const { username } = useParams<{ username: string }>();
@@ -252,11 +253,10 @@ export default function PublicProfile() {
                     </div>
 
                     {connection?.status === "accepted" || dbUser?.uid === profileUser.uid ? (
-                        <div className="text-center py-12 border border-dashed border-white/10 rounded-2xl bg-[#0a0a0a]">
-                            <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">
-                                Bateas sociales en desarrollo para V2.0
-                            </p>
-                        </div>
+                        <UserCollection
+                            userId={profileUser.uid!}
+                            readonly={dbUser?.uid !== profileUser.uid}
+                        />
                     ) : (
                         <div className="text-center py-12 border border-dashed border-white/10 rounded-2xl bg-black/40 relative overflow-hidden">
                             <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/80 z-10" />
