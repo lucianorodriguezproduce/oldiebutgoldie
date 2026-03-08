@@ -15,7 +15,7 @@ import { useLoading } from "@/context/LoadingContext";
 import { generateWhatsAppLink } from "@/utils/whatsapp";
 import { whatsappService } from "@/services/whatsappService";
 import type { OrderData } from "@/utils/whatsapp";
-import { pushViewItem, pushViewItemFromOrder, pushWhatsAppContactFromOrder } from "@/utils/analytics";
+import { pushViewItem, pushViewItemFromOrder, pushWhatsAppContactFromOrder, pushWizardStep } from "@/utils/analytics";
 import { SEO } from "@/components/SEO";
 import { useLote } from "@/context/LoteContext";
 import { PremiumShowcase } from "@/components/PremiumShowcase";
@@ -609,6 +609,13 @@ export default function Home() {
     const handleConfigConfirm = (config: { format: string; condition: string }, action: 'another' | 'finish') => {
         if (!selectedSearchItem) return;
 
+        pushWizardStep('wizard_add_to_lote', {
+            item_id: selectedSearchItem.id,
+            format: config.format,
+            condition: config.condition,
+            action
+        });
+
         addItemToBatch({
             id: selectedSearchItem.id,
             title: selectedSearchItem.title,
@@ -778,10 +785,16 @@ export default function Home() {
     const handleIntentSelect = (selectedIntent: Intent) => {
         setIntent(selectedIntent);
 
+        pushWizardStep('wizard_intent_selected', {
+            intent: selectedIntent,
+            item_id: selectedItem?.id,
+            item_title: selectedItem?.title
+        });
 
         if (selectedIntent === "VENDER") {
             fetchMarketPrice();
             setStep(2); // price step
+            pushWizardStep('wizard_sale_start', { item_id: selectedItem?.id });
             setTimeout(() => {
                 scrollToElement(actionsRef, 80);
                 priceInputRef.current?.focus();
@@ -791,11 +804,13 @@ export default function Home() {
 
         // For COMPRAR: Direct single item checkout
         if (user) {
+            pushWizardStep('wizard_purchase_start', { item_id: selectedItem?.id });
             performSubmission(user.uid, selectedIntent);
             setIsSuccess(true);
             scrollToTop();
         } else {
             setStep(3); // Auth step
+            pushWizardStep('wizard_auth_step', { item_id: selectedItem?.id });
         }
     };
 

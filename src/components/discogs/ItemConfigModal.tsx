@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Disc, Layers, Plus, ArrowRight } from 'lucide-react';
 import { TEXTS } from '@/constants/texts';
+import { pushWizardStep } from '@/utils/analytics';
+import { useEffect } from 'react';
 
 interface ItemConfigModalProps {
     isOpen: boolean;
@@ -18,6 +20,23 @@ export default function ItemConfigModal({ isOpen, onClose, item, onConfirm }: It
     const [condition, setCondition] = useState<string>('');
 
     const isComplete = format !== '' && condition !== '';
+
+    useEffect(() => {
+        if (isOpen && item) {
+            pushWizardStep('wizard_step_1_format', {
+                item_id: item.id,
+                item_title: item.title
+            });
+        }
+    }, [isOpen, item]);
+
+    const handleFormatSelect = (f: string) => {
+        setFormat(f);
+        pushWizardStep('wizard_step_2_condition', {
+            item_id: item.id,
+            format: f
+        });
+    };
 
     if (!item) return null;
 
@@ -76,7 +95,7 @@ export default function ItemConfigModal({ isOpen, onClose, item, onConfirm }: It
                                     {FORMATS.map(f => (
                                         <button
                                             key={f}
-                                            onClick={() => setFormat(f)}
+                                            onClick={() => handleFormatSelect(f)}
                                             className={`py-4 rounded-2xl text-[10px] font-black tracking-widest border-2 transition-all flex items-center justify-center gap-2 ${format === f ? 'bg-primary border-primary text-black' : 'bg-white/5 border-white/5 text-gray-500 hover:border-white/10'}`}
                                         >
                                             <Disc className="w-3 h-3" />

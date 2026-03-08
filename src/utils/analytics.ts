@@ -6,15 +6,17 @@ declare global {
 export const getSourceChannel = (): string => {
     if (typeof window === 'undefined') return 'direct';
     const params = new URLSearchParams(window.location.search);
+    const ref = params.get('ref')?.toLowerCase();
     const utmSource = params.get('utm_source')?.toLowerCase();
 
+    if (ref) return ref;
     if (utmSource) return utmSource;
 
-    const ref = document.referrer.toLowerCase();
-    if (ref.includes('whatsapp.com')) return 'whatsapp';
-    if (ref.includes('facebook.com') || ref.includes('instagram.com')) return 'social_media';
-    if (ref.includes('google.')) return 'google_search';
-    if (ref) return 'referral';
+    const referrer = document.referrer.toLowerCase();
+    if (referrer.includes('whatsapp.com')) return 'whatsapp';
+    if (referrer.includes('facebook.com') || referrer.includes('instagram.com')) return 'social_media';
+    if (referrer.includes('google.')) return 'google_search';
+    if (referrer) return 'referral';
 
     return 'direct';
 };
@@ -160,6 +162,18 @@ export const pushEditorialView = (article: any) => {
             'category': article.category,
             'author': article.author,
             'read_time': article.readTime
+        });
+    }
+};
+
+export const pushWizardStep = (stepName: string, data: any = {}) => {
+    if (typeof window !== 'undefined') {
+        window.dataLayer = window.dataLayer || [];
+        window.dataLayer.push({
+            'event': 'wizard_step',
+            'step_name': stepName,
+            ...data,
+            'Source_Channel': getSourceChannel()
         });
     }
 };
