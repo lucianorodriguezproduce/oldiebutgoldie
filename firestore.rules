@@ -14,9 +14,36 @@ service cloud.firestore {
       allow delete: if request.auth != null;
     }
     
-    // User data - Privacidad absoluta del dueño
-    match /users/{userId}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    // User data - Lectura para autenticados (perfiles), escritura solo dueño
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Usernames Registry - Lectura pública para búsquedas
+    match /usernames/{username} {
+      allow read: if true;
+      allow write: if request.auth != null && (
+        !exists(/databases/$(database)/documents/usernames/$(username)) || 
+        get(/databases/$(database)/documents/usernames/$(username)).data.uid == request.auth.uid
+      );
+    }
+
+    // Connections - Soberanía compartida entre las partes
+    match /connections/{connectionId} {
+      allow read: if request.auth != null && (
+        !exists(/databases/$(database)/documents/connections/$(connectionId)) ||
+        request.auth.uid == resource.data.requesterId || 
+        request.auth.uid == resource.data.receiverId ||
+        connectionId.split('_')[0] == request.auth.uid || 
+        connectionId.split('_')[1] == request.auth.uid
+      );
+      allow create: if request.auth != null && 
+        request.auth.uid == request.resource.data.requesterId;
+      allow update, delete: if request.auth != null && (
+        request.auth.uid == resource.data.requesterId || 
+        request.auth.uid == resource.data.receiverId
+      );
     }
 
     // Editorial - Lectura pública, gestión Admin
