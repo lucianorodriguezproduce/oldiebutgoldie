@@ -97,16 +97,16 @@ export const inventoryService = {
 
     /**
      * Clones a Discogs release and persists it into the local inventory.
-     * This is the "Bunker Entry" process.
+     * This is the "batea Entry" process.
      */
     async importFromDiscogs(discogsData: any, logistics: InventoryItem['logistics']) {
         const internalId = crypto.randomUUID();
 
-        // 1. Resolve High-Res Image (via Bunker Import API)
+        // 1. Resolve High-Res Image (via batea Import API)
         let fullResUrl = discogsData.images?.[0]?.resource_url || discogsData.images?.[0]?.uri || discogsData.cover_image || discogsData.thumb;
 
         try {
-            const response = await fetch('/api/bunker/import_image', {
+            const response = await fetch('/api/batea/import_image', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ imageUrl: fullResUrl, itemId: internalId })
@@ -126,10 +126,10 @@ export const inventoryService = {
                 const master = await discogsService.getMasterDetails(discogsData.master_id);
                 if (master && master.year) {
                     originalYear = master.year;
-                    console.log(`[Bunker-Import] Found Original Year for ${discogsData.title}: ${originalYear}`);
+                    console.log(`[batea-Import] Found Original Year for ${discogsData.title}: ${originalYear}`);
                 }
             } catch (e) {
-                console.warn(`[Bunker-Import] Could not fetch master ${discogsData.master_id} for original year.`);
+                console.warn(`[batea-Import] Could not fetch master ${discogsData.master_id} for original year.`);
             }
         }
 

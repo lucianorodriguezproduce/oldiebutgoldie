@@ -128,7 +128,7 @@ export const BrandingManager: React.FC = () => {
                         {logoStatus.success && (
                             <div className="flex items-center gap-2 text-green-500 text-sm mt-2">
                                 <CheckCircle className="h-4 w-4" />
-                                Logo actualizado en el Búnker.
+                                Logo actualizado en el Archivo central.
                             </div>
                         )}
                     </div>

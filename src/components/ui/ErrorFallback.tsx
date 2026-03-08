@@ -47,7 +47,7 @@ export default function ErrorFallback({ error, resetErrorBoundary, eventId }: Er
                             {isAutoRepairing ? 'Protocolo de' : 'Critical'} <span className={isAutoRepairing ? 'text-primary' : 'text-red-500'}>{isAutoRepairing ? 'Autocuración' : 'System Failure'}</span>
                         </h1>
                         <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mt-1">
-                            Bunker Protocol 7.1.3: Resiliencia Dinámica
+                            batea Protocol 7.1.3: Resiliencia Dinámica
                         </p>
                     </div>
                 </div>

@@ -26,7 +26,7 @@ export function PremiumShowcase() {
             where("is_admin_offer", "==", true)
         );
 
-        // 2. Listen to Active Inventory (The Bunker)
+        // 2. Listen to Active Inventory (The batea)
         const qInventory = query(
             collection(db, "inventory"),
             where("logistics.status", "==", "active"),

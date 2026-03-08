@@ -54,10 +54,26 @@ export const CompactSearchCard = memo(({ result, idx, onClick }: { result: Disco
                     </span>
                 </div>
 
-                {/* Mobile Type Indicator - Hidden when Local to avoid clutter */}
+                {/* Mobile Type Indicator */}
                 {!isLocal && result.type && (
                     <div className="absolute top-1.5 left-1.5 px-1 py-0.5 rounded-sm bg-black/60 backdrop-blur-md border border-white/5 md:top-4 md:left-4 md:px-2 md:py-1">
                         <span className="text-[5px] md:text-[8px] font-black uppercase tracking-tighter text-white/60">{result.type}</span>
+                    </div>
+                )}
+
+                {/* Botón de Preescucha - Integración V11.0 */}
+                {result.youtube_id && (
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-30">
+                        <a
+                            href={`https://youtube.com/watch?v=${result.youtube_id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-red-600/90 hover:bg-red-500 backdrop-blur-md rounded-full border border-white/20 shadow-xl"
+                        >
+                            <div className="w-0 h-0 border-t-4 border-t-transparent border-l-6 border-l-white border-b-4 border-b-transparent ml-0.5" />
+                            <span className="text-[8px] md:text-[10px] font-black uppercase text-white tracking-widest">Escuchar</span>
+                        </a>
                     </div>
                 )}
             </div>

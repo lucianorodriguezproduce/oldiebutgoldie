@@ -487,7 +487,7 @@ export default function EditorialManager() {
                                                     item={{
                                                         id: currentArticle.id,
                                                         title: currentArticle.title || 'Untitled',
-                                                        artist: 'OBG BUNKER',
+                                                        artist: 'OBG batea',
                                                         image: currentArticle.image || '',
                                                         source: 'editorial'
                                                     }}
@@ -512,16 +512,16 @@ export default function EditorialManager() {
                                                                 let text = "";
                                                                 const baseUrl = 'https://www.oldiebutgoldie.com.ar';
                                                                 const url = `${baseUrl}/comunidad/${currentArticle.id}?ref=social_${plat.id}`;
-                                                                const tags = currentArticle.tags_entidades?.map(t => `#${t.replace(/\s+/g, '')}`).join(' ') || '#Vinyl #Bunker';
+                                                                const tags = currentArticle.tags_entidades?.map(t => `#${t.replace(/\s+/g, '')}`).join(' ') || '#Vinyl #batea';
 
                                                                 if (plat.id === 'instagram') {
-                                                                    text = `🔥 NUEVO DESPACHO: ${currentArticle.title}\n\n${currentArticle.ai_summary || currentArticle.excerpt}\n\nLee la nota completa en el Búnker ⚡\n\n🔗 Link en Bio / Stories\n\n${tags} #OBGBunker`;
+                                                                    text = `🔥 NUEVO DESPACHO: ${currentArticle.title}\n\n${currentArticle.ai_summary || currentArticle.excerpt}\n\nLee la nota completa en el La Batea ⚡\n\n🔗 Link en Bio / Stories\n\n${tags} #OBGbatea`;
                                                                 } else if (plat.id === 'x') {
                                                                     text = `🚨 [INTEL DISPATCH] ${currentArticle.title}\n\n${currentArticle.ai_summary?.slice(0, 150) || currentArticle.excerpt}\n\nLee el reporte completo acá 👇\n\n${url}`;
                                                                 } else if (plat.id === 'tiktok') {
                                                                     text = `[Script Narrativo]\n(Intro) ¿Conocías la historia detrás de ${currentArticle.title}?\n(Desarrollo) ${currentArticle.ai_summary?.slice(0, 200) || currentArticle.excerpt}\n(CTA) Si sos coleccionista, tenés que leer esto. Seguime para más info. Link en comentarios.`;
                                                                 } else if (plat.id === 'whatsapp') {
-                                                                    text = `*REPORT [${currentArticle.category}]*\n\n*${currentArticle.title}*\n\n${currentArticle.excerpt}\n\n🔗 Lee más en el Búnker:\n${url}`;
+                                                                    text = `*REPORT [${currentArticle.category}]*\n\n*${currentArticle.title}*\n\n${currentArticle.excerpt}\n\n🔗 Lee más en el La Batea:\n${url}`;
                                                                 }
 
                                                                 navigator.clipboard.writeText(text);

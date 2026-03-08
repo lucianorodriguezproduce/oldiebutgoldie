@@ -43,7 +43,7 @@ interface ParsedRow {
     hasMore?: boolean;
 }
 
-const STAGING_KEY = "stitch_bulk_upload_staging";
+const STAGING_KEY = "OBG_bulk_upload_staging";
 
 export default function BulkUpload() {
     const { showLoading, hideLoading } = useLoading();
@@ -94,7 +94,7 @@ export default function BulkUpload() {
         ]);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "PlantillaOBG");
-        XLSX.writeFile(workbook, "Stitch_Bulk_Template.xlsx");
+        XLSX.writeFile(workbook, "OBG_Bulk_Template.xlsx");
     };
 
     const handleClearWorkspace = () => {
@@ -321,7 +321,7 @@ export default function BulkUpload() {
             return;
         }
 
-        showLoading(`Ingresando al Búnker ${batchItems.length} discos...`);
+        showLoading(`Ingresando al La Batea ${batchItems.length} discos...`);
         let newRows = [...rows];
         let publishCount = 0;
 
@@ -329,7 +329,7 @@ export default function BulkUpload() {
             for (const row of batchItems) {
                 const match = row.selectedMatch!;
 
-                // 1. Ingreso al Búnker (Sovereignty Snapshot)
+                // 1. Ingreso al La Batea (Sovereignty Snapshot)
                 await inventoryService.importFromDiscogs(
                     match,
                     {
@@ -355,7 +355,7 @@ export default function BulkUpload() {
             const errorMsg = isPermissionError
                 ? "Error de permisos en Firebase. Asegúrate de que las reglas de Firestore estén actualizadas."
                 : (error.message || "Error desconocido");
-            alert("Error al procesar el búnker: " + errorMsg);
+            alert("Error al procesar el La Batea: " + errorMsg);
         } finally {
             hideLoading();
             setBatchPrice(0);
@@ -498,7 +498,7 @@ export default function BulkUpload() {
                                     </div>
                                 </div>
 
-                                {/* Stitch Match Result */}
+                                {/* OBG Match Result */}
                                 <div className="flex-1 mt-auto pt-4 border-t border-white/5 z-10 relative">
                                     {row.published ? (
                                         <div className="flex items-center justify-center gap-2 text-green-500 font-bold uppercase text-[10px] tracking-widest h-16 bg-green-500/10 rounded-2xl">
@@ -638,7 +638,7 @@ export default function BulkUpload() {
 
                         <div>
                             <h3 className="text-2xl font-black text-white uppercase flex items-center gap-3 tracking-tight">
-                                Confirmar Ingesta al Búnker
+                                Confirmar Ingesta al La Batea
                             </h3>
                             <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-2">{rows.filter(r => r.inBatch).length} Discos listos para procesar</p>
                         </div>

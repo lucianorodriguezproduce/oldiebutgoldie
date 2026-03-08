@@ -251,7 +251,7 @@ export default function ManifestEditor({
                                 onClick={() => setSearchSource("collection")}
                                 className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${searchSource === "collection" ? "bg-primary text-black" : "text-gray-500 hover:text-white"}`}
                             >
-                                Mi Búnker
+                                Mi La Batea
                             </button>
                         </div>
 

@@ -53,10 +53,10 @@ export default function UserCollection({ userId, readonly = false }: UserCollect
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                     <input
                         type="text"
-                        placeholder={readonly ? "Buscar en la colección..." : "Buscar en mi búnker..."}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-12 py-4 text-sm text-white focus:border-primary/40 focus:outline-none transition-all"
+                        placeholder={readonly ? "Buscar en la colección..." : "Buscar en mi batea..."}
+                        className="w-full bg-[#0a0a0a] border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-primary/50 transition-colors"
                     />
                 </div>
                 <button className="flex items-center gap-2 px-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-white transition-all">
@@ -81,13 +81,14 @@ export default function UserCollection({ userId, readonly = false }: UserCollect
             ) : (
                 <div className="py-20 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[3rem] space-y-6 text-center">
                     <Disc className="h-12 w-12 text-gray-700 animate-[spin_10s_linear_infinite]" />
-                    <div className="space-y-2">
-                        <p className="text-xl font-display font-medium text-gray-500">
-                            {searchQuery ? "No se encontraron discos para esta búsqueda" : (readonly ? "Esta colección aún está vacía" : "Tu búnker personal está vacío")}
+                    <div className="text-center py-12 border border-dashed border-white/10 rounded-2xl bg-[#0a0a0a]">
+                        <p className="text-gray-500 font-medium tracking-widest uppercase text-xs">
+                            {searchQuery ? "No se encontraron discos para esta búsqueda" : (readonly ? "Esta colección aún está vacía" : "Tu batea personal está vacía")}
                         </p>
-                        {!searchQuery && (
-                            <p className="text-[10px] font-black uppercase tracking-widest text-primary/60">
-                                Los discos que compres aparecerán aquí para comercio
+                        {!readonly && !searchQuery && (
+                            <p className="text-[10px] text-gray-600 mt-2 font-black uppercase tracking-widest">
+                                Agrega discos desde el catálogo principal
+                                recerán aquí para comercio
                             </p>
                         )}
                     </div>

@@ -125,7 +125,7 @@ export function SocialCardGenerator({ item, type }: SocialCardGeneratorProps) {
             ctx.fillStyle = '#FFFFFF';
             ctx.globalAlpha = 0.4;
             ctx.font = 'bold 24px Inter, sans-serif';
-            ctx.fillText('OLDIE BUT GOLDIE | OBG BUNKER', canvas.width / 2, 1890);
+            ctx.fillText('OLDIE BUT GOLDIE | OBG batea', canvas.width / 2, 1890);
 
             // 8. Download
             const link = document.createElement('a');

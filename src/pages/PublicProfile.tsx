@@ -111,7 +111,7 @@ export default function PublicProfile() {
         } catch (error: any) {
             console.error("Connection action failed:", error);
             if (error.message === "SOCIAL_IDENTITY_REQUIRED") {
-                alert("Debes reclamar tu Identidad Social para conectar con otros gladiadores.");
+                alert("Debes reclamar tu Identidad Social para conectar con otros coleccionistaes.");
             }
         } finally {
             setIsActionLoading(false);

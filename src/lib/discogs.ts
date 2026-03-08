@@ -51,6 +51,7 @@ export interface DiscogsSearchResult {
     normalizedArtist?: string;
     normalizedAlbum?: string;
     price?: number;
+    youtube_id?: string; // Para nueva función de Preescucha V11.0
 }
 
 export const discogsService = {

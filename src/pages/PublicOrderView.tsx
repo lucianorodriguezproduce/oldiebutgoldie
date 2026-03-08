@@ -78,7 +78,7 @@ export default function PublicOrderView() {
                     if (legacyData.view_count === 4) pushHotOrderDetected(legacyData, 5);
                 }
             } else {
-                console.warn("Trade no encontrado en el búnker.");
+                console.warn("Trade no encontrado en el La Batea.");
             }
             setLoading(false);
             hideLoading();
@@ -136,7 +136,7 @@ export default function PublicOrderView() {
             // Resolvemos el trade usando el manifiesto actual para gatillar descuento de stock y creación de user_assets
             await tradeService.resolveTrade(id, order.manifest);
 
-            // Notificación al Admin (Búnker)
+            // Notificación al Admin (La Batea)
             if (order.is_admin_offer || order.participants?.receiverId === ADMIN_UID || order.participants?.receiverId === "oldiebutgoldie") {
                 await addDoc(collection(db, "notifications"), {
                     userId: "oldiebutgoldie",

@@ -309,7 +309,7 @@ export default function Home() {
                     let results: any[] = [];
                     let pagination = { page: 1, pages: 1 };
 
-                    // 1. BUSQUEDA LOCAL (BUNKER) - Prioridad Alta
+                    // 1. BUSQUEDA LOCAL (batea) - Prioridad Alta
                     let localResults: any[] = [];
                     if (!selectedArtist && (searchFilter === "todo" || searchFilter === "álbumes")) {
                         const localItems = await inventoryService.searchItems(debouncedQuery);
@@ -645,9 +645,9 @@ export default function Home() {
     const performSubmission = async (uid: string, intentOverride?: Intent) => {
         if (!selectedItem) return;
 
-        showLoading("Ingresando al Búnker...");
+        showLoading("Ingresando al La Batea...");
         try {
-            // 1. Ingreso al Búnker (Sovereignty Snapshot)
+            // 1. Ingreso al La Batea (Sovereignty Snapshot)
             const inventoryId = await inventoryService.importFromDiscogs(
                 selectedItem,
                 {

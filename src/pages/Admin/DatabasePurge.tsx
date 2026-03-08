@@ -34,7 +34,7 @@ export default function DatabasePurge() {
                 }
             }
 
-            // 2. RECALIBRACIÓN: Inventario (Bunker Preservation)
+            // 2. RECALIBRACIÓN: Inventario (batea Preservation)
             const invSnap = await getDocs(collection(db, "inventory"));
             const itemsBatch = writeBatch(db);
             let invCount = 0;
@@ -55,7 +55,7 @@ export default function DatabasePurge() {
             sessionStorage.clear();
 
             setResults(newResults);
-            alert("Operación Tabla Rasa Completada con Éxito. El Búnker ha sido restaurado.");
+            alert("Operación Tabla Rasa Completada con Éxito. El La Batea ha sido restaurado.");
         } catch (error) {
             console.error("Purge Error:", error);
             alert("Falla Crítica en el Protocolo de Purga: " + error);

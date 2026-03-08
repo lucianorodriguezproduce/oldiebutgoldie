@@ -1,6 +1,6 @@
 /**
  * Centralizes the logic for extracting artist, album, and image from an order.
- * Handles the different data schemas present in Firestore (Legacy, Individual User, Batch Admin, and Bunker Trade).
+ * Handles the different data schemas present in Firestore (Legacy, Individual User, Batch Admin, and batea Trade).
  */
 export const getCleanOrderMetadata = (order: any) => {
     if (!order) return { artist: '', album: '', format: 'Vinyl', condition: 'N/A', image: '', isBatch: false, itemsCount: 0 };
@@ -16,9 +16,9 @@ export const getCleanOrderMetadata = (order: any) => {
         return str.replace(/UNKNOWN ARTIST\s*[-—–]*\s*/gi, '').trim();
     };
 
-    // 0. BUNKER PRIORITIZATION (Data Sovereignty)
-    if (order.is_bunker_data && items.length > 0) {
-        console.log(`[Bunker-Sync] Processing sovereign data for ID: ${order.id}`);
+    // 0. batea PRIORITIZATION (Data Sovereignty)
+    if (order.is_batea_data && items.length > 0) {
+        console.log(`[batea-Sync] Processing sovereign data for ID: ${order.id}`);
         const first = items[0];
         return {
             artist: cleanString(first.artist) || '',
@@ -31,7 +31,7 @@ export const getCleanOrderMetadata = (order: any) => {
         };
     }
 
-    // 0.1 DIRECT INVENTORY ITEM SUPPORT (Raw Bunker Items)
+    // 0.1 DIRECT INVENTORY ITEM SUPPORT (Raw batea Items)
     if (order.metadata && order.logistics) {
         return {
             artist: order.metadata.artist || '',

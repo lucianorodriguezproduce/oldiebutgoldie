@@ -18,9 +18,17 @@ export const Navbar = () => {
     const { hasActiveOffer } = useOrderNotifications();
     const [config, setConfig] = useState<SiteConfig | null>(null);
 
-    // Phase III: Real-time Config Sync
+    // Phase III: Real-time Config Sync y Favicon Dinámico (V11.0)
     useEffect(() => {
-        return siteConfigService.onSnapshotConfig(setConfig);
+        return siteConfigService.onSnapshotConfig((newConfig) => {
+            setConfig(newConfig);
+            if (newConfig?.logo?.url) {
+                const link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+                if (link) {
+                    link.href = newConfig.logo.url;
+                }
+            }
+        });
     }, []);
 
     const navItems = [

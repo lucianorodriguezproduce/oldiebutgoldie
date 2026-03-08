@@ -153,7 +153,7 @@ export default function AnalyticsDashboard() {
                         </div>
                         <div>
                             <h3 className="text-black font-black text-2xl leading-none uppercase tracking-tight">Subir Stock Masivo</h3>
-                            <p className="text-black/70 font-bold text-[10px] mt-1 uppercase tracking-widest">Carga tus 300 vinilos usando el motor Stitch</p>
+                            <p className="text-black/70 font-bold text-[10px] mt-1 uppercase tracking-widest">Carga tus 300 vinilos usando el motor OBG</p>
                         </div>
                     </Link>
 

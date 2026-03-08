@@ -16,7 +16,7 @@ const BrandingPage: React.FC = () => {
                 </div>
                 <p className="text-zinc-500 font-medium max-w-2xl flex items-center gap-2 uppercase text-[10px] tracking-[0.2em]">
                     <Sparkles className="h-3 w-3 text-amber-500" />
-                    Gestión centralizada de activos de marca, blindaje de interfaz y sincronización con el búnker.
+                    Gestión centralizada de activos de marca, blindaje de interfaz y sincronización con el La Batea.
                 </p>
             </div>
 

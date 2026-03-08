@@ -95,7 +95,7 @@ export default function SocialRadar() {
                 <div className="bg-white/5 border border-white/5 rounded-2xl p-6 text-center space-y-2 translate-y-2 opacity-0 animate-[fade-in-up_0.3s_ease-out_forwards]">
                     <ShieldAlert className="w-8 h-8 text-gray-600 mx-auto" />
                     <p className="text-gray-400 font-bold text-sm tracking-widest uppercase">Sin Señal</p>
-                    <p className="text-[10px] text-gray-500 font-medium">Ningún gladiador coincide con esas coordenadas.</p>
+                    <p className="text-[10px] text-gray-500 font-medium">Ningún coleccionista coincide con esos parámetros.</p>
                 </div>
             )}
 

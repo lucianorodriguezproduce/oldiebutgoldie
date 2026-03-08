@@ -154,7 +154,7 @@ export default function Profile() {
     useEffect(() => {
         if (!user) return;
 
-        showLoading("Sincronizando Búnker Personal...");
+        showLoading("Sincronizando La Batea Personal...");
 
         // Unificado: Cargar todos los trades (Compras, Ventas e Intercambios)
         const loadEverything = async () => {
@@ -511,7 +511,7 @@ export default function Profile() {
                                         <p className="text-gray-600 text-xs font-bold uppercase tracking-widest max-w-xs">{TEXTS.perfil.profile.noActivitySub}</p>
                                     </div>
                                     <Link to="/tienda" className="bg-primary text-black px-8 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:scale-105 transition-all">
-                                        Explorar Búnker
+                                        Explorar La Batea
                                     </Link>
                                 </div>
                             ) : (

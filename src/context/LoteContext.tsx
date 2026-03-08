@@ -30,7 +30,7 @@ const LoteContext = createContext<LoteContextType | undefined>(undefined);
 export function LoteProvider({ children }: { children: ReactNode }) {
     const [loteItems, setLoteItems] = useState<BatchItem[]>(() => {
         try {
-            const saved = localStorage.getItem("stitch_lote");
+            const saved = localStorage.getItem("OBG_lote");
             // Migration: Ensure existing items have a source
             const items = saved ? JSON.parse(saved) : [];
             return items.map((item: any) => ({
@@ -43,7 +43,7 @@ export function LoteProvider({ children }: { children: ReactNode }) {
     });
 
     useEffect(() => {
-        localStorage.setItem("stitch_lote", JSON.stringify(loteItems));
+        localStorage.setItem("OBG_lote", JSON.stringify(loteItems));
     }, [loteItems]);
 
     const toggleItem = (item: BatchItem) => {
@@ -53,7 +53,7 @@ export function LoteProvider({ children }: { children: ReactNode }) {
                 ? prev.filter(i => i.id !== item.id)
                 : [...prev, item];
 
-            localStorage.setItem("stitch_lote", JSON.stringify(nextItems));
+            localStorage.setItem("OBG_lote", JSON.stringify(nextItems));
             return nextItems;
         });
     };
@@ -68,7 +68,7 @@ export function LoteProvider({ children }: { children: ReactNode }) {
             } else {
                 nextItems = [...prev, { ...item, source: item.source || 'DISCOGS' }];
             }
-            localStorage.setItem("stitch_lote", JSON.stringify(nextItems));
+            localStorage.setItem("OBG_lote", JSON.stringify(nextItems));
             return nextItems;
         });
     };
@@ -100,7 +100,7 @@ export function LoteProvider({ children }: { children: ReactNode }) {
     const isInLote = (id: number | string) => loteItems.some(i => i.id === id);
 
     const clearLote = () => {
-        localStorage.removeItem("stitch_lote");
+        localStorage.removeItem("OBG_lote");
         setLoteItems([]);
     };
 

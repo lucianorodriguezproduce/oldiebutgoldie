@@ -102,7 +102,7 @@ export default function Archivo() {
                         Archivo <span className="text-primary">Musical</span>
                     </h1>
                     <p className="text-gray-500 font-mono text-sm max-w-2xl uppercase tracking-widest leading-relaxed">
-                        Explorá el inventario total del búnker. Discos en stock y piezas únicas de la comunidad.
+                        Explorá el inventario total del La Batea. Discos en stock y piezas únicas de la comunidad.
                     </p>
                 </header>
 
@@ -130,7 +130,7 @@ export default function Archivo() {
                             onClick={loadMore}
                             className="px-10 py-5 bg-white/5 hover:bg-white/10 text-white rounded-2xl border border-white/10 text-[10px] font-black uppercase tracking-[0.3em] transition-all hover:scale-105 active:scale-95 shadow-xl shadow-black/40"
                         >
-                            Explorar más del búnker
+                            Explorar más del La Batea
                         </button>
                     </div>
                 )}

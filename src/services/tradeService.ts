@@ -25,13 +25,13 @@ import { ADMIN_UID } from "@/constants/admin";
 const COLLECTION_NAME = "trades";
 
 /**
- * ADAPTADOR: Transmuta un objeto Trade (Bunker) en un Order (Legacy V1)
+ * ADAPTADOR: Transmuta un objeto Trade (batea) en un Order (Legacy V1)
  * para que la UI consuma datos soberanos sin notar el cambio de motor.
  */
-const bunkerToLegacy = async (trade: any) => {
+const bateaToLegacy = async (trade: any) => {
     if (!trade) return null;
 
-    // Hidratación de ítems desde el Búnker (Colección inventory)
+    // Hidratación de ítems desde el La Batea (Colección inventory)
     const items = await Promise.all((trade.manifest?.requestedItems || []).map(async (itemId: string) => {
         const itemDoc = await getDoc(doc(db, "inventory", itemId));
         if (itemDoc.exists()) {
@@ -45,7 +45,7 @@ const bunkerToLegacy = async (trade: any) => {
                 format: data.metadata.format_description,
                 condition: data.logistics.condition,
                 price: data.logistics.price,
-                is_bunker_item: true
+                is_batea_item: true
             };
         }
         return null;
@@ -71,7 +71,7 @@ const bunkerToLegacy = async (trade: any) => {
         status: statusMap[trade.status] || trade.status,
         createdAt: trade.timestamp,
         user_id: trade.participants?.senderId,
-        is_bunker_data: true,
+        is_batea_data: true,
         // Campos de compatibilidad V1
         items: cleanItems,
         totalPrice: trade.manifest?.cashAdjustment || 0,
@@ -156,15 +156,15 @@ export const tradeService = {
 
         // --- AUTO-RESOLUTION: For direct sales, decrement stock immediately ---
         if (isDirectSale) {
-            console.log(`[Bunker] Direct sale detected. Auto-resolving trade: ${docRef.id}`);
+            console.log(`[batea] Direct sale detected. Auto-resolving trade: ${docRef.id}`);
             try {
                 await this.resolveTrade(docRef.id, trade.manifest as any);
             } catch (error) {
-                console.error("[Bunker] Error during auto-resolution of direct sale:", error);
+                console.error("[batea] Error during auto-resolution of direct sale:", error);
                 throw error;
             }
         } else {
-            console.log(`[Bunker] Exchange/negotiation created: ${docRef.id} (origin: ${tradeOrigin || 'legacy'})`);
+            console.log(`[batea] Exchange/negotiation created: ${docRef.id} (origin: ${tradeOrigin || 'legacy'})`);
         }
 
         return docRef.id;
@@ -223,7 +223,7 @@ export const tradeService = {
         const uniqueTrades = Array.from(rawTradesMap.values());
 
         // Transmutación Silenciosa
-        const legacyTrades = await Promise.all(uniqueTrades.map(t => bunkerToLegacy(t)));
+        const legacyTrades = await Promise.all(uniqueTrades.map(t => bateaToLegacy(t)));
 
         return legacyTrades.sort((a: any, b: any) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
     },
@@ -234,14 +234,14 @@ export const tradeService = {
         if (snapshot.empty) return null;
         const doc = snapshot.docs[0];
         const trade = { id: doc.id, ...doc.data() } as Trade;
-        return await bunkerToLegacy(trade);
+        return await bateaToLegacy(trade);
     },
 
     async getTrades() {
         const q = query(collection(db, COLLECTION_NAME), orderBy("timestamp", "desc"));
         const snapshot = await getDocs(q);
         const rawTrades = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Trade));
-        return await Promise.all(rawTrades.map(t => bunkerToLegacy(t)));
+        return await Promise.all(rawTrades.map(t => bateaToLegacy(t)));
     },
 
     async updateTradeStatus(tradeId: string, status: Trade['status']) {
@@ -338,7 +338,7 @@ export const tradeService = {
                     if (snap.exists()) {
                         const invData = snap.data() as InventoryItem;
                         const currentStock = invData.logistics.stock || 0;
-                        if (currentStock <= 0) throw new Error(`Stock insuficiente en Búnker: ${invData.metadata.title}`);
+                        if (currentStock <= 0) throw new Error(`Stock insuficiente en La Batea: ${invData.metadata.title}`);
 
                         transaction.update(ref, {
                             "logistics.stock": currentStock - 1,
@@ -385,7 +385,7 @@ export const tradeService = {
                     if (snap.exists()) {
                         const invData = snap.data() as InventoryItem;
                         const currentStock = invData.logistics.stock || 0;
-                        if (currentStock <= 0) throw new Error(`Stock insuficiente en Búnker: ${invData.metadata.title}`);
+                        if (currentStock <= 0) throw new Error(`Stock insuficiente en La Batea: ${invData.metadata.title}`);
 
                         transaction.update(ref, {
                             "logistics.stock": currentStock - 1,

@@ -106,7 +106,7 @@ export default function AdminInventory() {
 
     const handleIngestDiscogs = async () => {
         if (!discogsId) return;
-        showLoading("Importando desde Discogs al Búnker...");
+        showLoading("Importando desde Discogs al La Batea...");
         try {
             const release = await discogsService.getReleaseDetails(discogsId);
             await inventoryService.importFromDiscogs(release, {
@@ -570,7 +570,7 @@ export default function AdminInventory() {
                                         onClick={handleIngestDiscogs}
                                         className="w-full py-6 bg-primary text-black rounded-2xl font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/20 hover:brightness-110 transition-all"
                                     >
-                                        Importar al Búnker
+                                        Importar al La Batea
                                     </button>
                                 </div>
                             ) : (
@@ -691,7 +691,7 @@ export default function AdminInventory() {
                                                         let text = "";
 
                                                         if (plat.id === 'instagram') {
-                                                            text = `🔥 DISPONIBLE EN EL BÚNKAR: ${marketingItem.metadata.artist} - ${marketingItem.metadata.title}\n\nCondición: ${marketingItem.logistics.condition}\nPrecio: $${marketingItem.logistics.price.toLocaleString()}\n\n🔗 Link en Bio / Stories para comprar\n\n#OldieButGoldie #VinylCollection #Vinilos #BunkerOBG`;
+                                                            text = `🔥 DISPONIBLE EN EL BÚNKAR: ${marketingItem.metadata.artist} - ${marketingItem.metadata.title}\n\nCondición: ${marketingItem.logistics.condition}\nPrecio: $${marketingItem.logistics.price.toLocaleString()}\n\n🔗 Link en Bio / Stories para comprar\n\n#OldieButGoldie #VinylCollection #Vinilos #bateaOBG`;
                                                         } else if (plat.id === 'x') {
                                                             text = `🚨 [INVENTORY ALERT] ${marketingItem.metadata.artist} - ${marketingItem.metadata.title}\n\nCondición: ${marketingItem.logistics.condition}\nStock: ${marketingItem.logistics.stock}\n\nConseguilo acá antes que vuele 👇\n\n${url}`;
                                                         } else if (plat.id === 'tiktok') {

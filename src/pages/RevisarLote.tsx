@@ -249,7 +249,7 @@ export default function RevisarLote() {
         }
 
         if (!user?.emailVerified) {
-            alert("Acción Crítica: Verificá tu email para confirmar operaciones en el búnker.");
+            alert("Acción Crítica: Verificá tu email para confirmar operaciones en el La Batea.");
             return;
         }
 

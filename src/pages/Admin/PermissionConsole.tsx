@@ -99,7 +99,7 @@ export default function PermissionConsole() {
                         <p className="text-[10px] font-mono text-gray-600 leading-relaxed uppercase">
                             {config.allow_p2p_public_offers
                                 ? "ESTADO: DESBLOQUEADO. El Coliseo permite ofertas libres entre usuarios finales."
-                                : "ESTADO: PROTEGIDO. Solo se permiten ofertas dirigidas al Búnker Central (Oldie But Goldie)."}
+                                : "ESTADO: PROTEGIDO. Solo se permiten ofertas dirigidas al La Batea Central (Oldie But Goldie)."}
                         </p>
                     </div>
                 </motion.div>

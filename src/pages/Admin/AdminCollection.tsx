@@ -80,7 +80,7 @@ export default function AdminCollection() {
             <header className="flex flex-col gap-2">
                 <h1 className="text-4xl font-display font-black tracking-tighter uppercase">Colección Adquirida</h1>
                 <p className="text-gray-400 font-bold tracking-widest uppercase text-[10px]">
-                    Ítems recibidos por el Búnker a través de intercambios. Promovelos al inventario público cuando estén listos.
+                    Ítems recibidos por el La Batea a través de intercambios. Promovelos al inventario público cuando estén listos.
                 </p>
             </header>
 
@@ -283,11 +283,11 @@ export default function AdminCollection() {
                                                         const artist = marketingItem.metadata?.artist || 'Unknown';
 
                                                         if (plat.id === 'instagram') {
-                                                            text = `🔥 RECIÉN LLEGADO AL BÚNKER: ${artist} - ${title}\n\nIngresó por intercambio y ya es parte de la reserva soberana.\n\n🔗 Conocé la colección completa 👇\n\n#OldieButGoldie #Vinyl #Community #BunkerOBG`;
+                                                            text = `🔥 RECIÉN LLEGADO AL La Batea: ${artist} - ${title}\n\nIngresó por intercambio y ya es parte de la reserva soberana.\n\n🔗 Conocé la colección completa 👇\n\n#OldieButGoldie #Vinyl #Community #bateaOBG`;
                                                         } else if (plat.id === 'x') {
-                                                            text = `🚨 [NEW ACQUISITION] ${artist} - ${title}\n\nEste ejemplar acaba de entrar al Búnker vía permuta.\n\nMiralo acá:\n${url}`;
+                                                            text = `🚨 [NEW ACQUISITION] ${artist} - ${title}\n\nEste ejemplar acaba de entrar al La Batea vía permuta.\n\nMiralo acá:\n${url}`;
                                                         } else if (plat.id === 'tiktok') {
-                                                            text = `[Community Script]\n(Intro) Mirá lo que acaba de entrar al Búnker.\n(Body) ${artist} - ${title}. Un disco increíble que conseguimos hoy.\n(CTA) ¿Tenés algo para permutar? Seguime para ver más ingresos.`;
+                                                            text = `[Community Script]\n(Intro) Mirá lo que acaba de entrar al La Batea.\n(Body) ${artist} - ${title}. Un disco increíble que conseguimos hoy.\n(CTA) ¿Tenés algo para permutar? Seguime para ver más ingresos.`;
                                                         } else if (plat.id === 'whatsapp') {
                                                             text = `*NUEVO INGRESO (INTERCAMBIO) - OBG*\n\n💿 *${title}*\n👤 *${artist}*\n🏛️ Origen: Intercambio con Comunidad\n\n🔗 Ver en el archivo:\n${url}`;
                                                         }

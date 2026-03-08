@@ -12,7 +12,7 @@ export default function Guias() {
         },
         {
             title: "Cómo Vender",
-            description: "Aprendé a cotizar tu lote y enviarlo a nuestro búnker de forma segura.",
+            description: "Aprendé a cotizar tu lote y enviarlo a nuestro La Batea de forma segura.",
             icon: Shield,
             color: "text-secondary"
         },
