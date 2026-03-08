@@ -17,6 +17,7 @@ if (import.meta.env.PROD) {
     replaysOnErrorSampleRate: 1.0,
     environment: "production",
   });
+  Sentry.captureMessage("Soberanía Técnica: Señal Recibida");
 }
 
 import { HealthProvider } from './context/HealthContext';

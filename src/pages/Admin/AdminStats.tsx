@@ -24,6 +24,15 @@ export default function AdminStats() {
                         <span className="text-[10px] font-black uppercase tracking-widest text-white">Abrir en Looker</span>
                     </a>
                     <button
+                        onClick={() => {
+                            throw new Error("Test de Fuego Real V7.1.2");
+                        }}
+                        className="flex items-center gap-3 bg-red-500/10 border border-red-500/20 px-6 py-2.5 rounded-xl hover:bg-red-500/20 transition-all group"
+                    >
+                        <Activity className="h-4 w-4 text-red-500 group-hover:scale-110 transition-transform" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-white">Test Sentry</span>
+                    </button>
+                    <button
                         onClick={() => window.location.reload()}
                         className="p-2.5 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all text-gray-400 hover:text-primary"
                     >
