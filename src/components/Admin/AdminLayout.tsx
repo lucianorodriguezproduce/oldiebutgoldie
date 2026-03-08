@@ -14,7 +14,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     const { logout } = useAuth();
 
     const navItems = [
-        { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
+        { label: "Estadísticas", href: "/admin", icon: LayoutDashboard },
         { label: "🚀 Ingesta Masiva", href: "/admin/bulk-upload", icon: UploadCloud },
         { label: "📦 Inventario Pro", href: "/admin/inventory", icon: Package },
         { label: "🤝 Intercambios", href: "/admin/trades", icon: Handshake },

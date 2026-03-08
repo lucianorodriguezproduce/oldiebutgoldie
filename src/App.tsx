@@ -26,7 +26,7 @@ import PublicProfile from "@/pages/PublicProfile";
 import Archivo from "@/pages/Archivo";
 import ArchivoItem from "@/pages/ArchivoItem";
 import AdminLayout from "@/components/Admin/AdminLayout";
-import AdminAnalytics from "@/pages/Admin/AdminAnalytics";
+import AdminStats from "@/pages/Admin/AdminStats";
 import EditorialManager from "@/pages/Admin/EditorialManager";
 import CommunityManager from "@/pages/Admin/CommunityManager";
 import DatabasePurge from "@/pages/Admin/DatabasePurge";
@@ -122,8 +122,8 @@ function AppContent() {
         {/* Nested Admin Routes */}
         <Route element={<ProtectedRoute adminOnly={true} />}>
           <Route path="/admin" element={<AdminLayout><Outlet /></AdminLayout>}>
-            <Route index element={<AdminAnalytics />} />
-            <Route path="analytics" element={<AdminAnalytics />} />
+            <Route index element={<AdminStats />} />
+            <Route path="analytics" element={<AdminStats />} />
             <Route path="inventory" element={<AdminInventory />} />
             <Route path="collection" element={<AdminCollection />} />
             <Route path="trades" element={<AdminTrades />} />
