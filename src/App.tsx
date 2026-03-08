@@ -1,4 +1,6 @@
 import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
@@ -148,6 +150,8 @@ function App() {
           <TelemetryProvider>
             <LoteProvider>
               <AppContent />
+              <Analytics />
+              <SpeedInsights />
             </LoteProvider>
           </TelemetryProvider>
         </AuthProvider>
