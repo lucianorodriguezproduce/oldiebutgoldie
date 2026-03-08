@@ -105,12 +105,18 @@ export const archivoService = {
             limit(pageSize / 2)
         );
 
-        const [invSnap, assetSnap] = await Promise.all([
+        const [invResult, assetResult] = await Promise.allSettled([
             getDocs(lastDocs?.inventory ? query(invQuery, startAfter(lastDocs.inventory)) : invQuery),
             getDocs(lastDocs?.user_assets ? query(assetQuery, startAfter(lastDocs.user_assets)) : assetQuery)
         ]);
 
-        const inventoryItems: UnifiedItem[] = invSnap.docs.map(doc => {
+        const invSnap = invResult.status === 'fulfilled' ? invResult.value : null;
+        const assetSnap = assetResult.status === 'fulfilled' ? assetResult.value : null;
+
+        if (invResult.status === 'rejected') console.error("Archive: Inventory fetch failed", invResult.reason);
+        if (assetResult.status === 'rejected') console.error("Archive: Assets fetch failed", assetResult.reason);
+
+        const inventoryItems: UnifiedItem[] = invSnap ? invSnap.docs.map(doc => {
             const data = doc.data() as InventoryItem;
             return {
                 id: doc.id,
@@ -121,9 +127,9 @@ export const archivoService = {
                 source: 'inventory',
                 price: data.logistics.price
             };
-        });
+        }) : [];
 
-        const assetItems: UnifiedItem[] = assetSnap.docs.map(doc => {
+        const assetItems: UnifiedItem[] = assetSnap ? assetSnap.docs.map(doc => {
             const data = doc.data() as UserAsset;
             return {
                 id: doc.id,
@@ -134,7 +140,7 @@ export const archivoService = {
                 source: 'user_assets',
                 valuation: data.valuation
             };
-        });
+        }) : [];
 
         // Interleave (Already O(n+m))
         const combined: UnifiedItem[] = [];
@@ -147,10 +153,10 @@ export const archivoService = {
         const response = {
             items: combined,
             lastDocs: {
-                inventory: invSnap.docs[invSnap.docs.length - 1],
-                user_assets: assetSnap.docs[assetSnap.docs.length - 1]
+                inventory: invSnap?.docs[invSnap.docs.length - 1] || null,
+                user_assets: assetSnap?.docs[assetSnap.docs.length - 1] || null
             },
-            hasMore: invSnap.docs.length > 0 || assetSnap.docs.length > 0
+            hasMore: (invSnap?.docs.length || 0) > 0 || (assetSnap?.docs.length || 0) > 0
         };
 
         if (!lastDocs) {
