@@ -61,6 +61,7 @@ const queryClient = new QueryClient({
 });
 
 import { useHealth } from "@/context/HealthContext";
+import { useAnalytics } from "@/hooks/useAnalytics";
 
 const EnergyModeIndicator = () => {
   const { health } = useHealth();
@@ -81,6 +82,9 @@ function AppContent() {
   const { isAdmin, user } = useAuth();
   const { health } = useHealth();
   const [siteConfig, setSiteConfig] = useState<any>(null);
+
+  // Activar Telemetría Soberana (V8.4)
+  useAnalytics();
 
   // Sync User context with Sentry
   useEffect(() => {
