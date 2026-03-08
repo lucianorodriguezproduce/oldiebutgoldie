@@ -10,6 +10,7 @@ interface AuthContextType {
     user: User | null;
     dbUser: DbUser | null;
     isAdmin: boolean;
+    isEmailVerified: boolean;
     loading: boolean;
     logout: () => Promise<void>;
 }
@@ -71,13 +72,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const isAdmin = !!user && (isMasterAdmin || user.email === "admin@discography.ai");
 
+    const isEmailVerified = !!user && user.emailVerified;
+
     const value = React.useMemo(() => ({
         user,
         dbUser,
         isAdmin,
+        isEmailVerified,
         loading,
         logout
-    }), [user, dbUser, isAdmin, loading, logout]);
+    }), [user, dbUser, isAdmin, isEmailVerified, loading, logout]);
 
     return (
         <AuthContext.Provider value={value}>

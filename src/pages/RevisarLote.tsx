@@ -248,6 +248,11 @@ export default function RevisarLote() {
             return;
         }
 
+        if (!user?.emailVerified) {
+            alert("Acción Crítica: Verificá tu email para confirmar operaciones en el búnker.");
+            return;
+        }
+
         if (batchIntent === 'OFRECER' && (!totalPrice || Number(totalPrice) <= 0)) {
             alert(TEXTS.revisarLote.batchReview.validPriceRequired);
             return;
