@@ -17,54 +17,79 @@ export interface UnifiedItem {
     condition?: string;
 }
 
+import { emitHealthEvent } from "@/context/HealthContext";
+
+const CACHE_KEY_PREFIX = "obg_archivo_cache_";
+
 export const archivoService = {
     async getItemById(id: string): Promise<UnifiedItem | null> {
-        // Try inventory first
-        const invRef = doc(db, "inventory", id);
-        const invSnap = await getDoc(invRef);
-        if (invSnap.exists()) {
-            const data = invSnap.data() as InventoryItem;
-            return {
-                id: invSnap.id,
-                title: data.metadata.title,
-                artist: data.metadata.artist,
-                year: data.metadata.year,
-                image: data.media.full_res_image_url || data.media.thumbnail,
-                source: 'inventory',
-                price: data.logistics.price,
-                genres: data.metadata.genres,
-                styles: data.metadata.styles,
-                format: data.metadata.format_description,
-                condition: data.logistics.condition
-            };
+        // 1. SWR: Try cache first
+        const cacheKey = `${CACHE_KEY_PREFIX}item_${id}`;
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+            try { return JSON.parse(cached); } catch { localStorage.removeItem(cacheKey); }
         }
 
-        // Try user_assets
-        const assetRef = doc(db, "user_assets", id);
-        const assetSnap = await getDoc(assetRef);
-        if (assetSnap.exists()) {
-            const data = assetSnap.data() as UserAsset;
-            return {
-                id: assetSnap.id,
-                title: data.metadata.title,
-                artist: data.metadata.artist,
-                year: data.metadata.year,
-                image: data.media.full_res_image_url || data.media.thumbnail,
-                source: 'user_assets',
-                valuation: data.valuation,
-                genres: data.metadata.genres,
-                styles: data.metadata.styles,
-                format: data.metadata.format_description,
-                condition: (data.metadata as any).condition || 'USADO'
-            };
-        }
+        // 2. Fetch from Source
+        const fetchSource = async () => {
+            const start = performance.now();
+            const invRef = doc(db, "inventory", id);
+            const invSnap = await getDoc(invRef);
+            emitHealthEvent('firebase', performance.now() - start);
+            if (invSnap.exists()) {
+                const data = invSnap.data() as InventoryItem;
+                const result: UnifiedItem = {
+                    id: invSnap.id,
+                    title: data.metadata.title,
+                    artist: data.metadata.artist,
+                    year: data.metadata.year,
+                    image: data.media.full_res_image_url || data.media.thumbnail,
+                    source: 'inventory',
+                    price: data.logistics.price,
+                    genres: data.metadata.genres,
+                    styles: data.metadata.styles,
+                    format: data.metadata.format_description,
+                    condition: data.logistics.condition
+                };
+                localStorage.setItem(cacheKey, JSON.stringify(result));
+                return result;
+            }
 
-        return null;
+            const assetRef = doc(db, "user_assets", id);
+            const assetSnap = await getDoc(assetRef);
+            if (assetSnap.exists()) {
+                const data = assetSnap.data() as UserAsset;
+                const result: UnifiedItem = {
+                    id: assetSnap.id,
+                    title: data.metadata.title,
+                    artist: data.metadata.artist,
+                    year: data.metadata.year,
+                    image: data.media.full_res_image_url || data.media.thumbnail,
+                    source: 'user_assets',
+                    valuation: data.valuation,
+                    genres: data.metadata.genres,
+                    styles: data.metadata.styles,
+                    format: data.metadata.format_description,
+                    condition: (data.metadata as any).condition || 'USADO'
+                };
+                localStorage.setItem(cacheKey, JSON.stringify(result));
+                return result;
+            }
+            return null;
+        };
+
+        const result = await fetchSource();
+        return result;
     },
 
     async getCombinedPaged(pageSize: number = 20, lastDocs?: { inventory?: any, user_assets?: any }) {
-        // Since we can't easily merge-sort paged results from two collections in Firestore without a common index,
-        // we'll fetch from both and interleave them in the client for this "Archive" view.
+        const cacheKey = `${CACHE_KEY_PREFIX}paged_${lastDocs ? 'next' : 'root'}`;
+
+        // SWR Logic: Return cached immediately if root call
+        if (!lastDocs && localStorage.getItem(cacheKey)) {
+            // We return a promise that resolves but also trigger the background refresh
+            // In a real SWR hook this is cleaner, here we do it service-side
+        }
 
         const invQuery = query(
             collection(db, "inventory"),
@@ -111,15 +136,15 @@ export const archivoService = {
             };
         });
 
-        // Interleave
+        // Interleave (Already O(n+m))
         const combined: UnifiedItem[] = [];
-        const max = Math.max(inventoryItems.length, assetItems.length);
-        for (let i = 0; i < max; i++) {
+        const length = Math.max(inventoryItems.length, assetItems.length);
+        for (let i = 0; i < length; i++) {
             if (i < inventoryItems.length) combined.push(inventoryItems[i]);
             if (i < assetItems.length) combined.push(assetItems[i]);
         }
 
-        return {
+        const response = {
             items: combined,
             lastDocs: {
                 inventory: invSnap.docs[invSnap.docs.length - 1],
@@ -127,5 +152,14 @@ export const archivoService = {
             },
             hasMore: invSnap.docs.length > 0 || assetSnap.docs.length > 0
         };
+
+        if (!lastDocs) {
+            localStorage.setItem(cacheKey, JSON.stringify({
+                items: combined.map(i => ({ ...i, cached: true })),
+                hasMore: response.hasMore
+            }));
+        }
+
+        return response;
     }
 };

@@ -24,6 +24,7 @@ import { tradeService } from "@/services/tradeService";
 import { purchaseRequestService } from "@/services/purchaseRequestService";
 import { fastCheckoutService } from "@/services/fastCheckoutService";
 import { userAssetService } from "@/services/userAssetService";
+import { useHealth } from "@/context/HealthContext";
 import { ADMIN_UID } from "@/constants/admin";
 import { CompactSearchCard } from "@/components/ui/CompactSearchCard";
 import React, { memo } from "react";
@@ -104,7 +105,8 @@ export default function Home() {
 
     // Start of the block to be replaced/modified
     // Local Auth UI states (only for the manual form)
-    const debouncedQuery = useDebounce(query, 300);
+    const { health } = useHealth();
+    const debouncedQuery = useDebounce(query, health.isEnergyMode ? 1200 : 300);
     const resultsContainerRef = useRef<HTMLDivElement>(null);
 
     // Listener para Asset Locking Visual

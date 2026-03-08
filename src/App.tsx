@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
+import { motion } from "framer-motion";
 import * as Sentry from "@sentry/react";
 import ErrorFallback from "@/components/ui/ErrorFallback";
 import { Analytics } from "@vercel/analytics/react";
@@ -55,8 +56,26 @@ const queryClient = new QueryClient({
   },
 });
 
+import { useHealth } from "@/context/HealthContext";
+
+const EnergyModeIndicator = () => {
+  const { health } = useHealth();
+  if (!health.isEnergyMode) return null;
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="fixed bottom-6 left-6 z-[100] px-4 py-2 bg-orange-500/20 border border-orange-500/40 backdrop-blur-md rounded-full flex items-center gap-2 shadow-2xl"
+    >
+      <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+      <span className="text-[10px] font-black text-orange-500 uppercase tracking-widest">Modo Ahorro Energético</span>
+    </motion.div>
+  );
+};
+
 function AppContent() {
   const { isAdmin, user } = useAuth();
+  const { health } = useHealth();
   const [siteConfig, setSiteConfig] = useState<any>(null);
 
   // Sync User context with Sentry
@@ -153,6 +172,7 @@ function AppContent() {
           </Route>
         </Route>
       </Routes>
+      <EnergyModeIndicator />
     </BrowserRouter>
   );
 }

@@ -28,6 +28,20 @@ export default function Archivo() {
     };
 
     useEffect(() => {
+        // Instant SWR Load from Cache
+        const cached = localStorage.getItem("obg_archivo_cache_paged_root");
+        if (cached) {
+            try {
+                const data = JSON.parse(cached);
+                if (data.items) {
+                    setItems(data.items);
+                    setHasMore(data.hasMore);
+                    setLoading(false); // Hide initial spinner
+                }
+            } catch (e) {
+                console.warn("Error parsing archive cache:", e);
+            }
+        }
         loadMore();
     }, []);
 

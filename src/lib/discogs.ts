@@ -1,6 +1,9 @@
 const DISCOGS_BASE_URL = "/api/proxy";
 
+import { emitHealthEvent } from "@/context/HealthContext";
+
 async function fetchFromDiscogs(endpoint: string, params: Record<string, string> = {}) {
+    const start = performance.now();
     const url = new URL(window.location.origin + DISCOGS_BASE_URL);
     url.searchParams.append("path", endpoint);
 
@@ -8,17 +11,25 @@ async function fetchFromDiscogs(endpoint: string, params: Record<string, string>
         url.searchParams.append(key, value);
     }
 
-    const response = await fetch(url.toString());
-    const data = await response.json();
+    try {
+        const response = await fetch(url.toString());
+        const duration = performance.now() - start;
+        emitHealthEvent('discogs', duration);
 
-    if (!response.ok) {
-        const error = new Error(`Discogs API error: ${response.statusText}`);
-        (error as any).status = response.status;
-        (error as any).details = data;
+        const data = await response.json();
+
+        if (!response.ok) {
+            const error = new Error(`Discogs API error: ${response.statusText}`);
+            (error as any).status = response.status;
+            (error as any).details = data;
+            throw error;
+        }
+
+        return data;
+    } catch (error) {
+        emitHealthEvent('discogs', performance.now() - start);
         throw error;
     }
-
-    return data;
 }
 
 export interface DiscogsSearchResult {

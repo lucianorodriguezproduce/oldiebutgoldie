@@ -19,10 +19,14 @@ if (import.meta.env.PROD) {
   });
 }
 
+import { HealthProvider } from './context/HealthContext';
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <HelmetProvider>
-      <App />
+      <HealthProvider>
+        <App />
+      </HealthProvider>
     </HelmetProvider>
   </StrictMode>,
 )
