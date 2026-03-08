@@ -108,7 +108,7 @@ function AppContent() {
         const data = snapshot.data();
         setSiteConfig(data);
 
-        // Favicon logic
+        // Favicon logic (V11.2)
         if (data.favicon?.url) {
           let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
           if (!link) {
@@ -116,7 +116,9 @@ function AppContent() {
             link.rel = 'icon';
             document.getElementsByTagName('head')[0].appendChild(link);
           }
-          link.href = data.favicon.url;
+          if (link.href !== data.favicon.url) {
+            link.href = data.favicon.url;
+          }
         }
       }
     });

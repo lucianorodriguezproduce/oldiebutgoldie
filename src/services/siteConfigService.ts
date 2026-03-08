@@ -8,6 +8,11 @@ export interface SiteConfig {
     logo?: {
         url: string;
         public_id?: string;
+        updatedAt?: string;
+    };
+    favicon?: {
+        url: string;
+        updatedAt?: string;
     };
 }
 
