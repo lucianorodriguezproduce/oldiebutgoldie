@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { CopyPlus, Clock, Disc, Music } from "lucide-react";
+import { CopyPlus, Clock, Disc, Music, Sparkles, X, Copy } from "lucide-react";
+import { SocialCardGenerator } from "@/components/Social/SocialCardGenerator";
+import { motion, AnimatePresence } from "framer-motion";
 import { userAssetService } from "@/services/userAssetService";
 import { ADMIN_UID } from "@/constants/admin";
 import type { UserAsset } from "@/types/inventory";
@@ -10,6 +12,7 @@ export default function AdminCollection() {
     const [assets, setAssets] = useState<UserAsset[]>([]);
     const [loading, setLoading] = useState(true);
     const [promotingId, setPromotingId] = useState<string | null>(null);
+    const [marketingItem, setMarketingItem] = useState<UserAsset | null>(null);
 
     // Promote modal state
     const [showModal, setShowModal] = useState(false);
@@ -105,6 +108,13 @@ export default function AdminCollection() {
                                 <div className="absolute top-4 right-4 bg-primary text-black text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded shadow-lg">
                                     Adquirido
                                 </div>
+                                <button
+                                    onClick={() => setMarketingItem(asset)}
+                                    className="absolute bottom-4 right-4 p-3 bg-white/20 backdrop-blur-md text-white rounded-2xl hover:bg-primary hover:text-black transition-all opacity-0 group-hover:opacity-100 shadow-xl"
+                                    title="Propaganda V6.0"
+                                >
+                                    <Sparkles className="w-4 h-4" />
+                                </button>
                             </div>
 
                             {/* Card Content */}
@@ -208,6 +218,100 @@ export default function AdminCollection() {
                     </div>
                 </div>
             )}
+
+            {/* Propaganda Modal V6.0 */}
+            <AnimatePresence>
+                {marketingItem && (
+                    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 bg-black/95 backdrop-blur-xl"
+                            onClick={() => setMarketingItem(null)}
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 30 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 30 }}
+                            className="relative w-full max-w-2xl bg-[#0a0a0a] border border-white/10 rounded-[3rem] overflow-hidden"
+                        >
+                            <div className="p-10 border-b border-white/5 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <Sparkles className="w-6 h-6 text-primary" />
+                                    <h3 className="text-2xl font-black text-white uppercase tracking-tight">Propaganda: {marketingItem.metadata?.title}</h3>
+                                </div>
+                                <button onClick={() => setMarketingItem(null)} className="text-gray-500 hover:text-white transition-colors">
+                                    <X className="w-8 h-8" />
+                                </button>
+                            </div>
+
+                            <div className="p-10 space-y-10">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                                    <div className="space-y-4">
+                                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-4">Generador de Social Card (9:16)</label>
+                                        <SocialCardGenerator
+                                            item={{
+                                                id: marketingItem.id,
+                                                title: marketingItem.metadata?.title || 'Unknown',
+                                                artist: marketingItem.metadata?.artist || 'Various',
+                                                image: marketingItem.media?.full_res_image_url || marketingItem.media?.thumbnail || '',
+                                                source: 'user_asset'
+                                            }}
+                                            type="release"
+                                        />
+                                        <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest text-center italic">Personalizado para la Comunidad</p>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-4">Viral Snippets (Clipboard)</label>
+                                        <div className="space-y-3">
+                                            {[
+                                                { id: 'instagram', label: 'Copy Instagram', icon: '📸' },
+                                                { id: 'x', label: 'Copy X / Thread', icon: '🐦' },
+                                                { id: 'tiktok', label: 'Copy TikTok Script', icon: '🎵' },
+                                                { id: 'whatsapp', label: 'Copy Technical Data', icon: '💬' }
+                                            ].map((plat) => (
+                                                <button
+                                                    key={plat.id}
+                                                    onClick={() => {
+                                                        const baseUrl = 'https://www.oldiebutgoldie.com.ar';
+                                                        const url = `${baseUrl}/archivo/${marketingItem.id}?ref=social_${plat.id}`;
+                                                        let text = "";
+
+                                                        const title = marketingItem.metadata?.title || 'Untitled';
+                                                        const artist = marketingItem.metadata?.artist || 'Unknown';
+
+                                                        if (plat.id === 'instagram') {
+                                                            text = `🔥 RECIÉN LLEGADO AL BÚNKER: ${artist} - ${title}\n\nIngresó por intercambio y ya es parte de la reserva soberana.\n\n🔗 Conocé la colección completa 👇\n\n#OldieButGoldie #Vinyl #Community #BunkerOBG`;
+                                                        } else if (plat.id === 'x') {
+                                                            text = `🚨 [NEW ACQUISITION] ${artist} - ${title}\n\nEste ejemplar acaba de entrar al Búnker vía permuta.\n\nMiralo acá:\n${url}`;
+                                                        } else if (plat.id === 'tiktok') {
+                                                            text = `[Community Script]\n(Intro) Mirá lo que acaba de entrar al Búnker.\n(Body) ${artist} - ${title}. Un disco increíble que conseguimos hoy.\n(CTA) ¿Tenés algo para permutar? Seguime para ver más ingresos.`;
+                                                        } else if (plat.id === 'whatsapp') {
+                                                            text = `*NUEVO INGRESO (INTERCAMBIO) - OBG*\n\n💿 *${title}*\n👤 *${artist}*\n🏛️ Origen: Intercambio con Comunidad\n\n🔗 Ver en el archivo:\n${url}`;
+                                                        }
+
+                                                        navigator.clipboard.writeText(text);
+                                                        alert(`${plat.label} copiado`);
+                                                    }}
+                                                    className="w-full flex items-center justify-between bg-white/5 border border-white/5 hover:border-primary/40 p-4 rounded-2xl transition-all group"
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="text-lg">{plat.icon}</span>
+                                                        <span className="text-[10px] font-black text-white uppercase tracking-widest">{plat.label}</span>
+                                                    </div>
+                                                    <Copy className="w-3 h-3 text-gray-500 group-hover:text-primary transition-colors" />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

@@ -14,8 +14,10 @@ import {
     FileText,
     Users,
     Save,
-    X
+    X,
+    Sparkles
 } from "lucide-react";
+import { SocialCardGenerator } from "@/components/Social/SocialCardGenerator";
 import { motion, AnimatePresence } from "framer-motion";
 import { DriveUpload } from "@/components/Admin/DriveUpload";
 import { TEXTS } from "@/constants/texts";
@@ -469,6 +471,73 @@ export default function EditorialManager() {
                                         </div>
                                     </div>
                                 </div>
+
+                                {/* Propaganda Suite V6.0 */}
+                                {currentArticle?.id && (
+                                    <div className="space-y-6 pt-10 border-t border-white/5">
+                                        <div className="flex items-center gap-2">
+                                            <Sparkles className="w-4 h-4 text-primary" />
+                                            <h3 className="text-[10px] font-black text-white uppercase tracking-widest">Protocolo de Propaganda V6.0</h3>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                            <div className="space-y-4">
+                                                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-4">Generador de Activos</label>
+                                                <SocialCardGenerator
+                                                    item={{
+                                                        id: currentArticle.id,
+                                                        title: currentArticle.title || 'Untitled',
+                                                        artist: 'OBG BUNKER',
+                                                        image: currentArticle.image || '',
+                                                        source: 'editorial'
+                                                    }}
+                                                    type="article"
+                                                />
+                                            </div>
+
+                                            <div className="space-y-4">
+                                                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-4">Social Snippets (Clipboard)</label>
+                                                <div className="grid grid-cols-1 gap-3">
+                                                    {[
+                                                        { id: 'instagram', label: 'Copy Instagram', icon: '📸' },
+                                                        { id: 'x', label: 'Copy X / Thread', icon: '🐦' },
+                                                        { id: 'tiktok', label: 'Copy TikTok Script', icon: '🎵' },
+                                                        { id: 'whatsapp', label: 'Copy WA Summary', icon: '💬' }
+                                                    ].map((plat) => (
+                                                        <Button
+                                                            key={plat.id}
+                                                            type="button"
+                                                            variant="outline"
+                                                            onClick={() => {
+                                                                let text = "";
+                                                                const baseUrl = 'https://www.oldiebutgoldie.com.ar';
+                                                                const url = `${baseUrl}/comunidad/${currentArticle.id}?ref=social_${plat.id}`;
+                                                                const tags = currentArticle.tags_entidades?.map(t => `#${t.replace(/\s+/g, '')}`).join(' ') || '#Vinyl #Bunker';
+
+                                                                if (plat.id === 'instagram') {
+                                                                    text = `🔥 NUEVO DESPACHO: ${currentArticle.title}\n\n${currentArticle.ai_summary || currentArticle.excerpt}\n\nLee la nota completa en el Búnker ⚡\n\n🔗 Link en Bio / Stories\n\n${tags} #OBGBunker`;
+                                                                } else if (plat.id === 'x') {
+                                                                    text = `🚨 [INTEL DISPATCH] ${currentArticle.title}\n\n${currentArticle.ai_summary?.slice(0, 150) || currentArticle.excerpt}\n\nLee el reporte completo acá 👇\n\n${url}`;
+                                                                } else if (plat.id === 'tiktok') {
+                                                                    text = `[Script Narrativo]\n(Intro) ¿Conocías la historia detrás de ${currentArticle.title}?\n(Desarrollo) ${currentArticle.ai_summary?.slice(0, 200) || currentArticle.excerpt}\n(CTA) Si sos coleccionista, tenés que leer esto. Seguime para más info. Link en comentarios.`;
+                                                                } else if (plat.id === 'whatsapp') {
+                                                                    text = `*REPORT [${currentArticle.category}]*\n\n*${currentArticle.title}*\n\n${currentArticle.excerpt}\n\n🔗 Lee más en el Búnker:\n${url}`;
+                                                                }
+
+                                                                navigator.clipboard.writeText(text);
+                                                                alert(`${plat.label} copiado al portapapelas`);
+                                                            }}
+                                                            className="justify-start bg-white/5 border-white/5 hover:border-primary/30 h-10 px-4 rounded-xl text-[10px] font-bold uppercase tracking-widest gap-3"
+                                                        >
+                                                            <span>{plat.icon}</span>
+                                                            {plat.label}
+                                                        </Button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
 
                                 <div className="p-10 border-t border-white/5 bg-black/40 -mx-10 -mb-10 flex justify-end gap-4">
                                     <Button type="button" variant="ghost" onClick={() => setIsEditing(false)} className="text-gray-500 hover:text-white font-bold h-14 px-8 rounded-2xl">

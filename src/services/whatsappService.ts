@@ -31,5 +31,19 @@ export const whatsappService = {
     generateAcceptDealLink: (orderId: string) => {
         const message = `Hola! Acepté el trato por el lote ${orderId}. Coordinemos el pago y el envío. Link: ${WHATSAPP_CONFIG.baseUrl}/orden/${orderId}?ref=wa`;
         return `https://wa.me/${WHATSAPP_CONFIG.phoneNumber}?text=${encodeURIComponent(message)}`;
+    },
+
+    shareSummary: (item: any) => {
+        const url = `${WHATSAPP_CONFIG.baseUrl}/archivo/${item.id}?ref=social_wa`;
+        const artist = item.artist || item.metadata?.artist || 'Unknown';
+        const title = item.title || item.metadata?.title || 'Unknown';
+
+        return `*FICHA TÉCNICA - OLDIE BUT GOLDIE*\n\n` +
+            `💿 *${title}*\n` +
+            `👤 *${artist}*\n` +
+            `📅 Año: ${item.year || item.metadata?.year || 'N/A'}\n` +
+            `✨ Condición: ${item.condition || item.logistics?.condition || 'N/A'}\n` +
+            `📦 Formato: ${item.format || item.metadata?.format_description || 'Vinilo'}\n\n` +
+            `🔗 Ver más detalles:\n${url}`;
     }
 };

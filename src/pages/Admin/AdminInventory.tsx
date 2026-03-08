@@ -16,8 +16,12 @@ import {
     PlusCircle,
     LayoutGrid,
     Search as SearchIcon,
-    Trash2
+    Trash2,
+    Sparkles,
+    Copy,
+    Share2
 } from "lucide-react";
+import { SocialCardGenerator } from "@/components/Social/SocialCardGenerator";
 import { inventoryService } from "@/services/inventoryService";
 import { discogsService } from "@/lib/discogs";
 import type { InventoryItem } from "@/types/inventory";
@@ -34,6 +38,7 @@ export default function AdminInventory() {
     const [filter, setFilter] = useState<"all" | "low_stock" | "sold_out">("all");
     const [auditStats, setAuditStats] = useState<any>(null);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const [marketingItem, setMarketingItem] = useState<InventoryItem | null>(null);
 
     // Ingestion Modal State
     const [showIngestionModal, setShowIngestionModal] = useState(false);
@@ -478,6 +483,13 @@ export default function AdminInventory() {
                                                 >
                                                     <Trash2 className="h-4 w-4" />
                                                 </button>
+                                                <button
+                                                    onClick={() => setMarketingItem(item)}
+                                                    className="p-3 bg-white/5 text-primary rounded-2xl hover:bg-primary/10 transition-all opacity-0 group-hover:opacity-100"
+                                                    title="Propaganda V6.0"
+                                                >
+                                                    <Sparkles className="h-4 w-4" />
+                                                </button>
                                             </div>
                                         )}
                                     </td>
@@ -611,6 +623,99 @@ export default function AdminInventory() {
                                     </button>
                                 </div>
                             )}
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Propaganda Modal V6.0 */}
+            <AnimatePresence>
+                {marketingItem && (
+                    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 bg-black/95 backdrop-blur-xl"
+                            onClick={() => setMarketingItem(null)}
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 30 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 30 }}
+                            className="relative w-full max-w-2xl bg-[#0a0a0a] border border-white/10 rounded-[3rem] overflow-hidden"
+                        >
+                            <div className="p-10 border-b border-white/5 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <Sparkles className="w-6 h-6 text-primary" />
+                                    <h3 className="text-2xl font-black text-white uppercase tracking-tight">Propaganda: {marketingItem.metadata.title}</h3>
+                                </div>
+                                <button onClick={() => setMarketingItem(null)} className="text-gray-500 hover:text-white transition-colors">
+                                    <X className="w-8 h-8" />
+                                </button>
+                            </div>
+
+                            <div className="p-10 space-y-10">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                                    <div className="space-y-4">
+                                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-4">Generador de Social Card (9:16)</label>
+                                        <SocialCardGenerator
+                                            item={{
+                                                id: marketingItem.id,
+                                                title: marketingItem.metadata.title,
+                                                artist: marketingItem.metadata.artist,
+                                                image: marketingItem.media.full_res_image_url || marketingItem.media.thumbnail,
+                                                source: 'inventory',
+                                                condition: marketingItem.logistics.condition,
+                                                price: marketingItem.logistics.price
+                                            }}
+                                            type="release"
+                                        />
+                                        <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest text-center">Optimizado para Instagram Stories y TikTok</p>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-4">Viral Snippets (Clipboard)</label>
+                                        <div className="space-y-3">
+                                            {[
+                                                { id: 'instagram', label: 'Copy Instagram', icon: '📸' },
+                                                { id: 'x', label: 'Copy X / Thread', icon: '🐦' },
+                                                { id: 'tiktok', label: 'Copy TikTok Script', icon: '🎵' },
+                                                { id: 'whatsapp', label: 'Copy Technical Data', icon: '💬' }
+                                            ].map((plat) => (
+                                                <button
+                                                    key={plat.id}
+                                                    onClick={() => {
+                                                        const baseUrl = 'https://www.oldiebutgoldie.com.ar';
+                                                        const url = `${baseUrl}/archivo/${marketingItem.id}?ref=social_${plat.id}`;
+                                                        let text = "";
+
+                                                        if (plat.id === 'instagram') {
+                                                            text = `🔥 DISPONIBLE EN EL BÚNKAR: ${marketingItem.metadata.artist} - ${marketingItem.metadata.title}\n\nCondición: ${marketingItem.logistics.condition}\nPrecio: $${marketingItem.logistics.price.toLocaleString()}\n\n🔗 Link en Bio / Stories para comprar\n\n#OldieButGoldie #VinylCollection #Vinilos #BunkerOBG`;
+                                                        } else if (plat.id === 'x') {
+                                                            text = `🚨 [INVENTORY ALERT] ${marketingItem.metadata.artist} - ${marketingItem.metadata.title}\n\nCondición: ${marketingItem.logistics.condition}\nStock: ${marketingItem.logistics.stock}\n\nConseguilo acá antes que vuele 👇\n\n${url}`;
+                                                        } else if (plat.id === 'tiktok') {
+                                                            text = `[Viral Script]\n(Intro) Escuchá el sonido de esta joya: ${marketingItem.metadata.title}.\n(Body) Tenemos una copia en estado ${marketingItem.logistics.condition} disponible ahora.\n(CTA) No te duermas. Link en el perfil.`;
+                                                        } else if (plat.id === 'whatsapp') {
+                                                            text = `*FICHA TÉCNICA - OLDIE BUT GOLDIE*\n\n💿 *${marketingItem.metadata.title}*\n👤 *${marketingItem.metadata.artist}*\n✨ Condición: ${marketingItem.logistics.condition}\n💰 Precio: $${marketingItem.logistics.price.toLocaleString()}\n📦 Stock: ${marketingItem.logistics.stock}\n\n🔗 Ver más:\n${url}`;
+                                                        }
+
+                                                        navigator.clipboard.writeText(text);
+                                                        alert(`${plat.label} copiado`);
+                                                    }}
+                                                    className="w-full flex items-center justify-between bg-white/5 border border-white/5 hover:border-primary/40 p-4 rounded-2xl transition-all group"
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="text-lg">{plat.icon}</span>
+                                                        <span className="text-[10px] font-black text-white uppercase tracking-widest">{plat.label}</span>
+                                                    </div>
+                                                    <Copy className="w-3 h-3 text-gray-500 group-hover:text-primary transition-colors" />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </motion.div>
                     </div>
                 )}
