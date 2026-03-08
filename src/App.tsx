@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
+import { Routes, Route, Outlet } from "react-router-dom";
 import { motion } from "framer-motion";
 import * as Sentry from "@sentry/react";
 import ErrorFallback from "@/components/ui/ErrorFallback";
@@ -122,7 +122,7 @@ function AppContent() {
   }, []);
 
   return (
-    <BrowserRouter>
+    <>
       <LoadingOverlay />
       <FloatingCartCounter />
       <Suspense fallback={<LoadingOverlay />}>
@@ -183,7 +183,7 @@ function AppContent() {
         </Routes>
       </Suspense>
       <EnergyModeIndicator />
-    </BrowserRouter>
+    </>
   );
 }
 

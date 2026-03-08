@@ -26,13 +26,16 @@ if (import.meta.env.PROD) {
 }
 
 import { HealthProvider } from './context/HealthContext';
+import { BrowserRouter } from 'react-router-dom';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <HelmetProvider>
-      <HealthProvider>
-        <App />
-      </HealthProvider>
-    </HelmetProvider>
+    <BrowserRouter>
+      <HelmetProvider>
+        <HealthProvider>
+          <App />
+        </HealthProvider>
+      </HelmetProvider>
+    </BrowserRouter>
   </StrictMode>,
 )
