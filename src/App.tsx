@@ -1,4 +1,6 @@
 import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
+import * as Sentry from "@sentry/react";
+import ErrorFallback from "@/components/ui/ErrorFallback";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -54,8 +56,21 @@ const queryClient = new QueryClient({
 });
 
 function AppContent() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
   const [siteConfig, setSiteConfig] = useState<any>(null);
+
+  // Sync User context with Sentry
+  useEffect(() => {
+    if (user) {
+      Sentry.setUser({
+        id: user.uid,
+        username: (user as any).displayName || 'Anonymous',
+        // Redacting sensitive info like email if needed, but Firebase User usually safe
+      });
+    } else {
+      Sentry.setUser(null);
+    }
+  }, [user]);
 
   // Real-time Config sync
   useEffect(() => {
@@ -149,7 +164,11 @@ function App() {
         <AuthProvider>
           <TelemetryProvider>
             <LoteProvider>
-              <AppContent />
+              <Sentry.ErrorBoundary fallback={({ error, resetError, eventId }) => (
+                <ErrorFallback error={error as any} resetErrorBoundary={resetError} eventId={eventId} />
+              )}>
+                <AppContent />
+              </Sentry.ErrorBoundary>
               <Analytics />
               <SpeedInsights />
             </LoteProvider>
