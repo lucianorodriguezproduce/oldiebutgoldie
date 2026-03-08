@@ -48,17 +48,18 @@ export default function Archivo() {
                     </p>
                 </header>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
+                <div className="columns-2 md:columns-4 lg:columns-5 gap-4 md:gap-6 space-y-4 md:space-y-6">
                     {items.map((item, idx) => (
                         <motion.div
                             key={`${item.id}-${idx}`}
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: (idx % 10) * 0.05 }}
+                            className="break-inside-avoid mb-4 md:mb-6"
                         >
                             <Link
                                 to={`/archivo/${item.id}`}
-                                className="group block bg-white/5 rounded-2xl overflow-hidden border border-white/10 hover:border-primary/30 transition-all"
+                                className="group block bg-white/5 rounded-2xl md:rounded-[2rem] overflow-hidden border border-white/10 hover:border-primary/30 transition-all shadow-2xl shadow-black/50"
                             >
                                 <div className="aspect-square relative overflow-hidden">
                                     <LazyImage
@@ -66,39 +67,50 @@ export default function Archivo() {
                                         alt={item.title}
                                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                                     />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent opacity-60 group-hover:opacity-100 transition-opacity" />
 
                                     {item.source === 'inventory' ? (
-                                        <div className="absolute top-3 right-3 px-2 py-1 bg-primary text-black text-[10px] font-black uppercase tracking-widest rounded-md">
-                                            Stock
+                                        <div className="absolute top-3 right-3 px-3 py-1.5 bg-primary text-black text-[9px] font-black uppercase tracking-widest rounded-full shadow-lg border border-primary/20">
+                                            DISPONIBLE EN TIENDA
                                         </div>
                                     ) : (
-                                        <div className="absolute top-3 right-3 px-2 py-1 bg-white/20 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-widest rounded-md border border-white/20">
-                                            Comunidad
+                                        <div className="absolute top-3 right-3 px-3 py-1.5 bg-white/10 backdrop-blur-md text-white/90 text-[9px] font-black uppercase tracking-widest rounded-full border border-white/20 shadow-lg">
+                                            COLECCIÓN PRIVADA
                                         </div>
                                     )}
                                 </div>
-                                <div className="p-4">
-                                    <h3 className="text-white font-bold text-sm truncate uppercase tracking-tight mb-1 group-hover:text-primary transition-colors">
+                                <div className="p-4 md:p-5">
+                                    <h3 className="text-white font-display font-black text-sm md:text-md truncate uppercase tracking-tight mb-1 group-hover:text-primary transition-colors">
                                         {item.title}
                                     </h3>
-                                    <p className="text-gray-500 text-[10px] font-mono truncate uppercase tracking-widest">
+                                    <p className="text-gray-500 text-[10px] font-mono truncate uppercase tracking-widest opacity-70">
                                         {item.artist}
                                     </p>
                                 </div>
                             </Link>
                         </motion.div>
                     ))}
+
+                    {loading && Array.from({ length: 10 }).map((_, i) => (
+                        <div key={`skeleton-${i}`} className="break-inside-avoid mb-6">
+                            <div className="space-y-4">
+                                <div className="aspect-square rounded-[2rem] bg-white/5 animate-pulse border border-white/5" />
+                                <div className="space-y-2 px-2">
+                                    <div className="h-4 w-3/4 bg-white/5 rounded-full animate-pulse" />
+                                    <div className="h-3 w-1/2 bg-white/5 rounded-full animate-pulse opacity-50" />
+                                </div>
+                            </div>
+                        </div>
+                    ))}
                 </div>
 
-                {hasMore && (
-                    <div className="mt-16 flex justify-center">
+                {hasMore && !loading && (
+                    <div className="mt-20 flex justify-center pb-10">
                         <button
                             onClick={loadMore}
-                            disabled={loading}
-                            className="px-8 py-4 bg-white/5 hover:bg-white/10 text-white rounded-xl border border-white/10 text-xs font-black uppercase tracking-[0.2em] transition-all disabled:opacity-50"
+                            className="px-10 py-5 bg-white/5 hover:bg-white/10 text-white rounded-2xl border border-white/10 text-[10px] font-black uppercase tracking-[0.3em] transition-all hover:scale-105 active:scale-95 shadow-xl shadow-black/40"
                         >
-                            {loading ? "Cargando..." : "Cargar más discos"}
+                            Explorar más del búnker
                         </button>
                     </div>
                 )}

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Disc, Calendar, MapPin, Tag, Square, Zap, HelpCircle } from "lucide-react";
+import { ArrowLeft, Disc, Calendar, MapPin, Tag, Square, Zap, Layers } from "lucide-react";
 import { archivoService, type UnifiedItem } from "@/services/archivoService";
 import { LazyImage } from "@/components/ui/LazyImage";
 import { SEO } from "@/components/SEO";
@@ -53,10 +53,33 @@ export default function ArchivoItem() {
     return (
         <div className="min-h-screen bg-black pt-28 pb-20 px-6">
             <SEO
-                title={`Vinilo ${item.artist} - ${item.title} (${item.condition || 'N/A'}) | Oldie But Goldie`}
-                description={`Encontrá ${item.title} de ${item.artist} en el búnker. Formato: ${item.format}. Estado: ${item.condition}. Explorá el catálogo histórico de Oldie But Goldie.`}
+                title={`${item.artist} - ${item.title} | Archivo Sonoro Oldie But Goldie`}
+                description={`Explorá ${item.title} de ${item.artist} en nuestro archivo cultural. Formato: ${item.format}. Estado: ${item.condition}.`}
                 image={item.image}
             />
+
+            {/* JSON-LD Product Schema */}
+            <script type="application/ld+json">
+                {JSON.stringify({
+                    "@context": "https://schema.org/",
+                    "@type": "Product",
+                    "name": `${item.artist} - ${item.title}`,
+                    "image": item.image,
+                    "description": `Pieza de colección: ${item.title} por ${item.artist}. Disponible en el archivo de Oldie But Goldie.`,
+                    "brand": {
+                        "@type": "Brand",
+                        "name": "Oldie But Goldie"
+                    },
+                    "offers": {
+                        "@type": "Offer",
+                        "url": window.location.href,
+                        "priceCurrency": "ARS",
+                        "price": item.price || item.valuation || 0,
+                        "itemCondition": "https://schema.org/UsedCondition",
+                        "availability": item.source === 'inventory' ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
+                    }
+                })}
+            </script>
 
             <div className="max-w-6xl mx-auto">
                 <button
@@ -73,7 +96,7 @@ export default function ArchivoItem() {
                         animate={{ opacity: 1, x: 0 }}
                         className="relative"
                     >
-                        <div className="aspect-square rounded-3xl overflow-hidden border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+                        <div className="aspect-square rounded-3xl overflow-hidden border border-white/10 shadow-[0_0_80px_rgba(0,0,0,0.8)]">
                             <LazyImage
                                 src={item.image}
                                 alt={item.title}
@@ -89,68 +112,84 @@ export default function ArchivoItem() {
                     >
                         <div className="mb-8">
                             <div className="flex items-center gap-3 mb-4">
-                                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border ${item.source === 'inventory'
-                                    ? 'bg-primary/10 border-primary/20 text-primary'
-                                    : 'bg-white/10 border-white/20 text-white'
+                                <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.2em] border shadow-lg ${item.source === 'inventory'
+                                    ? 'bg-primary/20 border-primary/30 text-primary'
+                                    : 'bg-white/5 border-white/10 text-gray-300'
                                     }`}>
-                                    {item.source === 'inventory' ? 'ITEM DISPONIBLE' : 'DISCO DE COMUNIDAD'}
+                                    {item.source === 'inventory' ? 'DISPONIBLE EN TIENDA' : 'COLECCIÓN PRIVADA'}
                                 </span>
                                 {item.format && (
-                                    <span className="text-gray-500 font-mono text-[10px] uppercase tracking-widest flex items-center gap-2">
-                                        <Disc className="w-3 h-3" />
+                                    <span className="text-gray-500 font-mono text-[9px] uppercase tracking-widest flex items-center gap-2 opacity-60">
+                                        <Disc className="w-3.5 h-3.5" />
                                         {item.format}
                                     </span>
                                 )}
                             </div>
 
-                            <h1 className="text-5xl md:text-6xl font-display font-black text-white uppercase tracking-tighter mb-2 leading-none">
+                            <h1 className="text-5xl md:text-7xl font-display font-black text-white uppercase tracking-tighter mb-2 leading-[0.9]">
                                 {item.title}
                             </h1>
-                            <p className="text-2xl text-gray-500 font-display uppercase tracking-tight">
+                            <p className="text-2xl md:text-3xl text-gray-500 font-display uppercase tracking-tight opacity-80">
                                 {item.artist}
                             </p>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-6 mb-12 py-8 border-y border-white/10">
+                        <div className="grid grid-cols-2 gap-6 mb-12 py-10 border-y border-white/5">
                             <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/10">
-                                    <Calendar className="w-5 h-5 text-gray-400" />
+                                <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10">
+                                    <Calendar className="w-6 h-6 text-gray-400" />
                                 </div>
                                 <div>
-                                    <p className="text-gray-600 text-[8px] uppercase tracking-widest mb-1">Año</p>
+                                    <p className="text-gray-600 text-[9px] uppercase tracking-widest font-bold mb-1">Prensado</p>
                                     <p className="text-white font-mono text-sm">{item.year || "N/A"}</p>
                                 </div>
                             </div>
 
                             <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/10">
-                                    <Tag className="w-5 h-5 text-gray-400" />
+                                <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10">
+                                    <Tag className="w-6 h-6 text-gray-400" />
                                 </div>
                                 <div>
-                                    <p className="text-gray-600 text-[8px] uppercase tracking-widest mb-1">Género</p>
-                                    <p className="text-white font-mono text-xs truncate max-w-[120px]">
+                                    <p className="text-gray-600 text-[9px] uppercase tracking-widest font-bold mb-1">Etiquetas</p>
+                                    <p className="text-white font-mono text-xs truncate max-w-[150px]">
                                         {item.genres?.join(", ") || "N/A"}
                                     </p>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Regla de Dos Interacciones (The Funnel) */}
+                        {/* Smart CTA Loop (Museum to Conversion Funnel) */}
                         <div className="space-y-4">
-                            <Link
-                                to="/"
-                                className="group flex items-center justify-between w-full px-8 py-5 bg-primary text-black rounded-2xl font-black uppercase text-sm tracking-widest shadow-[0_0_40px_rgba(204,255,0,0.1)] hover:scale-[1.02] transition-all"
-                            >
-                                <span>Comprá vendé o intercambiá en OBG</span>
-                                <Zap className="w-5 h-5 fill-black group-hover:rotate-12 transition-transform" />
-                            </Link>
+                            {item.source === 'inventory' ? (
+                                <Link
+                                    to={`/?add=${item.id}`}
+                                    className="group flex items-center justify-between w-full px-10 py-6 bg-primary text-black rounded-2xl font-black uppercase text-sm tracking-widest shadow-[0_0_50px_rgba(204,255,0,0.2)] hover:scale-[1.02] transition-all hover:bg-white"
+                                >
+                                    <div className="flex flex-col items-start">
+                                        <span className="text-[10px] opacity-60 leading-none mb-1">STOCK DISPONIBLE</span>
+                                        <span>AGREGAR AL CARRITO</span>
+                                    </div>
+                                    <Zap className="w-6 h-6 fill-black group-hover:rotate-12 transition-transform" />
+                                </Link>
+                            ) : (
+                                <Link
+                                    to="/"
+                                    className="group flex items-center justify-between w-full px-10 py-6 bg-white/10 text-white rounded-2xl font-black uppercase text-sm tracking-widest border border-white/10 hover:border-primary/50 hover:bg-primary/5 transition-all hover:scale-[1.02]"
+                                >
+                                    <div className="flex flex-col items-start">
+                                        <span className="text-[10px] text-primary leading-none mb-1">PIEZA DE COMUNIDAD</span>
+                                        <span>TENGO UNO IGUAL / TRADE</span>
+                                    </div>
+                                    <Layers className="w-6 h-6 text-primary group-hover:scale-110 transition-transform" />
+                                </Link>
+                            )}
 
                             <Link
-                                to="/guias"
-                                className="flex items-center justify-center gap-2 w-full px-8 py-5 bg-white/5 text-white/50 hover:text-white rounded-2xl font-bold uppercase text-xs tracking-widest border border-white/5 hover:border-white/10 transition-all"
+                                to="/tienda"
+                                className="flex items-center justify-center gap-2 w-full px-8 py-5 bg-transparent text-gray-500 hover:text-white rounded-2xl font-bold uppercase text-[10px] tracking-[0.2em] border border-white/5 hover:border-white/20 transition-all"
                             >
-                                <HelpCircle className="w-4 h-4" />
-                                ¿Cómo operar con Oldie But Goldie?
+                                <ArrowLeft className="w-3.5 h-3.5" />
+                                Continuar explorando el catálogo
                             </Link>
                         </div>
                     </motion.div>
