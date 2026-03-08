@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback, memo } from "react";
 import { TEXTS } from "@/constants/texts";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { LazyImage } from "@/components/ui/LazyImage";
@@ -27,7 +27,6 @@ import { userAssetService } from "@/services/userAssetService";
 import { useHealth } from "@/context/HealthContext";
 import { ADMIN_UID } from "@/constants/admin";
 import { CompactSearchCard } from "@/components/ui/CompactSearchCard";
-import React, { memo } from "react";
 import { CardSkeleton } from "@/components/ui/Skeleton";
 import ItemConfigModal from "@/components/discogs/ItemConfigModal";
 import type { BatchItem } from "@/context/LoteContext";
@@ -554,7 +553,7 @@ export default function Home() {
         fetchRecommendations();
     }, [selectedItem]);
 
-    const handleResetSelection = () => {
+    const handleResetSelection = useCallback(() => {
         setSelectedItem(null);
         setQuery("");
         setFormat(null);
@@ -573,7 +572,7 @@ export default function Home() {
         if (routeId) {
             navigate('/', { replace: true });
         }
-    };
+    }, [routeId, navigate]);
 
     const handleShare = async () => {
         if (!selectedItem) return;

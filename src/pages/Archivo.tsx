@@ -1,10 +1,54 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Search, ChevronRight, Disc, Layers } from "lucide-react";
 import { archivoService, type UnifiedItem } from "@/services/archivoService";
 import { LazyImage } from "@/components/ui/LazyImage";
 import { SEO } from "@/components/SEO";
+
+const ArchivoItemCard = memo(({ item, idx }: { item: UnifiedItem, idx: number }) => (
+    <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: (idx % 10) * 0.05 }}
+        className="break-inside-avoid mb-4 md:mb-6"
+    >
+        <Link
+            to={`/archivo/${item.id}`}
+            className="group block bg-white/5 rounded-2xl md:rounded-[2rem] overflow-hidden border border-white/10 hover:border-primary/30 transition-all shadow-2xl shadow-black/50"
+        >
+            <div className="aspect-square relative overflow-hidden">
+                <LazyImage
+                    src={item.image}
+                    alt={item.title}
+                    priority={idx < 4}
+                    width={300}
+                    height={300}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent opacity-60 group-hover:opacity-100 transition-opacity" />
+
+                {item.source === 'inventory' ? (
+                    <div className="absolute top-3 right-3 px-3 py-1.5 bg-primary text-black text-[9px] font-black uppercase tracking-widest rounded-full shadow-lg border border-primary/20">
+                        DISPONIBLE EN TIENDA
+                    </div>
+                ) : (
+                    <div className="absolute top-3 right-3 px-3 py-1.5 bg-white/10 backdrop-blur-md text-white/90 text-[9px] font-black uppercase tracking-widest rounded-full border border-white/20 shadow-lg">
+                        COLECCIÓN PRIVADA
+                    </div>
+                )}
+            </div>
+            <div className="p-4 md:p-5">
+                <h3 className="text-white font-display font-black text-sm md:text-md truncate uppercase tracking-tight mb-1 group-hover:text-primary transition-colors">
+                    {item.title}
+                </h3>
+                <p className="text-gray-500 text-[10px] font-mono truncate uppercase tracking-widest opacity-70">
+                    {item.artist}
+                </p>
+            </div>
+        </Link>
+    </motion.div>
+));
 
 export default function Archivo() {
     const [items, setItems] = useState<UnifiedItem[]>([]);
@@ -64,45 +108,7 @@ export default function Archivo() {
 
                 <div className="columns-2 md:columns-4 lg:columns-5 gap-4 md:gap-6 space-y-4 md:space-y-6">
                     {items.map((item, idx) => (
-                        <motion.div
-                            key={`${item.id}-${idx}`}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: (idx % 10) * 0.05 }}
-                            className="break-inside-avoid mb-4 md:mb-6"
-                        >
-                            <Link
-                                to={`/archivo/${item.id}`}
-                                className="group block bg-white/5 rounded-2xl md:rounded-[2rem] overflow-hidden border border-white/10 hover:border-primary/30 transition-all shadow-2xl shadow-black/50"
-                            >
-                                <div className="aspect-square relative overflow-hidden">
-                                    <LazyImage
-                                        src={item.image}
-                                        alt={item.title}
-                                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                                    />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent opacity-60 group-hover:opacity-100 transition-opacity" />
-
-                                    {item.source === 'inventory' ? (
-                                        <div className="absolute top-3 right-3 px-3 py-1.5 bg-primary text-black text-[9px] font-black uppercase tracking-widest rounded-full shadow-lg border border-primary/20">
-                                            DISPONIBLE EN TIENDA
-                                        </div>
-                                    ) : (
-                                        <div className="absolute top-3 right-3 px-3 py-1.5 bg-white/10 backdrop-blur-md text-white/90 text-[9px] font-black uppercase tracking-widest rounded-full border border-white/20 shadow-lg">
-                                            COLECCIÓN PRIVADA
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="p-4 md:p-5">
-                                    <h3 className="text-white font-display font-black text-sm md:text-md truncate uppercase tracking-tight mb-1 group-hover:text-primary transition-colors">
-                                        {item.title}
-                                    </h3>
-                                    <p className="text-gray-500 text-[10px] font-mono truncate uppercase tracking-widest opacity-70">
-                                        {item.artist}
-                                    </p>
-                                </div>
-                            </Link>
-                        </motion.div>
+                        <ArchivoItemCard key={`${item.id}-${idx}`} item={item} idx={idx} />
                     ))}
 
                     {loading && Array.from({ length: 10 }).map((_, i) => (

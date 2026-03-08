@@ -9,11 +9,27 @@ interface LazyImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
     className?: string;
     containerClassName?: string;
     aspectRatio?: string;
+    priority?: boolean;
+    width?: number | string;
+    height?: number | string;
 }
 
-export function LazyImage({ src, alt, className, containerClassName, aspectRatio = '1/1', ...props }: LazyImageProps) {
+export function LazyImage({
+    src,
+    alt,
+    className,
+    containerClassName,
+    aspectRatio = '1/1',
+    priority = false,
+    width,
+    height,
+    ...props
+}: LazyImageProps) {
     const [loaded, setLoaded] = useState(false);
     const [error, setError] = useState(false);
+
+    // Optimized Image formats are usually handled by the source (Firebase/Discogs CDN)
+    // but we ensure the HTML handles it correctly.
 
     return (
         <div
@@ -33,6 +49,10 @@ export function LazyImage({ src, alt, className, containerClassName, aspectRatio
                 <img
                     src={src}
                     alt={alt}
+                    width={width}
+                    height={height}
+                    fetchPriority={priority ? "high" : "auto"}
+                    loading={priority ? "eager" : "lazy"}
                     className={cn(
                         "transition-all duration-700 ease-out",
                         loaded ? "opacity-100 scale-100" : "opacity-0 scale-105",
@@ -43,7 +63,6 @@ export function LazyImage({ src, alt, className, containerClassName, aspectRatio
                         setError(true);
                         setLoaded(false);
                     }}
-                    loading="lazy"
                     {...props}
                 />
             )}
