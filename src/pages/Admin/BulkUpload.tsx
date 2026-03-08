@@ -33,8 +33,6 @@ interface ParsedRow {
     originalMedia: string;
     originalCover: string;
     originalFormat: string;
-    originalYoutube?: string;
-    originalNotes?: string;
     status: ProcessingStatus;
     results: DiscogsSearchResult[];
     selectedMatch: DiscogsSearchResult | null;
@@ -275,8 +273,6 @@ export default function BulkUpload() {
         return { artist, title };
     };
 
-
-
     const handlePublishStrategy = async () => {
         const batchItems = rows.filter(r => r.inBatch && r.status === "MATCH_FOUND" && r.selectedMatch && !r.published);
         if (batchItems.length === 0) return;
@@ -293,9 +289,7 @@ export default function BulkUpload() {
                     price: row.originalPrice,
                     condition: `${row.originalMedia} / ${row.originalCover}`,
                     format: row.originalFormat,
-                    thumb: row.selectedMatch!.thumb,
-                    youtube_id: row.originalYoutube || undefined,
-                    notes: row.originalNotes || undefined
+                    thumb: row.selectedMatch!.thumb
                 }));
 
                 await inventoryService.createBatch({
@@ -341,10 +335,6 @@ export default function BulkUpload() {
                         price: row.originalPrice,
                         condition: `${row.originalMedia} / ${row.originalCover}`,
                         status: "active"
-                    },
-                    {
-                        youtube_id: row.originalYoutube || undefined,
-                        notes: row.originalNotes || undefined
                     }
                 );
 

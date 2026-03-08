@@ -99,7 +99,7 @@ export const inventoryService = {
      * Clones a Discogs release and persists it into the local inventory.
      * This is the "batea Entry" process.
      */
-    async importFromDiscogs(discogsData: any, logistics: InventoryItem['logistics'], extraData?: Partial<InventoryItem>) {
+    async importFromDiscogs(discogsData: any, logistics: InventoryItem['logistics'], extraData?: { youtube_id?: string; notes?: string }) {
         const internalId = crypto.randomUUID();
 
         // 1. Resolve High-Res Image (via batea Import API)
