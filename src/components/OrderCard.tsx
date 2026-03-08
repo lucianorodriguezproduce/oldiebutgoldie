@@ -334,12 +334,12 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                         </h3>
                         {album && artist && (
                             <h4 className="text-sm font-bold text-gray-400 uppercase tracking-widest truncate mt-0.5 opacity-80">
-                                {isBatch ? `LOTE DE ${itemsFromHelper} DISCOS` : album}
+                                {isBatch ? `LOTE DE ${itemsFromHelper} ÍTEMS` : album}
                             </h4>
                         )}
                         {isBatch && !artist && (
                             <h4 className="text-sm font-bold text-gray-400 uppercase tracking-widest truncate mt-0.5 opacity-80">
-                                LOTE DE {itemsFromHelper} DISCOS
+                                LOTE DE {itemsFromHelper} ÍTEMS
                             </h4>
                         )}
                     </div>

@@ -5,7 +5,9 @@
 export const getCleanOrderMetadata = (order: any) => {
     if (!order) return { artist: '', album: '', format: 'Vinyl', condition: 'N/A', image: '', isBatch: false, itemsCount: 0 };
 
-    const items = Array.isArray(order.items) ? order.items : [];
+    const items = (Array.isArray(order.items) && order.items.length > 0)
+        ? order.items
+        : (Array.isArray(order.manifest?.items) ? order.manifest.items : []);
     const isBatch = items.length > 1;
 
     // Helper to clean "UNKNOWN ARTIST" prefixes
@@ -94,11 +96,11 @@ export const getCleanOrderMetadata = (order: any) => {
             artist = album.split(' - ')[0].trim();
             album = album.split(' - ').slice(1).join(' - ').trim();
         } else {
-            artist = isBatch ? "Varios Artistas" : "";
+            artist = isBatch ? "Lote de ítems" : "";
         }
     }
 
-    if (!album) album = isBatch ? `Lote de ${items.length} discos` : "Detalle del Disco";
+    if (!album) album = isBatch ? `Lote de ${items.length} ítems` : "Detalle del Disco";
 
     // 3. IMAGE EXTRACTION
     const image =
