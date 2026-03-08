@@ -57,7 +57,7 @@ export const archivoService = {
                     condition: data.logistics.condition,
                     tracklist: data.tracklist,
                     labels: data.labels,
-                    youtube_id: (data as any).youtube_id, // Soporte temporal o extendido
+                    youtube_id: (data as any).youtube_id, // TODO: Add to formal InventoryItem type in inventory.ts
                     notes: (data as any).notes
                 };
                 localStorage.setItem(cacheKey, JSON.stringify(result));
@@ -79,7 +79,7 @@ export const archivoService = {
                     genres: data.metadata.genres,
                     styles: data.metadata.styles,
                     format: data.metadata.format_description,
-                    condition: (data.metadata as any).condition || 'USADO',
+                    condition: data.metadata.isBatch ? 'MIXTO' : 'USADO',
                     tracklist: data.tracklist,
                     labels: data.labels,
                     youtube_id: (data as any).youtube_id,

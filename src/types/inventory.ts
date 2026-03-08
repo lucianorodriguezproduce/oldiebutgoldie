@@ -10,6 +10,8 @@ export interface InventoryItem {
         styles: string[];
         format_description: string;
         isBatch?: boolean;
+        youtube_id?: string;
+        notes?: string;
     };
     media: {
         thumbnail: string;

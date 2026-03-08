@@ -7,6 +7,9 @@ import { LazyImage } from "@/components/ui/LazyImage";
 import { SEO } from "@/components/SEO";
 import { useLoading } from "@/context/LoadingContext";
 import { QRCodeCanvas } from "qrcode.react";
+import { siteConfigService, type SiteConfig } from "@/services/siteConfigService";
+import { db } from "@/lib/firebase";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 
 export default function ArchivoItem() {
     const { id } = useParams();
@@ -14,12 +17,42 @@ export default function ArchivoItem() {
     const { showLoading, hideLoading } = useLoading();
     const [item, setItem] = useState<UnifiedItem | null>(null);
     const [notFound, setNotFound] = useState(false);
+    const [siteConfig, setSiteConfig] = useState<SiteConfig | null>(null);
+
+    // Track Intent Logic (V12.7)
+    const trackIntent = async (type: string) => {
+        if (!item) return;
+        try {
+            await addDoc(collection(db, "analytics_intents"), {
+                item_id: item.id,
+                action: type,
+                timestamp: serverTimestamp(),
+                source: 'archivo_detail'
+            });
+        } catch (e) {
+            console.warn("Analytics: Failed to track intent", e);
+        }
+    };
 
     useEffect(() => {
         if (!id) return;
 
+        // Fetch Site Config for Branding Sync
+        siteConfigService.getConfig().then(setSiteConfig);
+
         async function load() {
-            showLoading("Localizando pieza...");
+            // Instant SWR check to avoid flickering showLoading (V12.7)
+            const cacheKey = `obg_archivo_cache_item_${id}`;
+            const cached = localStorage.getItem(cacheKey);
+
+            if (!cached) {
+                showLoading("Localizando pieza...");
+            } else {
+                try {
+                    setItem(JSON.parse(cached));
+                } catch (e) { }
+            }
+
             try {
                 const data = await archivoService.getItemById(id!);
                 if (data) {
@@ -51,12 +84,15 @@ export default function ArchivoItem() {
 
     if (!item) return null;
 
+    const absoluteUrl = `${window.location.origin}${window.location.pathname}`;
+
     return (
         <div className="min-h-screen bg-black pt-28 pb-20 px-6">
             <SEO
                 title={`${item.artist} - ${item.title} | Archivo Sonoro Oldie But Goldie`}
                 description={`Explorá ${item.title} de ${item.artist} en nuestro archivo cultural. Formato: ${item.format}. Estado: ${item.condition}.`}
                 image={item.image}
+                url={absoluteUrl} // Canonical URL forced here (V12.7)
             />
 
             {/* JSON-LD Product Schema */}
@@ -73,7 +109,7 @@ export default function ArchivoItem() {
                     },
                     "offers": {
                         "@type": "Offer",
-                        "url": window.location.href,
+                        "url": absoluteUrl,
                         "priceCurrency": "ARS",
                         "price": item.price || item.valuation || 0,
                         "itemCondition": "https://schema.org/UsedCondition",
@@ -85,13 +121,13 @@ export default function ArchivoItem() {
             <div className="max-w-6xl mx-auto">
                 <button
                     onClick={() => navigate(-1)}
-                    className="flex items-center gap-2 text-gray-500 hover:text-white transition-colors font-mono text-[10px] uppercase tracking-widest mb-12"
+                    className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors font-mono text-[10px] uppercase tracking-widest mb-12"
                 >
                     <ArrowLeft className="w-4 h-4" />
                     Regresar
                 </button>
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
 
                     {/* Media Sidebar - Sticky */}
                     <motion.div
@@ -126,6 +162,7 @@ export default function ArchivoItem() {
                                         frameBorder="0"
                                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                                         allowFullScreen
+                                        loading="lazy" // SEO Performance (V12.7)
                                         className="absolute top-0 left-0 w-full h-full pointer-events-auto"
                                     ></iframe>
                                 </div>
@@ -137,7 +174,7 @@ export default function ArchivoItem() {
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="lg:col-span-4 flex flex-col pt-2 lg:pt-0"
+                        className="md:col-span-1 lg:col-span-4 flex flex-col pt-2 lg:pt-0"
                     >
                         {/* Header Minimal */}
                         <div className="mb-10">
@@ -186,10 +223,10 @@ export default function ArchivoItem() {
                                     {item.tracklist.map((track, i) => (
                                         <div key={i} className="flex items-center justify-between p-3 hover:bg-white/5 rounded-xl transition-colors border border-transparent hover:border-white/10 group">
                                             <div className="flex items-center gap-4">
-                                                <span className="font-mono text-[10px] text-zinc-600 group-hover:text-primary transition-colors min-w-[30px]">{track.position}</span>
+                                                <span className="font-mono text-[10px] text-zinc-500 group-hover:text-primary transition-colors min-w-[30px]">{track.position}</span>
                                                 <span className="text-sm text-zinc-300 group-hover:text-white transition-colors line-clamp-1">{track.title}</span>
                                             </div>
-                                            <span className="font-mono text-xs text-zinc-600">{track.duration}</span>
+                                            <span className="font-mono text-xs text-zinc-500">{track.duration}</span>
                                         </div>
                                     ))}
                                 </div>
@@ -215,7 +252,7 @@ export default function ArchivoItem() {
                     <motion.div
                         initial={{ opacity: 0, x: 20 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className="lg:col-span-4"
+                        className="md:col-span-1 lg:col-span-4"
                     >
                         <div className="p-6 rounded-3xl bg-zinc-900 border border-white/10 shadow-2xl relative overflow-hidden">
                             {/* Decorative Glow */}
@@ -235,6 +272,7 @@ export default function ArchivoItem() {
                                     {item.source === 'inventory' ? (
                                         <Link
                                             to={`/?add=${item.id}`}
+                                            onClick={() => trackIntent('add_to_cart')}
                                             className="group flex flex-col items-center justify-center w-full px-8 py-5 bg-primary text-black rounded-2xl hover:scale-[1.02] transition-all"
                                         >
                                             <span className="font-black uppercase text-sm tracking-widest mb-1 flex items-center gap-2">
@@ -246,6 +284,7 @@ export default function ArchivoItem() {
                                         <Link
                                             to="/trade/new"
                                             state={{ requestedItem: item }}
+                                            onClick={() => trackIntent('init_trade')}
                                             className="group flex flex-col items-center justify-center w-full px-8 py-5 bg-white text-black rounded-2xl hover:scale-[1.02] transition-all"
                                         >
                                             <span className="font-black uppercase text-sm tracking-widest mb-1 flex items-center gap-2">
@@ -291,14 +330,14 @@ export default function ArchivoItem() {
                             <div className="bg-white p-4 rounded-xl shadow-inner mb-6 border border-zinc-100 relative group">
                                 <QRCodeCanvas
                                     id="obg-qr-code"
-                                    value={window.location.href}
+                                    value={absoluteUrl}
                                     size={180}
                                     bgColor={"#ffffff"}
                                     fgColor={"#000000"}
                                     level={"H"}
                                     includeMargin={false}
                                     imageSettings={{
-                                        src: "/favicon.svg", // Reemplaza con tu icono si la resolución no rompe la legibilidad
+                                        src: siteConfig?.favicon?.url || "/favicon.svg", // Dynamic Branding Sync (V12.7)
                                         x: undefined,
                                         y: undefined,
                                         height: 40,
@@ -311,6 +350,7 @@ export default function ArchivoItem() {
 
                             <button
                                 onClick={() => {
+                                    trackIntent('download_qr');
                                     const canvas = document.getElementById("obg-qr-code") as HTMLCanvasElement;
                                     if (canvas) {
                                         const pngUrl = canvas

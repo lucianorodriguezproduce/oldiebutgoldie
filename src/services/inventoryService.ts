@@ -99,7 +99,7 @@ export const inventoryService = {
      * Clones a Discogs release and persists it into the local inventory.
      * This is the "batea Entry" process.
      */
-    async importFromDiscogs(discogsData: any, logistics: InventoryItem['logistics']) {
+    async importFromDiscogs(discogsData: any, logistics: InventoryItem['logistics'], extraData?: Partial<InventoryItem>) {
         const internalId = crypto.randomUUID();
 
         // 1. Resolve High-Res Image (via batea Import API)
@@ -153,6 +153,19 @@ export const inventoryService = {
         // Clean up "Unknown Artist" prefix if it slipped through
         if (parsedArtist.toLowerCase() === 'unknown artist') parsedArtist = "";
 
+        // Attempt to extract YouTube ID from Discogs data
+        let discogsYoutubeId = "";
+        if (discogsData.videos && Array.isArray(discogsData.videos) && discogsData.videos.length > 0) {
+            for (const video of discogsData.videos) {
+                if (video.uri && video.uri.includes('youtube.com/watch?v=')) {
+                    discogsYoutubeId = video.uri.split('v=')[1]?.split('&')[0];
+                    if (discogsYoutubeId) break;
+                }
+            }
+        }
+
+        const finalYoutubeId = extraData?.youtube_id || discogsYoutubeId;
+
         const newItem: InventoryItem = {
             id: internalId,
             metadata: {
@@ -165,7 +178,9 @@ export const inventoryService = {
                 styles: discogsData.styles || [],
                 format_description: Array.isArray(discogsData.formats)
                     ? discogsData.formats.map((f: any) => f.name).join(", ")
-                    : discogsData.format || "Unknown Format"
+                    : discogsData.format || "Unknown Format",
+                ...(finalYoutubeId && { youtube_id: finalYoutubeId }),
+                ...(extraData?.notes && { notes: extraData.notes })
             },
             media: {
                 thumbnail: discogsData.thumb || "",

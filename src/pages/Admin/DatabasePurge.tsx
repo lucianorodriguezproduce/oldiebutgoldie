@@ -19,8 +19,12 @@ export default function DatabasePurge() {
         const newResults: { [key: string]: number } = {};
 
         try {
-            // 1. BORRADO TOTAL: Transaccional & Social
-            const collectionsToDelete = ["orders", "trades", "purchase_requests", "leads", "interactions", "missed_searches", "user_assets", "notifications"];
+            // 1. BORRADO TOTAL: Transaccional, Social e Inventario
+            const collectionsToDelete = [
+                "orders", "trades", "purchase_requests", "leads",
+                "interactions", "missed_searches", "user_assets", "notifications",
+                "inventory", "lotes", "articles", "analytics_intents", "p2p_market"
+            ];
 
             for (const coll of collectionsToDelete) {
                 const snap = await getDocs(collection(db, coll));
@@ -34,20 +38,23 @@ export default function DatabasePurge() {
                 }
             }
 
-            // 2. RECALIBRACIÓN: Inventario (batea Preservation)
-            const invSnap = await getDocs(collection(db, "inventory"));
-            const itemsBatch = writeBatch(db);
-            let invCount = 0;
+            // 2. PURGA DE USUARIOS FANTASMA (Sin username)
+            const usersSnap = await getDocs(collection(db, "users"));
+            const usersBatch = writeBatch(db);
+            let ghostCount = 0;
 
-            invSnap.docs.forEach(d => {
-                itemsBatch.update(d.ref, {
-                    "logistics.stock": 1,
-                    "logistics.status": "active"
-                });
-                invCount++;
+            usersSnap.docs.forEach(d => {
+                const data = d.data();
+                if (!data.username || data.username.trim() === "") {
+                    usersBatch.delete(d.ref);
+                    ghostCount++;
+                }
             });
-            await itemsBatch.commit();
-            newResults["inventory"] = invCount;
+
+            if (ghostCount > 0) {
+                await usersBatch.commit();
+            }
+            newResults["ghost_users"] = ghostCount;
 
             // Client side reset
             clearLote();
@@ -55,7 +62,7 @@ export default function DatabasePurge() {
             sessionStorage.clear();
 
             setResults(newResults);
-            alert("Operación Tabla Rasa Completada con Éxito. El La Batea ha sido restaurado.");
+            alert("Operación Tabla Rasa Completada con Éxito. Entorno purificado.");
         } catch (error) {
             console.error("Purge Error:", error);
             alert("Falla Crítica en el Protocolo de Purga: " + error);

@@ -33,6 +33,8 @@ interface ParsedRow {
     originalMedia: string;
     originalCover: string;
     originalFormat: string;
+    originalYoutube?: string;
+    originalNotes?: string;
     status: ProcessingStatus;
     results: DiscogsSearchResult[];
     selectedMatch: DiscogsSearchResult | null;
@@ -291,7 +293,9 @@ export default function BulkUpload() {
                     price: row.originalPrice,
                     condition: `${row.originalMedia} / ${row.originalCover}`,
                     format: row.originalFormat,
-                    thumb: row.selectedMatch!.thumb
+                    thumb: row.selectedMatch!.thumb,
+                    youtube_id: row.originalYoutube || undefined,
+                    notes: row.originalNotes || undefined
                 }));
 
                 await inventoryService.createBatch({
@@ -337,6 +341,10 @@ export default function BulkUpload() {
                         price: row.originalPrice,
                         condition: `${row.originalMedia} / ${row.originalCover}`,
                         status: "active"
+                    },
+                    {
+                        youtube_id: row.originalYoutube || undefined,
+                        notes: row.originalNotes || undefined
                     }
                 );
 
