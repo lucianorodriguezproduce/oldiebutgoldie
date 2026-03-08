@@ -1,11 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Disc, Calendar, MapPin, Tag, Square, Zap, Layers, PlayCircle, Music, FileText, ChevronRight, Hash } from "lucide-react";
+import { ArrowLeft, Disc, Calendar, MapPin, Tag, Square, Zap, Layers, PlayCircle, Music, FileText, ChevronRight, Hash, Download, QrCode } from "lucide-react";
 import { archivoService, type UnifiedItem } from "@/services/archivoService";
 import { LazyImage } from "@/components/ui/LazyImage";
 import { SEO } from "@/components/SEO";
 import { useLoading } from "@/context/LoadingContext";
+import { QRCodeCanvas } from "qrcode.react";
 
 export default function ArchivoItem() {
     const { id } = useParams();
@@ -277,9 +278,61 @@ export default function ArchivoItem() {
                                 </div>
                             </div>
                         </div>
+
+                        {/* Identidad Física Digital - QR Code V12.5 */}
+                        <div className="mt-8 p-6 rounded-3xl bg-white border border-white/10 shadow-2xl relative overflow-hidden flex flex-col items-center text-center">
+                            <h3 className="text-xl font-display font-black uppercase tracking-tight text-black mb-1">
+                                Identidad Digital
+                            </h3>
+                            <p className="text-[10px] text-zinc-500 mb-6 font-mono font-bold">
+                                ESCANEA PARA ACCEDER AL TRACKLIST
+                            </p>
+
+                            <div className="bg-white p-4 rounded-xl shadow-inner mb-6 border border-zinc-100 relative group">
+                                <QRCodeCanvas
+                                    id="obg-qr-code"
+                                    value={window.location.href}
+                                    size={180}
+                                    bgColor={"#ffffff"}
+                                    fgColor={"#000000"}
+                                    level={"H"}
+                                    includeMargin={false}
+                                    imageSettings={{
+                                        src: "/favicon.svg", // Reemplaza con tu icono si la resolución no rompe la legibilidad
+                                        x: undefined,
+                                        y: undefined,
+                                        height: 40,
+                                        width: 40,
+                                        excavate: true,
+                                    }}
+                                />
+                                <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl pointer-events-none"></div>
+                            </div>
+
+                            <button
+                                onClick={() => {
+                                    const canvas = document.getElementById("obg-qr-code") as HTMLCanvasElement;
+                                    if (canvas) {
+                                        const pngUrl = canvas
+                                            .toDataURL("image/png")
+                                            .replace("image/png", "image/octet-stream");
+                                        let downloadLink = document.createElement("a");
+                                        downloadLink.href = pngUrl;
+                                        downloadLink.download = `obg-qr-${item.id}.png`;
+                                        document.body.appendChild(downloadLink);
+                                        downloadLink.click();
+                                        document.body.removeChild(downloadLink);
+                                    }
+                                }}
+                                className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-black text-white rounded-xl hover:bg-zinc-800 transition-colors font-bold uppercase text-[10px] tracking-widest"
+                            >
+                                <Download className="w-4 h-4" />
+                                Descargar para Impresión
+                            </button>
+                        </div>
+
                     </motion.div>
                 </div>
             </div>
         </div>
     );
-}
