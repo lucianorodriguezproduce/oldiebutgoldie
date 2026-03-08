@@ -7,13 +7,20 @@ const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
-        const db = await initBunkerIdentity();
-        // ... existing cache logic ...
+        const db = await initBunkerIdentity().catch(err => {
+            console.error('Bunker Identity Failed:', err);
+            return null;
+        });
+
+        if (!db) {
+            return res.status(200).json([]); // Silent fallback
+        }
+
         const cacheRef = db.doc(CACHE_DOC_PATH);
-        const cacheSnap = await cacheRef.get();
+        const cacheSnap = await cacheRef.get().catch(() => null);
         const now = Date.now();
 
-        if (cacheSnap.exists) {
+        if (cacheSnap && cacheSnap.exists) {
             const cacheData = cacheSnap.data();
             const ts = cacheData?.timestamp;
             let lastUpdated = 0;
@@ -28,9 +35,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
         }
 
-        const gscConfig = await db.collection('system_config').doc('gsc_auth').get();
-        // ... existing config check ...
-        if (!gscConfig.exists || !gscConfig.data()?.refresh_token) {
+        const gscConfig = await db.collection('system_config').doc('gsc_auth').get().catch(() => null);
+        if (!gscConfig || !gscConfig.exists || !gscConfig.data()?.refresh_token) {
+            // Signal needs_auth but don't crash the dashboard with a 500
+            if (req.query.silent === '1') return res.status(200).json([]);
             return res.status(401).json({ error: 'GSC not connected', needs_auth: true, redirect: '/api/auth/gsc-init' });
         }
 
@@ -44,6 +52,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const clientId = await getSecret('GOOGLE_CLIENT_ID');
         const clientSecret = await getSecret('GOOGLE_CLIENT_SECRET');
 
+        if (!clientId || !clientSecret) {
+            console.error('GOOGLE_CLIENT secrets missing');
+            return res.status(200).json([]);
+        }
+
         const oauth2Client = new google.auth.OAuth2(
             clientId,
             clientSecret,
@@ -51,7 +64,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         );
 
         oauth2Client.setCredentials({ refresh_token: refreshToken });
-        await oauth2Client.getAccessToken();
+
+        // Refresh access token
+        await oauth2Client.getAccessToken().catch(err => {
+            console.error('GSC Token Refresh Failed:', err.message);
+            throw new Error('TOKEN_EXPIRED');
+        });
 
         const searchconsole = google.searchconsole({ version: 'v1', auth: oauth2Client });
 
@@ -75,22 +93,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             position: row.position || 0
         }));
 
-        await cacheRef.set({ keywords, timestamp: new Date(), siteUrl }, { merge: true });
+        await cacheRef.set({ keywords, timestamp: new Date(), siteUrl }, { merge: true }).catch(() => null);
 
         res.status(200).json(keywords);
 
     } catch (error: any) {
-        console.error('GSC Query Error:', error);
-        console.error('Context:', { siteUrl: (req as any).siteUrl || 'unknown', hasRefreshToken: !!error.config?.headers?.Authorization });
-        // REDACCIÓN DE SEGURIDAD (Búnker)
-        const safeMessage = (error.message || "")
-            .replace(/\{"type": "service_account".*?\}/g, "[SERVICE_ACCOUNT_REDACTED]")
-            .replace(/-----BEGIN PRIVATE KEY-----.*?-----END PRIVATE KEY-----/gs, "[PRIVATE_KEY_REDACTED]");
+        console.error('GSC Query Error (Stabilized):', error.message);
 
-        res.status(500).json({
-            error: 'Failed to fetch GSC data',
-            details: safeMessage,
-            stack: process.env.NODE_ENV === 'development' ? (error.stack?.includes("service_account") ? "Redacted" : error.stack) : undefined
-        });
+        // Redact and return safe response
+        if (error.message === 'TOKEN_EXPIRED') {
+            return res.status(401).json({ error: 'Session expired', needs_auth: true });
+        }
+
+        // Always return 200 [] on unexpected errors to keep admin dashboard alive
+        return res.status(200).json([]);
     }
 }
