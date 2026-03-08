@@ -54,8 +54,10 @@ export default function PublicOrders() {
 
                         const isOwner = user && (o.user_id === user.uid || o.participants?.senderId === user.uid || o.participants?.receiverId === user.uid);
                         const isMarketOpen = config?.p2p_global_enabled ?? false;
+                        const isExchange = o.type === 'exchange' || o.intent === 'INTERCAMBIO';
 
-                        return isOwner || (isMarketOpen && (o.isPublicOrder === true));
+                        // Only show exchanges in public feed (buy/sell filtered out)
+                        return isOwner || (isMarketOpen && o.isPublicOrder === true && isExchange);
                     });
 
                     const inventoryItems = await inventoryService.getRecentAdditions(15);
