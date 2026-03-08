@@ -1015,7 +1015,7 @@ export default function PublicOrderView() {
                     })()}
 
                     {/* === OWNER PROPOSAL LIST (BATTLEGROUND) === */}
-                    {isOwner && order.status !== 'resolved' && (
+                    {isOwner && order.status !== 'resolved' && config?.allow_p2p_public_offers && (
                         <div className="mt-12 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
                             <div className="flex items-center justify-between border-b border-white/10 pb-4">
                                 <div className="flex items-center gap-3">

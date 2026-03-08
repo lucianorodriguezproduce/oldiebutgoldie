@@ -132,9 +132,11 @@ export default function PublicOrders() {
                     </motion.p>
                 </header>
 
-                <div className="py-6 border-y border-white/5 bg-black/50 backdrop-blur-md">
-                    <SocialRadar />
-                </div>
+                {config?.allow_user_friendships && (
+                    <div className="py-6 border-y border-white/5 bg-black/50 backdrop-blur-md">
+                        <SocialRadar />
+                    </div>
+                )}
 
                 {/* Grid */}
                 {loading ? (
