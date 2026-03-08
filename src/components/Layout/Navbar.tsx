@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { TEXTS } from "@/constants/texts";
-import { Disc, Search, User as UserIcon, LogOut, BookOpen, Clock, Menu, X, ShoppingBag, HelpCircle } from "lucide-react";
+import { Disc, Search, User as UserIcon, LogOut, BookOpen, Clock, Menu, X, ShoppingBag, Box } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
@@ -13,7 +13,7 @@ import type { SiteConfig } from "@/services/siteConfigService";
 
 export const Navbar = () => {
     const location = useLocation();
-    const { user, logout } = useAuth();
+    const { user, isAdmin, logout } = useAuth();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const { hasActiveOffer } = useOrderNotifications();
     const [config, setConfig] = useState<SiteConfig | null>(null);
@@ -26,9 +26,9 @@ export const Navbar = () => {
     const navItems = [
         { path: "/", label: TEXTS.global.navigation.home, icon: Search },
         { path: "/tienda", label: TEXTS.global.navigation.tienda, icon: Disc },
-        { path: "/comercio", label: TEXTS.global.navigation.activity, icon: ShoppingBag },
+        ...(config?.allow_p2p_public_offers || isAdmin ? [{ path: "/comercio", label: TEXTS.global.navigation.activity, icon: ShoppingBag }] : []),
+        { path: "/archivo", label: TEXTS.global.navigation.archivo, icon: Box },
         { path: "/comunidad", label: TEXTS.global.navigation.editorial, icon: BookOpen },
-        { path: "/guias", label: TEXTS.global.navigation.guias, icon: HelpCircle },
     ];
 
     // Close menu when route changes

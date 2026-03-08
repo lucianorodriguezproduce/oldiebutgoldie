@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
 import { doc, onSnapshot } from "firebase/firestore";
-import { AuthProvider } from "@/context/AuthContext";
+import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { TelemetryProvider } from "@/context/TelemetryContext";
 import { LoteProvider } from "@/context/LoteContext";
 import { LoadingProvider } from "@/context/LoadingContext";
@@ -52,6 +52,7 @@ const queryClient = new QueryClient({
 });
 
 function AppContent() {
+  const { isAdmin } = useAuth();
   const [siteConfig, setSiteConfig] = useState<any>(null);
 
   // Real-time Config sync
@@ -89,7 +90,7 @@ function AppContent() {
           {/* P2P Routes with Guard */}
           <Route
             path="/comercio"
-            element={siteConfig?.p2p_global_enabled === false ? <Navigate to="/tienda" replace /> : <PublicOrders />}
+            element={siteConfig?.allow_p2p_public_offers === false && !isAdmin ? <Navigate to="/tienda" replace /> : <PublicOrders />}
           />
 
           <Route path="/orden/:id" element={<PublicOrderView />} />

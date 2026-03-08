@@ -7,6 +7,7 @@ export const TEXTS = {
             editorial: "Comunidad",
             profile: "Mi Perfil",
             guias: "Guías",
+            archivo: "Archivo",
             logout: "Cerrar Sesión",
             sync: "Conectar",
             admin: "Administrar",
