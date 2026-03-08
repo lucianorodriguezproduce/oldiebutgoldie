@@ -7,7 +7,7 @@ import App from './App.tsx'
 
 if (import.meta.env.PROD) {
   Sentry.init({
-    dsn: import.meta.env.VITE_SENTRY_DSN || "https://placeholder@sentry.io/4508930",
+    dsn: import.meta.env.VITE_SENTRY_DSN || "https://1f92ece5ebb1cb47e1c5cf95d24d11f6@o4511010851129344.ingest.us.sentry.io/4511010893531136",
     integrations: [
       Sentry.browserTracingIntegration(),
       Sentry.replayIntegration(),
