@@ -22,7 +22,9 @@ interface Notification {
     message: string;
     read: boolean;
     timestamp: any;
-    order_id: string;
+    order_id?: string;
+    type?: "connection_request" | "connection_accepted" | "order";
+    requester_username?: string;
 }
 
 export default function NotificationBell() {
@@ -167,7 +169,10 @@ export default function NotificationBell() {
                                             e.stopPropagation();
                                             if (!notif.read) markAsRead(notif.id);
                                             setIsOpen(false);
-                                            if (notif.order_id) {
+                                            setIsOpen(false);
+                                            if (notif.type === "connection_request" && notif.requester_username) {
+                                                navigate(`/u/${notif.requester_username}`);
+                                            } else if (notif.order_id) {
                                                 openOrderDrawer(notif.order_id);
                                             }
                                         }}

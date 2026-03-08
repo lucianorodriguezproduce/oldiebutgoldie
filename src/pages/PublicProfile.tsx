@@ -9,7 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import { getConnectionStatus, requestConnection, acceptConnection, breakConnection } from "@/services/connectionService";
 import { siteConfigService } from "@/services/siteConfigService";
 import type { SiteConfig } from "@/services/siteConfigService";
-import type { ConnectionStatus } from "@/types/connection";
+import type { Connection, ConnectionStatus } from "@/types/connection";
 
 export default function PublicProfile() {
     const { username } = useParams<{ username: string }>();
@@ -21,7 +21,7 @@ export default function PublicProfile() {
 
     // Auth & Connections
     const { dbUser, isAdmin } = useAuth();
-    const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus | null>(null);
+    const [connection, setConnection] = useState<Connection | null>(null);
     const [isActionLoading, setIsActionLoading] = useState(false);
     const [config, setConfig] = useState<SiteConfig | null>(null);
 
@@ -72,8 +72,8 @@ export default function PublicProfile() {
         if (dbUser.uid === profileUser.uid) return;
 
         const checkStatus = async () => {
-            const status = await getConnectionStatus(dbUser.uid, profileUser.uid!);
-            setConnectionStatus(status);
+            const conn = await getConnectionStatus(dbUser.uid, profileUser.uid!);
+            setConnection(conn);
         };
         checkStatus();
     }, [dbUser, profileUser]);
@@ -83,18 +83,29 @@ export default function PublicProfile() {
         return siteConfigService.onSnapshotConfig(setConfig);
     }, []);
 
-    const handleConnectionAction = async () => {
+    const handleConnectionAction = async (forcedStatus?: "accepted" | "rejected") => {
         if (!dbUser || !profileUser) return;
         setIsActionLoading(true);
         try {
-            if (!connectionStatus) {
+            if (!connection) {
                 // Request
                 await requestConnection(dbUser, profileUser.uid!);
-                setConnectionStatus("pending");
-            } else if (connectionStatus === "accepted" || connectionStatus === "pending") {
-                // Remove or Cancel
+                // Optimistic update
+                setConnection({
+                    id: "temp",
+                    requesterId: dbUser.uid,
+                    receiverId: profileUser.uid!,
+                    status: "pending",
+                    timestamp: new Date(),
+                    updatedAt: new Date()
+                });
+            } else if (forcedStatus === "accepted") {
+                await acceptConnection(dbUser.uid, profileUser.uid!);
+                setConnection({ ...connection, status: "accepted" });
+            } else if (connection.status === "accepted" || connection.status === "pending" || forcedStatus === "rejected") {
+                // Remove, Cancel, or Reject
                 await breakConnection(dbUser.uid, profileUser.uid!);
-                setConnectionStatus(null);
+                setConnection(null);
             }
         } catch (error: any) {
             console.error("Connection action failed:", error);
@@ -149,25 +160,54 @@ export default function PublicProfile() {
                 {/* Connection Controls */}
                 {dbUser && dbUser.uid !== profileUser.uid && (config?.allow_user_friendships || isAdmin) && (
                     <div className="pt-4 flex flex-col items-center space-y-3">
-                        <button
-                            onClick={handleConnectionAction}
-                            disabled={isActionLoading || connectionStatus === "blocked"}
-                            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold uppercase tracking-widest text-xs transition-all ${connectionStatus === "accepted"
-                                ? "bg-white/5 text-red-400 hover:bg-red-500/20"
-                                : connectionStatus === "pending"
-                                    ? "bg-white/10 text-gray-400 hover:bg-red-500/20"
-                                    : connectionStatus === "blocked"
-                                        ? "bg-red-500/10 text-red-500 cursor-not-allowed"
-                                        : "bg-primary text-black hover:scale-105"
-                                }`}
-                        >
-                            {isActionLoading ? <Clock className="w-4 h-4 animate-spin" /> :
-                                connectionStatus === "accepted" ? <><Users className="w-4 h-4" /> Desconectar</> :
-                                    connectionStatus === "pending" ? <><Clock className="w-4 h-4" /> Cancelar Solicitud</> :
-                                        connectionStatus === "blocked" ? <><Ban className="w-4 h-4" /> Uso Restringido</> :
-                                            <><Users className="w-4 h-4" /> Conectar</>
-                            }
-                        </button>
+                        {!connection ? (
+                            <button
+                                onClick={() => handleConnectionAction()}
+                                disabled={isActionLoading}
+                                className="flex items-center gap-2 px-6 py-2.5 bg-primary text-black rounded-xl font-bold uppercase tracking-widest text-xs transition-all hover:scale-105"
+                            >
+                                {isActionLoading ? <Clock className="w-4 h-4 animate-spin" /> : <><Users className="w-4 h-4" /> Conectar</>}
+                            </button>
+                        ) : connection.status === "accepted" ? (
+                            <button
+                                onClick={() => handleConnectionAction()}
+                                disabled={isActionLoading}
+                                className="flex items-center gap-2 px-6 py-2.5 bg-white/5 text-red-400 rounded-xl font-bold uppercase tracking-widest text-xs transition-all hover:bg-red-500/20"
+                            >
+                                {isActionLoading ? <Clock className="w-4 h-4 animate-spin" /> : <><Users className="w-4 h-4" /> Desconectar</>}
+                            </button>
+                        ) : connection.status === "pending" ? (
+                            connection.requesterId === dbUser.uid ? (
+                                <button
+                                    onClick={() => handleConnectionAction()}
+                                    disabled={isActionLoading}
+                                    className="flex items-center gap-2 px-6 py-2.5 bg-white/10 text-gray-400 rounded-xl font-bold uppercase tracking-widest text-xs transition-all hover:bg-red-500/20"
+                                >
+                                    {isActionLoading ? <Clock className="w-4 h-4 animate-spin" /> : <><Clock className="w-4 h-4" /> Cancelar Solicitud</>}
+                                </button>
+                            ) : (
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={() => handleConnectionAction("accepted")}
+                                        disabled={isActionLoading}
+                                        className="flex items-center gap-2 px-6 py-2.5 bg-emerald-500 text-black rounded-xl font-bold uppercase tracking-widest text-xs transition-all hover:scale-105"
+                                    >
+                                        {isActionLoading ? <Clock className="w-4 h-4 animate-spin" /> : "Aceptar"}
+                                    </button>
+                                    <button
+                                        onClick={() => handleConnectionAction("rejected")}
+                                        disabled={isActionLoading}
+                                        className="flex items-center gap-2 px-6 py-2.5 bg-white/5 text-red-400 rounded-xl font-bold uppercase tracking-widest text-xs transition-all hover:bg-red-500/20"
+                                    >
+                                        {isActionLoading ? <Clock className="w-4 h-4 animate-spin" /> : "Rechazar"}
+                                    </button>
+                                </div>
+                            )
+                        ) : connection.status === "blocked" ? (
+                            <button disabled className="flex items-center gap-2 px-6 py-2.5 bg-red-500/10 text-red-500 rounded-xl font-bold uppercase tracking-widest text-xs cursor-not-allowed">
+                                <Ban className="w-4 h-4" /> Uso Restringido
+                            </button>
+                        ) : null}
                     </div>
                 )}
 
@@ -211,7 +251,7 @@ export default function PublicProfile() {
                         </span>
                     </div>
 
-                    {connectionStatus === "accepted" || dbUser?.uid === profileUser.uid ? (
+                    {connection?.status === "accepted" || dbUser?.uid === profileUser.uid ? (
                         <div className="text-center py-12 border border-dashed border-white/10 rounded-2xl bg-[#0a0a0a]">
                             <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">
                                 Bateas sociales en desarrollo para V2.0

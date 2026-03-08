@@ -52,7 +52,8 @@ export const requestConnection = async (requester: DbUser, receiverId: string) =
             read: false,
             timestamp: serverTimestamp(),
             type: "connection_request",
-            requesterId: requester.uid
+            requesterId: requester.uid,
+            requester_username: requester.username
         });
     });
 };
@@ -96,13 +97,13 @@ export const breakConnection = async (userId: string, targetId: string) => {
 /**
  * Fetches the connection status between two users
  */
-export const getConnectionStatus = async (uid1: string, uid2: string): Promise<ConnectionStatus | null> => {
+export const getConnectionStatus = async (uid1: string, uid2: string): Promise<Connection | null> => {
     if (!uid1 || !uid2) return null;
     const connectionId = generateConnectionId(uid1, uid2);
     const docSnap = await getDoc(doc(db, "connections", connectionId));
 
     if (docSnap.exists()) {
-        return (docSnap.data() as Connection).status;
+        return docSnap.data() as Connection;
     }
     return null;
 };
