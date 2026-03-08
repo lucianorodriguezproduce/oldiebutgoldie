@@ -15,9 +15,12 @@ export function LoadingProvider({ children }: { children: ReactNode }) {
     const [message, setMessage] = useState('Procesando...');
     const [timerId, setTimerId] = useState<any>(null);
 
-    const showLoading = (msg: string = 'Procesando...') => {
+    const showLoading = React.useCallback((msg: string = 'Procesando...') => {
         // Clear any existing timer
-        if (timerId) clearTimeout(timerId);
+        setTimerId((prevId: any) => {
+            if (prevId) clearTimeout(prevId);
+            return null;
+        });
 
         setMessage(msg);
         setIsLoading(true);
@@ -29,16 +32,25 @@ export function LoadingProvider({ children }: { children: ReactNode }) {
         }, 12000);
 
         setTimerId(newTimer);
-    };
+    }, []);
 
-    const hideLoading = () => {
-        if (timerId) clearTimeout(timerId);
+    const hideLoading = React.useCallback(() => {
+        setTimerId((prevId: any) => {
+            if (prevId) clearTimeout(prevId);
+            return null;
+        });
         setIsLoading(false);
-        setTimerId(null);
-    };
+    }, []);
+
+    const value = React.useMemo(() => ({
+        isLoading,
+        message,
+        showLoading,
+        hideLoading
+    }), [isLoading, message, showLoading, hideLoading]);
 
     return (
-        <LoadingContext.Provider value={{ isLoading, message, showLoading, hideLoading }}>
+        <LoadingContext.Provider value={value}>
             {children}
         </LoadingContext.Provider>
     );

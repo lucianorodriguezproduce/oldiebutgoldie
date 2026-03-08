@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { onAuthStateChanged, signOut as firebaseSignOut } from "firebase/auth";
 import type { User } from "firebase/auth";
@@ -63,16 +63,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         };
     }, []);
 
-    const logout = async () => {
+    const logout = React.useCallback(async () => {
         localStorage.removeItem("admin_session");
         setIsMasterAdmin(false);
         await firebaseSignOut(auth);
-    };
+    }, []);
 
     const isAdmin = !!user && (isMasterAdmin || user.email === "admin@discography.ai");
 
+    const value = React.useMemo(() => ({
+        user,
+        dbUser,
+        isAdmin,
+        loading,
+        logout
+    }), [user, dbUser, isAdmin, loading, logout]);
+
     return (
-        <AuthContext.Provider value={{ user, dbUser, isAdmin, loading, logout }}>
+        <AuthContext.Provider value={value}>
             {!loading && children}
         </AuthContext.Provider>
     );
