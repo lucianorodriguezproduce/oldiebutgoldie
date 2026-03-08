@@ -164,11 +164,8 @@ export default function NotificationBell() {
                                     <button
                                         type="button"
                                         key={notif.id}
-                                        onClick={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
+                                        onClick={() => {
                                             if (!notif.read) markAsRead(notif.id);
-                                            setIsOpen(false);
                                             setIsOpen(false);
                                             if (notif.type === "connection_request" && notif.requester_username) {
                                                 navigate(`/u/${notif.requester_username}`);
