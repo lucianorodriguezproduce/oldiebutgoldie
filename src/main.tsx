@@ -16,8 +16,13 @@ if (import.meta.env.PROD) {
     replaysSessionSampleRate: 0.1,
     replaysOnErrorSampleRate: 1.0,
     environment: "production",
+    denyUrls: [
+      /lookerstudio\.google\.com/i,
+      /google\.com\/embed/i,
+    ],
   });
   Sentry.captureMessage("Soberanía Técnica: Señal Recibida");
+  console.log("Sistema de Alerta:", !!import.meta.env.VITE_SENTRY_DSN);
 }
 
 import { HealthProvider } from './context/HealthContext';
