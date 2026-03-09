@@ -1,19 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { SecretManagerServiceClient } from '@google-cloud/secret-manager';
-
-const secretClient = new SecretManagerServiceClient();
-
-async function getDiscogsToken() {
-    try {
-        const [version] = await secretClient.accessSecretVersion({
-            name: 'projects/344484307950/secrets/DISCOGS_API_TOKEN/versions/latest',
-        });
-        return version.payload?.data?.toString();
-    } catch (e) {
-        console.warn('CRITICAL_SECRET_FETCH_FAILURE: Discogs token fetch from Secret Manager failed. Falling back to env...');
-        // Fallback to environment variable for local development or if SM fails
-        return process.env.VITE_DISCOGS_TOKEN;
-    }
+// ADC was removed, using process.env strictly
+function getDiscogsToken() {
+    return process.env.DISCOGS_API_TOKEN || process.env.VITE_DISCOGS_TOKEN;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -38,7 +26,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ error: 'Path is required' });
     }
 
-    const DISCOGS_TOKEN = await getDiscogsToken();
+    const DISCOGS_TOKEN = getDiscogsToken();
     if (!DISCOGS_TOKEN) {
         console.error('CRITICAL: DISCOGS_API_TOKEN missing in Bunker/Environment');
         return res.status(500).json({ error: 'Discogs API Token not configured' });

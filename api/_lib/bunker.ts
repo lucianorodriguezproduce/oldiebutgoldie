@@ -51,8 +51,8 @@ export async function getSecret(name: string) {
     }
 }
 
-export async function getDiscogsToken() {
-    return getSecret('DISCOGS_API_TOKEN');
+export function getDiscogsToken() {
+    return process.env.DISCOGS_API_TOKEN || process.env.VITE_DISCOGS_TOKEN;
 }
 
 /**

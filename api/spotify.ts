@@ -1,29 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { SecretManagerServiceClient } from '@google-cloud/secret-manager';
-
-const secretClient = new SecretManagerServiceClient();
-
-async function getSpotifySecrets() {
-    try {
-        const [clientIdVersion] = await secretClient.accessSecretVersion({
-            name: 'projects/344484307950/secrets/SPOTIFY_CLIENT_ID/versions/latest',
-        });
-        const [clientSecretVersion] = await secretClient.accessSecretVersion({
-            name: 'projects/344484307950/secrets/SPOTIFY_CLIENT_SECRET/versions/latest',
-        });
-
-        return {
-            clientId: clientIdVersion.payload?.data?.toString(),
-            clientSecret: clientSecretVersion.payload?.data?.toString()
-        };
-    } catch (e) {
-        console.warn('SPOTIFY_SECRET_FETCH_FAILURE: Falling back to env...');
-        return {
-            clientId: process.env.SPOTIFY_CLIENT_ID,
-            clientSecret: process.env.SPOTIFY_CLIENT_SECRET
-        };
-    }
-}
+// ADC was removed, using process.env strictly
 
 let cachedToken: string | null = null;
 let tokenExpiry: number = 0;
@@ -33,7 +9,8 @@ async function getAccessToken() {
         return cachedToken;
     }
 
-    const { clientId, clientSecret } = await getSpotifySecrets();
+    const clientId = process.env.SPOTIFY_CLIENT_ID;
+    const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
     if (!clientId || !clientSecret) {
         throw new Error('Spotify credentials not configured');
     }

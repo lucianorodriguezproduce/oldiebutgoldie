@@ -1,21 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { google } from 'googleapis';
-import { SecretManagerServiceClient } from '@google-cloud/secret-manager';
-
-const secretClient = new SecretManagerServiceClient();
-
-async function getYouTubeApiKey() {
-    try {
-        const [version] = await secretClient.accessSecretVersion({
-            name: 'projects/344484307950/secrets/YOUTUBE_API_KEY/versions/latest',
-        });
-        return version.payload?.data?.toString();
-    } catch (e) {
-        console.warn('YOUTUBE_SECRET_FETCH_FAILURE: Falling back to env...');
-        return process.env.YOUTUBE_API_KEY;
-    }
-}
-
 const youtube = google.youtube('v3');
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -33,9 +17,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ error: 'Query (q) is required (via query or body)' });
     }
 
-    const apiKey = await getYouTubeApiKey();
+    const apiKey = process.env.YOUTUBE_API_KEY;
     if (!apiKey) {
-        return res.status(401).json({ error: 'YouTube API Key not configured' });
+        return res.status(401).json({ error: 'YouTube API Key not configured in environment' });
     }
 
     try {
