@@ -102,8 +102,8 @@ export const inventoryService = {
      * Clones a Discogs release and persists it into the local inventory.
      * This is the "batea Entry" process.
      */
-    async importFromDiscogs(discogsData: any, logistics: InventoryItem['logistics'], extraData?: { youtube_id?: string; notes?: string }) {
-        const internalId = crypto.randomUUID();
+    async importFromDiscogs(discogsData: any, logistics: InventoryItem['logistics'], extraData?: { youtube_id?: string; notes?: string; internalId?: string }) {
+        const internalId = extraData?.internalId || crypto.randomUUID();
 
         // 1. Resolve High-Res Image (via batea Import API)
         let fullResUrl = discogsData.images?.[0]?.resource_url || discogsData.images?.[0]?.uri || discogsData.cover_image || discogsData.thumb;
@@ -208,6 +208,8 @@ export const inventoryService = {
 
         // Fallback Inteligente y Protocolo de Redundancia Crítica V15.2
         let resolvedYoutubeId = finalYoutubeId;
+        let finalBpm = 0;
+        let finalKey = "";
 
         if (resolvedYoutubeId) {
             console.log(`[Quota-Safe] YouTube ID found in Discogs/Metadata for ${parsedTitle}. Skipping proactive search.`);
@@ -240,30 +242,31 @@ export const inventoryService = {
                 console.warn(`[Redundancia-Crítica] YouTube API falló o rechazó. Invocando Sound Savior (Spotify)...`);
             }
 
-            // 2. Fallback INMEDIATO a Spotify (Si YouTube falló o no dio resultados)
-            if (!resolvedYoutubeId) {
-                try {
-                    let spotifyMatch = await spotifyService.searchAlbum(cleanArtist, cleanTitle);
+            // 2. Enriquecimiento Obligatorio (V16.5): Fallback y Extracción Sonora (Spotify)
 
-                    if (!spotifyMatch) {
-                        spotifyMatch = await spotifyService.searchAlbum("", cleanTitle);
-                    }
+            try {
+                let spotifyMatch = await spotifyService.searchAlbum(cleanArtist, cleanTitle);
 
-                    if (!spotifyMatch && cleanTitle.includes(" ")) {
-                        const simpleTitle = cleanTitle.split(" ").slice(0, 3).join(" ");
-                        spotifyMatch = await spotifyService.searchAlbum("", simpleTitle);
-                    }
-
-                    quotaService.track('spotify', 1);
-                    if (spotifyMatch) {
-                        finalSpotifyId = spotifyMatch.spotify_id;
-                        console.log(`[batea-Import] The Sound Savior actuó: Cuyo Spotify ID -> ${finalSpotifyId}`);
-                    }
-                } catch (e) {
-                    // Ambos fallaron (Silencio)
+                if (!spotifyMatch) {
+                    spotifyMatch = await spotifyService.searchAlbum("", cleanTitle);
                 }
+
+                if (!spotifyMatch && cleanTitle.includes(" ")) {
+                    const simpleTitle = cleanTitle.split(" ").slice(0, 3).join(" ");
+                    spotifyMatch = await spotifyService.searchAlbum("", simpleTitle);
+                }
+
+                quotaService.track('spotify', 1);
+                if (spotifyMatch) {
+                    finalSpotifyId = spotifyMatch.spotify_id;
+                    if (spotifyMatch.bpm) finalBpm = spotifyMatch.bpm;
+                    if (spotifyMatch.key) finalKey = spotifyMatch.key;
+                    console.log(`[batea-Import] The Sound Savior actuó: Cuyo Spotify ID -> ${finalSpotifyId} | BPM: ${finalBpm} | Key: ${finalKey}`);
+                }
+            } catch (e) {
+                // Silencio
             }
-        }
+        } // Closing the 'else' block
 
         // 3. Protocolo de Enriquecimiento (V15.6)
         const tracklistArray = (discogsData.tracklist || []).map((t: any) => ({
@@ -275,6 +278,11 @@ export const inventoryService = {
         const wants = discogsData.community?.want || 0;
         const have = discogsData.community?.have || 0;
         const isGoldenSelection = (have > 0 && (wants / have) > 5) ? true : undefined;
+
+        // 4. Parada de Seguridad y Bloqueo de Persistencia (V16.5)
+        if (tracklistArray.length === 0 || (!resolvedYoutubeId && !finalSpotifyId)) {
+            throw new Error(`Integridad fallida: Metadata crítica ausente (Tracklist vacío o sin ID de Audio). Abortando.`);
+        }
 
         const newItem: InventoryItem = {
             id: internalId,
@@ -295,8 +303,8 @@ export const inventoryService = {
                 have: have,
                 ...(extraData?.notes && { notes: extraData.notes }),
                 ...(isGoldenSelection && { is_golden_selection: isGoldenSelection }),
-                bpm: 0, // Fallbacks ready for expansion
-                key: ""
+                bpm: finalBpm,
+                key: finalKey
             },
             media: {
                 thumbnail: discogsData.thumb || "",

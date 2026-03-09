@@ -341,7 +341,8 @@ export default function BulkUpload() {
                                 price: row.originalPrice,
                                 condition: `${row.originalMedia} / ${row.originalCover}`,
                                 status: "active"
-                            }
+                            },
+                            { internalId: row.id }
                         );
                         success = true;
                         break;

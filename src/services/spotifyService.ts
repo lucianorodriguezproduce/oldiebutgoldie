@@ -2,6 +2,8 @@ export interface SpotifyAlbumMatch {
     spotify_id: string;
     external_url: string;
     images: { url: string; height: number; width: number }[];
+    bpm?: number;
+    key?: string;
 }
 
 export const spotifyService = {

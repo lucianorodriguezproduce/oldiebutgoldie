@@ -102,10 +102,46 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(404).json({ error: 'Album not found on Spotify' });
         }
 
+        // --- ENRIQUECIMIENTO V16.5: BPM & KEY ---
+        let bpm = 0;
+        let keyText = "";
+
+        try {
+            // 1. Obtener el primer track del álbum
+            const trackRes = await fetch(`https://api.spotify.com/v1/albums/${album.id}/tracks?limit=1`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const trackData = await trackRes.json();
+            const trackId = trackData.items?.[0]?.id;
+
+            if (trackId) {
+                // 2. Obtener Audio Features de ese track
+                const featuresRes = await fetch(`https://api.spotify.com/v1/audio-features/${trackId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const featuresData = await featuresRes.json();
+
+                if (featuresData && featuresData.tempo) {
+                    bpm = Math.round(featuresData.tempo);
+
+                    // Pitch Class to Key mapping
+                    const pitchClasses = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+                    if (featuresData.key >= 0 && featuresData.key < 12) {
+                        const mode = featuresData.mode === 1 ? 'Major' : 'Minor';
+                        keyText = `${pitchClasses[featuresData.key]} ${mode}`;
+                    }
+                }
+            }
+        } catch (enrichError) {
+            console.warn("Error obteniendo features de Spotify (Ignorado para retornar al menos el ID de álbum):", enrichError);
+        }
+
         return res.status(200).json({
             spotify_id: album.id,
             external_url: album.external_urls.spotify,
-            images: album.images
+            images: album.images,
+            bpm,
+            key: keyText
         });
     } catch (error: any) {
         console.error('Spotify API Error:', error);
