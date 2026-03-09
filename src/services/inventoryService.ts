@@ -441,26 +441,64 @@ export const inventoryService = {
         let newPreview = item.metadata.preview_url || "";
         let newTracklist = item.tracklist || [];
 
-        // 1. Extraer Audio Features faltantes si tenemos spotify_id
-        if (item.metadata.spotify_id && (!newBpm || !newKey || !newPreview)) {
+        let finalSpotifyId = item.metadata.spotify_id || "";
+        let finalYoutubeId = item.metadata.youtube_id || "";
+
+        // Actively Search for Spotify Features if missing entirely
+        if (!finalSpotifyId || (!newBpm && !newKey)) {
             try {
-                const response = await fetch(`/api/spotify?spotify_id=${item.metadata.spotify_id}`);
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.bpm) newBpm = data.bpm;
-                    if (data.key) newKey = data.key;
-                    if (data.preview_url) newPreview = data.preview_url;
-                    console.log(`[Heal-Protocol] Recuperado desde Spotify: BPM ${newBpm}, Key ${newKey}`);
+                // If we don't have the ID, try to find it first
+                if (!finalSpotifyId) {
+                    const cleanArtist = item.metadata.artist.replace(/\s*\(\d+\)$/, "").trim();
+                    const cleanTitle = item.metadata.title.replace(/[•\*\/]/g, " ").replace(/\s\s+/g, " ").trim();
+
+                    let searchRes = await spotifyService.searchAlbum(cleanArtist, cleanTitle);
+                    if (!searchRes) searchRes = await spotifyService.searchAlbum("", cleanTitle);
+                    if (searchRes) {
+                        finalSpotifyId = searchRes.spotify_id;
+                        if (searchRes.bpm) newBpm = searchRes.bpm;
+                        if (searchRes.key) newKey = searchRes.key;
+                        if (searchRes.preview_url) newPreview = searchRes.preview_url;
+                    }
+                }
+
+                // If we only have the ID but missing BPM/key, execute standard fetch
+                if (finalSpotifyId && (!newBpm || !newKey || !newPreview)) {
+                    const response = await fetch(`/api/spotify?spotify_id=${finalSpotifyId}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.bpm) newBpm = data.bpm;
+                        if (data.key) newKey = data.key;
+                        if (data.preview_url) newPreview = data.preview_url;
+                        console.log(`[Heal-Protocol] Recuperado desde Spotify: BPM ${newBpm}, Key ${newKey}`);
+                    }
                 }
             } catch (e) {
                 console.warn("[Heal-Protocol] Falló la curación desde Spotify:", e);
             }
         }
 
-        // 2. Extraer tracklist si está vacío (re-consulta Discogs)
-        if (newTracklist.length === 0) {
+        // Search for YouTube ID if missing
+        if (!finalYoutubeId) {
             try {
-                const discogsRes = await fetch(`/api/proxy?path=/releases/${item.id}`);
+                const cleanArtist = item.metadata.artist.replace(/\s*\(\d+\)$/, "").trim();
+                const cleanTitle = item.metadata.title.replace(/[•\*\/]/g, " ").replace(/\s\s+/g, " ").trim();
+                let ytMatch = await youtubeService.searchVideo(`${cleanArtist} ${cleanTitle}`);
+                if (!ytMatch) ytMatch = await youtubeService.searchVideo(cleanTitle);
+
+                if (ytMatch) {
+                    finalYoutubeId = ytMatch.youtube_id;
+                    console.log(`[Heal-Protocol] Recuperado desde YouTube: ${finalYoutubeId}`);
+                }
+            } catch (e) {
+                console.warn("[Heal-Protocol] Falló la curación desde YouTube:", e);
+            }
+        }
+
+        // 2. Extraer tracklist si está vacío (re-consulta Discogs)
+        if (newTracklist.length === 0 && item.reference?.originalDiscogsId) {
+            try {
+                const discogsRes = await fetch(`/api/proxy?path=/releases/${item.reference.originalDiscogsId}`);
                 if (discogsRes.ok) {
                     const discogsData = await discogsRes.json();
                     newTracklist = (discogsData.tracklist || []).map((t: any) => ({
@@ -491,6 +529,9 @@ export const inventoryService = {
         if (newTracklist.length > 0) {
             updatePayload["tracklist"] = newTracklist;
         }
+
+        if (finalSpotifyId) updatePayload["metadata.spotify_id"] = finalSpotifyId;
+        if (finalYoutubeId) updatePayload["metadata.youtube_id"] = finalYoutubeId;
 
         console.log(`[Heal-Protocol] Ejecutando soldadura en Firestore...`);
         await updateDoc(docRef, updatePayload);
