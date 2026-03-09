@@ -9,12 +9,13 @@ export const spotifyService = {
         try {
             const response = await fetch(`/api/spotify?artist=${encodeURIComponent(artist)}&title=${encodeURIComponent(title)}`);
             if (!response.ok) {
-                if (response.status === 404) return null;
-                throw new Error('Spotify API Error');
+                // Silently return null for any non-ok response (404, 401, 503, etc)
+                return null;
             }
             return await response.json();
         } catch (error) {
-            console.error('Error searching Spotify:', error);
+            // Log as warning only to avoid cluttering console with "scary" Red errors
+            console.warn('Spotify Search Fallback active:', (error as Error).message);
             return null;
         }
     }

@@ -27,10 +27,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).end();
     }
 
-    const { q } = req.query;
+    const q = req.query.q || req.body?.q;
 
     if (!q) {
-        return res.status(400).json({ error: 'Query (q) is required' });
+        return res.status(400).json({ error: 'Query (q) is required (via query or body)' });
     }
 
     const apiKey = await getYouTubeApiKey();

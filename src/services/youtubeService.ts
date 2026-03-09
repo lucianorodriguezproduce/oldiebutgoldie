@@ -9,12 +9,13 @@ export const youtubeService = {
         try {
             const response = await fetch(`/api/youtube?q=${encodeURIComponent(query)}`);
             if (!response.ok) {
-                if (response.status === 404) return null;
-                throw new Error('YouTube API Error');
+                // Silently return null for any non-ok response
+                return null;
             }
             return await response.json();
         } catch (error) {
-            console.error('Error searching YouTube:', error);
+            // Log as warning only
+            console.warn('YouTube Search Fallback active:', (error as Error).message);
             return null;
         }
     }

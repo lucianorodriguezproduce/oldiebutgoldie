@@ -67,10 +67,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).end();
     }
 
-    const { artist, title } = req.query;
+    const artist = req.query.artist || req.body?.artist;
+    const title = req.query.title || req.body?.title;
 
     if (!artist || !title) {
-        return res.status(400).json({ error: 'Artist and title are required' });
+        return res.status(400).json({ error: 'Artist and title are required (via query or body)' });
     }
 
     try {
