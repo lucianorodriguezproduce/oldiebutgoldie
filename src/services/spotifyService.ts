@@ -4,6 +4,7 @@ export interface SpotifyAlbumMatch {
     images: { url: string; height: number; width: number }[];
     bpm?: number;
     key?: string;
+    preview_url?: string;
 }
 
 export const spotifyService = {

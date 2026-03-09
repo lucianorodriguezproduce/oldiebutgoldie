@@ -210,6 +210,7 @@ export const inventoryService = {
         let resolvedYoutubeId = finalYoutubeId;
         let finalBpm = 0;
         let finalKey = "";
+        let finalPreviewUrl = "";
 
         if (resolvedYoutubeId) {
             console.log(`[Quota-Safe] YouTube ID found in Discogs/Metadata for ${parsedTitle}. Skipping proactive search.`);
@@ -244,6 +245,7 @@ export const inventoryService = {
 
             // 2. Enriquecimiento Obligatorio (V16.5): Fallback y Extracción Sonora (Spotify)
 
+
             try {
                 let spotifyMatch = await spotifyService.searchAlbum(cleanArtist, cleanTitle);
 
@@ -261,6 +263,7 @@ export const inventoryService = {
                     finalSpotifyId = spotifyMatch.spotify_id;
                     if (spotifyMatch.bpm) finalBpm = spotifyMatch.bpm;
                     if (spotifyMatch.key) finalKey = spotifyMatch.key;
+                    if (spotifyMatch.preview_url) finalPreviewUrl = spotifyMatch.preview_url;
                     console.log(`[batea-Import] The Sound Savior actuó: Cuyo Spotify ID -> ${finalSpotifyId} | BPM: ${finalBpm} | Key: ${finalKey}`);
                 }
             } catch (e) {
@@ -279,9 +282,11 @@ export const inventoryService = {
         const have = discogsData.community?.have || 0;
         const isGoldenSelection = (have > 0 && (wants / have) > 5) ? true : undefined;
 
-        // 4. Parada de Seguridad y Bloqueo de Persistencia (V16.5)
+        // 4. Parada de Seguridad Suavizada (V17.5) - Dry Run Passthrough
+        let integrityWarning = "";
         if (tracklistArray.length === 0 || (!resolvedYoutubeId && !finalSpotifyId)) {
-            throw new Error(`Integridad fallida: Metadata crítica ausente (Tracklist vacío o sin ID de Audio). Abortando.`);
+            console.warn(`[Integridad-Parcial] Metadata crítica ausente para ${parsedTitle}. Se cargará con Status Warning.`);
+            integrityWarning = "Audio IDs o Tracklist ausentes";
         }
 
         const newItem: InventoryItem = {
@@ -299,10 +304,12 @@ export const inventoryService = {
                     : discogsData.format || "Unknown Format",
                 ...(resolvedYoutubeId && { youtube_id: resolvedYoutubeId }),
                 ...(finalSpotifyId && { spotify_id: finalSpotifyId }),
+                ...(finalPreviewUrl && { preview_url: finalPreviewUrl }),
                 wants: wants,
                 have: have,
                 ...(extraData?.notes && { notes: extraData.notes }),
                 ...(isGoldenSelection && { is_golden_selection: isGoldenSelection }),
+                ...(integrityWarning && { status_warning: integrityWarning }),
                 bpm: finalBpm,
                 key: finalKey
             },

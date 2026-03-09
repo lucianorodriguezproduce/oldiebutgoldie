@@ -25,6 +25,8 @@ export interface UnifiedItem {
     wants?: number;
     have?: number;
     notes?: string;
+    preview_url?: string;
+    status_warning?: string;
 }
 
 import { emitHealthEvent } from "@/context/HealthContext";
@@ -93,13 +95,15 @@ export const archivoService = {
                         condition: data.metadata.isBatch ? 'MIXTO' : 'USADO',
                         tracklist: data.tracklist,
                         labels: data.labels,
-                        youtube_id: (data as any).youtube_id,
-                        spotify_id: (data as any).spotify_id,
+                        youtube_id: data.metadata.youtube_id,
+                        spotify_id: data.metadata.spotify_id,
+                        preview_url: data.metadata.preview_url,
                         bpm: data.metadata.bpm,
                         key: data.metadata.key,
                         wants: data.metadata.wants,
                         have: data.metadata.have,
-                        notes: (data as any).notes
+                        notes: data.metadata.notes,
+                        status_warning: data.metadata.status_warning
                     };
                     localStorage.setItem(cacheKey, JSON.stringify(result));
                     return result;

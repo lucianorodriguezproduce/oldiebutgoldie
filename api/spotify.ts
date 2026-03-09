@@ -102,9 +102,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(404).json({ error: 'Album not found on Spotify' });
         }
 
-        // --- ENRIQUECIMIENTO V16.5: BPM & KEY ---
+        // --- ENRIQUECIMIENTO V16.5 & V17.5: BPM, KEY & PREVIEW ---
         let bpm = 0;
         let keyText = "";
+        let previewUrl = "";
 
         try {
             // 1. Obtener el primer track del álbum
@@ -112,7 +113,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const trackData = await trackRes.json();
-            const trackId = trackData.items?.[0]?.id;
+            const trackItem = trackData.items?.[0];
+            const trackId = trackItem?.id;
+
+            if (trackItem?.preview_url) {
+                previewUrl = trackItem.preview_url;
+            }
 
             if (trackId) {
                 // 2. Obtener Audio Features de ese track
@@ -133,7 +139,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 }
             }
         } catch (enrichError) {
-            console.warn("Error obteniendo features de Spotify (Ignorado para retornar al menos el ID de álbum):", enrichError);
+            console.warn("Error obteniendo features/preview de Spotify (Ignorado para retornar al menos el ID de álbum):", enrichError);
         }
 
         return res.status(200).json({
@@ -141,7 +147,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             external_url: album.external_urls.spotify,
             images: album.images,
             bpm,
-            key: keyText
+            key: keyText,
+            preview_url: previewUrl
         });
     } catch (error: any) {
         console.error('Spotify API Error:', error);

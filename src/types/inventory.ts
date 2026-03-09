@@ -12,12 +12,14 @@ export interface InventoryItem {
         isBatch?: boolean;
         youtube_id?: string;
         spotify_id?: string;
+        preview_url?: string;
         bpm?: number;
         key?: string;
         wants?: number;
         have?: number;
         notes?: string;
         is_golden_selection?: boolean;
+        status_warning?: string;
     };
     media: {
         thumbnail: string;

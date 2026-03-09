@@ -1,7 +1,7 @@
-import { memo, useState } from "react";
+import { memo, useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Play, Disc, Layers } from "lucide-react";
+import { Play, Pause, Disc, Waves } from "lucide-react";
 import type { UnifiedItem } from "@/services/archivoService";
 import { LazyImage } from "@/components/ui/LazyImage";
 
@@ -13,18 +13,38 @@ interface ArchivoCardProps {
 
 export const ArchivoCard = memo(({ item, idx, onPlay }: ArchivoCardProps) => {
     const [isHovered, setIsHovered] = useState(false);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const audioRef = useRef<HTMLAudioElement | null>(null);
 
-    // Color extraction can be added later if needed. For now we use the primary theme color.
     const color = '#ffeb3b'; // Fallback color (Primary)
-
     const isGoldSelection = (item.wants || 0) > (item.have || 1) * 5;
-    const playUrl = item.spotify_id || item.youtube_id;
+    const fallbackPlayUrl = item.spotify_id || item.youtube_id;
 
-    const handlePlayClick = (e: React.MouseEvent) => {
+    const togglePlay = (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        if (playUrl && onPlay) {
-            onPlay(playUrl);
+
+        if (item.preview_url) {
+            if (audioRef.current) {
+                if (isPlaying) {
+                    audioRef.current.pause();
+                    setIsPlaying(false);
+                } else {
+                    // Try to play locally
+                    audioRef.current.play()
+                        .then(() => setIsPlaying(true))
+                        .catch(err => {
+                            console.error("Audio playback failed:", err);
+                        });
+                }
+            }
+        } else {
+            // Fallback Genérico si no resolvió Preview URL
+            if (fallbackPlayUrl && onPlay) {
+                onPlay(fallbackPlayUrl);
+            } else {
+                window.location.href = `/archivo/${item.id}#play`;
+            }
         }
     };
 
@@ -33,9 +53,15 @@ export const ArchivoCard = memo(({ item, idx, onPlay }: ArchivoCardProps) => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: (idx % 10) * 0.05 }}
-            className="break-inside-avoid mb-4 md:mb-6"
+            className="break-inside-avoid mb-4 md:mb-6 cursor-pointer"
             onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
+            onMouseLeave={() => {
+                setIsHovered(false);
+                if (isPlaying && audioRef.current) {
+                    audioRef.current.pause();
+                    setIsPlaying(false);
+                }
+            }}
         >
             <Link
                 to={`/archivo/${item.id}`}
@@ -57,30 +83,30 @@ export const ArchivoCard = memo(({ item, idx, onPlay }: ArchivoCardProps) => {
                     />
 
                     {/* Shadow overlay base */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/20 to-transparent opacity-80 group-hover:opacity-90 transition-opacity duration-500" />
+                    <div className={`absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-black/10 transition-opacity duration-500 ${isHovered ? 'opacity-90' : 'opacity-40'}`} />
 
                     {/* Plástico Funda Overlay */}
                     <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent mix-blend-overlay pointer-events-none opacity-50 group-hover:opacity-100 transition-opacity" />
                     <div className="absolute inset-0 border border-white/10 rounded-t-2xl md:rounded-t-[2rem] pointer-events-none" />
 
-                    {/* Quick Access: Play Flotante */}
-                    {playUrl && (
-                        <div className={`absolute inset-0 flex items-center justify-center transition-all duration-300 pointer-events-none z-30 ${isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-90'}`}>
-                            {/* Evitamos que el Link envuelva al botón modificando el evento */}
+                    {/* Audio Invisible Player */}
+                    {item.preview_url && (
+                        <audio
+                            ref={audioRef}
+                            src={item.preview_url}
+                            onEnded={() => setIsPlaying(false)}
+                            preload="none"
+                        />
+                    )}
+
+                    {/* Botón Central de Play/Pause */}
+                    {(item.preview_url || fallbackPlayUrl) && (
+                        <div className={`absolute inset-0 flex items-center justify-center transition-all duration-500 pointer-events-none z-30 ${isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}`}>
                             <button
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    // Comportamiento por defecto: Si no hay onPlay inyectado, redirigimos al detalle con hash #play
-                                    if (onPlay) {
-                                        onPlay(playUrl);
-                                    } else {
-                                        window.location.href = `/archivo/${item.id}#play`;
-                                    }
-                                }}
-                                className="w-16 h-16 rounded-full bg-primary/90 text-black flex items-center justify-center backdrop-blur-md shadow-[0_0_30px_rgba(255,255,255,0.3)] hover:scale-110 hover:bg-white transition-all cursor-pointer pointer-events-auto"
+                                onClick={togglePlay}
+                                className={`w-16 h-16 rounded-full flex items-center justify-center backdrop-blur-md transition-all cursor-pointer pointer-events-auto ${isPlaying ? 'bg-primary border border-white text-black shadow-[0_0_40px_rgba(255,255,255,0.4)]' : 'bg-primary/90 text-black shadow-[0_0_30px_rgba(255,255,255,0.3)] hover:scale-110 hover:bg-white'}`}
                             >
-                                <Play size={28} className="ml-1" fill="currentColor" />
+                                {isPlaying ? <Pause size={28} fill="currentColor" /> : <Play size={28} className="ml-1" fill="currentColor" />}
                             </button>
                         </div>
                     )}
@@ -101,51 +127,70 @@ export const ArchivoCard = memo(({ item, idx, onPlay }: ArchivoCardProps) => {
                                 <Disc size={10} /> ORO
                             </div>
                         )}
+                        {item.status_warning && (
+                            <div className="px-2 py-1 bg-red-500/20 backdrop-blur-md text-red-400 text-[8px] font-black uppercase tracking-widest rounded-full border border-red-500/30 shadow-lg">
+                                OFFLINE
+                            </div>
+                        )}
                     </div>
 
-                    {/* MÓDULO DATA (Hover: Tracklist Preview) */}
-                    <div className={`absolute inset-x-0 bottom-0 p-4 transform transition-all duration-500 ${isHovered ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'} pointer-events-none`}>
+                    {/* CABINA DE DJ (Hover Panel) */}
+                    <div className={`absolute inset-x-0 bottom-0 p-4 transform transition-all duration-500 ${isHovered ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'} pointer-events-none`}>
+                        {/* Indicadores BPM/Key de Alta Jerarquía */}
+                        <div className="flex items-center gap-3 mb-4">
+                            {item.bpm && (
+                                <div className="flex flex-col items-center justify-center bg-black/60 backdrop-blur-xl border border-white/10 rounded-xl px-4 py-2 w-auto flex-1">
+                                    <span className="text-[8px] text-white/40 uppercase tracking-[0.3em] font-mono mb-1">TEMPO</span>
+                                    <span className="text-xl font-black text-white leading-none tracking-tight">{item.bpm}</span>
+                                </div>
+                            )}
+                            {item.key && (
+                                <div className="flex flex-col items-center justify-center bg-black/60 backdrop-blur-xl border border-white/10 rounded-xl px-4 py-2 w-auto flex-1">
+                                    <span className="text-[8px] text-white/40 uppercase tracking-[0.3em] font-mono mb-1">KEY</span>
+                                    <span className={`text-xl font-black leading-none tracking-tight ${item.key.includes('Major') ? 'text-primary' : 'text-purple-400'}`}>
+                                        {item.key.split(' ')[0]}
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Tracklist Resumido */}
                         {item.tracklist && item.tracklist.length > 0 && (
-                            <div className="mb-2">
-                                <p className="text-[9px] text-white/50 uppercase tracking-[0.2em] mb-1 font-mono">Tracklist</p>
-                                <ul className="text-white/80 text-[10px] space-y-1 font-mono truncate">
+                            <div className="mt-2 pl-1 border-l-2 border-primary/30">
+                                <ul className="text-white/80 text-[10px] space-y-1 font-mono">
                                     {item.tracklist.slice(0, 3).map((track, i) => (
-                                        <li key={i} className="truncate">
-                                            {track.position} {track.title}
+                                        <li key={i} className="truncate select-none">
+                                            <span className="text-primary/70 mr-2">{track.position}</span>
+                                            {track.title}
                                         </li>
                                     ))}
-                                    {item.tracklist.length > 3 && <li className="text-white/40">+{item.tracklist.length - 3} tracks...</li>}
+                                    {item.tracklist.length > 3 && (
+                                        <li className="text-white/40 italic">+{item.tracklist.length - 3} pistas más...</li>
+                                    )}
                                 </ul>
                             </div>
                         )}
-
-                        {/* Data Técnica */}
-                        <div className="flex flex-wrap gap-2 mt-3">
-                            {item.bpm && (
-                                <span className="text-[9px] font-mono text-white/60 bg-white/5 px-2 py-1 rounded">BPM: {item.bpm}</span>
-                            )}
-                            {item.key && (
-                                <span className="text-[9px] font-mono text-white/60 bg-white/5 px-2 py-1 rounded">KEY: {item.key}</span>
-                            )}
-                        </div>
                     </div>
                 </div>
 
-                {/* Base Metadata */}
-                <div className={`p-4 md:p-5 transition-transform duration-500 z-20 relative bg-[#0a0a0a] ${isHovered && item.tracklist?.length ? '-translate-y-2' : ''}`}>
-                    <h3 className="text-white font-display font-black text-sm md:text-md truncate uppercase tracking-tight mb-1 group-hover:text-primary transition-colors">
-                        {item.title}
-                    </h3>
-                    <div className="flex items-center justify-between">
-                        <p className="text-gray-500 text-[10px] font-mono truncate uppercase tracking-widest opacity-70">
-                            {item.artist}
-                        </p>
-                        {item.year && item.year !== 0 && (
-                            <p className="text-white/30 text-[9px] font-mono">
-                                {item.year}
+                {/* Base Metadata (Mantiene su estilo original pero más minimalista) */}
+                <div className={`p-5 transition-transform duration-500 z-20 relative bg-[#0a0a0a] ${isHovered ? 'bg-[#0f0f0f]' : ''}`}>
+                    <div className="flex justify-between items-start gap-4">
+                        <div className="flex-1 min-w-0">
+                            <h3 className="text-white font-display font-black text-sm md:text-md truncate uppercase tracking-tight mb-1 group-hover:text-primary transition-colors">
+                                {item.title}
+                            </h3>
+                            <p className="text-gray-500 text-[10px] font-mono truncate uppercase tracking-widest opacity-80">
+                                {item.artist}
                             </p>
+                        </div>
+                        {isPlaying && (
+                            <div className="flex items-center gap-1 text-primary">
+                                <Waves size={16} className="animate-pulse" />
+                            </div>
                         )}
                     </div>
+
                     {/* Color Accent line */}
                     {color && (
                         <div
@@ -162,3 +207,4 @@ export const ArchivoCard = memo(({ item, idx, onPlay }: ArchivoCardProps) => {
         </motion.div>
     );
 });
+
