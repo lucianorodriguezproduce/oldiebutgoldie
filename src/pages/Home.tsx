@@ -63,7 +63,29 @@ export default function Home() {
     const { user, dbUser } = useAuth();
     const { type: routeType, id: routeId } = useParams<{ type: string, id: string }>();
     const navigate = useNavigate();
-    const { addItemToBatch, isInLote, totalCount, loteItems } = useLote();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const { addItemToBatch, addItemFromInventory, isInLote, totalCount, loteItems } = useLote();
+
+    // URL Parameter Addiction Flow (Automatic Add to Cart)
+    useEffect(() => {
+        const itemId = searchParams.get('add');
+        if (itemId) {
+            const handleAutomaticAdd = async () => {
+                try {
+                    const item = await inventoryService.getItemById(itemId);
+                    if (item) {
+                        addItemFromInventory(item);
+                        // Clean up URL to avoid re-triggering on refresh
+                        searchParams.delete('add');
+                        setSearchParams(searchParams, { replace: true });
+                    }
+                } catch (error) {
+                    console.error("Automatic add-to-cart failed:", error);
+                }
+            };
+            handleAutomaticAdd();
+        }
+    }, [searchParams, setSearchParams, addItemFromInventory]);
 
     const [intent, setIntent] = useState<Intent | null>(null);
     const [query, setQuery] = useState("");
