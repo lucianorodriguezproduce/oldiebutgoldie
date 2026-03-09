@@ -173,7 +173,23 @@ export const inventoryService = {
         const finalYoutubeId = extraData?.youtube_id || discogsYoutubeId;
         let finalSpotifyId = "";
 
-        // Fallback Inteligente y Protocolo de Eficiencia (V14.4)
+        // Sanitización Proactiva (V14.6)
+        const sanitize = (text: string, isArtist: boolean = false) => {
+            if (!text) return "";
+            let clean = text;
+            if (isArtist) {
+                // Remove trailing numbers in parentheses: "Sui Generis (4)" -> "Sui Generis"
+                clean = clean.replace(/\s*\(\d+\)$/, "");
+            }
+            // Remove middle dots, asterisks, and extra slashes from titles
+            clean = clean.replace(/[•\*\/]/g, " ").replace(/\s\s+/g, " ").trim();
+            return clean;
+        };
+
+        const cleanArtist = sanitize(parsedArtist, true);
+        const cleanTitle = sanitize(parsedTitle);
+
+        // Fallback Inteligente y Protocolo de Eficiencia (V14.4 + V14.6)
         let resolvedYoutubeId = finalYoutubeId;
 
         if (resolvedYoutubeId) {
@@ -183,7 +199,15 @@ export const inventoryService = {
 
             // 1. Intentar Spotify (Costo bajo de cuota)
             try {
-                const spotifyMatch = await spotifyService.searchAlbum(parsedArtist, parsedTitle);
+                let spotifyMatch = await spotifyService.searchAlbum(cleanArtist, cleanTitle);
+
+                // Fallback (V14.6): Simplificar título si no hay match
+                if (!spotifyMatch && cleanTitle.includes(" ")) {
+                    const simpleTitle = cleanTitle.split(" ").slice(0, 3).join(" ");
+                    console.log(`[Fallback-Spotify] Retrying with simplified title: ${simpleTitle}`);
+                    spotifyMatch = await spotifyService.searchAlbum(cleanArtist, simpleTitle);
+                }
+
                 quotaService.track('spotify', 1);
                 if (spotifyMatch) {
                     finalSpotifyId = spotifyMatch.spotify_id;
@@ -197,7 +221,16 @@ export const inventoryService = {
             if (!finalSpotifyId && !resolvedYoutubeId) {
                 console.log(`[Quota-Action] Spotify failed. Attempting YouTube Proactive Search (Final Fallback)...`);
                 try {
-                    const ytMatch = await youtubeService.searchVideo(`${parsedArtist} ${parsedTitle}`);
+                    const searchQuery = `${cleanArtist} ${cleanTitle}`;
+                    let ytMatch = await youtubeService.searchVideo(searchQuery);
+
+                    // Fallback (V14.6): Simplificar si falla
+                    if (!ytMatch && cleanTitle.includes(" ")) {
+                        const simpleYtQuery = `${cleanArtist} ${cleanTitle.split(" ").slice(0, 3).join(" ")}`;
+                        console.log(`[Fallback-YouTube] Retrying with simplified query: ${simpleYtQuery}`);
+                        ytMatch = await youtubeService.searchVideo(simpleYtQuery);
+                    }
+
                     quotaService.track('youtube', 100); // 100 units per search
                     if (ytMatch) {
                         resolvedYoutubeId = ytMatch.youtube_id;

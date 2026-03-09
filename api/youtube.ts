@@ -58,10 +58,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             thumbnail: video.snippet?.thumbnails?.default?.url
         });
     } catch (error: any) {
-        console.error('YouTube API Error:', error);
+        const errorDetail = error.response?.data?.error;
+        console.error('YouTube API Error Detail:', JSON.stringify(errorDetail || error.message, null, 2));
+
         // Map common errors to status codes
-        const status = error.code === 403 ? 403 : (error.code === 401 ? 401 : 503);
-        const message = error.errors?.[0]?.message || error.message || 'YouTube Service Unavailable';
-        return res.status(status).json({ error: message });
+        const status = error.code === 403 ? 403 : (error.code === 401 ? 401 : 530);
+        const message = errorDetail?.message || error.message || 'YouTube Service Unavailable';
+        return res.status(status).json({ error: message, detail: errorDetail });
     }
 }
