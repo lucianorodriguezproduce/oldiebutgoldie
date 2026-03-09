@@ -44,17 +44,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).end();
     }
 
-    const artist = req.query.artist || req.body?.artist;
+    const artist = req.query.artist || req.body?.artist || "";
     const title = req.query.title || req.body?.title;
 
-    if (!artist || !title) {
-        return res.status(400).json({ error: 'Artist and title are required (via query or body)' });
+    if (!title) {
+        return res.status(400).json({ error: 'Title is required' });
     }
 
     try {
-        const { clientId, clientSecret } = await getSpotifySecrets();
+        const clientId = process.env.SPOTIFY_CLIENT_ID;
+        const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
+
         if (!clientId || !clientSecret) {
-            return res.status(401).json({ error: 'Spotify credentials not configured in Bunker or Environment' });
+            return res.status(500).json({ error: 'Spotify credentials not configured in environment' });
         }
 
         const token = await getAccessToken();
