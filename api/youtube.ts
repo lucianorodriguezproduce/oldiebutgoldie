@@ -39,15 +39,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
-        const response = await youtube.search.list({
-            key: apiKey,
-            part: ['snippet'],
-            q: String(q),
-            maxResults: 1,
-            type: ['video']
-        });
+        // Bypass de googleapis: Usamos fetch directamente inyectando la llave en la URL
+        const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(String(q))}&key=${apiKey}&maxResults=1&type=video`;
+        const fetchResponse = await fetch(url);
+        const data = await fetchResponse.json();
 
-        const video = response.data.items?.[0];
+        if (!fetchResponse.ok) {
+            console.log('FULL_ERROR_YOUTUBE:', JSON.stringify(data));
+            const status = fetchResponse.status === 403 ? 403 : (fetchResponse.status === 401 ? 401 : 530);
+            return res.status(status).json({ error: data.error?.message || 'YouTube Service Unavailable', detail: data });
+        }
+
+        const video = data.items?.[0];
         if (!video) {
             return res.status(404).json({ error: 'Video not found on YouTube' });
         }
@@ -58,12 +61,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             thumbnail: video.snippet?.thumbnails?.default?.url
         });
     } catch (error: any) {
-        const errorDetail = error.response?.data?.error;
-        console.error('YouTube API Error Detail:', JSON.stringify(errorDetail || error.message, null, 2));
-
-        // Map common errors to status codes
-        const status = error.code === 403 ? 403 : (error.code === 401 ? 401 : 530);
-        const message = errorDetail?.message || error.message || 'YouTube Service Unavailable';
-        return res.status(status).json({ error: message, detail: errorDetail });
+        console.error('YouTube Fetch Failure:', error.message);
+        return res.status(500).json({ error: 'Internal YouTube Fetch Error' });
     }
 }

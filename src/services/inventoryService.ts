@@ -206,67 +206,61 @@ export const inventoryService = {
         const cleanArtist = sanitize(parsedArtist, true);
         const cleanTitle = sanitize(parsedTitle);
 
-        // Fallback Inteligente y Protocolo de Eficiencia (V14.4 + V14.6 + V14.7)
+        // Fallback Inteligente y Protocolo de Redundancia Crítica V15.2
         let resolvedYoutubeId = finalYoutubeId;
 
         if (resolvedYoutubeId) {
             console.log(`[Quota-Safe] YouTube ID found in Discogs/Metadata for ${parsedTitle}. Skipping proactive search.`);
         } else {
-            console.log(`[Quota-Action] No YouTube ID found for ${parsedTitle}. Initiating efficiency flow...`);
+            console.log(`[Quota-Action] No YouTube ID found for ${parsedTitle}. Initiating efficiency flow (YouTube First)...`);
 
-            // 1. Intentar Spotify (Costo bajo de cuota)
+            // 1. Intentar YouTube API Primario
             try {
-                let spotifyMatch = await spotifyService.searchAlbum(cleanArtist, cleanTitle);
+                const searchQuery = `${cleanArtist} ${cleanTitle}`;
+                let ytMatch = await youtubeService.searchVideo(searchQuery);
 
-                // Fallback Escalonado (V14.7): Intentar solo con título del disco
-                if (!spotifyMatch) {
-                    console.log(`[Fallback-Spotify] First attempt failed. Retrying ONLY with title: ${cleanTitle}`);
-                    spotifyMatch = await spotifyService.searchAlbum("", cleanTitle);
+                if (!ytMatch) {
+                    console.log(`[Fallback-YouTube] Full query failed. Retrying ONLY with title: ${cleanTitle}`);
+                    ytMatch = await youtubeService.searchVideo(cleanTitle);
                 }
 
-                // Super-Fallback: Título simplificado (V14.6)
-                if (!spotifyMatch && cleanTitle.includes(" ")) {
-                    const simpleTitle = cleanTitle.split(" ").slice(0, 3).join(" ");
-                    console.log(`[Fallback-Spotify] Secondary attempt failed. Retrying with simplified title: ${simpleTitle}`);
-                    spotifyMatch = await spotifyService.searchAlbum("", simpleTitle);
+                if (!ytMatch && cleanTitle.includes(" ")) {
+                    const simpleYtQuery = cleanTitle.split(" ").slice(0, 3).join(" ");
+                    console.log(`[Fallback-YouTube] Secondary failure. Final retry with simplified title: ${simpleYtQuery}`);
+                    ytMatch = await youtubeService.searchVideo(simpleYtQuery);
                 }
 
-                quotaService.track('spotify', 1);
-                if (spotifyMatch) {
-                    finalSpotifyId = spotifyMatch.spotify_id;
-                    console.log(`[batea-Import] Found Spotify ID: ${finalSpotifyId}`);
+                quotaService.track('youtube', 100);
+                if (ytMatch) {
+                    resolvedYoutubeId = ytMatch.youtube_id;
+                    console.log(`[batea-Import] Found YouTube ID via API: ${resolvedYoutubeId}`);
                 }
             } catch (e) {
-                // Silencio Positivo (V14.7) - Error ya manejado por el service devolviendo null
+                // Silencio Positivo (YouTube Falló o 403/404)
+                console.warn(`[Redundancia-Crítica] YouTube API falló o rechazó. Invocando Sound Savior (Spotify)...`);
             }
 
-            // 2. Solo si Spotify también falló y seguimos sin YouTube, intentar YouTube API (Costo alto)
-            if (!finalSpotifyId && !resolvedYoutubeId) {
-                console.log(`[Quota-Action] Spotify failed. Attempting YouTube Proactive Search (Final Fallback)...`);
+            // 2. Fallback INMEDIATO a Spotify (Si YouTube falló o no dio resultados)
+            if (!resolvedYoutubeId) {
                 try {
-                    const searchQuery = `${cleanArtist} ${cleanTitle}`;
-                    let ytMatch = await youtubeService.searchVideo(searchQuery);
+                    let spotifyMatch = await spotifyService.searchAlbum(cleanArtist, cleanTitle);
 
-                    // Fallback Escalonado (V14.7): Solo título
-                    if (!ytMatch) {
-                        console.log(`[Fallback-YouTube] Full query failed. Retrying ONLY with title: ${cleanTitle}`);
-                        ytMatch = await youtubeService.searchVideo(cleanTitle);
+                    if (!spotifyMatch) {
+                        spotifyMatch = await spotifyService.searchAlbum("", cleanTitle);
                     }
 
-                    // Super-Fallback (V14.6)
-                    if (!ytMatch && cleanTitle.includes(" ")) {
-                        const simpleYtQuery = cleanTitle.split(" ").slice(0, 3).join(" ");
-                        console.log(`[Fallback-YouTube] Secondary failure. Final retry with simplified title: ${simpleYtQuery}`);
-                        ytMatch = await youtubeService.searchVideo(simpleYtQuery);
+                    if (!spotifyMatch && cleanTitle.includes(" ")) {
+                        const simpleTitle = cleanTitle.split(" ").slice(0, 3).join(" ");
+                        spotifyMatch = await spotifyService.searchAlbum("", simpleTitle);
                     }
 
-                    quotaService.track('youtube', 100);
-                    if (ytMatch) {
-                        resolvedYoutubeId = ytMatch.youtube_id;
-                        console.log(`[batea-Import] Found YouTube ID via API: ${resolvedYoutubeId}`);
+                    quotaService.track('spotify', 1);
+                    if (spotifyMatch) {
+                        finalSpotifyId = spotifyMatch.spotify_id;
+                        console.log(`[batea-Import] The Sound Savior actuó: Cuyo Spotify ID -> ${finalSpotifyId}`);
                     }
                 } catch (e) {
-                    // Silencio Positivo (V14.7)
+                    // Ambos fallaron (Silencio)
                 }
             }
         }
