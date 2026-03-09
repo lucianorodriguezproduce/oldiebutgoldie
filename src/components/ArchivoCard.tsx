@@ -18,7 +18,7 @@ export const ArchivoCard = memo(({ item, idx, onPlay }: ArchivoCardProps) => {
     const color = '#ffeb3b'; // Fallback color (Primary)
 
     const isGoldSelection = (item.wants || 0) > (item.have || 1) * 5;
-    const playUrl = item.spotify_url || item.youtube_id;
+    const playUrl = item.spotify_id || item.youtube_id;
 
     const handlePlayClick = (e: React.MouseEvent) => {
         e.preventDefault();

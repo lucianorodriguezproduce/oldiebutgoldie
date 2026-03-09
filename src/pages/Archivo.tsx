@@ -65,7 +65,7 @@ export default function Archivo() {
 
                 <div className="columns-2 md:columns-4 lg:columns-5 gap-4 md:gap-6 space-y-4 md:space-y-6">
                     {items.map((item, idx) => (
-                        <ArchivoItemCard key={`${item.id}-${idx}`} item={item} idx={idx} />
+                        <ArchivoCard key={`${item.id}-${idx}`} item={item} idx={idx} />
                     ))}
 
                     {loading && Array.from({ length: 10 }).map((_, i) => (
