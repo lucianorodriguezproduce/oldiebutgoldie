@@ -102,17 +102,11 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // User Assets - Soberanía y Blindaje: Solo dueño o Admin
+    // User Assets - Soberanía y Blindaje: Solo dueño o Admin, los items 'active' son públicos.
     match /user_assets/{assetId} {
-      allow read: if (resource != null && resource.data.status == "active") || (request.auth != null && (
-        isAdmin() || 
-        resource.data.uid == request.auth.uid
-      ));
+      allow read: if resource.data.status == "active" || (request.auth != null && (isAdmin() || resource.data.uid == request.auth.uid));
       allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
-      allow update, delete: if request.auth != null && (
-        resource.data.uid == request.auth.uid || 
-        isAdmin()
-      );
+      allow update, delete: if request.auth != null && (resource.data.uid == request.auth.uid || isAdmin());
     }
 
     // Lotes y Carritos - Gestión Admin

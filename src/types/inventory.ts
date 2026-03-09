@@ -17,6 +17,7 @@ export interface InventoryItem {
         wants?: number;
         have?: number;
         notes?: string;
+        is_golden_selection?: boolean;
     };
     media: {
         thumbnail: string;

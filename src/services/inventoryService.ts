@@ -265,6 +265,17 @@ export const inventoryService = {
             }
         }
 
+        // 3. Protocolo de Enriquecimiento (V15.6)
+        const tracklistArray = (discogsData.tracklist || []).map((t: any) => ({
+            position: t.position || "",
+            title: t.title || "",
+            duration: t.duration || ""
+        })).slice(0, 5); // Limit to 5 for DB scale
+
+        const wants = discogsData.community?.want || 0;
+        const have = discogsData.community?.have || 0;
+        const isGoldenSelection = (have > 0 && (wants / have) > 5) ? true : undefined;
+
         const newItem: InventoryItem = {
             id: internalId,
             metadata: {
@@ -280,9 +291,12 @@ export const inventoryService = {
                     : discogsData.format || "Unknown Format",
                 ...(resolvedYoutubeId && { youtube_id: resolvedYoutubeId }),
                 ...(finalSpotifyId && { spotify_id: finalSpotifyId }),
-                wants: discogsData.community?.want || 0,
-                have: discogsData.community?.have || 0,
-                ...(extraData?.notes && { notes: extraData.notes })
+                wants: wants,
+                have: have,
+                ...(extraData?.notes && { notes: extraData.notes }),
+                ...(isGoldenSelection && { is_golden_selection: isGoldenSelection }),
+                bpm: 0, // Fallbacks ready for expansion
+                key: ""
             },
             media: {
                 thumbnail: discogsData.thumb || "",
@@ -296,21 +310,18 @@ export const inventoryService = {
                 ...logistics,
                 status: logistics.stock > 0 ? "active" : "sold_out"
             },
-            tracklist: (discogsData.tracklist || []).map((t: any) => ({
-                position: t.position || "",
-                title: t.title || "",
-                duration: t.duration || ""
-            })),
+            tracklist: tracklistArray,
             labels: (discogsData.labels || []).map((l: any) => ({
                 name: l.name || "",
                 catno: l.catno || ""
             }))
         };
 
+        // Persistencia INMEDIATA con Merge True para salvaguardar futuros enriquecimientos
         await setDoc(doc(db, COLLECTION_NAME, internalId), {
             ...newItem,
             timestamp: serverTimestamp()
-        });
+        }, { merge: true });
 
         return internalId;
     },
