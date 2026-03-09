@@ -17,7 +17,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         const imageRes = await fetch(imageUrl, { headers: fetchHeaders });
-        if (!imageRes.ok) throw new Error(`Failed to fetch image: ${imageRes.statusText}`);
+        if (!imageRes.ok) {
+            const status = imageRes.status === 404 ? 404 : (imageRes.status === 403 ? 403 : 502);
+            return res.status(status).json({ error: `Discogs Image Fetch Failed: ${imageRes.statusText}` });
+        }
 
         const blob = await imageRes.arrayBuffer();
         const buffer = Buffer.from(blob);
@@ -28,8 +31,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const result = await uploadToBunker(base64, fileName, mimeType);
 
         return res.status(200).json({ url: result.url });
-    } catch (error) {
+    } catch (error: any) {
         console.error('Bunker Import Image Error:', error);
-        return res.status(500).json({ error: (error as Error).message });
+        return res.status(503).json({ error: error.message || 'Image Service Unavailable' });
     }
 }

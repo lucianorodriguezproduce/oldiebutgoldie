@@ -328,15 +328,10 @@ export default function BulkUpload() {
         try {
             for (const row of batchItems) {
                 const match = row.selectedMatch!;
-                let retryCount = 0;
-                const maxRetries = 2;
-
+                let success = false;
                 while (retryCount <= maxRetries) {
                     try {
-                        // Throttling: 3 solicitudes por segundo (V14.4)
                         if (publishCount > 0) await sleep(333);
-
-                        // 1. Ingreso al La Batea (Sovereignty Snapshot)
                         await inventoryService.importFromDiscogs(
                             match,
                             {
@@ -346,24 +341,29 @@ export default function BulkUpload() {
                                 status: "active"
                             }
                         );
-                        break; // Éxito, salir del bucle de reintento
+                        success = true;
+                        break;
                     } catch (error: any) {
-                        // Manejo de Error 429: Too Many Requests (V14.4)
                         if (error.status === 429 || error.message?.includes('429')) {
-                            console.warn(`[Quota] API Rate limit reached. Waiting 5s... (Attempt ${retryCount + 1})`);
-                            await sleep(5000); // Esperar 5 segundos y reintentar
+                            console.warn(`[Quota] Rate limit reached. Waiting 5s...`);
+                            await sleep(5000);
                             retryCount++;
-                            if (retryCount > maxRetries) throw error;
                         } else {
-                            throw error;
+                            console.error(`[Bulk-Error] Item ${row.originalTitle} failed:`, error.message);
+                            break; // Stop retrying this item
                         }
                     }
                 }
 
-                const rIndex = newRows.findIndex(r => r.id === row.id);
-                newRows[rIndex].published = true;
-                newRows[rIndex].inBatch = false;
-                publishCount++;
+                if (success) {
+                    const rIndex = newRows.findIndex(r => r.id === row.id);
+                    newRows[rIndex].published = true;
+                    newRows[rIndex].inBatch = false;
+                    publishCount++;
+                } else {
+                    const rIndex = newRows.findIndex(r => r.id === row.id);
+                    newRows[rIndex].status = "NOT_FOUND"; // Mark as failed
+                }
             }
 
             setRows(newRows);

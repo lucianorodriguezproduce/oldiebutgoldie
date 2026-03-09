@@ -18,6 +18,10 @@
             "destination": "/api/prerender"
         },
         {
+            "source": "/api/batea/import_image",
+            "destination": "/api/bunker/import_image"
+        },
+        {
             "source": "/orden/:id",
             "destination": "/api/prerender"
         },

@@ -74,6 +74,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
+        const { clientId, clientSecret } = await getSpotifySecrets();
+        if (!clientId || !clientSecret) {
+            return res.status(401).json({ error: 'Spotify credentials not configured in Bunker or Environment' });
+        }
+
         const token = await getAccessToken();
         const query = encodeURIComponent(`artist:${artist} album:${title}`);
         const searchUrl = `https://api.spotify.com/v1/search?q=${query}&type=album&limit=1`;
@@ -87,7 +92,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const data = await response.json();
 
         if (!response.ok) {
-            return res.status(response.status).json(data);
+            const status = response.status === 401 ? 401 : (response.status === 429 ? 429 : 400);
+            return res.status(status).json(data);
         }
 
         const album = data.albums.items[0];
@@ -102,6 +108,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
     } catch (error: any) {
         console.error('Spotify API Error:', error);
-        return res.status(500).json({ error: error.message });
+        // Error 401 for auth failures, 400 for bad requests, default to 503 instead of 500 if possible
+        const status = error.message?.includes('credentials') ? 401 : 503;
+        return res.status(status).json({ error: error.message || 'Spotify Service Unavailable' });
     }
 }

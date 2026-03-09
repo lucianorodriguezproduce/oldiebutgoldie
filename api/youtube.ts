@@ -35,7 +35,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const apiKey = await getYouTubeApiKey();
     if (!apiKey) {
-        return res.status(500).json({ error: 'YouTube API Key not configured' });
+        return res.status(401).json({ error: 'YouTube API Key not configured' });
     }
 
     try {
@@ -59,6 +59,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
     } catch (error: any) {
         console.error('YouTube API Error:', error);
-        return res.status(500).json({ error: error.message });
+        // Map common errors to status codes
+        const status = error.code === 403 ? 403 : (error.code === 401 ? 401 : 503);
+        const message = error.errors?.[0]?.message || error.message || 'YouTube Service Unavailable';
+        return res.status(status).json({ error: message });
     }
 }
