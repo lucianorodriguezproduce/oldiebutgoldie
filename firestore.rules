@@ -91,28 +91,29 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
-    // Trades - Negociaciones: Solo participantes o Admin
-    match /trades/{tradeId} {
-      allow read: if request.auth != null && (
-        isAdmin() ||
-        request.auth.uid == resource.data.participants.senderId ||
-        request.auth.uid == resource.data.participants.receiverId
-      );
-      allow write: if request.auth != null; // Restricción lógica en el servicio
-      allow delete: if isAdmin();
+    // Lotes y Carritos - Gestión Admin
+    match /lotes/{document=**} {
+      allow read, write: if isAdmin();
     }
 
-    // User Assets - Soberanía y Blindaje: Solo dueño o Admin
-    match /user_assets/{assetId} {
-      allow read: if (resource != null && resource.data.status == "active") || (request.auth != null && (
-        isAdmin() || 
-        resource.data.uid == request.auth.uid
-      ));
-      allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
-      allow update, delete: if request.auth != null && (
-        resource.data.uid == request.auth.uid || 
-        isAdmin()
-      );
+    // Purchase Requests & P2P Market - Gestión Admin
+    match /purchase_requests/{document=**} {
+      allow read, write: if isAdmin();
+    }
+    match /p2p_market/{document=**} {
+      allow read, write: if isAdmin();
+    }
+
+    // Articles & Editorial Assets - Gestión Admin
+    match /articles/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Analytics Intents - Gestión Admin
+    match /analytics_intents/{document=**} {
+      allow create: if true;
+      allow read, delete: if isAdmin();
     }
 
     // Analytics - Registro de búsquedas sin resultados
