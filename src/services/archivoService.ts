@@ -38,11 +38,16 @@ export const archivoService = {
         // 1. SWR: Try cache first
         const cacheKey = `${CACHE_KEY_PREFIX}item_${id}`;
         const cached = localStorage.getItem(cacheKey);
+        let cachedResult: UnifiedItem | null = null;
         if (cached) {
-            try { return JSON.parse(cached); } catch { localStorage.removeItem(cacheKey); }
+            try {
+                cachedResult = JSON.parse(cached);
+            } catch {
+                localStorage.removeItem(cacheKey);
+            }
         }
 
-        // 2. Fetch from Source
+        // 2. Fetch from Source (Always executed to revalidate)
         const fetchSource = async () => {
             const start = performance.now();
             const invRef = doc(db, "inventory", id);
@@ -115,8 +120,15 @@ export const archivoService = {
             return null;
         };
 
-        const result = await fetchSource();
-        return result;
+        const resultPromise = fetchSource();
+
+        if (cachedResult) {
+            // Background fetch to update cache, but return immediately
+            resultPromise.catch(console.error);
+            return cachedResult;
+        }
+
+        return await resultPromise;
     },
 
     async getCombinedPaged(pageSize: number = 20, lastDocs?: { inventory?: any, user_assets?: any }) {

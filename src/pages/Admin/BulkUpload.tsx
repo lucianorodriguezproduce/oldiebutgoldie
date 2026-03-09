@@ -333,9 +333,14 @@ export default function BulkUpload() {
                 const maxRetries = 2;
                 while (retryCount <= maxRetries) {
                     try {
-                        if (publishCount > 0) await sleep(333);
+                        if (publishCount > 0) await sleep(1000); // Increased sleep to aggressively avoid Discogs 429 rate limits
+
+                        // 1. Fetch full release details instead of passing the raw search result
+                        const fullRelease = await discogsService.getReleaseDetails(match.id.toString());
+
+                        // 2. Import into inventory
                         await inventoryService.importFromDiscogs(
-                            match,
+                            fullRelease,
                             {
                                 stock: 1,
                                 price: row.originalPrice,
