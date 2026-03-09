@@ -11,6 +11,7 @@ export interface InventoryItem {
         format_description: string;
         isBatch?: boolean;
         youtube_id?: string;
+        spotify_id?: string;
         notes?: string;
     };
     media: {

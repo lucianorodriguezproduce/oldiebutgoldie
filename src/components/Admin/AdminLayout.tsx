@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Activity, Terminal, Shield, LogOut, Disc, Newspaper, ShoppingBag, BarChart3, UploadCloud, Handshake, Package } from "lucide-react";
+import { LayoutDashboard, Activity, Terminal, Shield, LogOut, Disc, Newspaper, ShoppingBag, BarChart3, UploadCloud, Handshake, Package, Trash2 } from "lucide-react";
 
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
@@ -22,6 +22,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         { label: "Identidad Marca", href: "/admin/branding", icon: Shield },
         { label: "Permisos", href: "/admin/permissions", icon: Terminal },
         { label: "Editorial Hub", href: "/admin/editorial", icon: Newspaper },
+        { label: "🔥 Purga Total", href: "/admin/purge", icon: Trash2 },
     ];
 
 

@@ -1,5 +1,7 @@
 import { db } from "@/lib/firebase";
 import { discogsService } from "@/lib/discogs";
+import { spotifyService } from "@/services/spotifyService";
+import { youtubeService } from "@/services/youtubeService";
 import {
     collection,
     doc,
@@ -165,6 +167,26 @@ export const inventoryService = {
         }
 
         const finalYoutubeId = extraData?.youtube_id || discogsYoutubeId;
+        let finalSpotifyId = "";
+
+        // Fallback Inteligente (V14.0)
+        let resolvedYoutubeId = finalYoutubeId;
+
+        if (!resolvedYoutubeId) {
+            console.log(`[batea-Import] No YouTube ID found in Discogs for ${parsedTitle}. Trying Spotify...`);
+            const spotifyMatch = await spotifyService.searchAlbum(parsedArtist, parsedTitle);
+            if (spotifyMatch) {
+                finalSpotifyId = spotifyMatch.spotify_id;
+                console.log(`[batea-Import] Found Spotify ID: ${finalSpotifyId}`);
+            } else {
+                console.log(`[batea-Import] Spotify failed. Trying YouTube Proactive Search...`);
+                const ytMatch = await youtubeService.searchVideo(`${parsedArtist} ${parsedTitle}`);
+                if (ytMatch) {
+                    resolvedYoutubeId = ytMatch.youtube_id;
+                    console.log(`[batea-Import] Found YouTube ID via API: ${resolvedYoutubeId}`);
+                }
+            }
+        }
 
         const newItem: InventoryItem = {
             id: internalId,
@@ -179,7 +201,8 @@ export const inventoryService = {
                 format_description: Array.isArray(discogsData.formats)
                     ? discogsData.formats.map((f: any) => f.name).join(", ")
                     : discogsData.format || "Unknown Format",
-                ...(finalYoutubeId && { youtube_id: finalYoutubeId }),
+                ...(resolvedYoutubeId && { youtube_id: resolvedYoutubeId }),
+                ...(finalSpotifyId && { spotify_id: finalSpotifyId }),
                 ...(extraData?.notes && { notes: extraData.notes })
             },
             media: {

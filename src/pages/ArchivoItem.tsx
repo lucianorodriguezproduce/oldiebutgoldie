@@ -146,25 +146,42 @@ export default function ArchivoItem() {
                             )}
                         </div>
 
-                        {/* YouTube Sticky Player */}
-                        {item.youtube_id && (
+                        {/* Multi-Platform Player (V14.0) */}
+                        {(item.youtube_id || item.spotify_id) && (
                             <div className="w-full rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-black/50 backdrop-blur-md">
                                 <div className="p-3 border-b border-white/10 flex items-center gap-2 bg-zinc-900/50">
                                     <PlayCircle className="w-4 h-4 text-primary" />
-                                    <span className="text-[10px] uppercase font-bold tracking-widest text-zinc-400">Preescucha Oficial</span>
+                                    <span className="text-[10px] uppercase font-bold tracking-widest text-zinc-400">
+                                        {item.youtube_id ? "Preescucha Oficial (Video)" : "Preescucha Oficial (Spotify)"}
+                                    </span>
                                 </div>
-                                <div className="relative aspect-video w-full">
-                                    <iframe
-                                        width="100%"
-                                        height="100%"
-                                        src={`https://www.youtube.com/embed/${item.youtube_id}?autoplay=0&rel=0&modestbranding=1`}
-                                        title="YouTube video player"
-                                        frameBorder="0"
-                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                        allowFullScreen
-                                        loading="lazy" // SEO Performance (V12.7)
-                                        className="absolute top-0 left-0 w-full h-full pointer-events-auto"
-                                    ></iframe>
+                                <div className="relative w-full">
+                                    {item.youtube_id ? (
+                                        <div className="aspect-video w-full">
+                                            <iframe
+                                                width="100%"
+                                                height="100%"
+                                                src={`https://www.youtube.com/embed/${item.youtube_id}?autoplay=0&rel=0&modestbranding=1`}
+                                                title="YouTube video player"
+                                                frameBorder="0"
+                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                allowFullScreen
+                                                loading="lazy"
+                                                className="absolute top-0 left-0 w-full h-full"
+                                            ></iframe>
+                                        </div>
+                                    ) : (
+                                        <div className="h-[152px] w-full">
+                                            <iframe
+                                                src={`https://open.spotify.com/embed/album/${item.spotify_id}?utm_source=generator&theme=0`}
+                                                width="100%"
+                                                height="152"
+                                                frameBorder="0"
+                                                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                                                loading="lazy"
+                                            ></iframe>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}

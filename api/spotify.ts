@@ -1,0 +1,107 @@
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { SecretManagerServiceClient } from '@google-cloud/secret-manager';
+
+const secretClient = new SecretManagerServiceClient();
+
+async function getSpotifySecrets() {
+    try {
+        const [clientIdVersion] = await secretClient.accessSecretVersion({
+            name: 'projects/344484307950/secrets/SPOTIFY_CLIENT_ID/versions/latest',
+        });
+        const [clientSecretVersion] = await secretClient.accessSecretVersion({
+            name: 'projects/344484307950/secrets/SPOTIFY_CLIENT_SECRET/versions/latest',
+        });
+
+        return {
+            clientId: clientIdVersion.payload?.data?.toString(),
+            clientSecret: clientSecretVersion.payload?.data?.toString()
+        };
+    } catch (e) {
+        console.warn('SPOTIFY_SECRET_FETCH_FAILURE: Falling back to env...');
+        return {
+            clientId: process.env.SPOTIFY_CLIENT_ID,
+            clientSecret: process.env.SPOTIFY_CLIENT_SECRET
+        };
+    }
+}
+
+let cachedToken: string | null = null;
+let tokenExpiry: number = 0;
+
+async function getAccessToken() {
+    if (cachedToken && Date.now() < tokenExpiry) {
+        return cachedToken;
+    }
+
+    const { clientId, clientSecret } = await getSpotifySecrets();
+    if (!clientId || !clientSecret) {
+        throw new Error('Spotify credentials not configured');
+    }
+
+    const auth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+    const response = await fetch('https://accounts.spotify.com/api/token', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Basic ${auth}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'grant_type=client_credentials',
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+        throw new Error(`Spotify Auth Error: ${data.error_description || data.error}`);
+    }
+
+    cachedToken = data.access_token;
+    tokenExpiry = Date.now() + (data.expires_in * 1000) - 60000; // 1 min buffer
+    return cachedToken;
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
+    }
+
+    const { artist, title } = req.query;
+
+    if (!artist || !title) {
+        return res.status(400).json({ error: 'Artist and title are required' });
+    }
+
+    try {
+        const token = await getAccessToken();
+        const query = encodeURIComponent(`artist:${artist} album:${title}`);
+        const searchUrl = `https://api.spotify.com/v1/search?q=${query}&type=album&limit=1`;
+
+        const response = await fetch(searchUrl, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+            },
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            return res.status(response.status).json(data);
+        }
+
+        const album = data.albums.items[0];
+        if (!album) {
+            return res.status(404).json({ error: 'Album not found on Spotify' });
+        }
+
+        return res.status(200).json({
+            spotify_id: album.id,
+            external_url: album.external_urls.spotify,
+            images: album.images
+        });
+    } catch (error: any) {
+        console.error('Spotify API Error:', error);
+        return res.status(500).json({ error: error.message });
+    }
+}
