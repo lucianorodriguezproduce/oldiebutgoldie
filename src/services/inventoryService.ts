@@ -18,7 +18,8 @@ import {
     startAfter,
     deleteDoc,
     writeBatch,
-    onSnapshot
+    onSnapshot,
+    deleteField
 } from "firebase/firestore";
 import type { InventoryItem } from "@/types/inventory";
 
@@ -430,6 +431,70 @@ export const inventoryService = {
                 .filter(item => item.logistics.stock > 0);
             callback(items);
         });
+    },
+
+    async healRecord(item: InventoryItem) {
+        console.log(`[Heal-Protocol] Iniciando reparación para ${item.metadata.title}...`);
+
+        let newBpm = item.metadata.bpm || 0;
+        let newKey = item.metadata.key || "";
+        let newPreview = item.metadata.preview_url || "";
+        let newTracklist = item.tracklist || [];
+
+        // 1. Extraer Audio Features faltantes si tenemos spotify_id
+        if (item.metadata.spotify_id && (!newBpm || !newKey || !newPreview)) {
+            try {
+                const response = await fetch(`/api/spotify?spotify_id=${item.metadata.spotify_id}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.bpm) newBpm = data.bpm;
+                    if (data.key) newKey = data.key;
+                    if (data.preview_url) newPreview = data.preview_url;
+                    console.log(`[Heal-Protocol] Recuperado desde Spotify: BPM ${newBpm}, Key ${newKey}`);
+                }
+            } catch (e) {
+                console.warn("[Heal-Protocol] Falló la curación desde Spotify:", e);
+            }
+        }
+
+        // 2. Extraer tracklist si está vacío (re-consulta Discogs)
+        if (newTracklist.length === 0) {
+            try {
+                const discogsRes = await fetch(`/api/proxy?path=/releases/${item.id}`);
+                if (discogsRes.ok) {
+                    const discogsData = await discogsRes.json();
+                    newTracklist = (discogsData.tracklist || []).map((t: any) => ({
+                        position: t.position || "",
+                        title: t.title || "",
+                        duration: t.duration || ""
+                    })).slice(0, 5);
+                    console.log(`[Heal-Protocol] Recuperado Tracklist desde Discogs con ${newTracklist.length} tracks.`);
+                }
+            } catch (e) {
+                console.warn("[Heal-Protocol] Falló el rescate de Discogs:", e);
+            }
+        }
+
+        // 3. Compilación y Soldadura (Update a BD con eliminación del Warning)
+        const docRef = doc(db, COLLECTION_NAME, item.id);
+        const updatePayload: Record<string, any> = {};
+
+        // Asignación estricta de variables metadata
+        updatePayload["metadata.bpm"] = newBpm;
+        updatePayload["metadata.key"] = newKey;
+        if (newPreview) updatePayload["metadata.preview_url"] = newPreview;
+
+        // Purgando el estado negativo
+        updatePayload["metadata.status_warning"] = deleteField();
+
+        // Actualizando el tracklist raíz
+        if (newTracklist.length > 0) {
+            updatePayload["tracklist"] = newTracklist;
+        }
+
+        console.log(`[Heal-Protocol] Ejecutando soldadura en Firestore...`);
+        await updateDoc(docRef, updatePayload);
+        console.log(`[Heal-Protocol] Disco Sanado exitosamente.`);
     }
 };
 

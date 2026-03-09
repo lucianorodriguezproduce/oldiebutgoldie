@@ -213,6 +213,20 @@ export default function AdminInventory() {
         }
     };
 
+    const handleHeal = async (item: InventoryItem) => {
+        showLoading(`Sanando disco: ${item.metadata.title}...`);
+        try {
+            await inventoryService.healRecord(item);
+            alert("Disco curado exitosamente. Se recargará la lista.");
+            fetchInventory();
+        } catch (error) {
+            console.error("Error healing item:", error);
+            alert("Error al curar el ítem.");
+        } finally {
+            hideLoading();
+        }
+    };
+
     const toggleSelectAll = () => {
         if (selectedIds.size === filteredItems.length) {
             setSelectedIds(new Set());
@@ -483,6 +497,15 @@ export default function AdminInventory() {
                                                 >
                                                     <Trash2 className="h-4 w-4" />
                                                 </button>
+                                                {item.metadata.status_warning && (
+                                                    <button
+                                                        onClick={() => handleHeal(item)}
+                                                        className="p-3 bg-red-500/20 text-red-500 rounded-2xl hover:text-white hover:bg-red-500 transition-all opacity-0 group-hover:opacity-100 animate-pulse border border-red-500/50"
+                                                        title="Curar Registro (BPM/Key/Tracklist)"
+                                                    >
+                                                        <Sparkles className="h-4 w-4" />
+                                                    </button>
+                                                )}
                                                 <button
                                                     onClick={() => setMarketingItem(item)}
                                                     className="p-3 bg-white/5 text-primary rounded-2xl hover:bg-primary/10 transition-all opacity-0 group-hover:opacity-100"
