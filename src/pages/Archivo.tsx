@@ -18,7 +18,15 @@ export default function Archivo() {
         setLoading(true);
         try {
             const result = await archivoService.getCombinedPaged(20, lastDocs);
-            setItems(prev => [...prev, ...result.items]);
+
+            // Si es la carga inicial (lastDocs == null), reemplazamos el caché con datos frescos.
+            // Si es paginación (lastDocs != null), concatenamos normalmente.
+            if (!lastDocs) {
+                setItems(result.items);
+            } else {
+                setItems(prev => [...prev, ...result.items]);
+            }
+
             setLastDocs(result.lastDocs);
             setHasMore(result.hasMore);
         } catch (error) {
