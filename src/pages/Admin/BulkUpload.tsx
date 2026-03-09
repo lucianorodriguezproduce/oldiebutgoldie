@@ -329,6 +329,8 @@ export default function BulkUpload() {
             for (const row of batchItems) {
                 const match = row.selectedMatch!;
                 let success = false;
+                let retryCount = 0;
+                const maxRetries = 2;
                 while (retryCount <= maxRetries) {
                     try {
                         if (publishCount > 0) await sleep(333);
