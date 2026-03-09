@@ -63,7 +63,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         const { dateRanges, metrics, dimensions } = req.body;
 
-        const [response] = await analyticsData.properties.runReport({
+        const { data: response } = await analyticsData.properties.runReport({
             property: `properties/${propertyId}`,
             requestBody: {
                 dateRanges: dateRanges || [{ startDate: '7daysAgo', endDate: 'today' }],

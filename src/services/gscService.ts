@@ -14,7 +14,7 @@ export const gscService = {
      */
     async getKeywords() {
         try {
-            const response = await fetch('/api/gsc/queries');
+            const response = await fetch('/api/gsc');
             if (!response.ok) {
                 const errorData = await response.json();
                 if (errorData.needs_auth) {

@@ -22,7 +22,7 @@ export const crawlWatcherService = {
 
             const results = [];
             for (const url of urlsToInspect) {
-                const res = await fetch('/api/gsc/inspect', {
+                const res = await fetch('/api/gsc?action=inspect', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ url })

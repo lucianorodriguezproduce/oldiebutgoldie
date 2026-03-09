@@ -141,7 +141,7 @@ export default function ArchivoItem() {
                             <LazyImage
                                 src={item.image}
                                 alt={item.title}
-                                className="w-full h-full object-cover relative z-10 group-hover:scale-110 transition-transform duration-[1.5s] ease-out"
+                                className="w-full h-full object-cover relative z-10 group-hover:scale-110 transition-transform duration-[1500ms] ease-out"
                             />
                             {item.format?.toLowerCase().includes("vinyl") && (
                                 <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/vinyl.png')] opacity-20 group-hover:opacity-40 transition-opacity duration-700 z-20 pointer-events-none mix-blend-overlay"></div>
@@ -218,8 +218,8 @@ export default function ArchivoItem() {
                                 {/* Rareza Badge (V14.1) */}
                                 {item.wants && item.have && (
                                     <span className={`px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.25em] border shadow-2xl backdrop-blur-md ${(item.wants / item.have) > 5 ? 'bg-red-500/20 border-red-500/30 text-red-500' :
-                                            (item.wants / item.have) > 2 ? 'bg-amber-500/20 border-amber-500/30 text-amber-500' :
-                                                'bg-zinc-800 border-zinc-700 text-zinc-400'
+                                        (item.wants / item.have) > 2 ? 'bg-amber-500/20 border-amber-500/30 text-amber-500' :
+                                            'bg-zinc-800 border-zinc-700 text-zinc-400'
                                         }`}>
                                         {(item.wants / item.have) > 5 ? 'GRIAL' :
                                             (item.wants / item.have) > 2 ? 'MUY RARO' : 'CATÁLOGO'}
