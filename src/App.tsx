@@ -19,6 +19,37 @@ import Layout from "@/components/Layout/Layout";
 // Lazy Loaded Pages (Code Splitting)
 const Login = lazy(() => import("@/pages/Login"));
 const Home = lazy(() => import("@/pages/Home"));
+import { useSearchParams } from "react-router-dom";
+import { useLote } from "@/context/LoteContext";
+import { inventoryService } from "@/services/inventoryService";
+
+const URLParameterHandler = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { addItemFromInventory } = useLote();
+
+  useEffect(() => {
+    const itemId = searchParams.get('add');
+    if (itemId) {
+      const handleAutomaticAdd = async () => {
+        try {
+          const item = await inventoryService.getItemById(itemId);
+          if (item) {
+            addItemFromInventory(item);
+            // Clean up URL parameter without changing the route
+            searchParams.delete('add');
+            setSearchParams(searchParams, { replace: true });
+          }
+        } catch (error) {
+          console.error("Global automatic add-to-cart failed:", error);
+        }
+      };
+      handleAutomaticAdd();
+    }
+  }, [searchParams, setSearchParams, addItemFromInventory]);
+
+  return null;
+};
+
 const PublicOrders = lazy(() => import("@/pages/PublicOrders"));
 const PublicOrderView = lazy(() => import("@/pages/PublicOrderView"));
 const AlbumDetail = lazy(() => import("@/pages/AlbumDetail"));
@@ -127,6 +158,7 @@ function AppContent() {
 
   return (
     <>
+      <URLParameterHandler />
       <LoadingOverlay />
       <FloatingCartCounter />
       <Suspense fallback={<LoadingOverlay />}>
