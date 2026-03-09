@@ -64,13 +64,14 @@ export const archivoService = {
                     condition: data.logistics.condition,
                     tracklist: data.tracklist,
                     labels: data.labels,
-                    youtube_id: (data as any).youtube_id, // TODO: Add to formal InventoryItem type in inventory.ts
-                    spotify_id: (data as any).spotify_id,
+                    youtube_id: data.metadata.youtube_id,
+                    spotify_id: data.metadata.spotify_id,
+                    preview_url: data.metadata.preview_url,
                     bpm: data.metadata.bpm,
                     key: data.metadata.key,
                     wants: data.metadata.wants,
                     have: data.metadata.have,
-                    notes: (data as any).notes
+                    notes: data.metadata.notes
                 };
                 localStorage.setItem(cacheKey, JSON.stringify(result));
                 return result;
