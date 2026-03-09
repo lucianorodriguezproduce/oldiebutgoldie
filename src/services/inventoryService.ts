@@ -277,7 +277,7 @@ export const inventoryService = {
             position: t.position || "",
             title: t.title || "",
             duration: t.duration || ""
-        })).slice(0, 5); // Limit to 5 for DB scale
+        })); // Removed limit to fetch full tracklist
 
         const wants = discogsData.community?.want || 0;
         const have = discogsData.community?.have || 0;
@@ -505,7 +505,7 @@ export const inventoryService = {
                         position: t.position || "",
                         title: t.title || "",
                         duration: t.duration || ""
-                    })).slice(0, 5);
+                    }));
                     console.log(`[Heal-Protocol] Recuperado Tracklist desde Discogs con ${newTracklist.length} tracks.`);
                 }
             } catch (e) {

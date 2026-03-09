@@ -65,6 +65,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         let albumDataMock: any = null;
 
         if (!albumIdToUse) {
+            console.log(`[Spotify-Search] Querying: artist:${artist} album:${title}`);
             const query = encodeURIComponent(`artist:${artist} album:${title}`);
             const searchUrl = `https://api.spotify.com/v1/search?q=${query}&type=album&limit=1`;
             const response = await fetch(searchUrl, {
@@ -73,21 +74,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const data = await response.json();
 
             if (!response.ok) {
+                console.error(`[Spotify-API-Error] Search failed: ${response.status}`, data);
                 const status = response.status === 401 ? 401 : (response.status === 429 ? 429 : 400);
                 return res.status(status).json(data);
             }
 
             albumDataMock = data.albums.items[0];
             if (!albumDataMock) {
-                return res.status(404).json({ error: 'Album not found on Spotify' });
+                console.warn(`[Spotify-Audit] Album NOT FOUND: "${artist} - ${title}"`);
+                return res.status(404).json({
+                    error: 'Album not found on Spotify',
+                    audit_query: { artist, title }
+                });
             }
             albumIdToUse = albumDataMock.id;
+            console.log(`[Spotify-Audit] Found Match: ${albumIdToUse} for "${artist} - ${title}"`);
         } else {
+            console.log(`[Spotify-Audit] Direct fetch for ID: ${albumIdToUse}`);
             const albumResponse = await fetch(`https://api.spotify.com/v1/albums/${albumIdToUse}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (albumResponse.ok) {
                 albumDataMock = await albumResponse.json();
+            } else {
+                console.error(`[Spotify-Audit] Failed to fetch album ID ${albumIdToUse}: ${albumResponse.status}`);
             }
         }
 
@@ -137,7 +147,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             images: albumDataMock?.images || [],
             bpm,
             key: keyText,
-            preview_url: previewUrl
+            preview_url: previewUrl,
+            audit: {
+                found_match: !!albumDataMock,
+                enriched: bpm > 0,
+                timestamp: new Date().toISOString()
+            }
         });
     } catch (error: any) {
         console.error('Spotify API Error:', error);
