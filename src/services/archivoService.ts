@@ -20,6 +20,10 @@ export interface UnifiedItem {
     labels?: { name: string; catno: string }[];
     youtube_id?: string;
     spotify_id?: string;
+    bpm?: number;
+    key?: string;
+    wants?: number;
+    have?: number;
     notes?: string;
 }
 
@@ -60,6 +64,10 @@ export const archivoService = {
                     labels: data.labels,
                     youtube_id: (data as any).youtube_id, // TODO: Add to formal InventoryItem type in inventory.ts
                     spotify_id: (data as any).spotify_id,
+                    bpm: data.metadata.bpm,
+                    key: data.metadata.key,
+                    wants: data.metadata.wants,
+                    have: data.metadata.have,
                     notes: (data as any).notes
                 };
                 localStorage.setItem(cacheKey, JSON.stringify(result));
@@ -86,6 +94,10 @@ export const archivoService = {
                     labels: data.labels,
                     youtube_id: (data as any).youtube_id,
                     spotify_id: (data as any).spotify_id,
+                    bpm: data.metadata.bpm,
+                    key: data.metadata.key,
+                    wants: data.metadata.wants,
+                    have: data.metadata.have,
                     notes: (data as any).notes
                 };
                 localStorage.setItem(cacheKey, JSON.stringify(result));

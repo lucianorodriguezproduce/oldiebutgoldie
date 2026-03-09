@@ -323,20 +323,42 @@ export default function BulkUpload() {
         let newRows = [...rows];
         let publishCount = 0;
 
+        const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
         try {
             for (const row of batchItems) {
                 const match = row.selectedMatch!;
+                let retryCount = 0;
+                const maxRetries = 2;
 
-                // 1. Ingreso al La Batea (Sovereignty Snapshot)
-                await inventoryService.importFromDiscogs(
-                    match,
-                    {
-                        stock: 1,
-                        price: row.originalPrice,
-                        condition: `${row.originalMedia} / ${row.originalCover}`,
-                        status: "active"
+                while (retryCount <= maxRetries) {
+                    try {
+                        // Throttling: 3 solicitudes por segundo (V14.4)
+                        if (publishCount > 0) await sleep(333);
+
+                        // 1. Ingreso al La Batea (Sovereignty Snapshot)
+                        await inventoryService.importFromDiscogs(
+                            match,
+                            {
+                                stock: 1,
+                                price: row.originalPrice,
+                                condition: `${row.originalMedia} / ${row.originalCover}`,
+                                status: "active"
+                            }
+                        );
+                        break; // Éxito, salir del bucle de reintento
+                    } catch (error: any) {
+                        // Manejo de Error 429: Too Many Requests (V14.4)
+                        if (error.status === 429 || error.message?.includes('429')) {
+                            console.warn(`[Quota] API Rate limit reached. Waiting 5s... (Attempt ${retryCount + 1})`);
+                            await sleep(5000); // Esperar 5 segundos y reintentar
+                            retryCount++;
+                            if (retryCount > maxRetries) throw error;
+                        } else {
+                            throw error;
+                        }
                     }
-                );
+                }
 
                 const rIndex = newRows.findIndex(r => r.id === row.id);
                 newRows[rIndex].published = true;

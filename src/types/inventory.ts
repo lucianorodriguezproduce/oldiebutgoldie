@@ -12,6 +12,10 @@ export interface InventoryItem {
         isBatch?: boolean;
         youtube_id?: string;
         spotify_id?: string;
+        bpm?: number;
+        key?: string;
+        wants?: number;
+        have?: number;
         notes?: string;
     };
     media: {

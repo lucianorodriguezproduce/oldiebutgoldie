@@ -2,6 +2,7 @@ import { db } from "@/lib/firebase";
 import { discogsService } from "@/lib/discogs";
 import { spotifyService } from "@/services/spotifyService";
 import { youtubeService } from "@/services/youtubeService";
+import { quotaService } from "@/services/quotaService";
 import {
     collection,
     doc,
@@ -121,6 +122,8 @@ export const inventoryService = {
             console.error("Failed to import image to Storage, using original URL line-of-sight:", error);
         }
 
+        quotaService.track('discogs', 1); // Importación base
+
         // 2. Fetch Original Year from Master if available
         let originalYear = parseInt(discogsData.year) || 0;
         if (discogsData.master_id) {
@@ -128,6 +131,7 @@ export const inventoryService = {
                 const master = await discogsService.getMasterDetails(discogsData.master_id);
                 if (master && master.year) {
                     originalYear = master.year;
+                    quotaService.track('discogs', 1); // Costo de consulta adicional
                     console.log(`[batea-Import] Found Original Year for ${discogsData.title}: ${originalYear}`);
                 }
             } catch (e) {
@@ -169,21 +173,38 @@ export const inventoryService = {
         const finalYoutubeId = extraData?.youtube_id || discogsYoutubeId;
         let finalSpotifyId = "";
 
-        // Fallback Inteligente (V14.0)
+        // Fallback Inteligente y Protocolo de Eficiencia (V14.4)
         let resolvedYoutubeId = finalYoutubeId;
 
-        if (!resolvedYoutubeId) {
-            console.log(`[batea-Import] No YouTube ID found in Discogs for ${parsedTitle}. Trying Spotify...`);
-            const spotifyMatch = await spotifyService.searchAlbum(parsedArtist, parsedTitle);
-            if (spotifyMatch) {
-                finalSpotifyId = spotifyMatch.spotify_id;
-                console.log(`[batea-Import] Found Spotify ID: ${finalSpotifyId}`);
-            } else {
-                console.log(`[batea-Import] Spotify failed. Trying YouTube Proactive Search...`);
-                const ytMatch = await youtubeService.searchVideo(`${parsedArtist} ${parsedTitle}`);
-                if (ytMatch) {
-                    resolvedYoutubeId = ytMatch.youtube_id;
-                    console.log(`[batea-Import] Found YouTube ID via API: ${resolvedYoutubeId}`);
+        if (resolvedYoutubeId) {
+            console.log(`[Quota-Safe] YouTube ID found in Discogs/Metadata for ${parsedTitle}. Skipping proactive search.`);
+        } else {
+            console.log(`[Quota-Action] No YouTube ID found for ${parsedTitle}. Initiating efficiency flow...`);
+
+            // 1. Intentar Spotify (Costo bajo de cuota)
+            try {
+                const spotifyMatch = await spotifyService.searchAlbum(parsedArtist, parsedTitle);
+                quotaService.track('spotify', 1);
+                if (spotifyMatch) {
+                    finalSpotifyId = spotifyMatch.spotify_id;
+                    console.log(`[batea-Import] Found Spotify ID: ${finalSpotifyId}`);
+                }
+            } catch (e) {
+                console.warn("[Quota] Spotify search failed", e);
+            }
+
+            // 2. Solo si Spotify también falló y seguimos sin YouTube, intentar YouTube API (Costo alto)
+            if (!finalSpotifyId && !resolvedYoutubeId) {
+                console.log(`[Quota-Action] Spotify failed. Attempting YouTube Proactive Search (Final Fallback)...`);
+                try {
+                    const ytMatch = await youtubeService.searchVideo(`${parsedArtist} ${parsedTitle}`);
+                    quotaService.track('youtube', 100); // 100 units per search
+                    if (ytMatch) {
+                        resolvedYoutubeId = ytMatch.youtube_id;
+                        console.log(`[batea-Import] Found YouTube ID via API: ${resolvedYoutubeId}`);
+                    }
+                } catch (e) {
+                    console.warn("[Quota] YouTube proactive search failed", e);
                 }
             }
         }
@@ -203,6 +224,8 @@ export const inventoryService = {
                     : discogsData.format || "Unknown Format",
                 ...(resolvedYoutubeId && { youtube_id: resolvedYoutubeId }),
                 ...(finalSpotifyId && { spotify_id: finalSpotifyId }),
+                wants: discogsData.community?.want || 0,
+                have: discogsData.community?.have || 0,
                 ...(extraData?.notes && { notes: extraData.notes })
             },
             media: {

@@ -133,41 +133,52 @@ export default function ArchivoItem() {
                     <motion.div
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className="lg:col-span-4 lg:sticky lg:top-32 space-y-6"
+                        className="lg:col-span-12 xl:col-span-5 lg:sticky lg:top-32 space-y-8"
                     >
-                        <div className="group relative aspect-square rounded-3xl overflow-hidden border border-white/10 shadow-[0_0_80px_rgba(0,0,0,0.8)]">
+                        {/* Cover Art - Luxury Depth (V14.1) */}
+                        <div className="group relative aspect-square rounded-[2.5rem] overflow-hidden border border-white/10 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.9)] bg-zinc-900">
+                            <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 via-transparent to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-700 z-10 pointer-events-none"></div>
                             <LazyImage
                                 src={item.image}
                                 alt={item.title}
-                                className="w-full h-full object-cover relative z-10 group-hover:scale-105 transition-transform duration-700"
+                                className="w-full h-full object-cover relative z-10 group-hover:scale-110 transition-transform duration-[1.5s] ease-out"
                             />
                             {item.format?.toLowerCase().includes("vinyl") && (
-                                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/vinyl.png')] opacity-0 group-hover:opacity-40 transition-opacity duration-700 z-20 pointer-events-none mix-blend-overlay"></div>
+                                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/vinyl.png')] opacity-20 group-hover:opacity-40 transition-opacity duration-700 z-20 pointer-events-none mix-blend-overlay"></div>
                             )}
                         </div>
 
-                        {/* Multi-Platform Player (V14.0) */}
+                        {/* Unified Audio Engine (V14.1) */}
                         {(item.youtube_id || item.spotify_id) && (
-                            <div className="w-full rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-black/50 backdrop-blur-md">
-                                <div className="p-3 border-b border-white/10 flex items-center gap-2 bg-zinc-900/50">
-                                    <PlayCircle className="w-4 h-4 text-primary" />
-                                    <span className="text-[10px] uppercase font-bold tracking-widest text-zinc-400">
-                                        {item.youtube_id ? "Preescucha Oficial (Video)" : "Preescucha Oficial (Spotify)"}
-                                    </span>
+                            <div className="w-full rounded-3xl overflow-hidden border border-white/5 shadow-2xl bg-zinc-900/40 backdrop-blur-xl group">
+                                <div className="p-4 border-b border-white/5 flex items-center justify-between bg-zinc-950/50">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-primary/10 rounded-lg">
+                                            <PlayCircle className="w-4 h-4 text-primary animate-pulse" />
+                                        </div>
+                                        <span className="text-[10px] uppercase font-black tracking-[0.2em] text-zinc-300">
+                                            {item.youtube_id ? "Sovereign Audio Stream" : "Spotify Sync Active"}
+                                        </span>
+                                    </div>
+                                    <div className="flex gap-1">
+                                        <div className="w-1 h-3 bg-primary/40 rounded-full animate-[bounce_1s_infinite_100ms]"></div>
+                                        <div className="w-1 h-3 bg-primary/40 rounded-full animate-[bounce_1s_infinite_300ms]"></div>
+                                        <div className="w-1 h-3 bg-primary/40 rounded-full animate-[bounce_1s_infinite_500ms]"></div>
+                                    </div>
                                 </div>
-                                <div className="relative w-full">
+                                <div className="relative w-full overflow-hidden">
                                     {item.youtube_id ? (
                                         <div className="aspect-video w-full">
                                             <iframe
                                                 width="100%"
                                                 height="100%"
-                                                src={`https://www.youtube.com/embed/${item.youtube_id}?autoplay=0&rel=0&modestbranding=1`}
-                                                title="YouTube video player"
+                                                src={`https://www.youtube.com/embed/${item.youtube_id}?autoplay=0&rel=0&modestbranding=1&theme=dark`}
+                                                title="OBG Stream Engine"
                                                 frameBorder="0"
                                                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                                                 allowFullScreen
                                                 loading="lazy"
-                                                className="absolute top-0 left-0 w-full h-full"
+                                                className="absolute top-0 left-0 w-full h-full transition-filter duration-700 grayscale-[0.2] group-hover:grayscale-0"
                                             ></iframe>
                                         </div>
                                     ) : (
@@ -179,6 +190,7 @@ export default function ArchivoItem() {
                                                 frameBorder="0"
                                                 allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
                                                 loading="lazy"
+                                                className="grayscale-0 group-hover:grayscale-0 transition-all"
                                             ></iframe>
                                         </div>
                                     )}
@@ -191,42 +203,54 @@ export default function ArchivoItem() {
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="md:col-span-1 lg:col-span-4 flex flex-col pt-2 lg:pt-0"
+                        className="lg:col-span-12 xl:col-span-4 flex flex-col pt-2 lg:pt-0"
                     >
-                        {/* Header Minimal */}
-                        <div className="mb-10">
-                            <div className="flex flex-wrap items-center gap-2 mb-6">
-                                <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.2em] border shadow-lg ${item.source === 'inventory'
-                                    ? 'bg-primary/20 border-primary/30 text-primary'
+                        {/* Header Minimal - High Fashion Style (V14.1) */}
+                        <div className="mb-12">
+                            <div className="flex flex-wrap items-center gap-3 mb-8">
+                                <span className={`px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.25em] border shadow-2xl backdrop-blur-md transition-all ${item.source === 'inventory'
+                                    ? 'bg-primary text-black border-primary shadow-primary/20'
                                     : 'bg-white/5 border-white/10 text-gray-400'
                                     }`}>
-                                    {item.source === 'inventory' ? 'DISPONIBLE EN TIENDA' : 'COLECCIÓN PRIVADA'}
+                                    {item.source === 'inventory' ? 'STOCK DISPONIBLE' : 'ARCHIVADO'}
                                 </span>
-                                {item.format && (
-                                    <span className="text-gray-400 font-mono text-[9px] uppercase tracking-widest border border-white/10 px-3 py-1.5 rounded-full">
-                                        {item.format}
+
+                                {/* Rareza Badge (V14.1) */}
+                                {item.wants && item.have && (
+                                    <span className={`px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.25em] border shadow-2xl backdrop-blur-md ${(item.wants / item.have) > 5 ? 'bg-red-500/20 border-red-500/30 text-red-500' :
+                                            (item.wants / item.have) > 2 ? 'bg-amber-500/20 border-amber-500/30 text-amber-500' :
+                                                'bg-zinc-800 border-zinc-700 text-zinc-400'
+                                        }`}>
+                                        {(item.wants / item.have) > 5 ? 'GRIAL' :
+                                            (item.wants / item.have) > 2 ? 'MUY RARO' : 'CATÁLOGO'}
                                     </span>
                                 )}
                             </div>
 
-                            <h1 className="text-4xl lg:text-5xl font-display font-black text-white uppercase tracking-tighter mb-2 leading-[0.9]">
+                            <h1 className="text-5xl lg:text-7xl font-display font-black text-white uppercase tracking-tightest mb-4 leading-[0.85]">
                                 {item.title}
                             </h1>
-                            <p className="text-xl lg:text-2xl text-primary font-display uppercase tracking-tight">
-                                {item.artist}
-                            </p>
+                            <div className="flex items-center gap-4">
+                                <div className="h-px w-12 bg-primary"></div>
+                                <p className="text-2xl text-primary font-display uppercase tracking-widest italic">
+                                    {item.artist}
+                                </p>
+                            </div>
                         </div>
 
-                        {/* Extended Metas */}
-                        <div className="grid grid-cols-2 gap-4 mb-8">
-                            <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
-                                <p className="text-zinc-500 text-[9px] uppercase tracking-widest font-bold mb-1">Año de Prensado</p>
-                                <p className="text-white font-mono text-sm">{item.year || "N/A"}</p>
-                            </div>
-                            <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
-                                <p className="text-zinc-500 text-[9px] uppercase tracking-widest font-bold mb-1">Géneros Principales</p>
-                                <p className="text-white font-mono text-xs truncate">{item.genres?.slice(0, 2).join(", ") || "N/A"}</p>
-                            </div>
+                        {/* Metadata Pro Grid (V14.1) */}
+                        <div className="grid grid-cols-2 gap-4 mb-10">
+                            {[
+                                { label: "Prensado", val: item.year || "N/A" },
+                                { label: "Wants", val: item.wants || "0" },
+                                { label: "Key", val: item.key || "—", accent: true },
+                                { label: "BPM", val: item.bpm || "—", accent: true },
+                            ].map((meta, idx) => (
+                                <div key={idx} className="p-5 rounded-[2rem] bg-zinc-900/40 border border-white/5 group hover:border-primary/30 transition-all">
+                                    <p className="text-zinc-500 text-[9px] uppercase tracking-[0.3em] font-black mb-2">{meta.label}</p>
+                                    <p className={`font-mono text-xl font-bold ${meta.accent ? 'text-primary' : 'text-white'}`}>{meta.val}</p>
+                                </div>
+                            ))}
                         </div>
 
                         {/* Tracklist Premium */}
@@ -335,34 +359,41 @@ export default function ArchivoItem() {
                             </div>
                         </div>
 
-                        {/* Identidad Física Digital - QR Code V12.5 */}
-                        <div className="mt-8 p-6 rounded-3xl bg-white border border-white/10 shadow-2xl relative overflow-hidden flex flex-col items-center text-center">
-                            <h3 className="text-xl font-display font-black uppercase tracking-tight text-black mb-1">
-                                Identidad Digital
-                            </h3>
-                            <p className="text-[10px] text-zinc-500 mb-6 font-mono font-bold">
-                                ESCANEA PARA ACCEDER AL TRACKLIST
-                            </p>
+                        {/* Pasaporte del Disco - QR Engine (V14.1) */}
+                        <div className="mt-8 p-8 rounded-[3rem] bg-zinc-950 border border-white/5 shadow-2xl relative overflow-hidden flex flex-col items-center">
+                            <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-primary/40 to-transparent"></div>
 
-                            <div className="bg-white p-4 rounded-xl shadow-inner mb-6 border border-zinc-100 relative group">
+                            <h3 className="text-2xl font-display font-black uppercase tracking-tightest text-white mb-2 italic">
+                                Pasaporte <span className="text-primary italic">Cultural</span>
+                            </h3>
+                            <div className="flex items-center gap-2 mb-8">
+                                <div className="w-1.5 h-1.5 bg-primary rounded-full animate-ping"></div>
+                                <p className="text-[10px] text-zinc-500 font-black tracking-[0.2em] uppercase">
+                                    OBG IDENT-FLOW REGISTER
+                                </p>
+                            </div>
+
+                            <div className="bg-white p-6 rounded-[2rem] shadow-[0_20px_50px_rgba(255,255,255,0.05)] mb-8 relative group cursor-pointer transition-transform hover:scale-105 active:scale-95">
                                 <QRCodeCanvas
                                     id="obg-qr-code"
                                     value={absoluteUrl}
-                                    size={180}
+                                    size={200}
                                     bgColor={"#ffffff"}
                                     fgColor={"#000000"}
                                     level={"H"}
                                     includeMargin={false}
                                     imageSettings={{
-                                        src: siteConfig?.favicon?.url || "/favicon.svg", // Dynamic Branding Sync (V12.7)
+                                        src: siteConfig?.favicon?.url || "/favicon.svg",
                                         x: undefined,
                                         y: undefined,
-                                        height: 40,
-                                        width: 40,
+                                        height: 48,
+                                        width: 48,
                                         excavate: true,
                                     }}
                                 />
-                                <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl pointer-events-none"></div>
+                                <div className="absolute inset-x-0 bottom-4 flex justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <span className="bg-black text-white text-[8px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-white/10">OBG Certified</span>
+                                </div>
                             </div>
 
                             <button
@@ -370,21 +401,21 @@ export default function ArchivoItem() {
                                     trackIntent('download_qr');
                                     const canvas = document.getElementById("obg-qr-code") as HTMLCanvasElement;
                                     if (canvas) {
-                                        const pngUrl = canvas
-                                            .toDataURL("image/png")
-                                            .replace("image/png", "image/octet-stream");
+                                        const pngUrl = canvas.toDataURL("image/png");
                                         let downloadLink = document.createElement("a");
+                                        const safeArtist = item.artist?.replace(/[^a-z0-9]/gi, '_').toUpperCase();
+                                        const safeTitle = item.title?.replace(/[^a-z0-9]/gi, '_').toUpperCase();
                                         downloadLink.href = pngUrl;
-                                        downloadLink.download = `obg-qr-${item.id}.png`;
+                                        downloadLink.download = `OBG-${safeArtist}-${safeTitle}.png`;
                                         document.body.appendChild(downloadLink);
                                         downloadLink.click();
                                         document.body.removeChild(downloadLink);
                                     }
                                 }}
-                                className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-black text-white rounded-xl hover:bg-zinc-800 transition-colors font-bold uppercase text-[10px] tracking-widest"
+                                className="w-full flex items-center justify-center gap-3 px-8 py-5 bg-white text-black rounded-2xl hover:bg-primary transition-all font-black uppercase text-xs tracking-widest group"
                             >
-                                <Download className="w-4 h-4" />
-                                Descargar para Impresión
+                                <Download className="w-5 h-5 group-hover:bounce" />
+                                Exportar Pasaporte PNG
                             </button>
                         </div>
 
