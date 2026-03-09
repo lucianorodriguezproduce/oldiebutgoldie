@@ -74,34 +74,38 @@ export const archivoService = {
                 return result;
             }
 
-            const assetRef = doc(db, "user_assets", id);
-            const assetSnap = await getDoc(assetRef);
-            if (assetSnap.exists()) {
-                const data = assetSnap.data() as UserAsset;
-                const result: UnifiedItem = {
-                    id: assetSnap.id,
-                    title: data.metadata.title,
-                    artist: data.metadata.artist,
-                    year: data.metadata.year,
-                    image: data.media.full_res_image_url || data.media.thumbnail,
-                    source: 'user_assets',
-                    valuation: data.valuation,
-                    genres: data.metadata.genres,
-                    styles: data.metadata.styles,
-                    format: data.metadata.format_description,
-                    condition: data.metadata.isBatch ? 'MIXTO' : 'USADO',
-                    tracklist: data.tracklist,
-                    labels: data.labels,
-                    youtube_id: (data as any).youtube_id,
-                    spotify_id: (data as any).spotify_id,
-                    bpm: data.metadata.bpm,
-                    key: data.metadata.key,
-                    wants: data.metadata.wants,
-                    have: data.metadata.have,
-                    notes: (data as any).notes
-                };
-                localStorage.setItem(cacheKey, JSON.stringify(result));
-                return result;
+            try {
+                const assetRef = doc(db, "user_assets", id);
+                const assetSnap = await getDoc(assetRef);
+                if (assetSnap.exists()) {
+                    const data = assetSnap.data() as UserAsset;
+                    const result: UnifiedItem = {
+                        id: assetSnap.id,
+                        title: data.metadata.title,
+                        artist: data.metadata.artist,
+                        year: data.metadata.year,
+                        image: data.media.full_res_image_url || data.media.thumbnail,
+                        source: 'user_assets',
+                        valuation: data.valuation,
+                        genres: data.metadata.genres,
+                        styles: data.metadata.styles,
+                        format: data.metadata.format_description,
+                        condition: data.metadata.isBatch ? 'MIXTO' : 'USADO',
+                        tracklist: data.tracklist,
+                        labels: data.labels,
+                        youtube_id: (data as any).youtube_id,
+                        spotify_id: (data as any).spotify_id,
+                        bpm: data.metadata.bpm,
+                        key: data.metadata.key,
+                        wants: data.metadata.wants,
+                        have: data.metadata.have,
+                        notes: (data as any).notes
+                    };
+                    localStorage.setItem(cacheKey, JSON.stringify(result));
+                    return result;
+                }
+            } catch (e) {
+                console.warn("Asset no encontrado o acceso denegado.");
             }
             return null;
         };
