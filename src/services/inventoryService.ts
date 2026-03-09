@@ -173,15 +173,32 @@ export const inventoryService = {
         const finalYoutubeId = extraData?.youtube_id || discogsYoutubeId;
         let finalSpotifyId = "";
 
-        // Sanitización Proactiva (V14.6)
+        // Super-Sanitización (V14.7)
         const sanitize = (text: string, isArtist: boolean = false) => {
             if (!text) return "";
             let clean = text;
+
             if (isArtist) {
-                // Remove trailing numbers in parentheses: "Sui Generis (4)" -> "Sui Generis"
+                // Sui Generis (4) -> Sui Generis
                 clean = clean.replace(/\s*\(\d+\)$/, "");
+            } else {
+                // Remover nombre del artista del título si está duplicado: "Miles Davis - Miles Davis Kind" -> "Kind"
+                const artistLower = (parsedArtist || "").toLowerCase();
+                if (artistLower && clean.toLowerCase().startsWith(artistLower)) {
+                    clean = clean.substring(artistLower.length).replace(/^[\s\-—–]+/, "");
+                }
+
+                // Remover palabras ruido
+                const noise = [
+                    /Parte \d+ra/gi, /Remaster/gi, /Edition/gi, /Anniversary/gi,
+                    /\[180g\]/g, /\(\d+\)/g, /Special/gi, /Deluxe/gi
+                ];
+                noise.forEach(pattern => {
+                    clean = clean.replace(pattern, "");
+                });
             }
-            // Remove middle dots, asterisks, and extra slashes from titles
+
+            // Normalización final
             clean = clean.replace(/[•\*\/]/g, " ").replace(/\s\s+/g, " ").trim();
             return clean;
         };
@@ -189,7 +206,7 @@ export const inventoryService = {
         const cleanArtist = sanitize(parsedArtist, true);
         const cleanTitle = sanitize(parsedTitle);
 
-        // Fallback Inteligente y Protocolo de Eficiencia (V14.4 + V14.6)
+        // Fallback Inteligente y Protocolo de Eficiencia (V14.4 + V14.6 + V14.7)
         let resolvedYoutubeId = finalYoutubeId;
 
         if (resolvedYoutubeId) {
@@ -201,11 +218,17 @@ export const inventoryService = {
             try {
                 let spotifyMatch = await spotifyService.searchAlbum(cleanArtist, cleanTitle);
 
-                // Fallback (V14.6): Simplificar título si no hay match
+                // Fallback Escalonado (V14.7): Intentar solo con título del disco
+                if (!spotifyMatch) {
+                    console.log(`[Fallback-Spotify] First attempt failed. Retrying ONLY with title: ${cleanTitle}`);
+                    spotifyMatch = await spotifyService.searchAlbum("", cleanTitle);
+                }
+
+                // Super-Fallback: Título simplificado (V14.6)
                 if (!spotifyMatch && cleanTitle.includes(" ")) {
                     const simpleTitle = cleanTitle.split(" ").slice(0, 3).join(" ");
-                    console.log(`[Fallback-Spotify] Retrying with simplified title: ${simpleTitle}`);
-                    spotifyMatch = await spotifyService.searchAlbum(cleanArtist, simpleTitle);
+                    console.log(`[Fallback-Spotify] Secondary attempt failed. Retrying with simplified title: ${simpleTitle}`);
+                    spotifyMatch = await spotifyService.searchAlbum("", simpleTitle);
                 }
 
                 quotaService.track('spotify', 1);
@@ -214,7 +237,7 @@ export const inventoryService = {
                     console.log(`[batea-Import] Found Spotify ID: ${finalSpotifyId}`);
                 }
             } catch (e) {
-                console.warn("[Quota] Spotify search failed", e);
+                // Silencio Positivo (V14.7) - Error ya manejado por el service devolviendo null
             }
 
             // 2. Solo si Spotify también falló y seguimos sin YouTube, intentar YouTube API (Costo alto)
@@ -224,20 +247,26 @@ export const inventoryService = {
                     const searchQuery = `${cleanArtist} ${cleanTitle}`;
                     let ytMatch = await youtubeService.searchVideo(searchQuery);
 
-                    // Fallback (V14.6): Simplificar si falla
+                    // Fallback Escalonado (V14.7): Solo título
+                    if (!ytMatch) {
+                        console.log(`[Fallback-YouTube] Full query failed. Retrying ONLY with title: ${cleanTitle}`);
+                        ytMatch = await youtubeService.searchVideo(cleanTitle);
+                    }
+
+                    // Super-Fallback (V14.6)
                     if (!ytMatch && cleanTitle.includes(" ")) {
-                        const simpleYtQuery = `${cleanArtist} ${cleanTitle.split(" ").slice(0, 3).join(" ")}`;
-                        console.log(`[Fallback-YouTube] Retrying with simplified query: ${simpleYtQuery}`);
+                        const simpleYtQuery = cleanTitle.split(" ").slice(0, 3).join(" ");
+                        console.log(`[Fallback-YouTube] Secondary failure. Final retry with simplified title: ${simpleYtQuery}`);
                         ytMatch = await youtubeService.searchVideo(simpleYtQuery);
                     }
 
-                    quotaService.track('youtube', 100); // 100 units per search
+                    quotaService.track('youtube', 100);
                     if (ytMatch) {
                         resolvedYoutubeId = ytMatch.youtube_id;
                         console.log(`[batea-Import] Found YouTube ID via API: ${resolvedYoutubeId}`);
                     }
                 } catch (e) {
-                    console.warn("[Quota] YouTube proactive search failed", e);
+                    // Silencio Positivo (V14.7)
                 }
             }
         }
