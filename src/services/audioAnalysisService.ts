@@ -74,7 +74,7 @@ class AudioAnalysisService {
             console.log(`[AudioAnalysis] Starting analysis for: ${url}`);
 
             // 1. Fetch the audio file using the Sovereign Proxy (Protocol V18.7)
-            const proxyUrl = `/api/audio-proxy?url=${encodeURIComponent(url)}`;
+            const proxyUrl = `/api/media?service=proxy&url=${encodeURIComponent(url)}`;
             console.log(`[AudioAnalysis] Fetching audio through proxy: ${proxyUrl}`);
             const response = await fetch(proxyUrl);
 

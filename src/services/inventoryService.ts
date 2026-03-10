@@ -478,7 +478,7 @@ export const inventoryService = {
 
                 // If we only have the ID but missing BPM/key, execute standard fetch
                 if (finalSpotifyId && (!newBpm || !newKey || !newPreview)) {
-                    const response = await fetch(`/api/spotify?spotify_id=${finalSpotifyId}`);
+                    const response = await fetch(`/api/media?service=spotify&spotify_id=${finalSpotifyId}`);
                     if (response.ok) {
                         const data = await response.json();
                         if (data.bpm) newBpm = data.bpm;

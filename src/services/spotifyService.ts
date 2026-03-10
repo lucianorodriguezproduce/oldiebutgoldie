@@ -10,7 +10,7 @@ export interface SpotifyAlbumMatch {
 export const spotifyService = {
     async searchAlbum(artist: string, title: string): Promise<SpotifyAlbumMatch | null> {
         try {
-            const response = await fetch(`/api/spotify?artist=${encodeURIComponent(artist)}&title=${encodeURIComponent(title)}`);
+            const response = await fetch(`/api/media?service=spotify&artist=${encodeURIComponent(artist)}&title=${encodeURIComponent(title)}`);
             if (!response.ok) {
                 // Silently return null for any non-ok response (404, 401, 503, etc)
                 return null;

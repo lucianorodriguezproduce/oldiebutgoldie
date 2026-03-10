@@ -7,7 +7,7 @@ export interface YouTubeMatch {
 export const youtubeService = {
     async searchVideo(query: string): Promise<YouTubeMatch | null> {
         try {
-            const response = await fetch(`/api/youtube?q=${encodeURIComponent(query)}`);
+            const response = await fetch(`/api/media?service=youtube&q=${encodeURIComponent(query)}`);
             if (!response.ok) {
                 // Silently return null for any non-ok response
                 return null;
