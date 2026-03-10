@@ -20,13 +20,12 @@ class AudioAnalysisService {
         if (this.initialized) return;
 
         try {
-            // Depending on how essentia.js is bundled, initialization might vary.
-            // For the WASM version, it typically initializes itself or provides a promise.
-            this.essentia = new Essentia();
+            // Essentia.js needs the wasm module available in production. We copied it to public/.
+            this.essentia = new Essentia(); // Might need specific WASM config later if still failing
             this.initialized = true;
             console.log("[AudioAnalysis] Essentia.js Engine initialized.");
         } catch (error) {
-            console.error("[AudioAnalysis] Error initializing Essentia:", error);
+            console.warn("[AudioAnalysis-V18.3-CRITICAL] Error initializing Essentia WASM Engine:", error);
             throw error;
         }
     }
@@ -63,38 +62,43 @@ class AudioAnalysisService {
     }
 
     async analyzeAudio(url: string): Promise<AnalysisResult> {
-        await this.init();
+        try {
+            await this.init();
 
-        console.log(`[AudioAnalysis] Starting analysis for: ${url}`);
+            console.log(`[AudioAnalysis] Starting analysis for: ${url}`);
 
-        // 1. Fetch the audio file
-        const response = await fetch(url);
-        const arrayBuffer = await response.arrayBuffer();
+            // 1. Fetch the audio file
+            const response = await fetch(url);
+            const arrayBuffer = await response.arrayBuffer();
 
-        // 2. Decode audio data
-        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-        const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+            // 2. Decode audio data
+            const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
 
-        // 3. Prepare data for Essentia (Mono, Float32Array)
-        const channelData = audioBuffer.getChannelData(0);
-        const vectorSignal = this.essentia.arrayToVector(channelData);
+            // 3. Prepare data for Essentia (Mono, Float32Array)
+            const channelData = audioBuffer.getChannelData(0);
+            const vectorSignal = this.essentia.arrayToVector(channelData);
 
-        // 4. Extract BPM
-        // PercivalBPMEstimator is good for short snippets
-        const bpmResult = this.essentia.PercivalBPMEstimator(vectorSignal);
-        const bpm = Math.round(bpmResult.bpm);
+            // 4. Extract BPM
+            // PercivalBPMEstimator is good for short snippets
+            const bpmResult = this.essentia.PercivalBPMEstimator(vectorSignal);
+            const bpm = Math.round(bpmResult.bpm);
 
-        // 5. Extract Key
-        const keyResult = this.essentia.KeyExtractor(vectorSignal);
-        const { simple, camelot } = this.normalizeKey(keyResult.key, keyResult.scale);
+            // 5. Extract Key
+            const keyResult = this.essentia.KeyExtractor(vectorSignal);
+            const { simple, camelot } = this.normalizeKey(keyResult.key, keyResult.scale);
 
-        console.log(`[AudioAnalysis] Done: BPM ${bpm}, Key ${simple} (${camelot})`);
+            console.log(`[AudioAnalysis] Done: BPM ${bpm}, Key ${simple} (${camelot})`);
 
-        return {
-            bpm,
-            key: simple,
-            camelot
-        };
+            return {
+                bpm,
+                key: simple,
+                camelot
+            };
+        } catch (error) {
+            console.warn(`[AudioAnalysis-V18.3-CRITICAL] Analysis completely failed for ${url}. Raw error object:`, error);
+            throw error;
+        }
     }
 }
 

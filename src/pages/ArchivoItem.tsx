@@ -186,7 +186,7 @@ export default function ArchivoItem() {
                                                 id="youtube-player"
                                                 width="100%"
                                                 height="100%"
-                                                src={`https://www.youtube.com/embed/${item.youtube_id}?autoplay=0&rel=0&modestbranding=1&theme=dark&enablejsapi=1`}
+                                                src={`https://www.youtube.com/embed/${item.youtube_id}?autoplay=1&rel=0&modestbranding=1&theme=dark&enablejsapi=1`}
                                                 title="OBG Stream Engine"
                                                 frameBorder="0"
                                                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -197,12 +197,25 @@ export default function ArchivoItem() {
                                             <script dangerouslySetInnerHTML={{
                                                 __html: `
                                                 window.onYouTubeIframeAPIReady = function() {
+                                                    let isPlaying = false;
                                                     new YT.Player('youtube-player', {
                                                         events: {
+                                                            'onStateChange': function(event) {
+                                                                if (event.data === 1) isPlaying = true; // PLAYING
+                                                            },
+                                                            'onReady': function(event) {
+                                                                event.target.playVideo();
+                                                                // Timeout de Carga (Hard-Fix V18.3)
+                                                                setTimeout(() => {
+                                                                    if (!isPlaying && event.target.getPlayerState() !== 1) {
+                                                                        console.warn('[YouTube-Hard-Fix] Timeout: Video falló en reproducirse (restringido/roto).');
+                                                                        window.dispatchEvent(new CustomEvent('youtube-error', { detail: '${item.id}' }));
+                                                                    }
+                                                                }, 3000);
+                                                            },
                                                             'onError': function(event) {
-                                                                if ([100, 101, 150].includes(event.data)) {
-                                                                    window.dispatchEvent(new CustomEvent('youtube-error', { detail: '${item.id}' }));
-                                                                }
+                                                                console.warn('[YouTube-Hard-Fix] Error detectado:', event.data);
+                                                                window.dispatchEvent(new CustomEvent('youtube-error', { detail: '${item.id}' }));
                                                             }
                                                         }
                                                     });
