@@ -58,6 +58,16 @@ export default function Store() {
         // Infinite scroll disabled in real-time mode to ensure 1:1 sync
     }, []);
 
+    const dynamicGenres = useMemo(() => {
+        const genres = items.flatMap(item => item.metadata?.genres || []);
+        return Array.from(new Set(genres)).sort();
+    }, [items]);
+
+    const dynamicStyles = useMemo(() => {
+        const styles = items.flatMap(item => item.metadata?.styles || []);
+        return Array.from(new Set(styles)).sort();
+    }, [items]);
+
     const filteredItems = useMemo(() => {
         return items.filter(item => {
             // Asset Locking Visual: Filter out items in active trades
@@ -91,7 +101,7 @@ export default function Store() {
 
             return true;
         });
-    }, [items, searchTerm, filters]);
+    }, [items, searchTerm, filters, blockedAssetIds]);
 
     const FilterSection = ({ title, options, field }: { title: string, options: string[] | number[], field: keyof typeof filters }) => (
         <div className="space-y-4">
@@ -173,8 +183,8 @@ export default function Store() {
                 <div className="flex flex-col md:flex-row gap-12">
                     {/* Desktop Sidebar Filters */}
                     <div className="hidden md:block w-64 space-y-10 shrink-0">
-                        <FilterSection title="Géneros" options={taxonomyData.genres} field="genre" />
-                        <FilterSection title="Estilos" options={taxonomyData.styles} field="style" />
+                        <FilterSection title="Géneros" options={dynamicGenres} field="genre" />
+                        <FilterSection title="Estilos" options={dynamicStyles} field="style" />
                         <FilterSection title="Formato" options={taxonomyData.formats} field="format" />
                         <FilterSection title="Décadas" options={taxonomyData.decades} field="decade" />
                     </div>
@@ -279,8 +289,8 @@ export default function Store() {
                                 </button>
                             </div>
 
-                            <FilterSection title="Géneros" options={taxonomyData.genres} field="genre" />
-                            <FilterSection title="Estilos" options={taxonomyData.styles} field="style" />
+                            <FilterSection title="Géneros" options={dynamicGenres} field="genre" />
+                            <FilterSection title="Estilos" options={dynamicStyles} field="style" />
                             <FilterSection title="Formato" options={taxonomyData.formats} field="format" />
                             <FilterSection title="Décadas" options={taxonomyData.decades} field="decade" />
 
