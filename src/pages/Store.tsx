@@ -82,7 +82,7 @@ export default function Store() {
                 if (!artist.toLowerCase().includes(search) && !album.toLowerCase().includes(search)) return false;
             }
 
-            // Genre Filter
+            // Genre Filterr
             if (filters.genre && !metadata.genres?.includes(filters.genre)) return false;
 
             // Style Filter
