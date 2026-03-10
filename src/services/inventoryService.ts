@@ -271,6 +271,19 @@ export const inventoryService = {
             } catch (e) {
                 // Silencio
             }
+
+            // 2.1 Silent Alchemist (V18.2): Proactive Local Analysis during ingestion
+            if (finalPreviewUrl && (!finalBpm || finalBpm === 0)) {
+                try {
+                    console.log(`[Silent-Alchemist] Spotify failed to provide technical metadata. Initiating proactive local analysis (Essentia)...`);
+                    const analysis = await audioAnalysisService.analyzeAudio(finalPreviewUrl);
+                    finalBpm = analysis.bpm;
+                    finalKey = `${analysis.key} (${analysis.camelot})`;
+                    console.log(`[Silent-Alchemist] Successfully extracted: BPM ${finalBpm}, Key ${finalKey}`);
+                } catch (e) {
+                    console.error("[Silent-Alchemist] Failed proactive local analysis:", e);
+                }
+            }
         } // Closing the 'else' block
 
         // 3. Protocolo de Enriquecimiento (V15.6)

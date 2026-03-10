@@ -497,7 +497,7 @@ export default function AdminInventory() {
                                                 >
                                                     <Trash2 className="h-4 w-4" />
                                                 </button>
-                                                {item.metadata.status_warning && (
+                                                {(item.metadata.status_warning || !item.metadata.bpm || item.metadata.bpm === 0) && (
                                                     <button
                                                         onClick={() => handleHeal(item)}
                                                         className="p-3 bg-red-500/20 text-red-500 rounded-2xl hover:text-white hover:bg-red-500 transition-all opacity-0 group-hover:opacity-100 animate-pulse border border-red-500/50"

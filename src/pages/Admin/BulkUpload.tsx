@@ -131,7 +131,10 @@ export default function BulkUpload() {
     const handleParsedData = async (data: any[]) => {
         const initialRows: ParsedRow[] = data.map((row, index) => {
             const getVal = (keys: string[]) => {
-                const key = Object.keys(row).find(k => keys.some(ok => k.toLowerCase().includes(ok)));
+                const key = Object.keys(row).find(k => {
+                    const kLower = k.toLowerCase().trim();
+                    return keys.some(ok => kLower === ok || kLower.includes(ok));
+                });
                 return key ? row[key] : "";
             };
 
