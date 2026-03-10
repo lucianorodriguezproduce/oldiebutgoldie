@@ -215,19 +215,29 @@ export default function AdminInventory() {
     };
 
     const handleHeal = async (item: InventoryItem) => {
-        console.log("CLICK DETECTADO");
-        console.log("-> Botón Diamante Presionado para:", item.metadata.title);
-        console.log(`[UI-Heal] Clicked Sparkle for: ${item.metadata.title} (${item.id})`);
-        showLoading(`Sanando disco: ${item.metadata.title}...`);
+        const bpmInput = window.prompt(`Ingresa el BPM para ${item.metadata.title}`, item.metadata.bpm?.toString() || "0");
+        if (bpmInput === null) return;
+
+        const keyInput = window.prompt(`Ingresa la Key para ${item.metadata.title}`, item.metadata.key || "");
+        if (keyInput === null) return;
+
+        const bpm = parseInt(bpmInput) || 0;
+        const key = keyInput.trim();
+
+        showLoading(`Guardando data técnica: ${item.metadata.title}...`);
         try {
-            console.log(`[UI-Heal] Calling inventoryService.healRecord...`);
-            await inventoryService.healRecord(item);
-            console.log(`[UI-Heal] healRecord success!`);
-            alert("Disco curado exitosamente. Se recargará la página para sincronizar.");
+            await inventoryService.updateTechnicalData(item.id, bpm, key);
+
+            // Also run background healing for IDs/Tracklist if needed
+            if (!item.metadata.spotify_id || !item.metadata.youtube_id || !item.tracklist?.length) {
+                await inventoryService.healRecord(item);
+            }
+
+            alert("Data técnica actualizada.");
             window.location.reload();
         } catch (error) {
-            console.error("[UI-Heal] CRITICAL FAILURE:", error);
-            alert(`Error al curar el ítem: ${error instanceof Error ? error.message : String(error)}`);
+            console.error("[UI-Heal] FAILED:", error);
+            alert(`Error al guardar: ${error instanceof Error ? error.message : String(error)}`);
         } finally {
             hideLoading();
         }

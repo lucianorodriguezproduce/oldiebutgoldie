@@ -111,34 +111,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 let bpm = 0;
                 let key = "";
                 let preview_url = firstTrack?.preview_url || "";
-                let source = "spotify-full";
-
-                // 3. If we have a track, let's get its audio features
-                if (firstTrack?.id) {
-                    const featuresRes = await fetch(`https://api.spotify.com/v1/audio-features/${firstTrack.id}`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
-
-                    console.log("[Spotify-Debug] Audio Features Status:", featuresRes.status);
-                    if (featuresRes.ok) {
-                        const features = await featuresRes.json();
-                        if (features) {
-                            bpm = Math.round(features.tempo || 0);
-                            // Convert Spotify key to standard format
-                            const keys = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-                            const keyStr = keys[features.key] || "";
-                            const modeStr = features.mode === 0 ? "m" : "";
-                            if (keyStr) key = `${keyStr}${modeStr}`;
-                        }
-                    } else if (featuresRes.status === 403) {
-                        console.warn("[Spotify-Debug] Audio Features 403 - Restricted Access. Falling back to frontend analysis.");
-                        source = "spotify-limited";
-                    } else {
-                        const errorText = await featuresRes.text();
-                        console.error("[Spotify-Debug] Audio Features Error Text:", errorText);
-                        source = "spotify-error";
-                    }
-                }
+                let source = "spotify-clean"; // Protocol V19.0: Manual Tech Transition
 
                 // 4. Return the consolidated SpotifyAlbumMatch
                 return res.status(200).json({
