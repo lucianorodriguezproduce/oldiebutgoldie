@@ -497,10 +497,10 @@ export default function AdminInventory() {
                                                 >
                                                     <Trash2 className="h-4 w-4" />
                                                 </button>
-                                                {(!item.metadata.bpm || item.metadata.bpm <= 0) && (
+                                                {(!item.metadata.bpm || Number(item.metadata.bpm) === 0 || item.metadata.status_warning) && (
                                                     <button
                                                         onClick={() => handleHeal(item)}
-                                                        className="p-3 bg-red-500/20 text-red-500 rounded-2xl hover:text-white hover:bg-red-500 transition-all opacity-0 group-hover:opacity-100 animate-pulse border border-red-500/50"
+                                                        className="p-3 bg-amber-500/20 text-amber-500 rounded-2xl hover:text-white hover:bg-amber-500 transition-all opacity-0 group-hover:opacity-100 animate-pulse border border-amber-500/50"
                                                         title="Curar Registro (BPM/Key/Tracklist)"
                                                     >
                                                         <Sparkles className="h-4 w-4" />
