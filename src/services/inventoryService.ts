@@ -2,6 +2,7 @@ import { db } from "@/lib/firebase";
 import { discogsService } from "@/lib/discogs";
 import { spotifyService } from "@/services/spotifyService";
 import { youtubeService } from "@/services/youtubeService";
+import { audioAnalysisService } from "@/services/audioAnalysisService";
 import { quotaService } from "@/services/quotaService";
 import {
     collection,
@@ -478,6 +479,19 @@ export const inventoryService = {
             }
         }
 
+        // 1.1 Local Acoustic Analysis (Essentia.js) V18.1
+        if (newPreview && (!newBpm || newBpm === 0)) {
+            try {
+                console.log(`[Heal-Protocol] Spotify falló o incompleto. Iniciando Análisis Acústico Soberano (Essentia.js)...`);
+                const analysis = await audioAnalysisService.analyzeAudio(newPreview);
+                newBpm = analysis.bpm;
+                newKey = `${analysis.key} (${analysis.camelot})`;
+                console.log(`[Heal-Protocol] Análisis exitoso: BPM ${newBpm}, Key ${newKey}`);
+            } catch (e) {
+                console.error("[Heal-Protocol] Falló el Análisis Acústico Soberano:", e);
+            }
+        }
+
         // Search for YouTube ID if missing
         if (!finalYoutubeId) {
             try {
@@ -522,8 +536,10 @@ export const inventoryService = {
         updatePayload["metadata.key"] = newKey;
         if (newPreview) updatePayload["metadata.preview_url"] = newPreview;
 
-        // Purgando el estado negativo
-        updatePayload["metadata.status_warning"] = deleteField();
+        // Purgando el estado negativo solo si el análisis fue exitoso (V18.1)
+        if (newBpm > 0) {
+            updatePayload["metadata.status_warning"] = deleteField();
+        }
 
         // Actualizando el tracklist raíz
         if (newTracklist.length > 0) {
