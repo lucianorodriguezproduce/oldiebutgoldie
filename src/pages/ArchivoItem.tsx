@@ -10,14 +10,17 @@ import { QRCodeCanvas } from "qrcode.react";
 import { siteConfigService, type SiteConfig } from "@/services/siteConfigService";
 import { db } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { useLote } from "@/context/LoteContext";
 
 export default function ArchivoItem() {
     const { id } = useParams();
     const navigate = useNavigate();
     const { showLoading, hideLoading } = useLoading();
+    const { addItemFromInventory } = useLote();
     const [item, setItem] = useState<UnifiedItem | null>(null);
     const [notFound, setNotFound] = useState(false);
     const [siteConfig, setSiteConfig] = useState<SiteConfig | null>(null);
+    const [isVideoAvailable, setIsVideoAvailable] = useState(true);
 
     // Track Intent Logic (V12.7)
     const trackIntent = async (type: string) => {
@@ -33,6 +36,16 @@ export default function ArchivoItem() {
             console.warn("Analytics: Failed to track intent", e);
         }
     };
+
+    useEffect(() => {
+        const handleVideoError = (e: any) => {
+            if (e.detail === id) {
+                setIsVideoAvailable(false);
+            }
+        };
+        window.addEventListener('youtube-error', handleVideoError);
+        return () => window.removeEventListener('youtube-error', handleVideoError);
+    }, [id]);
 
     useEffect(() => {
         if (!id) return;
@@ -157,7 +170,7 @@ export default function ArchivoItem() {
                                             <PlayCircle className="w-4 h-4 text-primary animate-pulse" />
                                         </div>
                                         <span className="text-[10px] uppercase font-black tracking-[0.2em] text-zinc-300">
-                                            {item.youtube_id ? "Sovereign Audio Stream" : "Spotify Sync Active"}
+                                            {item.youtube_id && isVideoAvailable ? "Sovereign Audio Stream" : "Spotify Sync Active"}
                                         </span>
                                     </div>
                                     <div className="flex gap-1">
@@ -167,12 +180,13 @@ export default function ArchivoItem() {
                                     </div>
                                 </div>
                                 <div className="relative w-full overflow-hidden">
-                                    {item.youtube_id ? (
+                                    {item.youtube_id && isVideoAvailable ? (
                                         <div className="aspect-video w-full">
                                             <iframe
+                                                id="youtube-player"
                                                 width="100%"
                                                 height="100%"
-                                                src={`https://www.youtube.com/embed/${item.youtube_id}?autoplay=0&rel=0&modestbranding=1&theme=dark`}
+                                                src={`https://www.youtube.com/embed/${item.youtube_id}?autoplay=0&rel=0&modestbranding=1&theme=dark&enablejsapi=1`}
                                                 title="OBG Stream Engine"
                                                 frameBorder="0"
                                                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -180,19 +194,44 @@ export default function ArchivoItem() {
                                                 loading="lazy"
                                                 className="absolute top-0 left-0 w-full h-full transition-filter duration-700 grayscale-[0.2] group-hover:grayscale-0"
                                             ></iframe>
+                                            <script dangerouslySetInnerHTML={{
+                                                __html: `
+                                                window.onYouTubeIframeAPIReady = function() {
+                                                    new YT.Player('youtube-player', {
+                                                        events: {
+                                                            'onError': function(event) {
+                                                                if ([100, 101, 150].includes(event.data)) {
+                                                                    window.dispatchEvent(new CustomEvent('youtube-error', { detail: '${item.id}' }));
+                                                                }
+                                                            }
+                                                        }
+                                                    });
+                                                };
+                                                if (!window.YT) {
+                                                    const tag = document.createElement('script');
+                                                    tag.src = "https://www.youtube.com/iframe_api";
+                                                    const firstScriptTag = document.getElementsByTagName('script')[0];
+                                                    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+                                                } else if (window.YT && window.YT.Player) {
+                                                    window.onYouTubeIframeAPIReady();
+                                                }
+                                                `
+                                            }} />
                                         </div>
                                     ) : (
-                                        <div className="h-[152px] w-full">
-                                            <iframe
-                                                src={`https://open.spotify.com/embed/album/${item.spotify_id}?utm_source=generator&theme=0`}
-                                                width="100%"
-                                                height="152"
-                                                frameBorder="0"
-                                                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                                                loading="lazy"
-                                                className="grayscale-0 group-hover:grayscale-0 transition-all"
-                                            ></iframe>
-                                        </div>
+                                        item.spotify_id && (
+                                            <div className="h-[152px] w-full">
+                                                <iframe
+                                                    src={`https://open.spotify.com/embed/album/${item.spotify_id}?utm_source=generator&theme=0`}
+                                                    width="100%"
+                                                    height="152"
+                                                    frameBorder="0"
+                                                    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                                                    loading="lazy"
+                                                    className="grayscale-0 group-hover:grayscale-0 transition-all"
+                                                ></iframe>
+                                            </div>
+                                        )
                                     )}
                                 </div>
                             </div>
@@ -311,16 +350,18 @@ export default function ArchivoItem() {
 
                                 <div className="space-y-4">
                                     {item.source === 'inventory' ? (
-                                        <Link
-                                            to={`/?add=${item.id}`}
-                                            onClick={() => trackIntent('add_to_cart')}
+                                        <button
+                                            onClick={() => {
+                                                trackIntent('add_to_cart');
+                                                addItemFromInventory(item);
+                                            }}
                                             className="group flex flex-col items-center justify-center w-full px-8 py-5 bg-primary text-black rounded-2xl hover:scale-[1.02] transition-all"
                                         >
                                             <span className="font-black uppercase text-sm tracking-widest mb-1 flex items-center gap-2">
                                                 Agregar a Base <Zap className="w-4 h-4 fill-black group-hover:scale-110 transition-transform" />
                                             </span>
                                             <span className="text-[10px] opacity-70 font-mono font-bold">DISPONIBILIDAD INMEDIATA</span>
-                                        </Link>
+                                        </button>
                                     ) : (
                                         <Link
                                             to="/trade/new"
