@@ -449,16 +449,26 @@ export default function Home() {
                 return;
             }
 
-            // IF DISCOGS: Open Wizard (V4.1)
+            // IF DISCOGS: Obtener detalles completos para Ingesta de Alta Fidelidad
             showLoading(TEXTS.home.loadingDiscogs);
             try {
                 const details = await discogsService.getReleaseDetails(String(result.id));
                 const normalized = normalizeDiscogsData({ ...result, ...details });
-                setSelectedSearchItem(normalized);
-                setShowConfigModal(true);
+
+                // Seteamos selectedItem para que se muestre la vista de detalle con los botones de acción
+                setSelectedItem({
+                    ...normalized,
+                    cover_image: normalized.images?.[0]?.uri || normalized.thumb || '',
+                    thumb: normalized.thumb || '',
+                    type: result.type,
+                    normalizedArtist: normalized.normalizedArtist,
+                    normalizedAlbum: normalized.normalizedAlbum
+                } as any);
+
+                setIsSearchActive(false); // Salimos del modo búsqueda para ver el detalle
 
             } catch (error) {
-                console.error("Error opening wizard:", error);
+                console.error("Error loading release details:", error);
                 setSearchError("No se pudo obtener detalles del disco.");
             } finally {
                 hideLoading();
@@ -696,11 +706,18 @@ export default function Home() {
         if (!selectedItem || !user) return;
         showLoading("Registrando pedido privado...");
         try {
+            let fullData = selectedItem;
+            // Asegurar Ingesta de Alta Fidelidad para pedidos externos
+            if (!selectedItem.isLocal) {
+                const details = await discogsService.getReleaseDetails(selectedItem.id.toString());
+                fullData = { ...selectedItem, ...details };
+            }
+
             await purchaseRequestService.createRequest(
                 user.uid,
                 user.email || "",
                 (user.displayName || user.email || "Usuario") as string,
-                selectedItem
+                fullData
             );
             setIsSuccess(true);
             setSubmittedOrder({ type: 'order' });
@@ -716,22 +733,33 @@ export default function Home() {
         if (!selectedItem || !user) return;
         showLoading("Añadiendo a tu batea...");
         try {
-            // Transform DiscogsSearchResult to initial UserAsset shape
+            let fullData = selectedItem;
+
+            // Si es un item externo de Discogs, necesitamos la "Ingesta de Alta Fidelidad"
+            if (!selectedItem.isLocal) {
+                const details = await discogsService.getReleaseDetails(selectedItem.id.toString());
+                fullData = { ...selectedItem, ...details };
+            }
+
+            // Transform DiscogsSearchResult (or full details) to initial UserAsset shape
             await userAssetService.addAsset(user.uid, {
                 metadata: {
-                    title: (selectedItem as any).normalizedAlbum || selectedItem.title,
-                    artist: (selectedItem as any).normalizedArtist || "Varios",
-                    year: parseInt(selectedItem.year || "0") || 0,
-                    genres: selectedItem.genre || [],
-                    styles: selectedItem.style || [],
-                    format_description: selectedItem.format?.join(", ") || "Vinyl"
+                    title: (fullData as any).normalizedAlbum || fullData.title,
+                    artist: (fullData as any).normalizedArtist || "Varios",
+                    year: parseInt(fullData.year || "0") || 0,
+                    genres: fullData.genre || (fullData as any).genres || [],
+                    styles: (fullData as any).style || (fullData as any).styles || [],
+                    format_description: Array.isArray(fullData.format) ? fullData.format.join(", ") : (fullData as any).format || "Vinyl"
                 },
                 media: {
-                    thumbnail: selectedItem.thumb,
-                    full_res_image_url: selectedItem.cover_image || selectedItem.thumb
+                    thumbnail: fullData.thumb,
+                    full_res_image_url: fullData.cover_image || fullData.thumb
                 },
-                originalInventoryId: selectedItem.isLocal ? selectedItem.id.toString() : ""
-            });
+                originalInventoryId: fullData.isLocal ? fullData.id.toString() : "",
+                tracklist: (fullData as any).tracklist || [],
+                labels: (fullData as any).labels || []
+            } as any);
+
             alert("¡Añadido a tu batea!");
             handleResetSelection();
         } catch (error) {
@@ -1382,46 +1410,43 @@ export default function Home() {
                             >
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     {/* Legacy buttons only for local items now, as Discogs items are handled by the Wizard */}
-                                    {(selectedItem as any).isLocal && (
-                                        <>
-                                            <button
-                                                onClick={handleExternalOrder}
-                                                className="flex flex-col items-center justify-center gap-3 p-8 rounded-3xl bg-primary text-black hover:scale-[1.02] transition-all group"
-                                            >
-                                                <Package className="w-8 h-8 group-hover:rotate-12 transition-transform" />
-                                                <div className="text-center">
-                                                    <span className="block font-black uppercase text-sm tracking-widest">Pedir Disco</span>
-                                                    <span className="block text-[10px] uppercase font-bold opacity-60">Lo buscamos por vos</span>
-                                                </div>
-                                            </button>
+                                    {/* Unificando botones para Items Locales y de Discogs (Protocolo V21.1) */}
+                                    <button
+                                        onClick={handleExternalOrder}
+                                        className="flex flex-col items-center justify-center gap-3 p-8 rounded-3xl bg-primary text-black hover:scale-[1.02] transition-all group"
+                                    >
+                                        <Package className="w-8 h-8 group-hover:rotate-12 transition-transform" />
+                                        <div className="text-center">
+                                            <span className="block font-black uppercase text-sm tracking-widest">Pedir Disco</span>
+                                            <span className="block text-[10px] uppercase font-bold opacity-60">Lo buscamos por vos</span>
+                                        </div>
+                                    </button>
 
-                                            <button
-                                                onClick={handleAddToCollection}
-                                                className="flex flex-col items-center justify-center gap-3 p-8 rounded-3xl bg-white/5 border border-white/10 text-white hover:bg-primary hover:text-black transition-all group"
-                                            >
-                                                <Disc className="w-8 h-8 group-hover:animate-spin-slow transition-transform" />
-                                                <div className="text-center">
-                                                    <span className="block font-black uppercase text-sm tracking-widest">A Mi Batea</span>
-                                                    <span className="block text-[10px] uppercase font-bold opacity-60">Solo para colección</span>
-                                                </div>
-                                            </button>
+                                    <button
+                                        onClick={handleAddToCollection}
+                                        className="flex flex-col items-center justify-center gap-3 p-8 rounded-3xl bg-white/5 border border-white/10 text-white hover:bg-primary hover:text-black transition-all group"
+                                    >
+                                        <Disc className="w-8 h-8 group-hover:animate-spin-slow transition-transform" />
+                                        <div className="text-center">
+                                            <span className="block font-black uppercase text-sm tracking-widest">A Mi Batea</span>
+                                            <span className="block text-[10px] uppercase font-bold opacity-60">Solo para colección</span>
+                                        </div>
+                                    </button>
 
-                                            <button
-                                                onClick={() => {
-                                                    setIntent("VENDER");
-                                                    setStep(1); // Continue with legacy flow if they want to SELL/OFFER
-                                                    // Actually, for exchange, we might need a different path
-                                                }}
-                                                className="flex flex-col items-center justify-center gap-3 p-8 rounded-3xl bg-white/5 border border-white/10 text-gray-500 hover:border-primary/40 hover:text-white transition-all group"
-                                            >
-                                                <MessageCircle className="w-8 h-8 group-hover:scale-110 transition-transform" />
-                                                <div className="text-center">
-                                                    <span className="block font-black uppercase text-sm tracking-widest">Intercambio</span>
-                                                    <span className="block text-[10px] uppercase font-bold opacity-60">Proponer Negocio</span>
-                                                </div>
-                                            </button>
-                                        </>
-                                    )}
+                                    <button
+                                        onClick={() => {
+                                            setIntent("VENDER");
+                                            setStep(1);
+                                            // Activa el flujo de oferta/intercambio
+                                        }}
+                                        className="flex flex-col items-center justify-center gap-3 p-8 rounded-3xl bg-white/5 border border-white/10 text-gray-400 hover:border-primary/40 hover:text-white transition-all group"
+                                    >
+                                        <MessageCircle className="w-8 h-8 group-hover:scale-110 transition-transform" />
+                                        <div className="text-center">
+                                            <span className="block font-black uppercase text-sm tracking-widest">Intercambio</span>
+                                            <span className="block text-[10px] uppercase font-bold opacity-60">Proponer Negocio</span>
+                                        </div>
+                                    </button>
                                 </div>
 
                                 <div className="text-center pt-8">

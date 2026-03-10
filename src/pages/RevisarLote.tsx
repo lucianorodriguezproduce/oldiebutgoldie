@@ -16,6 +16,7 @@ import { inventoryService } from "@/services/inventoryService";
 import { tradeService } from "@/services/tradeService";
 import { userAssetService } from "@/services/userAssetService";
 import { purchaseRequestService } from "@/services/purchaseRequestService";
+import { discogsService } from "@/lib/discogs";
 import { ADMIN_UID } from "@/constants/admin";
 import { useEffect as useReactEffect } from "react";
 import UsernameClaimModal from "@/components/Profile/UsernameClaimModal";
@@ -119,20 +120,34 @@ export default function RevisarLote() {
                     createdDocs.push(invTradeId);
                 }
 
-                // Discogs items in a "COMPRAR" context become Purchase Requests
+                // Discogs items in a "COMPRAR" context also become Archived Inventory + Purchase Requests
                 for (const item of discogsItems) {
-                    const reqId = await purchaseRequestService.createRequest(uid, currentUser.email || "", currentUser.displayName || "", item, transactionId);
+                    const invId = await inventoryService.importFromDiscogs(item as any, {
+                        stock: 0,
+                        price: item.price || 0,
+                        condition: item.condition,
+                        status: 'archived'
+                    });
+
+                    const reqId = await purchaseRequestService.createRequest(uid, currentUser.email || "", currentUser.displayName || "", { ...item, internalInventoryId: invId }, transactionId);
                     createdDocs.push(reqId);
                 }
             }
 
-            // 2. Logic for PEDIR (Only for External items)
+            // 2. Logic for PEDIR (External items)
             if (action === 'PEDIR') {
                 for (const item of discogsItems) {
-                    const reqId = await purchaseRequestService.createRequest(uid, currentUser.email || "", currentUser.displayName || "", item, transactionId);
+                    // Importar a inventario (archived) para que "viaje al archivo" (Protocolo V21.1)
+                    const invId = await inventoryService.importFromDiscogs(item as any, {
+                        stock: 0,
+                        price: item.price || 0,
+                        condition: item.condition,
+                        status: 'archived'
+                    });
+
+                    const reqId = await purchaseRequestService.createRequest(uid, currentUser.email || "", currentUser.displayName || "", { ...item, internalInventoryId: invId }, transactionId);
                     createdDocs.push(reqId);
                 }
-                // (Optional) We could alert if inventory items were present but skip them or handle them
             }
 
             // 3. Logic for OFRECER (C2B Negotiation)
@@ -184,17 +199,28 @@ export default function RevisarLote() {
         const discogsItems = loteItems.filter(item => item.source === 'DISCOGS');
         const inventoryItems = loteItems.filter(item => item.source === 'INVENTORY');
 
-        if (discogsItems.length === 0) {
-            alert("Tu batea personal ya contiene los ítems de la tienda. Solo puedes añadir hallazgos externos (Discogs) de forma directa.");
+        if (discogsItems.length === 0 && inventoryItems.length === 0) {
+            alert("No hay ítems en tu lote para guardar.");
             return;
         }
 
-        showLoading("Añadiendo a tu batea...");
+        showLoading("Sincronizando con Discogs y añadiendo a tu batea...");
         try {
+            // Importación de Alta Fidelidad: Iterar y obtener detalles completos
             for (const item of discogsItems) {
+                let fullData: any = item;
+                try {
+                    // Intentamos obtener el release completo para tener el tracklist y más metadata
+                    const details = await inventoryService.getItemById(item.id.toString()) || await discogsService.getReleaseDetails(item.id.toString());
+                    fullData = { ...item, ...details };
+                } catch (e) {
+                    console.warn(`No se pudo obtener detalles extra para ${item.title}, usando data parcial.`);
+                }
+
                 // Parse artist from title if needed
-                let parsedArtist = item.artist || '';
-                let parsedTitle = item.title || item.album || '';
+                let parsedArtist = fullData.artist || fullData.metadata?.artist || '';
+                let parsedTitle = fullData.title || fullData.metadata?.title || fullData.album || '';
+
                 if (!parsedArtist && parsedTitle.includes(' - ')) {
                     const parts = parsedTitle.split(' - ');
                     parsedArtist = parts[0].trim();
@@ -203,24 +229,28 @@ export default function RevisarLote() {
 
                 await userAssetService.addAsset(user.uid, {
                     metadata: {
-                        title: parsedTitle,
+                        title: parsedTitle || 'Sin Título',
                         artist: parsedArtist || 'Desconocido',
-                        year: 0,
-                        genres: [],
-                        styles: [],
-                        format_description: item.format || 'Vinyl'
+                        year: parseInt(fullData.year || fullData.metadata?.year || '0') || 0,
+                        genres: fullData.genres || fullData.metadata?.genres || [],
+                        styles: fullData.styles || fullData.metadata?.styles || [],
+                        format_description: fullData.format || fullData.metadata?.format_description || 'Vinyl'
                     },
                     media: {
-                        thumbnail: item.cover_image || '',
-                        full_res_image_url: item.cover_image || ''
+                        thumbnail: fullData.cover_image || fullData.media?.thumbnail || '',
+                        full_res_image_url: fullData.cover_image || fullData.media?.full_res_image_url || ''
                     },
                     originalInventoryId: String(item.id),
-                    valuation: item.price || 0
-                });
+                    valuation: item.price || 0,
+                    tracklist: fullData.tracklist || [],
+                    labels: fullData.labels || []
+                } as any);
             }
 
             if (inventoryItems.length > 0) {
-                alert("Tus hallazgos de Discogs se guardaron en tu batea. Los ítems de la tienda no se duplicaron; siguen disponibles para compra o intercambio.");
+                alert("Tus hallazgos de Discogs se guardaron con éxito. Los ítems de la tienda no se duplicaron automáticamente; recordá que podés comprarlos o pedirlos.");
+            } else {
+                alert("¡Lote guardado en tu batea con éxito!");
             }
 
             clearLote();
@@ -233,16 +263,17 @@ export default function RevisarLote() {
         }
     };
 
-    const handleCheckout = async () => {
+    const handleCheckout = async (explicitIntent?: 'COMPRAR' | 'PEDIR' | 'OFRECER') => {
         if (isSubmitting) return;
 
-        if (!batchIntent) {
+        const currentIntent = explicitIntent || batchIntent;
+
+        if (!currentIntent) {
             alert(TEXTS.revisarLote.batchReview.confirmIntent);
             return;
         }
 
         // --- IDENTITY GUARD ---
-        // All transactional paths (PEDIR, OFRECER, COMPRAR) require identity
         if (!dbUser?.username) {
             setShowIdentityGuard(true);
             return;
@@ -253,12 +284,13 @@ export default function RevisarLote() {
             return;
         }
 
-        if (batchIntent === 'OFRECER' && (!totalPrice || Number(totalPrice) <= 0)) {
+        if (currentIntent === 'OFRECER' && (!totalPrice || Number(totalPrice) <= 0)) {
             alert(TEXTS.revisarLote.batchReview.validPriceRequired);
             return;
         }
+
         if (user) {
-            await performSubmission(user.uid, batchIntent);
+            await performSubmission(user.uid, currentIntent);
         }
     };
 
@@ -527,7 +559,7 @@ export default function RevisarLote() {
                                         {/* CAMINO 1: COMPRAR (Direct Sale - Only if Inventory exists) */}
                                         {hasInventoryItems && (
                                             <button
-                                                onClick={() => { setBatchIntent('COMPRAR'); setTimeout(handleCheckout, 50); }}
+                                                onClick={() => { setBatchIntent('COMPRAR'); handleCheckout('COMPRAR'); }}
                                                 disabled={isSubmitting}
                                                 className="w-full bg-primary text-black py-5 rounded-2xl font-black uppercase text-xs tracking-widest shadow-[0_0_30px_rgba(204,255,0,0.2)] hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3"
                                             >
@@ -539,7 +571,7 @@ export default function RevisarLote() {
                                         {/* CAMINO 2: PEDIR (Discogs/External Items) */}
                                         {hasDiscogsItems && (
                                             <button
-                                                onClick={() => { setBatchIntent('PEDIR'); setTimeout(handleCheckout, 50); }}
+                                                onClick={() => { setBatchIntent('PEDIR'); handleCheckout('PEDIR'); }}
                                                 disabled={isSubmitting}
                                                 className="w-full bg-blue-500/10 border border-blue-500/30 text-blue-400 py-5 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-blue-500/20 transition-all flex items-center justify-center gap-3"
                                             >
@@ -586,7 +618,7 @@ export default function RevisarLote() {
                                                         />
                                                     </div>
                                                     <button
-                                                        onClick={handleCheckout}
+                                                        onClick={() => handleCheckout('OFRECER')}
                                                         disabled={!totalPrice || Number(totalPrice) <= 0}
                                                         className="w-full bg-orange-500 text-black py-3 rounded-xl font-black uppercase text-[10px] tracking-widest"
                                                     >
