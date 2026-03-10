@@ -60,7 +60,7 @@ type Condition = "NUEVO" | "USADO";
 type Currency = "ARS" | "USD";
 
 export default function Home() {
-    const { user, dbUser } = useAuth();
+    const { user, dbUser, isAdmin } = useAuth();
     const { type: routeType, id: routeId } = useParams<{ type: string, id: string }>();
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
@@ -681,10 +681,10 @@ export default function Home() {
             const inventoryId = await inventoryService.importFromDiscogs(
                 selectedItem,
                 {
-                    stock: 1,
+                    stock: isAdmin ? 1 : 0,
                     price: price ? parseFloat(price) : 0,
                     condition: `${condition || "N/A"} (${format || "N/A"})`,
-                    status: "active"
+                    status: isAdmin ? "active" : "archived"
                 }
             );
 

@@ -322,7 +322,7 @@ export const inventoryService = {
             },
             logistics: {
                 ...logistics,
-                status: logistics.stock > 0 ? "active" : "sold_out"
+                status: logistics.status || (logistics.stock > 0 ? "active" : "sold_out")
             },
             tracklist: tracklistArray,
             labels: (discogsData.labels || []).map((l: any) => ({
