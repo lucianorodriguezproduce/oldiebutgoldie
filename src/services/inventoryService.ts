@@ -495,13 +495,14 @@ export const inventoryService = {
         // 1.1 Local Acoustic Analysis (Essentia.js) V18.1
         if (newPreview && (!newBpm || newBpm === 0)) {
             try {
-                console.log(`[Heal-Protocol] Spotify falló o incompleto. Iniciando Análisis Acústico Soberano (Essentia.js)...`);
+                console.log(`[Heal-Protocol] Spotify falló o incompleto. Iniciando Análisis Acústico Soberano (Essentia.js) para: ${newPreview}`);
                 const analysis = await audioAnalysisService.analyzeAudio(newPreview);
                 newBpm = analysis.bpm;
                 newKey = `${analysis.key} (${analysis.camelot})`;
                 console.log(`[Heal-Protocol] Análisis exitoso: BPM ${newBpm}, Key ${newKey}`);
-            } catch (e) {
-                console.error("[Heal-Protocol] Falló el Análisis Acústico Soberano:", e);
+            } catch (error) {
+                console.error("[Heal-Protocol] Falló el Análisis Acústico Soberano:", error);
+                // No re-lanzamos para permitir que YouTube y Discogs sigan
             }
         }
 

@@ -21,17 +21,28 @@ class AudioAnalysisService {
     private async init() {
         if (this.initialized) return;
 
+        console.log("[AudioAnalysis] Initializing Essentia.js...");
         try {
-            // Explicitly route to root for WASM file (Protocol V18.7)
-            const wasmModule = typeof EssentiaWASM !== 'undefined'
-                ? await EssentiaWASM({ locateFile: (file: string) => `/${file}` })
-                : await (window as any).EssentiaWASM({ locateFile: (file: string) => `/${file}` });
+            let wasmModule;
+
+            if (typeof EssentiaWASM !== 'undefined') {
+                console.log("[AudioAnalysis] Using imported EssentiaWASM function.");
+                wasmModule = await EssentiaWASM({ locateFile: (file: string) => `/${file}` });
+            } else if (typeof (window as any).EssentiaWASM !== 'undefined') {
+                console.log("[AudioAnalysis] Using window.EssentiaWASM function.");
+                wasmModule = await (window as any).EssentiaWASM({ locateFile: (file: string) => `/${file}` });
+            } else {
+                console.error("[AudioAnalysis] EssentiaWASM is NOT defined. Check your imports and that essentia.js is correctly loaded.");
+                throw new Error("EssentiaWASM is not defined");
+            }
+
+            if (!wasmModule) throw new Error("Could not load Essentia WASM module");
 
             this.essentia = new Essentia(wasmModule);
             this.initialized = true;
-            console.log("[AudioAnalysis] Essentia.js Engine initialized with explicit WASM routing.");
+            console.log("[AudioAnalysis] Essentia.js Engine fully initialized.");
         } catch (error) {
-            console.error("[AudioAnalysis-V18.7-CRITICAL] Error initializing Essentia WASM Engine. Ensure essentia-wasm.web.wasm is in /public:", error);
+            console.error("[AudioAnalysis-V18.7-CRITICAL] Global initialization failure:", error);
             throw error;
         }
     }

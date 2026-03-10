@@ -19,7 +19,8 @@ import {
     Trash2,
     Sparkles,
     Copy,
-    Share2
+    Share2,
+    Megaphone
 } from "lucide-react";
 import { SocialCardGenerator } from "@/components/Social/SocialCardGenerator";
 import { inventoryService } from "@/services/inventoryService";
@@ -214,14 +215,17 @@ export default function AdminInventory() {
     };
 
     const handleHeal = async (item: InventoryItem) => {
+        console.log(`[UI-Heal] Clicked Sparkle for: ${item.metadata.title} (${item.id})`);
         showLoading(`Sanando disco: ${item.metadata.title}...`);
         try {
+            console.log(`[UI-Heal] Calling inventoryService.healRecord...`);
             await inventoryService.healRecord(item);
+            console.log(`[UI-Heal] healRecord success!`);
             alert("Disco curado exitosamente. Se recargará la lista.");
             fetchInventory();
         } catch (error) {
-            console.error("Error healing item:", error);
-            alert("Error al curar el ítem.");
+            console.error("[UI-Heal] CRITICAL FAILURE:", error);
+            alert(`Error al curar el ítem: ${error instanceof Error ? error.message : String(error)}`);
         } finally {
             hideLoading();
         }
@@ -511,7 +515,7 @@ export default function AdminInventory() {
                                                     className="p-3 bg-white/5 text-primary rounded-2xl hover:bg-primary/10 transition-all opacity-0 group-hover:opacity-100"
                                                     title="Propaganda V6.0"
                                                 >
-                                                    <Sparkles className="h-4 w-4" />
+                                                    <Megaphone className="h-4 w-4" />
                                                 </button>
                                             </div>
                                         )}

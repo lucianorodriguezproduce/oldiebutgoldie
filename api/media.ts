@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 // @ts-ignore
-import { google } from 'googleapis';
+// google import removed to minimize bundle size and start time since we use fetch directly
 
 // --- Spotify logic ---
 let cachedToken: string | null = null;
@@ -88,15 +88,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         if (service === 'proxy') {
-            const url = req.query.url;
-            if (!url || typeof url !== 'string') return res.status(400).json({ error: 'Url is required' });
+            const urlString = req.query.url;
+            if (!urlString || typeof urlString !== 'string') return res.status(400).json({ error: 'Url is required' });
 
-            const response = await fetch(decodeURIComponent(url));
-            if (!response.ok) return res.status(response.status).json({ error: 'Upstream Fetch Error' });
+            const decodedUrl = decodeURIComponent(urlString);
+            console.log(`[Proxy] Fetching: ${decodedUrl}`);
+
+            const response = await fetch(decodedUrl);
+            if (!response.ok) {
+                console.error(`[Proxy] Upstream Error: ${response.status}`);
+                return res.status(response.status).json({ error: 'Upstream Fetch Error', status: response.status });
+            }
 
             const arrayBuffer = await response.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+
             res.setHeader('Content-Type', response.headers.get('Content-Type') || 'audio/mpeg');
-            return res.status(200).send(Buffer.from(arrayBuffer));
+            res.setHeader('Content-Length', buffer.length);
+            res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache audio for 24h
+
+            return res.status(200).end(buffer);
         }
 
         return res.status(400).json({ error: 'Invalid service' });
