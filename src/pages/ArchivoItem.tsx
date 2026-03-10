@@ -165,7 +165,7 @@ export default function ArchivoItem() {
                             )}
                         </div>
 
-                        {(item.youtube_id || item.spotify_id) && (
+                        {!item.isBatch && (item.youtube_id || item.spotify_id) && (
                             <div className="w-full rounded-3xl overflow-hidden border border-white/5 shadow-2xl bg-zinc-900/40 backdrop-blur-xl group">
                                 <div className="p-4 border-b border-white/5 flex items-center justify-between bg-zinc-950/50">
                                     <div className="flex items-center gap-3">
@@ -261,7 +261,12 @@ export default function ArchivoItem() {
                                 <span className={`px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.25em] border shadow-2xl backdrop-blur-md transition-all ${item.source === 'inventory' ? 'bg-primary text-black border-primary shadow-primary/20' : 'bg-white/5 border-white/10 text-gray-400'}`}>
                                     {item.source === 'inventory' ? 'STOCK DISPONIBLE' : 'ARCHIVADO'}
                                 </span>
-                                {item.wants && item.have && (
+                                {item.isBatch && (
+                                    <span className="px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.25em] border border-primary/50 bg-primary/10 text-primary shadow-2xl backdrop-blur-md">
+                                        🏷️ Lote Especial: {item.items?.length || 0} Unidades
+                                    </span>
+                                )}
+                                {!item.isBatch && item.wants && item.have && (
                                     <span className={`px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.25em] border shadow-2xl backdrop-blur-md ${(item.wants / item.have) > 5 ? 'bg-red-500/20 border-red-500/30 text-red-500' : (item.wants / item.have) > 2 ? 'bg-amber-500/20 border-amber-500/30 text-amber-500' : 'bg-zinc-800 border-zinc-700 text-zinc-400'}`}>
                                         {(item.wants / item.have) > 5 ? 'GRIAL' : (item.wants / item.have) > 2 ? 'MUY RARO' : 'CATÁLOGO'}
                                     </span>
@@ -276,21 +281,23 @@ export default function ArchivoItem() {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4 mb-10">
-                            {[
-                                { label: "Prensado", val: item.year || "N/A" },
-                                { label: "Wants", val: item.wants || "0" },
-                                { label: "Key", val: item.key || "—", accent: true },
-                                { label: "BPM", val: item.bpm || "—", accent: true },
-                            ].map((meta, idx) => (
-                                <div key={idx} className="p-5 rounded-[2rem] bg-zinc-900/40 border border-white/5 group hover:border-primary/30 transition-all">
-                                    <p className="text-zinc-500 text-[9px] uppercase tracking-[0.3em] font-black mb-2">{meta.label}</p>
-                                    <p className={`font-mono text-xl font-bold ${meta.accent ? 'text-primary' : 'text-white'}`}>{meta.val}</p>
-                                </div>
-                            ))}
-                        </div>
+                        {!item.isBatch && (
+                            <div className="grid grid-cols-2 gap-4 mb-10">
+                                {[
+                                    { label: "Prensado", val: item.year || "N/A" },
+                                    { label: "Wants", val: item.wants || "0" },
+                                    { label: "Key", val: item.key || "—", accent: true },
+                                    { label: "BPM", val: item.bpm || "—", accent: true },
+                                ].map((meta, idx) => (
+                                    <div key={idx} className="p-5 rounded-[2rem] bg-zinc-900/40 border border-white/5 group hover:border-primary/30 transition-all">
+                                        <p className="text-zinc-500 text-[9px] uppercase tracking-[0.3em] font-black mb-2">{meta.label}</p>
+                                        <p className={`font-mono text-xl font-bold ${meta.accent ? 'text-primary' : 'text-white'}`}>{meta.val}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
 
-                        {item.tracklist && item.tracklist.length > 0 && (
+                        {!item.isBatch && item.tracklist && item.tracklist.length > 0 && (
                             <div className="mb-10">
                                 <div className="flex items-center gap-2 mb-4">
                                     <Music className="w-5 h-5 text-gray-500" />
@@ -305,6 +312,36 @@ export default function ArchivoItem() {
                                             </div>
                                             <span className="font-mono text-xs text-zinc-500">{track.duration}</span>
                                         </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {item.isBatch && item.items && item.items.length > 0 && (
+                            <div className="mb-10 space-y-8">
+                                <div className="flex items-center gap-3 border-b border-white/5 pb-4">
+                                    <Layers className="w-5 h-5 text-primary" />
+                                    <h3 className="text-xl font-black uppercase tracking-tighter text-white">Discos incluidos en este lote</h3>
+                                </div>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    {item.items.map((sub, i) => (
+                                        <motion.div
+                                            key={i}
+                                            whileHover={{ y: -5 }}
+                                            className="bg-zinc-900/40 border border-white/5 rounded-2xl overflow-hidden group hover:border-primary/20 transition-all"
+                                        >
+                                            <div className="aspect-square bg-zinc-800">
+                                                <LazyImage
+                                                    src={sub.thumb || sub.image}
+                                                    alt={sub.title}
+                                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                                                />
+                                            </div>
+                                            <div className="p-3 space-y-1">
+                                                <p className="text-[10px] font-black text-white uppercase truncate tracking-tight">{sub.title}</p>
+                                                <p className="text-[8px] font-bold text-primary uppercase truncate tracking-widest">{sub.artist}</p>
+                                            </div>
+                                        </motion.div>
                                     ))}
                                 </div>
                             </div>
