@@ -37,24 +37,36 @@ export default function ArchivoItem() {
         }
     };
 
+    // V18.3 WATCHDOG: Si YouTube no responde, activamos el fallback
     useEffect(() => {
         const handleVideoError = (e: any) => {
             if (e.detail === id) {
+                console.warn("[Watchdog] Señal de error recibida para:", id);
                 setIsVideoAvailable(false);
             }
         };
         window.addEventListener('youtube-error', handleVideoError);
+
+        if (item?.youtube_id && isVideoAvailable) {
+            const timer = setTimeout(() => {
+                if (isVideoAvailable) {
+                    console.warn("[Watchdog] Timeout de 4s: Video no inició. Activando Spotify...");
+                    setIsVideoAvailable(false);
+                }
+            }, 4000);
+            return () => {
+                window.removeEventListener('youtube-error', handleVideoError);
+                clearTimeout(timer);
+            };
+        }
         return () => window.removeEventListener('youtube-error', handleVideoError);
-    }, [id]);
+    }, [id, item?.youtube_id, isVideoAvailable]);
 
     useEffect(() => {
         if (!id) return;
-
-        // Fetch Site Config for Branding Sync
         siteConfigService.getConfig().then(setSiteConfig);
 
         async function load() {
-            // Instant SWR check to avoid flickering showLoading (V12.7)
             const cacheKey = `obg_archivo_cache_item_${id}`;
             const cached = localStorage.getItem(cacheKey);
 
@@ -80,7 +92,6 @@ export default function ArchivoItem() {
                 hideLoading();
             }
         }
-
         load();
     }, [id]);
 
@@ -105,10 +116,9 @@ export default function ArchivoItem() {
                 title={`${item.artist} - ${item.title} | Archivo Sonoro Oldie But Goldie`}
                 description={`Explorá ${item.title} de ${item.artist} en nuestro archivo cultural. Formato: ${item.format}. Estado: ${item.condition}.`}
                 image={item.image}
-                url={absoluteUrl} // Canonical URL forced here (V12.7)
+                url={absoluteUrl}
             />
 
-            {/* JSON-LD Product Schema */}
             <script type="application/ld+json">
                 {JSON.stringify({
                     "@context": "https://schema.org/",
@@ -116,10 +126,7 @@ export default function ArchivoItem() {
                     "name": `${item.artist} - ${item.title}`,
                     "image": item.image,
                     "description": `Pieza de colección: ${item.title} por ${item.artist}. Disponible en el archivo de Oldie But Goldie.`,
-                    "brand": {
-                        "@type": "Brand",
-                        "name": "Oldie But Goldie"
-                    },
+                    "brand": { "@type": "Brand", "name": "Oldie But Goldie" },
                     "offers": {
                         "@type": "Offer",
                         "url": absoluteUrl,
@@ -141,14 +148,11 @@ export default function ArchivoItem() {
                 </button>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
-
-                    {/* Media Sidebar - Sticky */}
                     <motion.div
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         className="lg:col-span-12 xl:col-span-5 lg:sticky lg:top-32 space-y-8"
                     >
-                        {/* Cover Art - Luxury Depth (V14.1) */}
                         <div className="group relative aspect-square rounded-[2.5rem] overflow-hidden border border-white/10 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.9)] bg-zinc-900">
                             <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 via-transparent to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-700 z-10 pointer-events-none"></div>
                             <LazyImage
@@ -161,7 +165,6 @@ export default function ArchivoItem() {
                             )}
                         </div>
 
-                        {/* Unified Audio Engine (V14.1) */}
                         {(item.youtube_id || item.spotify_id) && (
                             <div className="w-full rounded-3xl overflow-hidden border border-white/5 shadow-2xl bg-zinc-900/40 backdrop-blur-xl group">
                                 <div className="p-4 border-b border-white/5 flex items-center justify-between bg-zinc-950/50">
@@ -192,7 +195,7 @@ export default function ArchivoItem() {
                                                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                                                 allowFullScreen
                                                 loading="lazy"
-                                                className="absolute top-0 left-0 w-full h-full transition-filter duration-700 grayscale-[0.2] group-hover:grayscale-0"
+                                                className="absolute top-0 left-0 w-full h-full grayscale-[0.2] group-hover:grayscale-0"
                                             ></iframe>
                                             <script dangerouslySetInnerHTML={{
                                                 __html: `
@@ -201,20 +204,17 @@ export default function ArchivoItem() {
                                                     new YT.Player('youtube-player', {
                                                         events: {
                                                             'onStateChange': function(event) {
-                                                                if (event.data === 1) isPlaying = true; // PLAYING
+                                                                if (event.data === 1) isPlaying = true;
                                                             },
                                                             'onReady': function(event) {
                                                                 event.target.playVideo();
-                                                                // Timeout de Carga (Hard-Fix V18.3)
                                                                 setTimeout(() => {
                                                                     if (!isPlaying && event.target.getPlayerState() !== 1) {
-                                                                        console.warn('[YouTube-Hard-Fix] Timeout: Video falló en reproducirse (restringido/roto).');
                                                                         window.dispatchEvent(new CustomEvent('youtube-error', { detail: '${item.id}' }));
                                                                     }
                                                                 }, 3000);
                                                             },
-                                                            'onError': function(event) {
-                                                                console.warn('[YouTube-Hard-Fix] Error detectado:', event.data);
+                                                            'onError': function() {
                                                                 window.dispatchEvent(new CustomEvent('youtube-error', { detail: '${item.id}' }));
                                                             }
                                                         }
@@ -241,7 +241,7 @@ export default function ArchivoItem() {
                                                     frameBorder="0"
                                                     allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
                                                     loading="lazy"
-                                                    className="grayscale-0 group-hover:grayscale-0 transition-all"
+                                                    className="grayscale-0"
                                                 ></iframe>
                                             </div>
                                         )
@@ -251,46 +251,31 @@ export default function ArchivoItem() {
                         )}
                     </motion.div>
 
-                    {/* Main Content Area */}
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         className="lg:col-span-12 xl:col-span-4 flex flex-col pt-2 lg:pt-0"
                     >
-                        {/* Header Minimal - High Fashion Style (V14.1) */}
                         <div className="mb-12">
                             <div className="flex flex-wrap items-center gap-3 mb-8">
-                                <span className={`px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.25em] border shadow-2xl backdrop-blur-md transition-all ${item.source === 'inventory'
-                                    ? 'bg-primary text-black border-primary shadow-primary/20'
-                                    : 'bg-white/5 border-white/10 text-gray-400'
-                                    }`}>
+                                <span className={`px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.25em] border shadow-2xl backdrop-blur-md transition-all ${item.source === 'inventory' ? 'bg-primary text-black border-primary shadow-primary/20' : 'bg-white/5 border-white/10 text-gray-400'}`}>
                                     {item.source === 'inventory' ? 'STOCK DISPONIBLE' : 'ARCHIVADO'}
                                 </span>
-
-                                {/* Rareza Badge (V14.1) */}
                                 {item.wants && item.have && (
-                                    <span className={`px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.25em] border shadow-2xl backdrop-blur-md ${(item.wants / item.have) > 5 ? 'bg-red-500/20 border-red-500/30 text-red-500' :
-                                        (item.wants / item.have) > 2 ? 'bg-amber-500/20 border-amber-500/30 text-amber-500' :
-                                            'bg-zinc-800 border-zinc-700 text-zinc-400'
-                                        }`}>
-                                        {(item.wants / item.have) > 5 ? 'GRIAL' :
-                                            (item.wants / item.have) > 2 ? 'MUY RARO' : 'CATÁLOGO'}
+                                    <span className={`px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.25em] border shadow-2xl backdrop-blur-md ${(item.wants / item.have) > 5 ? 'bg-red-500/20 border-red-500/30 text-red-500' : (item.wants / item.have) > 2 ? 'bg-amber-500/20 border-amber-500/30 text-amber-500' : 'bg-zinc-800 border-zinc-700 text-zinc-400'}`}>
+                                        {(item.wants / item.have) > 5 ? 'GRIAL' : (item.wants / item.have) > 2 ? 'MUY RARO' : 'CATÁLOGO'}
                                     </span>
                                 )}
                             </div>
-
                             <h1 className="text-5xl lg:text-7xl font-display font-black text-white uppercase tracking-tightest mb-4 leading-[0.85]">
                                 {item.title}
                             </h1>
                             <div className="flex items-center gap-4">
                                 <div className="h-px w-12 bg-primary"></div>
-                                <p className="text-2xl text-primary font-display uppercase tracking-widest italic">
-                                    {item.artist}
-                                </p>
+                                <p className="text-2xl text-primary font-display uppercase tracking-widest italic">{item.artist}</p>
                             </div>
                         </div>
 
-                        {/* Metadata Pro Grid (V14.1) */}
                         <div className="grid grid-cols-2 gap-4 mb-10">
                             {[
                                 { label: "Prensado", val: item.year || "N/A" },
@@ -305,7 +290,6 @@ export default function ArchivoItem() {
                             ))}
                         </div>
 
-                        {/* Tracklist Premium */}
                         {item.tracklist && item.tracklist.length > 0 && (
                             <div className="mb-10">
                                 <div className="flex items-center gap-2 mb-4">
@@ -326,48 +310,35 @@ export default function ArchivoItem() {
                             </div>
                         )}
 
-                        {/* Crónica del Curador */}
                         {item.notes && (
                             <div className="mb-10 p-6 rounded-3xl bg-gradient-to-br from-zinc-900 to-black border border-zinc-800 shadow-2xl relative overflow-hidden">
                                 <FileText className="absolute top-4 right-4 w-32 h-32 text-zinc-800 opacity-20 rotate-12 pointer-events-none" />
                                 <div className="relative z-10">
                                     <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary mb-4">Crónica del Curador</h3>
-                                    <div className="prose prose-invert prose-sm max-w-none prose-p:leading-relaxed prose-p:text-zinc-400 prose-p:font-serif prose-p:italic prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-strong:text-zinc-200">
+                                    <div className="prose prose-invert prose-sm max-w-none">
                                         <div style={{ whiteSpace: 'pre-line' }}>{item.notes}</div>
                                     </div>
                                 </div>
                             </div>
                         )}
-
                     </motion.div>
 
-                    {/* Right Context Area (Intercambio Seguro) */}
                     <motion.div
                         initial={{ opacity: 0, x: 20 }}
                         animate={{ opacity: 1, x: 0 }}
                         className="md:col-span-1 lg:col-span-4"
                     >
                         <div className="p-6 rounded-3xl bg-zinc-900 border border-white/10 shadow-2xl relative overflow-hidden">
-                            {/* Decorative Glow */}
                             <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2"></div>
-
                             <div className="relative z-10">
-                                <h3 className="text-xl font-display font-black uppercase tracking-tight text-white mb-2">
-                                    Adquisición Segura
-                                </h3>
+                                <h3 className="text-xl font-display font-black uppercase tracking-tight text-white mb-2">Adquisición Segura</h3>
                                 <p className="text-xs text-zinc-400 mb-8 leading-relaxed">
-                                    {item.source === 'inventory'
-                                        ? "Esta pieza está certificada por nuestro equipo técnico y lista para entrega inmediata bajo los estándares de limpieza OBG."
-                                        : "Esta pieza pertenece al canon privado de la comunidad. Puedes solicitar un intercambio (trade) ofreciendo crédito o discos de valor equivalente."}
+                                    {item.source === 'inventory' ? "Pieza certificada por nuestro equipo técnico y lista para entrega inmediata." : "Pieza comunitaria. Solicita un intercambio (trade) ofreciendo crédito o discos de valor."}
                                 </p>
-
                                 <div className="space-y-4">
                                     {item.source === 'inventory' ? (
                                         <button
-                                            onClick={() => {
-                                                trackIntent('add_to_cart');
-                                                addItemFromInventory(item);
-                                            }}
+                                            onClick={() => { trackIntent('add_to_cart'); addItemFromInventory(item); }}
                                             className="group flex flex-col items-center justify-center w-full px-8 py-5 bg-primary text-black rounded-2xl hover:scale-[1.02] transition-all"
                                         >
                                             <span className="font-black uppercase text-sm tracking-widest mb-1 flex items-center gap-2">
@@ -383,73 +354,33 @@ export default function ArchivoItem() {
                                             className="group flex flex-col items-center justify-center w-full px-8 py-5 bg-white text-black rounded-2xl hover:scale-[1.02] transition-all"
                                         >
                                             <span className="font-black uppercase text-sm tracking-widest mb-1 flex items-center gap-2">
-                                                Iniciar Intercambio <Layers className="w-4 h-4 fill-black group-hover:rotate-180 transition-transform duration-500" />
+                                                Iniciar Intercambio <Layers className="w-4 h-4 fill-black" />
                                             </span>
                                             <span className="text-[10px] opacity-70 font-mono font-bold">VERIFICACIÓN GARANTIZADA</span>
                                         </Link>
                                     )}
                                 </div>
-
-                                {/* Info Box */}
-                                <div className="mt-8 pt-6 border-t border-white/5 space-y-3">
-                                    <div className="flex items-start gap-3">
-                                        <div className="mt-0.5"><Square className="w-3.5 h-3.5 fill-zinc-600 text-zinc-800" /></div>
-                                        <p className="text-[10px] leading-tight text-zinc-500 uppercase tracking-widest">
-                                            Las piezas de colección comunitaria pasan obligatoriamente por nuestra cámara de verificación para certificar su estado exacto antes del traspaso.
-                                        </p>
-                                    </div>
-                                    {item.labels && item.labels.length > 0 && (
-                                        <div className="flex items-start gap-3 mt-4">
-                                            <div className="mt-0.5"><Hash className="w-3.5 h-3.5 text-zinc-600" /></div>
-                                            <div>
-                                                <p className="text-[10px] text-zinc-300 font-bold uppercase tracking-widest mb-1">Edición Sellada</p>
-                                                {item.labels.map((l, i) => (
-                                                    <p key={i} className="text-[10px] text-zinc-500 font-mono truncate max-w-[200px]">{l.name} [{l.catno}]</p>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
                             </div>
                         </div>
 
-                        {/* Pasaporte del Disco - QR Engine (V14.1) */}
                         <div className="mt-8 p-8 rounded-[3rem] bg-zinc-950 border border-white/5 shadow-2xl relative overflow-hidden flex flex-col items-center">
-                            <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-primary/40 to-transparent"></div>
-
                             <h3 className="text-2xl font-display font-black uppercase tracking-tightest text-white mb-2 italic">
                                 Pasaporte <span className="text-primary italic">Cultural</span>
                             </h3>
-                            <div className="flex items-center gap-2 mb-8">
-                                <div className="w-1.5 h-1.5 bg-primary rounded-full animate-ping"></div>
-                                <p className="text-[10px] text-zinc-500 font-black tracking-[0.2em] uppercase">
-                                    OBG IDENT-FLOW REGISTER
-                                </p>
-                            </div>
-
-                            <div className="bg-white p-6 rounded-[2rem] shadow-[0_20px_50px_rgba(255,255,255,0.05)] mb-8 relative group cursor-pointer transition-transform hover:scale-105 active:scale-95">
+                            <div className="bg-white p-6 rounded-[2rem] mb-8 group cursor-pointer">
                                 <QRCodeCanvas
                                     id="obg-qr-code"
                                     value={absoluteUrl}
                                     size={200}
-                                    bgColor={"#ffffff"}
-                                    fgColor={"#000000"}
                                     level={"H"}
-                                    includeMargin={false}
                                     imageSettings={{
                                         src: siteConfig?.favicon?.url || "/favicon.svg",
-                                        x: undefined,
-                                        y: undefined,
                                         height: 48,
                                         width: 48,
                                         excavate: true,
                                     }}
                                 />
-                                <div className="absolute inset-x-0 bottom-4 flex justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <span className="bg-black text-white text-[8px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-white/10">OBG Certified</span>
-                                </div>
                             </div>
-
                             <button
                                 onClick={() => {
                                     trackIntent('download_qr');
@@ -457,22 +388,17 @@ export default function ArchivoItem() {
                                     if (canvas) {
                                         const pngUrl = canvas.toDataURL("image/png");
                                         let downloadLink = document.createElement("a");
-                                        const safeArtist = item.artist?.replace(/[^a-z0-9]/gi, '_').toUpperCase();
-                                        const safeTitle = item.title?.replace(/[^a-z0-9]/gi, '_').toUpperCase();
                                         downloadLink.href = pngUrl;
-                                        downloadLink.download = `OBG-${safeArtist}-${safeTitle}.png`;
-                                        document.body.appendChild(downloadLink);
+                                        downloadLink.download = `OBG-${item.artist}-${item.title}.png`.replace(/\s+/g, '_');
                                         downloadLink.click();
-                                        document.body.removeChild(downloadLink);
                                     }
                                 }}
                                 className="w-full flex items-center justify-center gap-3 px-8 py-5 bg-white text-black rounded-2xl hover:bg-primary transition-all font-black uppercase text-xs tracking-widest group"
                             >
-                                <Download className="w-5 h-5 group-hover:bounce" />
+                                <Download className="w-5 h-5" />
                                 Exportar Pasaporte PNG
                             </button>
                         </div>
-
                     </motion.div>
                 </div>
             </div>
