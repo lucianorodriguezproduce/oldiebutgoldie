@@ -448,6 +448,7 @@ export const inventoryService = {
     },
 
     async healRecord(item: InventoryItem) {
+        console.log("-> Entrando a healRecord en el Service...");
         console.log(`[Heal-Protocol] Iniciando reparación para ${item.metadata.title}...`);
 
         let newBpm = item.metadata.bpm || 0;
