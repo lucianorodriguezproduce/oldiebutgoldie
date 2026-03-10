@@ -215,6 +215,7 @@ export default function AdminInventory() {
     };
 
     const handleHeal = async (item: InventoryItem) => {
+        console.log("CLICK DETECTADO");
         console.log("-> Botón Diamante Presionado para:", item.metadata.title);
         console.log(`[UI-Heal] Clicked Sparkle for: ${item.metadata.title} (${item.id})`);
         showLoading(`Sanando disco: ${item.metadata.title}...`);

@@ -448,132 +448,136 @@ export const inventoryService = {
     },
 
     async healRecord(item: InventoryItem) {
-        console.log("-> Entrando a healRecord en el Service...");
-        console.log(`[Heal-Protocol] Iniciando reparación para ${item.metadata.title}...`);
+        try {
+            console.log("-> Entrando a healRecord en el Service...");
+            console.log(`[Heal-Protocol] Iniciando reparación para ${item.metadata.title}...`);
 
-        let newBpm = item.metadata.bpm || 0;
-        let newKey = item.metadata.key || "";
-        let newPreview = item.metadata.preview_url || "";
-        let newTracklist = item.tracklist || [];
+            let newBpm = item.metadata.bpm || 0;
+            let newKey = item.metadata.key || "";
+            let newPreview = item.metadata.preview_url || "";
+            let newTracklist = item.tracklist || [];
 
-        let finalSpotifyId = item.metadata.spotify_id || "";
-        let finalYoutubeId = item.metadata.youtube_id || "";
+            let finalSpotifyId = item.metadata.spotify_id || "";
+            let finalYoutubeId = item.metadata.youtube_id || "";
 
-        // 1. Actively Search for Spotify Features if missing entirely
-        if (!finalSpotifyId || !newBpm || newBpm === 0) {
-            try {
-                // If we don't have the ID, try to find it first
-                if (!finalSpotifyId) {
-                    console.log(`[Heal-Protocol] Buscando Spotify ID para: ${item.metadata.artist} - ${item.metadata.title}`);
+            // 1. Actively Search for Spotify Features if missing entirely
+            if (!finalSpotifyId || !newBpm || newBpm === 0) {
+                try {
+                    // If we don't have the ID, try to find it first
+                    if (!finalSpotifyId) {
+                        console.log(`[Heal-Protocol] Buscando Spotify ID para: ${item.metadata.artist} - ${item.metadata.title}`);
+                        const cleanArtist = item.metadata.artist.replace(/\s*\(\d+\)$/, "").trim();
+                        const cleanTitle = item.metadata.title.replace(/[•\*\/]/g, " ").replace(/\s\s+/g, " ").trim();
+
+                        let searchRes = await spotifyService.searchAlbum(cleanArtist, cleanTitle);
+                        if (!searchRes) searchRes = await spotifyService.searchAlbum("", cleanTitle);
+
+                        if (searchRes) {
+                            finalSpotifyId = searchRes.spotify_id;
+                            console.log(`[Heal-Protocol] Nuevo Spotify ID encontrado: ${finalSpotifyId}`);
+                        }
+                    }
+
+                    // FETCH COMPLETO: Si ahora tenemos el ID (viejo o nuevo), traemos toda la data de la API consolidada
+                    if (finalSpotifyId) {
+                        console.log(`[Heal-Protocol] Extrayendo data técnica de Spotify para ID: ${finalSpotifyId}`);
+                        // OJO: Asegúrate de que el endpoint /api/media responda a esto correctamente según tu consolidación
+                        const response = await fetch(`/api/media?service=spotify&spotify_id=${finalSpotifyId}`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            if (data.bpm) newBpm = data.bpm;
+                            if (data.key) newKey = data.key;
+                            if (data.preview_url) newPreview = data.preview_url;
+                            console.log(`[Heal-Protocol] Data recuperada -> BPM: ${newBpm}, Key: ${newKey}, Preview: ${newPreview ? 'OK' : 'NULL'}`);
+                        } else {
+                            console.warn(`[Heal-Protocol] Proxy Media devolvió error: ${response.status}`);
+                        }
+                    }
+                } catch (e) {
+                    console.warn("[Heal-Protocol] Falló la curación desde Spotify:", e);
+                }
+            }
+
+            // 1.1 Local Acoustic Analysis (Essentia.js) V18.1
+            // Solo corre si tenemos audio (newPreview) y el BPM sigue en 0
+            if (newPreview && (!newBpm || newBpm === 0)) {
+                try {
+                    console.warn(`[Heal-Protocol] Spotify bloqueado (403) o data técnica ausente. Derivando análisis a Essentia.js local...`);
+                    console.log(`[Heal-Protocol] Iniciando Análisis Acústico Soberano (Essentia.js) para: ${newPreview}`);
+                    const analysis = await audioAnalysisService.analyzeAudio(newPreview);
+                    newBpm = analysis.bpm;
+                    newKey = `${analysis.key} (${analysis.camelot})`;
+                    console.log(`[Heal-Protocol] Análisis exitoso: BPM ${newBpm}, Key ${newKey}`);
+                } catch (error) {
+                    console.error("[Heal-Protocol] Falló el Análisis Acústico Soberano:", error);
+                }
+            } else if (!newPreview && (!newBpm || newBpm === 0)) {
+                console.warn(`[Heal-Protocol] Imposible analizar BPM: No se encontró audio previo (preview_url) en Spotify para este disco.`);
+            }
+
+            // Search for YouTube ID if missing
+            if (!finalYoutubeId) {
+                try {
                     const cleanArtist = item.metadata.artist.replace(/\s*\(\d+\)$/, "").trim();
                     const cleanTitle = item.metadata.title.replace(/[•\*\/]/g, " ").replace(/\s\s+/g, " ").trim();
+                    let ytMatch = await youtubeService.searchVideo(`${cleanArtist} ${cleanTitle}`);
+                    if (!ytMatch) ytMatch = await youtubeService.searchVideo(cleanTitle);
 
-                    let searchRes = await spotifyService.searchAlbum(cleanArtist, cleanTitle);
-                    if (!searchRes) searchRes = await spotifyService.searchAlbum("", cleanTitle);
-
-                    if (searchRes) {
-                        finalSpotifyId = searchRes.spotify_id;
-                        console.log(`[Heal-Protocol] Nuevo Spotify ID encontrado: ${finalSpotifyId}`);
+                    if (ytMatch) {
+                        finalYoutubeId = ytMatch.youtube_id;
+                        console.log(`[Heal-Protocol] Recuperado desde YouTube: ${finalYoutubeId}`);
                     }
+                } catch (e) {
+                    console.warn("[Heal-Protocol] Falló la curación desde YouTube:", e);
                 }
+            }
 
-                // FETCH COMPLETO: Si ahora tenemos el ID (viejo o nuevo), traemos toda la data de la API consolidada
-                if (finalSpotifyId) {
-                    console.log(`[Heal-Protocol] Extrayendo data técnica de Spotify para ID: ${finalSpotifyId}`);
-                    // OJO: Asegúrate de que el endpoint /api/media responda a esto correctamente según tu consolidación
-                    const response = await fetch(`/api/media?service=spotify&spotify_id=${finalSpotifyId}`);
-                    if (response.ok) {
-                        const data = await response.json();
-                        if (data.bpm) newBpm = data.bpm;
-                        if (data.key) newKey = data.key;
-                        if (data.preview_url) newPreview = data.preview_url;
-                        console.log(`[Heal-Protocol] Data recuperada -> BPM: ${newBpm}, Key: ${newKey}, Preview: ${newPreview ? 'OK' : 'NULL'}`);
-                    } else {
-                        console.warn(`[Heal-Protocol] Proxy Media devolvió error: ${response.status}`);
+            // 2. Extraer tracklist si está vacío (re-consulta Discogs)
+            if (newTracklist.length === 0 && item.reference?.originalDiscogsId) {
+                try {
+                    const discogsRes = await fetch(`/api/proxy?path=/releases/${item.reference.originalDiscogsId}`);
+                    if (discogsRes.ok) {
+                        const discogsData = await discogsRes.json();
+                        newTracklist = (discogsData.tracklist || []).map((t: any) => ({
+                            position: t.position || "",
+                            title: t.title || "",
+                            duration: t.duration || ""
+                        }));
+                        console.log(`[Heal-Protocol] Recuperado Tracklist desde Discogs con ${newTracklist.length} tracks.`);
                     }
+                } catch (e) {
+                    console.warn("[Heal-Protocol] Falló el rescate de Discogs:", e);
                 }
-            } catch (e) {
-                console.warn("[Heal-Protocol] Falló la curación desde Spotify:", e);
             }
-        }
 
-        // 1.1 Local Acoustic Analysis (Essentia.js) V18.1
-        // Solo corre si tenemos audio (newPreview) y el BPM sigue en 0
-        if (newPreview && (!newBpm || newBpm === 0)) {
-            try {
-                console.warn(`[Heal-Protocol] Spotify bloqueado (403) o data técnica ausente. Derivando análisis a Essentia.js local...`);
-                console.log(`[Heal-Protocol] Iniciando Análisis Acústico Soberano (Essentia.js) para: ${newPreview}`);
-                const analysis = await audioAnalysisService.analyzeAudio(newPreview);
-                newBpm = analysis.bpm;
-                newKey = `${analysis.key} (${analysis.camelot})`;
-                console.log(`[Heal-Protocol] Análisis exitoso: BPM ${newBpm}, Key ${newKey}`);
-            } catch (error) {
-                console.error("[Heal-Protocol] Falló el Análisis Acústico Soberano:", error);
+            // 3. Compilación y Soldadura (Update a BD con eliminación del Warning)
+            const docRef = doc(db, COLLECTION_NAME, item.id);
+            const updatePayload: Record<string, any> = {};
+
+            // Asignación estricta de variables metadata
+            updatePayload["metadata.bpm"] = newBpm;
+            updatePayload["metadata.key"] = newKey;
+            if (newPreview) updatePayload["metadata.preview_url"] = newPreview;
+
+            // Purgando el estado negativo solo si el análisis fue exitoso (V18.1)
+            if (newBpm > 0 || (newTracklist.length > 0 && finalSpotifyId)) {
+                updatePayload["metadata.status_warning"] = deleteField();
             }
-        } else if (!newPreview && (!newBpm || newBpm === 0)) {
-            console.warn(`[Heal-Protocol] Imposible analizar BPM: No se encontró audio previo (preview_url) en Spotify para este disco.`);
-        }
 
-        // Search for YouTube ID if missing
-        if (!finalYoutubeId) {
-            try {
-                const cleanArtist = item.metadata.artist.replace(/\s*\(\d+\)$/, "").trim();
-                const cleanTitle = item.metadata.title.replace(/[•\*\/]/g, " ").replace(/\s\s+/g, " ").trim();
-                let ytMatch = await youtubeService.searchVideo(`${cleanArtist} ${cleanTitle}`);
-                if (!ytMatch) ytMatch = await youtubeService.searchVideo(cleanTitle);
-
-                if (ytMatch) {
-                    finalYoutubeId = ytMatch.youtube_id;
-                    console.log(`[Heal-Protocol] Recuperado desde YouTube: ${finalYoutubeId}`);
-                }
-            } catch (e) {
-                console.warn("[Heal-Protocol] Falló la curación desde YouTube:", e);
+            // Actualizando el tracklist raíz
+            if (newTracklist.length > 0) {
+                updatePayload["tracklist"] = newTracklist;
             }
+
+            if (finalSpotifyId) updatePayload["metadata.spotify_id"] = finalSpotifyId;
+            if (finalYoutubeId) updatePayload["metadata.youtube_id"] = finalYoutubeId;
+
+            console.log(`[Heal-Protocol] Ejecutando soldadura en Firestore... Payload:`, updatePayload);
+            await updateDoc(docRef, updatePayload);
+            console.log(`[Heal-Protocol] Disco Sanado exitosamente.`);
+        } catch (err) {
+            console.error("FATAL ERROR en HealRecord:", err);
         }
-
-        // 2. Extraer tracklist si está vacío (re-consulta Discogs)
-        if (newTracklist.length === 0 && item.reference?.originalDiscogsId) {
-            try {
-                const discogsRes = await fetch(`/api/proxy?path=/releases/${item.reference.originalDiscogsId}`);
-                if (discogsRes.ok) {
-                    const discogsData = await discogsRes.json();
-                    newTracklist = (discogsData.tracklist || []).map((t: any) => ({
-                        position: t.position || "",
-                        title: t.title || "",
-                        duration: t.duration || ""
-                    }));
-                    console.log(`[Heal-Protocol] Recuperado Tracklist desde Discogs con ${newTracklist.length} tracks.`);
-                }
-            } catch (e) {
-                console.warn("[Heal-Protocol] Falló el rescate de Discogs:", e);
-            }
-        }
-
-        // 3. Compilación y Soldadura (Update a BD con eliminación del Warning)
-        const docRef = doc(db, COLLECTION_NAME, item.id);
-        const updatePayload: Record<string, any> = {};
-
-        // Asignación estricta de variables metadata
-        updatePayload["metadata.bpm"] = newBpm;
-        updatePayload["metadata.key"] = newKey;
-        if (newPreview) updatePayload["metadata.preview_url"] = newPreview;
-
-        // Purgando el estado negativo solo si el análisis fue exitoso (V18.1)
-        if (newBpm > 0 || (newTracklist.length > 0 && finalSpotifyId)) {
-            updatePayload["metadata.status_warning"] = deleteField();
-        }
-
-        // Actualizando el tracklist raíz
-        if (newTracklist.length > 0) {
-            updatePayload["tracklist"] = newTracklist;
-        }
-
-        if (finalSpotifyId) updatePayload["metadata.spotify_id"] = finalSpotifyId;
-        if (finalYoutubeId) updatePayload["metadata.youtube_id"] = finalYoutubeId;
-
-        console.log(`[Heal-Protocol] Ejecutando soldadura en Firestore... Payload:`, updatePayload);
-        await updateDoc(docRef, updatePayload);
-        console.log(`[Heal-Protocol] Disco Sanado exitosamente.`);
     }
 };
 

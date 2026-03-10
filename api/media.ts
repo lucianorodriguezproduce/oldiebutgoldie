@@ -33,6 +33,7 @@ async function getSpotifyAccessToken(): Promise<string> {
 
 // --- Handler ---
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+    console.log("[Media-Service] Nueva petición recibida:", req.query);
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
