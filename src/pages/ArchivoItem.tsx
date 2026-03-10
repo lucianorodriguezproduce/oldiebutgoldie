@@ -173,7 +173,7 @@ export default function ArchivoItem() {
                                             <PlayCircle className="w-4 h-4 text-primary animate-pulse" />
                                         </div>
                                         <span className="text-[10px] uppercase font-black tracking-[0.2em] text-zinc-300">
-                                            {item.youtube_id && isVideoAvailable ? "Sovereign Audio Stream" : "Spotify Sync Active"}
+                                            {item.spotify_id ? "Spotify Sync Active" : (item.youtube_id && isVideoAvailable ? "Sovereign Audio Stream" : "Audio Not Available")}
                                         </span>
                                     </div>
                                     <div className="flex gap-1">
@@ -183,66 +183,66 @@ export default function ArchivoItem() {
                                     </div>
                                 </div>
                                 <div className="relative w-full overflow-hidden">
-                                    {item.youtube_id && isVideoAvailable ? (
-                                        <div className="aspect-video w-full">
+                                    {item.spotify_id ? (
+                                        <div className="h-[152px] w-full">
                                             <iframe
-                                                id="youtube-player"
+                                                src={`https://open.spotify.com/embed/album/${item.spotify_id}?utm_source=generator&theme=0`}
                                                 width="100%"
-                                                height="100%"
-                                                src={`https://www.youtube.com/embed/${item.youtube_id}?autoplay=1&rel=0&modestbranding=1&theme=dark&enablejsapi=1`}
-                                                title="OBG Stream Engine"
+                                                height="152"
                                                 frameBorder="0"
-                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                                allowFullScreen
+                                                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
                                                 loading="lazy"
-                                                className="absolute top-0 left-0 w-full h-full grayscale-[0.2] group-hover:grayscale-0"
+                                                className="grayscale-0"
                                             ></iframe>
-                                            <script dangerouslySetInnerHTML={{
-                                                __html: `
-                                                window.onYouTubeIframeAPIReady = function() {
-                                                    let isPlaying = false;
-                                                    new YT.Player('youtube-player', {
-                                                        events: {
-                                                            'onStateChange': function(event) {
-                                                                if (event.data === 1) isPlaying = true;
-                                                            },
-                                                            'onReady': function(event) {
-                                                                event.target.playVideo();
-                                                                setTimeout(() => {
-                                                                    if (!isPlaying && event.target.getPlayerState() !== 1) {
-                                                                        window.dispatchEvent(new CustomEvent('youtube-error', { detail: '${item.id}' }));
-                                                                    }
-                                                                }, 3000);
-                                                            },
-                                                            'onError': function() {
-                                                                window.dispatchEvent(new CustomEvent('youtube-error', { detail: '${item.id}' }));
-                                                            }
-                                                        }
-                                                    });
-                                                };
-                                                if (!window.YT) {
-                                                    const tag = document.createElement('script');
-                                                    tag.src = "https://www.youtube.com/iframe_api";
-                                                    const firstScriptTag = document.getElementsByTagName('script')[0];
-                                                    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-                                                } else if (window.YT && window.YT.Player) {
-                                                    window.onYouTubeIframeAPIReady();
-                                                }
-                                                `
-                                            }} />
                                         </div>
                                     ) : (
-                                        item.spotify_id && (
-                                            <div className="h-[152px] w-full">
+                                        item.youtube_id && isVideoAvailable && (
+                                            <div className="aspect-video w-full">
                                                 <iframe
-                                                    src={`https://open.spotify.com/embed/album/${item.spotify_id}?utm_source=generator&theme=0`}
+                                                    id="youtube-player"
                                                     width="100%"
-                                                    height="152"
+                                                    height="100%"
+                                                    src={`https://www.youtube.com/embed/${item.youtube_id}?autoplay=1&rel=0&modestbranding=1&theme=dark&enablejsapi=1`}
+                                                    title="OBG Stream Engine"
                                                     frameBorder="0"
-                                                    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                    allowFullScreen
                                                     loading="lazy"
-                                                    className="grayscale-0"
+                                                    className="absolute top-0 left-0 w-full h-full grayscale-[0.2] group-hover:grayscale-0"
                                                 ></iframe>
+                                                <script dangerouslySetInnerHTML={{
+                                                    __html: `
+                                                    window.onYouTubeIframeAPIReady = function() {
+                                                        let isPlaying = false;
+                                                        new YT.Player('youtube-player', {
+                                                            events: {
+                                                                'onStateChange': function(event) {
+                                                                    if (event.data === 1) isPlaying = true;
+                                                                },
+                                                                'onReady': function(event) {
+                                                                    event.target.playVideo();
+                                                                    setTimeout(() => {
+                                                                        if (!isPlaying && event.target.getPlayerState() !== 1) {
+                                                                            window.dispatchEvent(new CustomEvent('youtube-error', { detail: '${item.id}' }));
+                                                                        }
+                                                                    }, 3000);
+                                                                },
+                                                                'onError': function() {
+                                                                    window.dispatchEvent(new CustomEvent('youtube-error', { detail: '${item.id}' }));
+                                                                }
+                                                            }
+                                                        });
+                                                    };
+                                                    if (!window.YT) {
+                                                        const tag = document.createElement('script');
+                                                        tag.src = "https://www.youtube.com/iframe_api";
+                                                        const firstScriptTag = document.getElementsByTagName('script')[0];
+                                                        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+                                                    } else if (window.YT && window.YT.Player) {
+                                                        window.onYouTubeIframeAPIReady();
+                                                    }
+                                                    `
+                                                }} />
                                             </div>
                                         )
                                     )}
