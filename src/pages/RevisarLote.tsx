@@ -122,13 +122,15 @@ export default function RevisarLote() {
 
                 // Discogs items in a "COMPRAR" context also become Archived Inventory + Purchase Requests
                 for (const item of discogsItems) {
-                    // Protocolo de Hidratación Crítica V21.4
+                    const itemId = item.id.toString();
                     let fullData: any = item;
                     try {
-                        const details = await discogsService.getReleaseDetails(item.id.toString());
+                        const details = item.type === 'master'
+                            ? await discogsService.getMasterDetails(itemId)
+                            : await discogsService.getReleaseDetails(itemId);
                         fullData = { ...item, ...details };
                     } catch (e) {
-                        console.warn(`[Lote-Hydration] Falló hidratación para ${item.title}, usando data del lote.`);
+                        console.warn(`[Lote-Hydration] Falló hidratación para ${item.title} (ID: ${itemId}, Type: ${item.type}), usando data del lote.`);
                     }
 
                     const invId = await inventoryService.importFromDiscogs(fullData as any, {
@@ -146,13 +148,15 @@ export default function RevisarLote() {
             // 2. Logic for PEDIR (External items)
             if (action === 'PEDIR') {
                 for (const item of discogsItems) {
-                    // Protocolo de Hidratación Crítica V21.4
+                    const itemId = item.id.toString();
                     let fullData: any = item;
                     try {
-                        const details = await discogsService.getReleaseDetails(item.id.toString());
+                        const details = item.type === 'master'
+                            ? await discogsService.getMasterDetails(itemId)
+                            : await discogsService.getReleaseDetails(itemId);
                         fullData = { ...item, ...details };
                     } catch (e) {
-                        console.warn(`[Lote-Hydration] Falló hidratación para ${item.title}, usando data del lote.`);
+                        console.warn(`[Lote-Hydration] Falló hidratación para ${item.title} (ID: ${itemId}, Type: ${item.type}), usando data del lote.`);
                     }
 
                     // Importar a inventario (archived) para que "viaje al archivo" (Protocolo V21.1)
@@ -174,13 +178,15 @@ export default function RevisarLote() {
 
                 // For Discogs, we must import them first as archived inventory to use in trade
                 const importedDiscogsIds = await Promise.all(discogsItems.map(async (item) => {
-                    // Protocolo de Hidratación Crítica V21.4
+                    const itemId = item.id.toString();
                     let fullData: any = item;
                     try {
-                        const details = await discogsService.getReleaseDetails(item.id.toString());
+                        const details = item.type === 'master'
+                            ? await discogsService.getMasterDetails(itemId)
+                            : await discogsService.getReleaseDetails(itemId);
                         fullData = { ...item, ...details };
                     } catch (e) {
-                        console.warn(`[Lote-Hydration] Falló hidratación para ${item.title}, usando data del lote.`);
+                        console.warn(`[Lote-Hydration] Falló hidratación para ${item.title} (ID: ${itemId}, Type: ${item.type}), usando data del lote.`);
                     }
                     return await inventoryService.importFromDiscogs(fullData as any, { stock: 0, price: item.price || 0, condition: item.condition, status: 'archived' });
                 }));
@@ -234,13 +240,16 @@ export default function RevisarLote() {
         try {
             // Importación de Alta Fidelidad: Iterar y obtener detalles completos
             for (const item of discogsItems) {
+                const itemId = item.id.toString();
                 let fullData: any = item;
                 try {
                     // Intentamos obtener el release completo para tener el tracklist y más metadata
-                    const details = await inventoryService.getItemById(item.id.toString()) || await discogsService.getReleaseDetails(item.id.toString());
+                    const details = item.type === 'master'
+                        ? await discogsService.getMasterDetails(itemId)
+                        : await discogsService.getReleaseDetails(itemId);
                     fullData = { ...item, ...details };
                 } catch (e) {
-                    console.warn(`No se pudo obtener detalles extra para ${item.title}, usando data parcial.`);
+                    console.warn(`[Batea-Resilience] No se pudo hidratar ${item.title} (ID: ${itemId}, Type: ${item.type}), usando data parcial.`);
                 }
 
                 // Parse artist from title if needed
@@ -307,11 +316,6 @@ export default function RevisarLote() {
         // --- IDENTITY GUARD ---
         if (!dbUser?.username) {
             setShowIdentityGuard(true);
-            return;
-        }
-
-        if (!user?.emailVerified) {
-            alert("Acción Crítica: Verificá tu email para confirmar operaciones en el La Batea.");
             return;
         }
 

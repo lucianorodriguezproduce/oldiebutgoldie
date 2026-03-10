@@ -12,6 +12,7 @@ export interface BatchItem {
     price?: number;
     currency?: string;
     source: 'DISCOGS' | 'INVENTORY';
+    type?: string;
     // Metadata Enriquecido (V21.4)
     genre?: string[];
     styles?: string[];

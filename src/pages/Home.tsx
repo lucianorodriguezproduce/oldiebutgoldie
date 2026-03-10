@@ -453,7 +453,9 @@ export default function Home() {
             // IF DISCOGS: Obtener detalles completos para Ingesta de Alta Fidelidad
             showLoading(TEXTS.home.loadingDiscogs);
             try {
-                const details = await discogsService.getReleaseDetails(String(result.id));
+                const details = result.type === 'master'
+                    ? await discogsService.getMasterDetails(String(result.id))
+                    : await discogsService.getReleaseDetails(String(result.id));
                 const normalized = normalizeDiscogsData({ ...result, ...details });
 
                 // Seteamos selectedItem para que se muestre la vista de detalle con los botones de acción
@@ -652,7 +654,8 @@ export default function Home() {
             styles: selectedSearchItem.style || selectedSearchItem.styles,
             format: config.format,
             condition: config.condition,
-            source: 'DISCOGS'
+            source: 'DISCOGS',
+            type: selectedSearchItem.type
         });
 
         setShowConfigModal(false);
