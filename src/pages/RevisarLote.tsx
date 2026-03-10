@@ -217,8 +217,8 @@ export default function RevisarLote() {
             }
 
         } catch (error) {
-            console.error("Submission error:", error);
-            alert("Error al procesar la orden. Inténtalo de nuevo.");
+            console.error("FATAL: Error en performSubmission:", error);
+            alert(`Error al procesar el lote: ${error instanceof Error ? error.message : 'Error desconocido'}. Inténtalo de nuevo.`);
         } finally {
             hideLoading();
         }
@@ -285,6 +285,14 @@ export default function RevisarLote() {
                     tracklist: fullData.tracklist || [],
                     labels: fullData.labels || []
                 } as any);
+
+                // También importar a inventario (archived) para que "viaje al archivo" (Protocolo V21.6)
+                await inventoryService.importFromDiscogs(fullData as any, {
+                    stock: 0,
+                    price: item.price || 0,
+                    condition: item.condition,
+                    status: 'archived'
+                });
             }
 
             if (inventoryItems.length > 0) {
@@ -296,8 +304,8 @@ export default function RevisarLote() {
             clearLote();
             navigate('/perfil');
         } catch (error) {
-            console.error('Error adding to batea:', error);
-            alert('Error al añadir a tu batea. Inténtalo de nuevo.');
+            console.error("FATAL: Error al añadir a batea:", error);
+            alert(`Error al añadir a tu batea: ${error instanceof Error ? error.message : 'Error desconocido'}. Inténtalo de nuevo.`);
         } finally {
             hideLoading();
         }
@@ -330,14 +338,6 @@ export default function RevisarLote() {
     };
 
     const handleGoogleSignIn = async () => {
-        if (!batchIntent) {
-            alert(TEXTS.revisarLote.batchReview.confirmIntent);
-            return;
-        }
-        if (batchIntent === 'OFRECER' && (!totalPrice || Number(totalPrice) <= 0)) {
-            alert(TEXTS.revisarLote.batchReview.validPriceRequired);
-            return;
-        }
         showLoading(TEXTS.revisarLote.batchReview.syncingGoogle);
         try {
             const googleUser = await signInWithGoogle();
@@ -359,14 +359,6 @@ export default function RevisarLote() {
     const handleAuthAction = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
         if (!email || !password) return;
-        if (!batchIntent) {
-            alert(TEXTS.revisarLote.batchReview.confirmIntent);
-            return;
-        }
-        if (batchIntent === 'OFRECER' && (!totalPrice || Number(totalPrice) <= 0)) {
-            alert(TEXTS.revisarLote.batchReview.validPriceRequired);
-            return;
-        }
 
         showLoading(TEXTS.revisarLote.batchReview.authenticatingUser);
         try {
