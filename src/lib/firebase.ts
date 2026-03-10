@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, setPersistence, browserLocalPersistence } from "firebase/auth";
-import { initializeFirestore } from "firebase/firestore";
+import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
@@ -21,11 +21,8 @@ export const storage = getStorage(app);
 setPersistence(auth, browserLocalPersistence)
     .catch((error) => console.error("Error setting persistence:", error));
 
-// SDK 12.9.0 introduces a BloomFilter for aggressive caching but causes regression
-// with high read volume. Re-initializing firestore with settings explicitly avoiding it or using default
-export const db = initializeFirestore(app, {
-    experimentalForceLongPolling: true,
-});
+// Firestore Initialization (Standard)
+export const db = getFirestore(app);
 
 export default app;
 
