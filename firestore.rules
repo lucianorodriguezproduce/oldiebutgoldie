@@ -4,7 +4,10 @@ service cloud.firestore {
     
     // Core Functions
     function isAdmin() {
-      return request.auth != null && request.auth.token.email == "admin@discography.ai";
+      return request.auth != null && (
+        request.auth.token.email == "admin@discography.ai" ||
+        request.auth.token.email == "lucianorodriguez.produce@gmail.com"
+      );
     }
 
     function isOwner(userId) {
@@ -88,7 +91,8 @@ service cloud.firestore {
     // Inventory - El Búnker: Lectura pública, gestión Admin
     match /inventory/{document=**} {
       allow read: if true;
-      allow create, update, delete: if isAdmin();
+      allow create: if request.auth != null && (isAdmin() || request.resource.data.logistics.status == "archived");
+      allow update, delete: if isAdmin();
     }
 
     // Trades - Negociaciones: Solo participantes o Admin
@@ -104,9 +108,9 @@ service cloud.firestore {
 
     // User Assets - Soberanía y Blindaje: Solo dueño o Admin, los items 'active' son públicos.
     match /user_assets/{assetId} {
-      allow read: if resource.data.status == "active" || (request.auth != null && (isAdmin() || resource.data.uid == request.auth.uid));
-      allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
-      allow update, delete: if request.auth != null && (resource.data.uid == request.auth.uid || isAdmin());
+      allow read: if resource.data.status == "active" || (request.auth != null && (isAdmin() || resource.data.ownerId == request.auth.uid));
+      allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if request.auth != null && (resource.data.ownerId == request.auth.uid || isAdmin());
     }
 
     // Lotes y Carritos - Gestión Admin
@@ -115,8 +119,10 @@ service cloud.firestore {
     }
 
     // Purchase Requests & P2P Market - Gestión Admin
-    match /purchase_requests/{document=**} {
-      allow read, write: if isAdmin();
+    match /purchase_requests/{requestId} {
+      allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
+      allow read: if request.auth != null && (resource.data.uid == request.auth.uid || isAdmin());
+      allow update, delete: if isAdmin();
     }
     match /p2p_market/{document=**} {
       allow read, write: if isAdmin();

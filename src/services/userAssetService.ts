@@ -54,6 +54,7 @@ export const userAssetService = {
     }) {
         const docRef = await addDoc(collection(db, COLLECTION_NAME), {
             ownerId: userId,
+            uid: userId, // Redundancia para compatibilidad con firestore.rules
             originalInventoryId: assetData.originalInventoryId || '',
             metadata: assetData.metadata,
             media: assetData.media,
