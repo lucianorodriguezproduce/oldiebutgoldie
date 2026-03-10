@@ -88,11 +88,19 @@ service cloud.firestore {
       );
     }
 
-    // Inventory - El Búnker: Lectura pública, gestión Admin
-    match /inventory/{document=**} {
+    // Inventory - El Búnker: Lectura pública. 
+    // Los usuarios pueden CREAR si el estado es 'archived' (viaje al archivo).
+    match /inventory/{itemId} {
       allow read: if true;
       allow create: if request.auth != null && (isAdmin() || request.resource.data.logistics.status == "archived");
-      allow update, delete: if isAdmin();
+      allow update: if request.auth != null && (isAdmin() || request.resource.data.logistics.status == "archived");
+      allow delete: if isAdmin();
+
+      // Regla recursiva para campos anidados si se requiere
+      match /{allPaths=**} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
     }
 
     // Trades - Negociaciones: Solo participantes o Admin
@@ -106,11 +114,12 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // User Assets - Soberanía y Blindaje: Solo dueño o Admin, los items 'active' son públicos.
+    // User Assets - Soberanía y Blindaje: Solo dueño o Admin
+    // Armonizado para usar 'ownerId' o 'uid' (Protocolo V21.7)
     match /user_assets/{assetId} {
-      allow read: if resource.data.status == "active" || (request.auth != null && (isAdmin() || resource.data.ownerId == request.auth.uid));
-      allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
-      allow update, delete: if request.auth != null && (resource.data.ownerId == request.auth.uid || isAdmin());
+      allow read: if resource == null || resource.data.status == "active" || (request.auth != null && (isAdmin() || resource.data.ownerId == request.auth.uid || resource.data.uid == request.auth.uid));
+      allow create: if request.auth != null && (request.resource.data.ownerId == request.auth.uid || request.resource.data.uid == request.auth.uid);
+      allow update, delete: if request.auth != null && (resource.data.ownerId == request.auth.uid || resource.data.uid == request.auth.uid || isAdmin());
     }
 
     // Lotes y Carritos - Gestión Admin
@@ -118,12 +127,13 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
-    // Purchase Requests & P2P Market - Gestión Admin
+    // Purchase Requests - Abierto para creación de usuario
     match /purchase_requests/{requestId} {
       allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
       allow read: if request.auth != null && (resource.data.uid == request.auth.uid || isAdmin());
       allow update, delete: if isAdmin();
     }
+
     match /p2p_market/{document=**} {
       allow read, write: if isAdmin();
     }
@@ -142,6 +152,15 @@ service cloud.firestore {
     match /missed_searches/{document=**} {
       allow create: if true;
       allow read, delete: if isAdmin();
+    }
+
+    // System Cache & Config
+    match /system_cache/{document=**} {
+      allow read, write: if true; 
+    }
+    match /system_config/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin(); 
     }
   }
 }
