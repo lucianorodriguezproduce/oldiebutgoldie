@@ -17,7 +17,7 @@ import UsernameClaimModal from "@/components/Profile/UsernameClaimModal";
 import { getCleanOrderMetadata } from "@/utils/orderMetadata";
 import { tradeService } from "@/services/tradeService";
 import { generateWhatsAppAcceptDealMsg } from "@/utils/whatsapp";
-import { ADMIN_UID } from "@/constants/admin";
+import { ADMIN_UID, isAdminEmail } from "@/constants/admin";
 import { siteConfigService } from "@/services/siteConfigService";
 import type { SiteConfig } from "@/services/siteConfigService";
 import { Trash2, Trophy, Star } from "lucide-react";
@@ -36,7 +36,7 @@ export default function PublicOrderView() {
     const [showRejectConfirm, setShowRejectConfirm] = useState(false);
 
     const isOwner = user?.uid === order?.user_id;
-    const isAdminOrder = order?.user_id === ADMIN_UID || order?.user_id === "oldiebutgoldie" || order?.user_email === "admin@discography.ai";
+    const isAdminOrder = order?.user_id === ADMIN_UID || order?.user_id === "oldiebutgoldie" || isAdminEmail(order?.user_email);
     const canSeePrice = isAdmin || isOwner || isAdminOrder;
 
     const [offerAmount, setOfferAmount] = useState<string>("");

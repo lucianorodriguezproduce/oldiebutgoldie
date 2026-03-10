@@ -5,6 +5,7 @@ import type { User } from "firebase/auth";
 import { doc, onSnapshot } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import type { DbUser } from "@/types/user";
+import { isAdminEmail } from "@/constants/admin";
 
 interface AuthContextType {
     user: User | null;
@@ -49,7 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 setLoading(false);
             }
 
-            if (currentUser?.email === "admin@discography.ai") {
+            if (isAdminEmail(currentUser?.email)) {
                 localStorage.setItem("admin_session", "true");
                 setIsMasterAdmin(true);
             } else if (!currentUser) {
@@ -70,7 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await firebaseSignOut(auth);
     }, []);
 
-    const isAdmin = !!user && (isMasterAdmin || user.email === "admin@discography.ai");
+    const isAdmin = !!user && (isMasterAdmin || isAdminEmail(user.email));
 
     const isEmailVerified = !!user && user.emailVerified;
 

@@ -15,6 +15,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useLoading } from "@/context/LoadingContext";
 import { useEffect } from "react";
 import { TEXTS } from "@/constants/texts";
+import { isAdminEmail } from "@/constants/admin";
 
 export default function Login() {
     const { showLoading, hideLoading } = useLoading();
@@ -41,7 +42,7 @@ export default function Login() {
                 ? await signInWithEmailAndPassword(auth, email, password)
                 : await createUserWithEmailAndPassword(auth, email, password);
 
-            if (userCredential.user.email === "admin@discography.ai") {
+            if (isAdminEmail(userCredential.user.email)) {
                 navigate("/admin");
             } else {
                 navigate("/");
@@ -70,7 +71,7 @@ export default function Login() {
         try {
             const provider = new GoogleAuthProvider();
             const result = await signInWithPopup(auth, provider);
-            if (result.user.email === "admin@discography.ai") {
+            if (isAdminEmail(result.user.email)) {
                 navigate("/admin");
             } else {
                 navigate("/");

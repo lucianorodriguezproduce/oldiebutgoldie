@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { TEXTS } from "@/constants/texts";
 import { useNavigate } from "react-router-dom";
 import { LazyImage } from "@/components/ui/LazyImage";
+import { isAdminEmail } from "@/constants/admin";
 import { ChevronRight, Check, Plus, ShoppingBag, Star } from "lucide-react";
 import { getCleanOrderMetadata } from "@/utils/orderMetadata";
 import { useLote } from "@/context/LoteContext";
@@ -55,7 +56,7 @@ export function PremiumShowcase() {
                     const isAdmin = item.is_admin_offer === true ||
                         item.user_id === 'MKPlxxi9JENQt0hS3V1QNeF8oOS2' ||
                         item.user_id === 'oldiebutgoldie' ||
-                        item.user_email === 'admin@discography.ai';
+                        isAdminEmail(item.user_email);
 
                     const isAvailable = !['sold', 'venta_finalizada', 'completed', 'cancelled', 'rejected'].includes(item.status);
 

@@ -16,6 +16,7 @@ import { tradeService } from "@/services/tradeService";
 import type { Trade, TradeManifest } from "@/types/inventory";
 import { useLoading } from "@/context/LoadingContext";
 import { useAuth } from "@/context/AuthContext";
+import { isAdminEmail } from "@/constants/admin";
 import ManifestEditor from "./ManifestEditor";
 
 interface TradeConsoleProps {
@@ -30,7 +31,7 @@ export default function TradeConsole({ trade, onUpdate, onClose }: TradeConsoleP
     const [isEditing, setIsEditing] = useState(false);
     const [editedManifest, setEditedManifest] = useState<TradeManifest | null>(null);
 
-    const isAdmin = user?.email === 'admin@discography.ai' || user?.uid === 'MKPlxxi9JENQt0hS3V1QNeF8oOS2';
+    const isAdmin = isAdminEmail(user?.email) || user?.uid === 'MKPlxxi9JENQt0hS3V1QNeF8oOS2';
     // isMyTurn is true if the current turn matches the user's uid, or if it's the admin's turn and the current user is an admin.
     const isMyTurn = trade.currentTurn === user?.uid || (trade.currentTurn === 'admin' && isAdmin);
 
