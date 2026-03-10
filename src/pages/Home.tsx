@@ -183,7 +183,8 @@ export default function Home() {
         return {
             ...data,
             normalizedArtist: realArtist,
-            normalizedAlbum: realAlbum
+            normalizedAlbum: realAlbum,
+            year: data.year?.toString() || data.released?.toString() || "0"
         };
     };
 
@@ -1374,13 +1375,13 @@ export default function Home() {
                                         </div>
                                         <h3 className="text-3xl lg:text-4xl font-display font-black text-white uppercase tracking-tighter leading-none mt-4 md:mt-0">{selectedItem.title}</h3>
                                         <div className="grid grid-cols-2 gap-6">
-                                            {selectedItem.year && selectedItem.year !== "0" && selectedItem.year.toUpperCase() !== "N/A" && (
+                                            {selectedItem.year && selectedItem.year !== "0" && String(selectedItem.year).toUpperCase() !== "N/A" && (
                                                 <div>
                                                     <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">{TEXTS.album.item.year}</p>
                                                     <p className="text-white font-bold">{selectedItem.year}</p>
                                                 </div>
                                             )}
-                                            {selectedItem.genre && selectedItem.genre.length > 0 && selectedItem.genre[0].toUpperCase() !== "N/A" && (
+                                            {selectedItem.genre && selectedItem.genre.length > 0 && String(selectedItem.genre[0]).toUpperCase() !== "N/A" && (
                                                 <div>
                                                     <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">{TEXTS.album.item.genre}</p>
                                                     <p className="text-primary font-bold">{selectedItem.genre[0]}</p>
