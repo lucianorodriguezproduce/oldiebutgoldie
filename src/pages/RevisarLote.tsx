@@ -122,14 +122,23 @@ export default function RevisarLote() {
 
                 // Discogs items in a "COMPRAR" context also become Archived Inventory + Purchase Requests
                 for (const item of discogsItems) {
-                    const invId = await inventoryService.importFromDiscogs(item as any, {
+                    // Protocolo de Hidratación Crítica V21.4
+                    let fullData: any = item;
+                    try {
+                        const details = await discogsService.getReleaseDetails(item.id.toString());
+                        fullData = { ...item, ...details };
+                    } catch (e) {
+                        console.warn(`[Lote-Hydration] Falló hidratación para ${item.title}, usando data del lote.`);
+                    }
+
+                    const invId = await inventoryService.importFromDiscogs(fullData as any, {
                         stock: 0,
                         price: item.price || 0,
                         condition: item.condition,
                         status: 'archived'
                     });
 
-                    const reqId = await purchaseRequestService.createRequest(uid, currentUser.email || "", currentUser.displayName || "", { ...item, internalInventoryId: invId }, transactionId);
+                    const reqId = await purchaseRequestService.createRequest(uid, currentUser.email || "", currentUser.displayName || "", { ...fullData, internalInventoryId: invId }, transactionId);
                     createdDocs.push(reqId);
                 }
             }
@@ -137,15 +146,24 @@ export default function RevisarLote() {
             // 2. Logic for PEDIR (External items)
             if (action === 'PEDIR') {
                 for (const item of discogsItems) {
+                    // Protocolo de Hidratación Crítica V21.4
+                    let fullData: any = item;
+                    try {
+                        const details = await discogsService.getReleaseDetails(item.id.toString());
+                        fullData = { ...item, ...details };
+                    } catch (e) {
+                        console.warn(`[Lote-Hydration] Falló hidratación para ${item.title}, usando data del lote.`);
+                    }
+
                     // Importar a inventario (archived) para que "viaje al archivo" (Protocolo V21.1)
-                    const invId = await inventoryService.importFromDiscogs(item as any, {
+                    const invId = await inventoryService.importFromDiscogs(fullData as any, {
                         stock: 0,
                         price: item.price || 0,
                         condition: item.condition,
                         status: 'archived'
                     });
 
-                    const reqId = await purchaseRequestService.createRequest(uid, currentUser.email || "", currentUser.displayName || "", { ...item, internalInventoryId: invId }, transactionId);
+                    const reqId = await purchaseRequestService.createRequest(uid, currentUser.email || "", currentUser.displayName || "", { ...fullData, internalInventoryId: invId }, transactionId);
                     createdDocs.push(reqId);
                 }
             }
@@ -156,7 +174,15 @@ export default function RevisarLote() {
 
                 // For Discogs, we must import them first as archived inventory to use in trade
                 const importedDiscogsIds = await Promise.all(discogsItems.map(async (item) => {
-                    return await inventoryService.importFromDiscogs(item as any, { stock: 0, price: item.price || 0, condition: item.condition, status: 'archived' });
+                    // Protocolo de Hidratación Crítica V21.4
+                    let fullData: any = item;
+                    try {
+                        const details = await discogsService.getReleaseDetails(item.id.toString());
+                        fullData = { ...item, ...details };
+                    } catch (e) {
+                        console.warn(`[Lote-Hydration] Falló hidratación para ${item.title}, usando data del lote.`);
+                    }
+                    return await inventoryService.importFromDiscogs(fullData as any, { stock: 0, price: item.price || 0, condition: item.condition, status: 'archived' });
                 }));
 
                 const tradeId = await tradeService.createTrade({
@@ -227,18 +253,23 @@ export default function RevisarLote() {
                     parsedTitle = parts.slice(1).join(' - ').trim();
                 }
 
+                // Seguridad de Tipos y NaN (Protocolo V21.4)
+                const rawYear = fullData.year || fullData.metadata?.year || '0';
+                const safeYear = parseInt(String(rawYear)) || 0;
+
                 await userAssetService.addAsset(user.uid, {
                     metadata: {
                         title: parsedTitle || 'Sin Título',
                         artist: parsedArtist || 'Desconocido',
-                        year: parseInt(fullData.year || fullData.metadata?.year || '0') || 0,
-                        genres: fullData.genres || fullData.metadata?.genres || [],
-                        styles: fullData.styles || fullData.metadata?.styles || [],
-                        format_description: fullData.format || fullData.metadata?.format_description || 'Vinyl'
+                        year: safeYear,
+                        genres: fullData.genres || fullData.genre || fullData.metadata?.genres || [],
+                        styles: fullData.styles || fullData.style || fullData.metadata?.styles || [],
+                        format_description: String(fullData.format || fullData.metadata?.format_description || 'Vinyl'),
+                        country: fullData.country || fullData.metadata?.country || 'Unknown'
                     },
                     media: {
-                        thumbnail: fullData.cover_image || fullData.media?.thumbnail || '',
-                        full_res_image_url: fullData.cover_image || fullData.media?.full_res_image_url || ''
+                        thumbnail: fullData.cover_image || fullData.thumb || fullData.media?.thumbnail || '',
+                        full_res_image_url: fullData.cover_image || fullData.thumb || fullData.media?.full_res_image_url || ''
                     },
                     originalInventoryId: String(item.id),
                     valuation: item.price || 0,

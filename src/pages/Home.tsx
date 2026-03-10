@@ -646,6 +646,10 @@ export default function Home() {
             artist: selectedSearchItem.normalizedArtist || "",
             album: selectedSearchItem.normalizedAlbum || selectedSearchItem.title,
             cover_image: selectedSearchItem.cover_image || selectedSearchItem.thumb,
+            thumb: selectedSearchItem.thumb,
+            year: selectedSearchItem.year,
+            genre: selectedSearchItem.genre,
+            styles: selectedSearchItem.style || selectedSearchItem.styles,
             format: config.format,
             condition: config.condition,
             source: 'DISCOGS'

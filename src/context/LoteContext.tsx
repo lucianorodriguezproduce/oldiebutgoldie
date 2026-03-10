@@ -12,6 +12,11 @@ export interface BatchItem {
     price?: number;
     currency?: string;
     source: 'DISCOGS' | 'INVENTORY';
+    // Metadata Enriquecido (V21.4)
+    genre?: string[];
+    styles?: string[];
+    year?: string | number;
+    thumb?: string;
 }
 
 interface LoteContextType {

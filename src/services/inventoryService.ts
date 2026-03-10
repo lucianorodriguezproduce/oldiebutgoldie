@@ -126,12 +126,12 @@ export const inventoryService = {
         quotaService.track('discogs', 1); // Importación base
 
         // 2. Fetch Original Year from Master if available
-        let originalYear = parseInt(discogsData.year) || 0;
+        let originalYear = parseInt(String(discogsData.year)) || 0;
         if (discogsData.master_id) {
             try {
                 const master = await discogsService.getMasterDetails(discogsData.master_id);
                 if (master && master.year) {
-                    originalYear = master.year;
+                    originalYear = parseInt(String(master.year)) || 0;
                     quotaService.track('discogs', 1); // Costo de consulta adicional
                     console.log(`[batea-Import] Found Original Year for ${discogsData.title}: ${originalYear}`);
                 }
@@ -293,8 +293,8 @@ export const inventoryService = {
             metadata: {
                 title: parsedTitle || discogsData.title || "Unknown Title",
                 artist: parsedArtist || "Desconocido",
-                year: parseInt(discogsData.year) || 0,
-                original_year: originalYear,
+                year: parseInt(String(discogsData.year)) || 0,
+                original_year: parseInt(String(originalYear)) || 0,
                 country: discogsData.country || "Unknown",
                 genres: discogsData.genres || [],
                 styles: discogsData.styles || [],
