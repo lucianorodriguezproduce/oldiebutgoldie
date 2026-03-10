@@ -12,10 +12,14 @@ export const spotifyService = {
         try {
             const response = await fetch(`/api/media?service=spotify&artist=${encodeURIComponent(artist)}&title=${encodeURIComponent(title)}`);
             if (!response.ok) {
-                // Silently return null for any non-ok response (404, 401, 503, etc)
                 return null;
             }
-            return await response.json();
+            const data = await response.json();
+            if (data.error) {
+                console.warn('Spotify API (Bypass) returned error:', data.error);
+                return null;
+            }
+            return data;
         } catch (error) {
             // Log as warning only to avoid cluttering console with "scary" Red errors
             console.warn('Spotify Search Fallback active:', (error as Error).message);

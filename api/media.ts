@@ -41,27 +41,110 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     try {
         if (service === 'spotify') {
-            const token = await getSpotifyAccessToken();
-            const artist = req.query.artist || req.body?.artist || "";
-            const title = req.query.title || req.body?.title;
-            const spotify_id = req.query.spotify_id || req.body?.spotify_id;
+            const clientId = process.env.SPOTIFY_CLIENT_ID;
+            const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
+            if (!clientId || !clientSecret) {
+                console.error("[Media Proxy] SPOTIFY_CLIENT_ID or SPOTIFY_CLIENT_SECRET is missing.");
+                // Bypass de Emergencia
+                return res.status(200).json({ error: 'Spotify Unavailable (Missing Credentials)' });
+            }
 
-            if (!title && !spotify_id) return res.status(400).json({ error: 'Title or spotify_id is required' });
+            let token: string;
+            try {
+                token = await getSpotifyAccessToken();
+            } catch (tokenErr: any) {
+                console.error("[Spotify-Debug] Token fetching failed:", tokenErr.message);
+                return res.status(200).json({ error: 'Spotify Unavailable (Token Error)' });
+            }
 
-            if (spotify_id) {
-                const response = await fetch(`https://api.spotify.com/v1/albums/${spotify_id}`, {
+            const paramArtist = req.query.artist || req.body?.artist || "";
+            const paramTitle = req.query.title || req.body?.title;
+            let spotify_id = req.query.spotify_id || req.body?.spotify_id;
+
+            if (!paramTitle && !spotify_id) {
+                return res.status(400).json({ error: 'Title or spotify_id is required' });
+            }
+
+            try {
+                // 1. If no spotify_id, we must search for the album first
+                if (!spotify_id && paramTitle) {
+                    const query = paramArtist ? `artist:${paramArtist} album:${paramTitle}` : `album:${paramTitle}`;
+                    const searchUrl = `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=album&limit=1`;
+                    const searchRes = await fetch(searchUrl, {
+                        headers: { 'Authorization': `Bearer ${token}` },
+                    });
+
+                    console.log("[Spotify-Debug] Search Status:", searchRes.status);
+                    if (!searchRes.ok) {
+                        const errorText = await searchRes.text();
+                        console.error("[Spotify-Debug] Search Error Text:", errorText);
+                        return res.status(200).json({ error: 'Spotify Unavailable' });
+                    }
+
+                    const searchData = await searchRes.json();
+                    const albumNode = searchData.albums?.items?.[0];
+
+                    if (!albumNode) {
+                        return res.status(200).json({ error: 'Album not found on Spotify' });
+                    }
+                    spotify_id = albumNode.id;
+                }
+
+                // 2. We now have a spotify_id (album). Let's get the album details to find the first track.
+                const albumRes = await fetch(`https://api.spotify.com/v1/albums/${spotify_id}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-                const data = await response.json();
-                return res.status(response.status).json(data);
-            } else {
-                const query = encodeURIComponent(`artist:${artist} album:${title}`);
-                const searchUrl = `https://api.spotify.com/v1/search?q=${query}&type=album&limit=1`;
-                const response = await fetch(searchUrl, {
-                    headers: { 'Authorization': `Bearer ${token}` },
+
+                console.log("[Spotify-Debug] Album Fetch Status:", albumRes.status);
+                if (!albumRes.ok) {
+                    const errorText = await albumRes.text();
+                    console.error("[Spotify-Debug] Album Fetch Error Text:", errorText);
+                    return res.status(200).json({ error: 'Spotify Unavailable' });
+                }
+
+                const albumData = await albumRes.json();
+                const firstTrack = albumData.tracks?.items?.[0];
+
+                let bpm = 0;
+                let key = "";
+                let preview_url = firstTrack?.preview_url || "";
+
+                // 3. If we have a track, let's get its audio features
+                if (firstTrack?.id) {
+                    const featuresRes = await fetch(`https://api.spotify.com/v1/audio-features/${firstTrack.id}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+
+                    console.log("[Spotify-Debug] Audio Features Status:", featuresRes.status);
+                    if (featuresRes.ok) {
+                        const features = await featuresRes.json();
+                        if (features) {
+                            bpm = Math.round(features.tempo || 0);
+                            // Convert Spotify key to standard format
+                            const keys = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+                            const keyStr = keys[features.key] || "";
+                            const modeStr = features.mode === 0 ? "m" : "";
+                            if (keyStr) key = `${keyStr}${modeStr}`;
+                        }
+                    } else {
+                        const errorText = await featuresRes.text();
+                        console.error("[Spotify-Debug] Audio Features Error Text:", errorText);
+                    }
+                }
+
+                // 4. Return the consolidated SpotifyAlbumMatch
+                return res.status(200).json({
+                    spotify_id: albumData.id,
+                    external_url: albumData.external_urls?.spotify || "",
+                    images: albumData.images || [],
+                    bpm: bpm,
+                    key: key,
+                    preview_url: preview_url
                 });
-                const data = await response.json();
-                return res.status(response.status).json(data);
+
+            } catch (spotifyApiError: any) {
+                console.error("[Spotify-Debug] Unhandled API Exception:", spotifyApiError.message);
+                return res.status(200).json({ error: 'Spotify Unavailable (Exception)' });
             }
         }
 
