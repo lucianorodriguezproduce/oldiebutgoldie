@@ -1,5 +1,7 @@
 // @ts-ignore - Essentia.js might not have perfect TS definitions in some environments
 import Essentia from 'essentia.js';
+// @ts-ignore
+import { EssentiaWASM } from 'essentia.js';
 
 export interface AnalysisResult {
     bpm: number;
@@ -20,12 +22,16 @@ class AudioAnalysisService {
         if (this.initialized) return;
 
         try {
-            // Essentia.js needs the wasm module available in production. We copied it to public/.
-            this.essentia = new Essentia(); // Might need specific WASM config later if still failing
+            // Explicitly route to root for WASM file (Protocol V18.7)
+            const wasmModule = typeof EssentiaWASM !== 'undefined'
+                ? await EssentiaWASM({ locateFile: (file: string) => `/${file}` })
+                : await (window as any).EssentiaWASM({ locateFile: (file: string) => `/${file}` });
+
+            this.essentia = new Essentia(wasmModule);
             this.initialized = true;
-            console.log("[AudioAnalysis] Essentia.js Engine initialized.");
+            console.log("[AudioAnalysis] Essentia.js Engine initialized with explicit WASM routing.");
         } catch (error) {
-            console.warn("[AudioAnalysis-V18.3-CRITICAL] Error initializing Essentia WASM Engine:", error);
+            console.error("[AudioAnalysis-V18.7-CRITICAL] Error initializing Essentia WASM Engine. Ensure essentia-wasm.web.wasm is in /public:", error);
             throw error;
         }
     }
@@ -67,8 +73,16 @@ class AudioAnalysisService {
 
             console.log(`[AudioAnalysis] Starting analysis for: ${url}`);
 
-            // 1. Fetch the audio file
-            const response = await fetch(url);
+            // 1. Fetch the audio file using the Sovereign Proxy (Protocol V18.7)
+            const proxyUrl = `/api/audio-proxy?url=${encodeURIComponent(url)}`;
+            console.log(`[AudioAnalysis] Fetching audio through proxy: ${proxyUrl}`);
+            const response = await fetch(proxyUrl);
+
+            if (!response.ok) {
+                console.error(`[AudioAnalysis-V18.7-CRITICAL] Proxy failed to fetch audio. Status: ${response.status}`);
+                throw new Error(`Audio fetch proxy failed with status ${response.status}`);
+            }
+
             const arrayBuffer = await response.arrayBuffer();
 
             // 2. Decode audio data
@@ -96,7 +110,7 @@ class AudioAnalysisService {
                 camelot
             };
         } catch (error) {
-            console.warn(`[AudioAnalysis-V18.3-CRITICAL] Analysis completely failed for ${url}. Raw error object:`, error);
+            console.error(`[AudioAnalysis-V18.7-CRITICAL] Analysis completely failed for ${url}. Raw error object:`, error);
             throw error;
         }
     }
