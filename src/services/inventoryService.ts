@@ -440,6 +440,54 @@ export const inventoryService = {
         });
     },
 
+    async bulkUpdatePrices(category: string, mode: 'fixed' | 'percentage', value: number) {
+        try {
+            console.log(`[Bulk-Price] Iniciando ajuste masivo para categoría: ${category}...`);
+            const q = query(
+                collection(db, COLLECTION_NAME),
+                where("logistics.internal_category", "==", category),
+                where("logistics.status", "==", "active")
+            );
+
+            const snapshot = await getDocs(q);
+            if (snapshot.empty) {
+                console.warn(`[Bulk-Price] No se encontraron discos bajo la categoría: ${category}`);
+                return;
+            }
+
+            const batch = writeBatch(db);
+            let count = 0;
+
+            snapshot.docs.forEach(docSnap => {
+                const item = docSnap.data() as InventoryItem;
+                const oldPrice = item.logistics.price;
+                let newPrice = oldPrice;
+
+                if (mode === 'fixed') {
+                    newPrice = oldPrice + value;
+                } else {
+                    newPrice = oldPrice * (1 + value / 100);
+                }
+
+                // Round to nearest 100 (ceil)
+                newPrice = Math.ceil(newPrice / 100) * 100;
+
+                if (newPrice !== oldPrice) {
+                    batch.update(docSnap.ref, { "logistics.price": newPrice });
+                    count++;
+                }
+            });
+
+            if (count > 0) {
+                await batch.commit();
+                console.log(`[Bulk-Price] Ajuste masivo completado: ${count} discos actualizados.`);
+            }
+        } catch (error) {
+            console.error("[Bulk-Price] CRITICAL ERROR:", error);
+            throw error;
+        }
+    },
+
     async healRecord(item: InventoryItem) {
         try {
             console.log(`[Heal-Protocol] Iniciando restauración de metadatos para ${item.metadata.title}...`);

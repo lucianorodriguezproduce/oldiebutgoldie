@@ -34,6 +34,7 @@ export interface InventoryItem {
         price: number;
         condition: string;
         status: "active" | "sold_out" | "archived";
+        internal_category?: string;
     };
     items?: {
         id: string | number;

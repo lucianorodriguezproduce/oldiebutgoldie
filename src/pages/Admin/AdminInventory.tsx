@@ -35,7 +35,7 @@ export default function AdminInventory() {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [editingId, setEditingId] = useState<string | null>(null);
-    const [editData, setEditData] = useState<{ price?: number, stock?: number, condition?: string }>({});
+    const [editData, setEditData] = useState<{ price?: number, stock?: number, condition?: string, internal_category?: string }>({});
     const [filter, setFilter] = useState<"all" | "low_stock" | "sold_out">("all");
     const [auditStats, setAuditStats] = useState<any>(null);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -45,13 +45,16 @@ export default function AdminInventory() {
     const [showIngestionModal, setShowIngestionModal] = useState(false);
     const [ingestionMode, setIngestionMode] = useState<"discogs" | "manual">("discogs");
     const [discogsId, setDiscogsId] = useState("");
+    const [showBulkModal, setShowBulkModal] = useState(false);
+    const [bulkData, setBulkData] = useState({ category: "", mode: "percentage" as "fixed" | "percentage", value: 0 });
     const [manualData, setManualData] = useState({
         title: "",
         artist: "",
         price: 0,
         stock: 1,
         condition: "M/NM",
-        format: "Vinyl"
+        format: "Vinyl",
+        internal_category: ""
     });
 
     useEffect(() => {
@@ -82,7 +85,8 @@ export default function AdminInventory() {
         setEditData({
             price: item.logistics.price,
             stock: item.logistics.stock,
-            condition: item.logistics.condition
+            condition: item.logistics.condition,
+            internal_category: item.logistics.internal_category || ""
         });
     };
 
@@ -114,7 +118,8 @@ export default function AdminInventory() {
                 price: manualData.price || 0,
                 stock: manualData.stock || 1,
                 condition: manualData.condition,
-                status: "active"
+                status: "active",
+                internal_category: manualData.internal_category
             });
             setShowIngestionModal(false);
             setDiscogsId("");
@@ -152,16 +157,37 @@ export default function AdminInventory() {
                     price: manualData.price,
                     stock: manualData.stock,
                     condition: manualData.condition,
-                    status: "active"
+                    status: (manualData.stock > 0) ? "active" : "sold_out",
+                    internal_category: manualData.internal_category
                 }
             };
             await inventoryService.createItem(newItem);
             setShowIngestionModal(false);
-            setManualData({ title: "", artist: "", price: 0, stock: 1, condition: "M/NM", format: "Vinyl" });
+            setManualData({ title: "", artist: "", price: 0, stock: 1, condition: "M/NM", format: "Vinyl", internal_category: "" });
             fetchInventory();
         } catch (error) {
             console.error("Error creating manual item:", error);
             alert("Error al crear el registro.");
+        } finally {
+            hideLoading();
+        }
+    };
+
+    const handleBulkUpdate = async () => {
+        if (!bulkData.category || bulkData.value === 0) {
+            alert("Por favor completa la categoría y el valor del ajuste.");
+            return;
+        }
+
+        showLoading(`Ajustando precios para la categoría ${bulkData.category}...`);
+        try {
+            await inventoryService.bulkUpdatePrices(bulkData.category, bulkData.mode, bulkData.value);
+            setShowBulkModal(false);
+            setBulkData({ category: "", mode: "percentage", value: 0 });
+            await fetchInventory();
+        } catch (error) {
+            console.error("Error in bulk update:", error);
+            alert("Hubo un error al procesar el ajuste masivo.");
         } finally {
             hideLoading();
         }
@@ -302,6 +328,13 @@ export default function AdminInventory() {
                     <p className="text-gray-500 font-medium text-lg">Gestión avanzada de la base de datos soberana.</p>
                 </div>
                 <div className="flex items-center gap-4 flex-1 max-w-2xl">
+                    <button
+                        onClick={() => setShowBulkModal(true)}
+                        className="flex items-center gap-2 px-6 py-3.5 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-primary hover:border-primary/50 hover:bg-primary/5 transition-all group shrink-0"
+                    >
+                        <DollarSign className="h-4 w-4" />
+                        Ajuste de Precios
+                    </button>
                     <div className="flex bg-white/5 border border-white/10 rounded-2xl px-4 py-3 flex-1">
                         <Search className="h-4 w-4 text-gray-500 mt-1" />
                         <input
@@ -448,14 +481,31 @@ export default function AdminInventory() {
                                                         className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-xs text-white w-24 focus:border-primary/40 focus:outline-none"
                                                     />
                                                 </div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-[10px] font-bold text-gray-600 w-8">Cat.</span>
+                                                    <input
+                                                        type="text"
+                                                        value={editData.internal_category}
+                                                        onChange={e => setEditData({ ...editData, internal_category: e.target.value })}
+                                                        placeholder="Privado..."
+                                                        className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-xs text-white w-24 focus:border-primary/40 focus:outline-none"
+                                                    />
+                                                </div>
                                             </div>
                                         ) : (
                                             <div className="space-y-1">
                                                 <div className="text-sm font-black text-white">
                                                     ${item.logistics.price.toLocaleString()}
                                                 </div>
-                                                <div className="text-[10px] text-gray-500 font-bold">
-                                                    STOCK: {item.logistics.stock}
+                                                <div className="flex items-center gap-2">
+                                                    <div className="text-[10px] text-gray-500 font-bold">
+                                                        STOCK: {item.logistics.stock}
+                                                    </div>
+                                                    {item.logistics.internal_category && (
+                                                        <span className="text-[10px] font-black uppercase tracking-widest text-primary/40">
+                                                            [{item.logistics.internal_category}]
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </div>
                                         )}
@@ -757,6 +807,99 @@ export default function AdminInventory() {
                             </div>
                         </motion.div>
                     </div>
+                )}
+            </AnimatePresence>
+            {/* Bulk Adjustment Modal */}
+            <AnimatePresence>
+                {showBulkModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/80 backdrop-blur-md z-[110] flex items-center justify-center p-4"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            className="bg-[#0a0a0a] border border-white/10 rounded-[3rem] w-full max-w-lg overflow-hidden shadow-2xl"
+                        >
+                            <div className="p-10 space-y-8">
+                                <div className="flex items-center justify-between">
+                                    <div className="space-y-1">
+                                        <h3 className="text-3xl font-black italic text-white uppercase tracking-tighter">Ajuste Masivo</h3>
+                                        <p className="text-gray-500 text-[10px] font-bold uppercase tracking-[0.2em]">Motor de Precios en Lote</p>
+                                    </div>
+                                    <button
+                                        onClick={() => setShowBulkModal(false)}
+                                        className="p-4 bg-white/5 border border-white/10 rounded-2xl text-gray-500 hover:text-white transition-all"
+                                    >
+                                        <X className="h-5 w-5" />
+                                    </button>
+                                </div>
+
+                                <div className="space-y-6">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Categoría Interna Objetiva</label>
+                                        <input
+                                            type="text"
+                                            value={bulkData.category}
+                                            onChange={e => setBulkData({ ...bulkData, category: e.target.value })}
+                                            className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:border-primary/50 transition-all"
+                                            placeholder="Ej: OFERTA_MARZO"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Tipo de Ajuste</label>
+                                        <div className="flex p-1 bg-white/5 rounded-xl border border-white/5">
+                                            <button
+                                                onClick={() => setBulkData({ ...bulkData, mode: 'percentage' })}
+                                                className={`flex-1 py-3 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${bulkData.mode === 'percentage' ? "bg-primary text-black" : "text-gray-500"}`}
+                                            >
+                                                Porcentaje (%)
+                                            </button>
+                                            <button
+                                                onClick={() => setBulkData({ ...bulkData, mode: 'fixed' })}
+                                                className={`flex-1 py-3 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${bulkData.mode === 'fixed' ? "bg-primary text-black" : "text-gray-500"}`}
+                                            >
+                                                Monto Fijo ($)
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">
+                                            {bulkData.mode === 'percentage' ? 'Porcentaje de Variación' : 'Monto a Sumar/Restar'}
+                                        </label>
+                                        <div className="relative">
+                                            <input
+                                                type="number"
+                                                value={bulkData.value}
+                                                onChange={e => setBulkData({ ...bulkData, value: parseFloat(e.target.value) })}
+                                                className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-xl font-black text-white focus:border-primary/50 transition-all pr-12"
+                                                placeholder="0"
+                                            />
+                                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">
+                                                {bulkData.mode === 'percentage' ? '%' : '$'}
+                                            </span>
+                                        </div>
+                                        <p className="text-[10px] text-gray-600 font-bold italic ml-1">
+                                            * Los precios se redondearán automáticamente a la centena más cercana.
+                                        </p>
+                                    </div>
+
+                                    <button
+                                        onClick={handleBulkUpdate}
+                                        disabled={!bulkData.category || bulkData.value === 0}
+                                        className="w-full py-5 bg-primary text-black rounded-[1.5rem] font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:scale-100 mt-4"
+                                    >
+                                        Ejecutar Ajuste Masivo
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
                 )}
             </AnimatePresence>
         </div>
