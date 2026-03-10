@@ -466,6 +466,17 @@ export default function Home() {
                     normalizedAlbum: normalized.normalizedAlbum
                 } as any);
 
+                // ACTIVAR WIZARD CONFIG (Protocolo V21.3)
+                setSelectedSearchItem({
+                    ...normalized,
+                    cover_image: normalized.images?.[0]?.uri || normalized.thumb || '',
+                    thumb: normalized.thumb || '',
+                    type: result.type,
+                    normalizedArtist: normalized.normalizedArtist,
+                    normalizedAlbum: normalized.normalizedAlbum
+                });
+                setShowConfigModal(true);
+
                 setIsSearchActive(false); // Salimos del modo búsqueda para ver el detalle
 
             } catch (error) {
@@ -646,11 +657,11 @@ export default function Home() {
         if (action === 'finish') {
             navigate('/revisar-lote');
         } else {
-            // "Añadir otro": Limpiar para permitir nueva captura
-            setQuery("");
-            setSearchResults([]);
-            setIsSearchActive(false);
+            // "Añadir otro": Volver a modo búsqueda para carga fluida (Protocolo V21.3)
+            setSelectedItem(null);
+            setIsSearchActive(true);
             if (resultsContainerRef.current) resultsContainerRef.current.scrollTop = 0;
+            // No reseteamos query ni searchResults para permitir seguir explorando el mismo contexto
         }
     };
 
