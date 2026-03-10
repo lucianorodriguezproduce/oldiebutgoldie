@@ -6,7 +6,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 let cachedToken: string | null = null;
 let tokenExpiry: number = 0;
 
-async function getSpotifyAccessToken() {
+async function getSpotifyAccessToken(): Promise<string> {
     if (cachedToken && Date.now() < tokenExpiry) {
         return cachedToken;
     }
@@ -26,6 +26,8 @@ async function getSpotifyAccessToken() {
     if (!response.ok) throw new Error(`Spotify Auth Error: ${data.error_description || data.error}`);
     cachedToken = data.access_token;
     tokenExpiry = Date.now() + (data.expires_in * 1000) - 60000;
+
+    if (!cachedToken) throw new Error('Spotify Token is null after success');
     return cachedToken;
 }
 
@@ -108,6 +110,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 let bpm = 0;
                 let key = "";
                 let preview_url = firstTrack?.preview_url || "";
+                let source = "spotify-full";
 
                 // 3. If we have a track, let's get its audio features
                 if (firstTrack?.id) {
@@ -126,9 +129,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                             const modeStr = features.mode === 0 ? "m" : "";
                             if (keyStr) key = `${keyStr}${modeStr}`;
                         }
+                    } else if (featuresRes.status === 403) {
+                        console.warn("[Spotify-Debug] Audio Features 403 - Restricted Access. Falling back to frontend analysis.");
+                        source = "spotify-limited";
                     } else {
                         const errorText = await featuresRes.text();
                         console.error("[Spotify-Debug] Audio Features Error Text:", errorText);
+                        source = "spotify-error";
                     }
                 }
 
@@ -139,7 +146,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     images: albumData.images || [],
                     bpm: bpm,
                     key: key,
-                    preview_url: preview_url
+                    preview_url: preview_url,
+                    source: source
                 });
 
             } catch (spotifyApiError: any) {

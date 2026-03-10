@@ -501,7 +501,8 @@ export const inventoryService = {
         // Solo corre si tenemos audio (newPreview) y el BPM sigue en 0
         if (newPreview && (!newBpm || newBpm === 0)) {
             try {
-                console.log(`[Heal-Protocol] BPM ausente en metadata. Iniciando Análisis Acústico Soberano (Essentia.js) para: ${newPreview}`);
+                console.warn(`[Heal-Protocol] Spotify bloqueado (403) o data técnica ausente. Derivando análisis a Essentia.js local...`);
+                console.log(`[Heal-Protocol] Iniciando Análisis Acústico Soberano (Essentia.js) para: ${newPreview}`);
                 const analysis = await audioAnalysisService.analyzeAudio(newPreview);
                 newBpm = analysis.bpm;
                 newKey = `${analysis.key} (${analysis.camelot})`;
