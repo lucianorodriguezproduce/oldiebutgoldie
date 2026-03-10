@@ -20,10 +20,12 @@ import {
     Sparkles,
     Copy,
     Share2,
-    Megaphone
+    Megaphone,
+    Settings
 } from "lucide-react";
 import { SocialCardGenerator } from "@/components/Social/SocialCardGenerator";
 import { inventoryService } from "@/services/inventoryService";
+import { categoryService, type InternalCategory } from "@/services/categoryService";
 import { discogsService } from "@/lib/discogs";
 import type { InventoryItem } from "@/types/inventory";
 import { useLoading } from "@/context/LoadingContext";
@@ -47,6 +49,12 @@ export default function AdminInventory() {
     const [discogsId, setDiscogsId] = useState("");
     const [showBulkModal, setShowBulkModal] = useState(false);
     const [bulkData, setBulkData] = useState({ category: "", mode: "percentage" as "fixed" | "percentage", value: 0 });
+
+    // Category Management State
+    const [categories, setCategories] = useState<InternalCategory[]>([]);
+    const [showCategoryModal, setShowCategoryModal] = useState(false);
+    const [newCategoryName, setNewCategoryName] = useState("");
+
     const [manualData, setManualData] = useState({
         title: "",
         artist: "",
@@ -59,7 +67,40 @@ export default function AdminInventory() {
 
     useEffect(() => {
         fetchInventory();
+        fetchCategories();
     }, []);
+
+    const fetchCategories = async () => {
+        try {
+            const fetched = await categoryService.getCategories();
+            setCategories(fetched);
+        } catch (error) {
+            console.error("Error fetching categories:", error);
+        }
+    };
+
+    const handleAddCategory = async () => {
+        if (!newCategoryName.trim()) return;
+        try {
+            await categoryService.addCategory(newCategoryName);
+            setNewCategoryName("");
+            fetchCategories();
+        } catch (error) {
+            console.error("Error adding category:", error);
+            alert("Error al añadir categoría.");
+        }
+    };
+
+    const handleDeleteCategory = async (id: string, name: string) => {
+        if (!window.confirm(`¿Eliminar la categoría "${name}"? Los items existentes mantendrán el texto pero ya no aparecerá en el menú.`)) return;
+        try {
+            await categoryService.deleteCategory(id);
+            fetchCategories();
+        } catch (error) {
+            console.error("Error deleting category:", error);
+            alert("Error al eliminar categoría.");
+        }
+    };
 
     const fetchInventory = async () => {
         setLoading(true);
@@ -329,6 +370,13 @@ export default function AdminInventory() {
                 </div>
                 <div className="flex items-center gap-4 flex-1 max-w-2xl">
                     <button
+                        onClick={() => setShowCategoryModal(true)}
+                        className="flex items-center gap-2 px-4 py-3.5 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-white hover:border-white/20 hover:bg-white/10 transition-all shrink-0"
+                        title="Gestionar Categorías"
+                    >
+                        <Settings className="h-4 w-4" />
+                    </button>
+                    <button
                         onClick={() => setShowBulkModal(true)}
                         className="flex items-center gap-2 px-6 py-3.5 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-primary hover:border-primary/50 hover:bg-primary/5 transition-all group shrink-0"
                     >
@@ -483,13 +531,16 @@ export default function AdminInventory() {
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-[10px] font-bold text-gray-600 w-8">Cat.</span>
-                                                    <input
-                                                        type="text"
+                                                    <select
                                                         value={editData.internal_category}
                                                         onChange={e => setEditData({ ...editData, internal_category: e.target.value })}
-                                                        placeholder="Privado..."
-                                                        className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-xs text-white w-24 focus:border-primary/40 focus:outline-none"
-                                                    />
+                                                        className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-xs text-white w-24 focus:border-primary/40 focus:outline-none appearance-none cursor-pointer"
+                                                    >
+                                                        <option value="" className="bg-[#0a0a0a]">Ninguna</option>
+                                                        {categories.map(cat => (
+                                                            <option key={cat.id} value={cat.name} className="bg-[#0a0a0a]">{cat.name}</option>
+                                                        ))}
+                                                    </select>
                                                 </div>
                                             </div>
                                         ) : (
@@ -655,6 +706,19 @@ export default function AdminInventory() {
                                             />
                                         </div>
                                     </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Categoría Interna</label>
+                                        <select
+                                            value={manualData.internal_category}
+                                            onChange={e => setManualData({ ...manualData, internal_category: e.target.value })}
+                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-primary/40 focus:outline-none transition-all appearance-none cursor-pointer"
+                                        >
+                                            <option value="" className="bg-[#0a0a0a]">Ninguna / Sin Categoría</option>
+                                            {categories.map(cat => (
+                                                <option key={cat.id} value={cat.name} className="bg-[#0a0a0a]">{cat.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
                                     <button
                                         onClick={handleIngestDiscogs}
                                         className="w-full py-6 bg-primary text-black rounded-2xl font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/20 hover:brightness-110 transition-all"
@@ -703,6 +767,19 @@ export default function AdminInventory() {
                                                 className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-primary/40 focus:outline-none transition-all"
                                             />
                                         </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Categoría Interna</label>
+                                        <select
+                                            value={manualData.internal_category}
+                                            onChange={e => setManualData({ ...manualData, internal_category: e.target.value })}
+                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-primary/40 focus:outline-none transition-all appearance-none cursor-pointer"
+                                        >
+                                            <option value="" className="bg-[#0a0a0a]">Ninguna / Sin Categoría</option>
+                                            {categories.map(cat => (
+                                                <option key={cat.id} value={cat.name} className="bg-[#0a0a0a]">{cat.name}</option>
+                                            ))}
+                                        </select>
                                     </div>
                                     <button
                                         onClick={handleIngestManual}
@@ -809,6 +886,79 @@ export default function AdminInventory() {
                     </div>
                 )}
             </AnimatePresence>
+            {/* Category Management Modal */}
+            <AnimatePresence>
+                {showCategoryModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/80 backdrop-blur-md z-[120] flex items-center justify-center p-4"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            className="bg-[#0a0a0a] border border-white/10 rounded-[3rem] w-full max-w-md overflow-hidden shadow-2xl"
+                        >
+                            <div className="p-10 space-y-8">
+                                <div className="flex items-center justify-between">
+                                    <div className="space-y-1">
+                                        <h3 className="text-3xl font-black italic text-white uppercase tracking-tighter">Categorías</h3>
+                                        <p className="text-gray-500 text-[10px] font-bold uppercase tracking-[0.2em]">Gestión de Etiquetas Internas</p>
+                                    </div>
+                                    <button
+                                        onClick={() => setShowCategoryModal(false)}
+                                        className="p-4 bg-white/5 border border-white/10 rounded-2xl text-gray-500 hover:text-white transition-all"
+                                    >
+                                        <X className="h-5 w-5" />
+                                    </button>
+                                </div>
+
+                                <div className="space-y-6">
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            value={newCategoryName}
+                                            onChange={e => setNewCategoryName(e.target.value)}
+                                            onKeyDown={e => e.key === "Enter" && handleAddCategory()}
+                                            className="flex-1 bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:border-primary/50 transition-all uppercase"
+                                            placeholder="NUEVA_CATEGORIA"
+                                        />
+                                        <button
+                                            onClick={handleAddCategory}
+                                            className="px-6 bg-primary text-black rounded-2xl font-black uppercase text-[10px]"
+                                        >
+                                            Añadir
+                                        </button>
+                                    </div>
+
+                                    <div className="max-h-[300px] overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                                        {categories.length === 0 ? (
+                                            <div className="text-center py-8 text-gray-600 font-bold italic text-xs">
+                                                No hay categorías definidas.
+                                            </div>
+                                        ) : (
+                                            categories.map(cat => (
+                                                <div key={cat.id} className="flex items-center justify-between p-4 bg-white/[0.02] border border-white/5 rounded-2xl hover:border-white/10 transition-all group">
+                                                    <span className="text-xs font-black text-gray-300 tracking-widest">{cat.name}</span>
+                                                    <button
+                                                        onClick={() => handleDeleteCategory(cat.id, cat.name)}
+                                                        className="p-2 opacity-0 group-hover:opacity-100 hover:text-red-500 transition-all"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </button>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* Bulk Adjustment Modal */}
             <AnimatePresence>
                 {showBulkModal && (
@@ -841,13 +991,16 @@ export default function AdminInventory() {
                                 <div className="space-y-6">
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Categoría Interna Objetiva</label>
-                                        <input
-                                            type="text"
+                                        <select
                                             value={bulkData.category}
                                             onChange={e => setBulkData({ ...bulkData, category: e.target.value })}
-                                            className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:border-primary/50 transition-all"
-                                            placeholder="Ej: OFERTA_MARZO"
-                                        />
+                                            className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:border-primary/50 transition-all appearance-none cursor-pointer"
+                                        >
+                                            <option value="" className="bg-[#0a0a0a]">Seleccionar Categoría...</option>
+                                            {categories.map(cat => (
+                                                <option key={cat.id} value={cat.name} className="bg-[#0a0a0a]">{cat.name}</option>
+                                            )) || []}
+                                        </select>
                                     </div>
 
                                     <div className="space-y-2">
