@@ -572,11 +572,13 @@ export const inventoryService = {
             if (finalSpotifyId) updatePayload["metadata.spotify_id"] = finalSpotifyId;
             if (finalYoutubeId) updatePayload["metadata.youtube_id"] = finalYoutubeId;
 
+            console.log("-> BPM FINAL A GUARDAR:", newBpm);
             console.log(`[Heal-Protocol] Ejecutando soldadura en Firestore... Payload:`, updatePayload);
             await updateDoc(docRef, updatePayload);
             console.log(`[Heal-Protocol] Disco Sanado exitosamente.`);
         } catch (err) {
             console.error("FATAL ERROR en HealRecord:", err);
+            throw err;
         }
     }
 };

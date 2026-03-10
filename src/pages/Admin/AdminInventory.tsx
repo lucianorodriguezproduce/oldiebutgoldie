@@ -223,8 +223,8 @@ export default function AdminInventory() {
             console.log(`[UI-Heal] Calling inventoryService.healRecord...`);
             await inventoryService.healRecord(item);
             console.log(`[UI-Heal] healRecord success!`);
-            alert("Disco curado exitosamente. Se recargará la lista.");
-            fetchInventory();
+            alert("Disco curado exitosamente. Se recargará la página para sincronizar.");
+            window.location.reload();
         } catch (error) {
             console.error("[UI-Heal] CRITICAL FAILURE:", error);
             alert(`Error al curar el ítem: ${error instanceof Error ? error.message : String(error)}`);
