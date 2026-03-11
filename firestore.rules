@@ -138,6 +138,12 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
+    // Internal Categories - Lectura pública, gestión Admin
+    match /internal_categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // Articles & Editorial Assets - Lectura pública, gestión Admin
     match /articles/{document=**} {
       allow read: if true;
