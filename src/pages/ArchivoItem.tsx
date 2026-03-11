@@ -96,6 +96,13 @@ export default function ArchivoItem() {
         load();
     }, [id]);
 
+    // Initial View Tracking (V23.0)
+    useEffect(() => {
+        if (item) {
+            trackIntent('view');
+        }
+    }, [item?.id]);
+
     if (notFound) {
         return (
             <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 text-center">
