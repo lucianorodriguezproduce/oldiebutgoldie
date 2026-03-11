@@ -8,6 +8,7 @@ export interface UnifiedItem {
     artist: string;
     year: number | string;
     image: string;
+    full_res_image?: string;
     source: 'inventory' | 'user_assets';
     price?: number;
     valuation?: number;
@@ -63,6 +64,7 @@ export const archivoService = {
                     artist: data.metadata.artist,
                     year: data.metadata.year,
                     image: data.media.full_res_image_url || data.media.thumbnail,
+                    full_res_image: data.media.full_res_image_url,
                     source: 'inventory',
                     price: data.logistics.price,
                     genres: data.metadata.genres,
@@ -96,6 +98,7 @@ export const archivoService = {
                         artist: data.metadata.artist,
                         year: data.metadata.year,
                         image: data.media.full_res_image_url || data.media.thumbnail,
+                        full_res_image: data.media.full_res_image_url,
                         source: 'user_assets',
                         valuation: data.valuation,
                         genres: data.metadata.genres,

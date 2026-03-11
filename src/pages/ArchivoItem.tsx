@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { ArrowLeft, Disc, Calendar, MapPin, Tag, Square, Zap, Layers, PlayCircle, Music, FileText, ChevronRight, Hash, Download, QrCode } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ArrowLeft, Disc, Calendar, MapPin, Tag, Square, Zap, Layers, PlayCircle, Music, FileText, ChevronRight, Hash, Download, QrCode, Share2 } from "lucide-react";
 import { archivoService, type UnifiedItem } from "@/services/archivoService";
 import { LazyImage } from "@/components/ui/LazyImage";
 import { SEO } from "@/components/SEO";
@@ -21,6 +21,7 @@ export default function ArchivoItem() {
     const [notFound, setNotFound] = useState(false);
     const [siteConfig, setSiteConfig] = useState<SiteConfig | null>(null);
     const [isVideoAvailable, setIsVideoAvailable] = useState(true);
+    const [showToast, setShowToast] = useState(false);
 
     // Track Intent Logic (V12.7)
     const trackIntent = async (type: string) => {
@@ -107,16 +108,48 @@ export default function ArchivoItem() {
     }
 
     if (!item) return null;
+ 
+    const shareTitle = item.isBatch ? "Lote: " + item.title : item.artist + " - " + item.title;
+    const shareDescription = item.isBatch 
+        ? `Lote de colección con ${item.items?.length || 0} discos. Disponible en Oldie But Goldie.`
+        : `Formato: ${item.format} | Año: ${item.year}. Disponible en Oldie But Goldie.`;
+    
+    const handleShare = async () => {
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: shareTitle,
+                    text: "Mirá esta joya en Oldie But Goldie 💿✨",
+                    url: window.location.href
+                });
+                trackIntent('share_native');
+            } catch (err) {
+                if ((err as Error).name !== 'AbortError') {
+                    console.error("Error sharing:", err);
+                }
+            }
+        } else {
+            try {
+                await navigator.clipboard.writeText(window.location.href);
+                trackIntent('share_clipboard');
+                setShowToast(true);
+                setTimeout(() => setShowToast(false), 3000);
+            } catch (err) {
+                console.error("Error copying to clipboard:", err);
+            }
+        }
+    };
 
     const absoluteUrl = `${window.location.origin}${window.location.pathname}`;
 
     return (
         <div className="min-h-screen bg-black pt-28 pb-20 px-6">
             <SEO
-                title={`${item.artist} - ${item.title} | Archivo Sonoro Oldie But Goldie`}
-                description={`Explorá ${item.title} de ${item.artist} en nuestro archivo cultural. Formato: ${item.format}. Estado: ${item.condition}.`}
-                image={item.image}
+                title={`${shareTitle} | Archivo Sonoro Oldie But Goldie`}
+                description={shareDescription}
+                image={item.full_res_image || item.image}
                 url={absoluteUrl}
+                type="product"
             />
 
             <script type="application/ld+json">
@@ -271,6 +304,13 @@ export default function ArchivoItem() {
                                         {(item.wants / item.have) > 5 ? 'GRIAL' : (item.wants / item.have) > 2 ? 'MUY RARO' : 'CATÁLOGO'}
                                     </span>
                                 )}
+                                <button
+                                    onClick={handleShare}
+                                    className="flex items-center gap-2 px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.25em] bg-white/5 border border-white/10 text-zinc-400 hover:text-white hover:border-white/20 hover:bg-white/10 transition-all shadow-xl backdrop-blur-md group"
+                                >
+                                    <Share2 className="w-3 h-3 group-hover:scale-110 transition-transform" />
+                                    <span>Compartir</span>
+                                </button>
                             </div>
                             <h1 className="text-5xl lg:text-7xl font-display font-black text-white uppercase tracking-tightest mb-4 leading-[0.85]">
                                 {item.title}
@@ -439,6 +479,20 @@ export default function ArchivoItem() {
                     </motion.div>
                 </div>
             </div>
+
+            {/* Native Feedback Toast (V22.0) */}
+            <AnimatePresence>
+                {showToast && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 50 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 50 }}
+                        className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[200] bg-white text-black px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-[0_20px_50px_rgba(255,255,255,0.2)]"
+                    >
+                        Enlace copiado al portapapeles 💿✨
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
