@@ -207,14 +207,12 @@ export default function RevisarLote() {
                 createdDocs.push(tradeId);
             }
 
+            setSubmittedOrder({ id: createdDocs[0], items: loteItems });
+            setIsSuccess(true);
             clearLote();
 
-            if (createdDocs.length === 1 && action !== 'PEDIR') {
-                navigate(`/orden/${createdDocs[0]}`);
-            } else {
-                // For mixed or multiple requests, go to commerce/activity feed
-                navigate('/comercio');
-            }
+            // Automatic navigation removed to allow success screen + WhatsApp button
+            // If the user wants to jump directly, we could add a small delay or a redirect on the success screen.
 
         } catch (error) {
             console.error("FATAL: Error en performSubmission:", error);
@@ -345,7 +343,6 @@ export default function RevisarLote() {
                 // Zero-Friction: Auto-submit ONLY if it's a direct inventory sale (COMPRAR without Discogs)
                 if (batchIntent === 'COMPRAR' && !hasDiscogsItems) {
                     await performSubmission(googleUser.uid, 'COMPRAR');
-                    setIsSuccess(true);
                 }
             }
         } catch (error) {
@@ -367,7 +364,6 @@ export default function RevisarLote() {
                 // Zero-Friction: Auto-submit ONLY if it's a direct inventory sale
                 if (batchIntent === 'COMPRAR' && !hasDiscogsItems) {
                     await performSubmission(loggedUser.uid, 'COMPRAR');
-                    setIsSuccess(true);
                 }
             }
         } catch (error) {
