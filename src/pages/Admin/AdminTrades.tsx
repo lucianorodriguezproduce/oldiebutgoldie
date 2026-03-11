@@ -262,7 +262,10 @@ export default function AdminTrades() {
                         <div className="h-12 w-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
                         <span className="text-xs font-black uppercase tracking-[0.3em] text-gray-500">Sincronizando Trades...</span>
                     </div>
-                ) : trades.filter(t => (t.type || 'exchange') === activeView).length === 0 ? (
+                ) : trades.filter(t => {
+                    const type = t.type || 'exchange';
+                    return activeView === 'exchange' ? type === 'exchange' : (type === 'direct_sale' || type === 'admin_negotiation');
+                }).length === 0 ? (
                     <div className="py-32 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[2rem] space-y-4 text-center">
                         {activeView === 'exchange' ? <ArrowRightLeft className="h-12 w-12 text-gray-700" /> : <ShoppingBag className="h-12 w-12 text-gray-700" />}
                         <p className="text-xl font-display font-medium text-gray-500">
@@ -271,7 +274,10 @@ export default function AdminTrades() {
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                        {trades.filter(t => (t.type || 'exchange') === activeView).map(trade => (
+                        {trades.filter(t => {
+                            const type = t.type || 'exchange';
+                            return activeView === 'exchange' ? type === 'exchange' : (type === 'direct_sale' || type === 'admin_negotiation');
+                        }).map(trade => (
                             <motion.div
                                 key={trade.id}
                                 layoutId={trade.id}

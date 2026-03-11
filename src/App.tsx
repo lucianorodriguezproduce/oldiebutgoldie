@@ -170,10 +170,10 @@ function AppContent() {
               <Route path="/u/:username" element={<PublicProfile />} />
 
               {/* P2P Routes with Guard */}
-              <Route
-                path="/comercio"
-                element={siteConfig?.allow_p2p_public_offers === false && !isAdmin ? <Navigate to="/tienda" replace /> : <PublicOrders />}
-              />
+                <Route
+                  path="/comercio"
+                  element={siteConfig?.allow_p2p_public_offers === false && !isAdmin && !user ? <Navigate to="/tienda" replace /> : <PublicOrders />}
+                />
 
               <Route path="/orden/:id" element={<PublicOrderView />} />
               <Route path="/revisar-lote" element={<RevisarLote />} />

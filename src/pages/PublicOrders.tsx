@@ -52,14 +52,16 @@ export default function PublicOrders() {
 
                         if (!isValidStructure) return false;
 
-                        const isExchange = o.type === 'exchange' || o.intent === 'INTERCAMBIO';
-                        if (!isExchange) return false;
-
                         const isOwner = user && (o.user_id === user.uid || o.participants?.senderId === user.uid || o.participants?.receiverId === user.uid);
-                        const isMarketOpen = config?.p2p_global_enabled ?? false;
+                        
+                        // Rule 1: Owners always see their own orders (History)
+                        if (isOwner) return true;
 
-                        // Only show exchanges (public or owned)
-                        return isOwner || (isMarketOpen && o.isPublicOrder === true);
+                        // Rule 2: Non-owners only see public exchanges when market is open
+                        const isMarketOpen = config?.p2p_global_enabled ?? false;
+                        const isPublicExchange = (o.type === 'exchange' || o.intent === 'INTERCAMBIO') && o.isPublicOrder === true;
+
+                        return isMarketOpen && isPublicExchange;
                     });
 
                     const inventoryItems = await inventoryService.getRecentAdditions(15);
