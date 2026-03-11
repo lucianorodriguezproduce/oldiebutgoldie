@@ -177,7 +177,19 @@ export const archivoService = {
                 year: data.metadata.year,
                 image: data.media.thumbnail,
                 source: 'inventory',
-                price: data.logistics.price
+                price: data.logistics.price,
+                tracklist: data.tracklist,
+                labels: data.labels,
+                youtube_id: data.metadata.youtube_id,
+                spotify_id: data.metadata.spotify_id,
+                bpm: data.metadata.bpm,
+                key: data.metadata.key,
+                wants: data.metadata.wants,
+                have: data.metadata.have,
+                notes: data.metadata.notes,
+                isBatch: data.metadata.isBatch,
+                items: data.items,
+                preview_url: data.metadata.preview_url
             };
         }) : [];
 
@@ -190,7 +202,20 @@ export const archivoService = {
                 year: data.metadata.year,
                 image: data.media.thumbnail,
                 source: 'user_assets',
-                valuation: data.valuation
+                valuation: data.valuation,
+                tracklist: data.tracklist,
+                labels: data.labels,
+                youtube_id: data.metadata.youtube_id,
+                spotify_id: data.metadata.spotify_id,
+                bpm: data.metadata.bpm,
+                key: data.metadata.key,
+                wants: data.metadata.wants,
+                have: data.metadata.have,
+                notes: data.metadata.notes,
+                status_warning: data.metadata.status_warning,
+                isBatch: data.metadata.isBatch,
+                items: data.items,
+                preview_url: data.metadata.preview_url
             };
         }) : [];
 

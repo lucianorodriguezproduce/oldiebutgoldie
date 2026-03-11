@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { Disc, DollarSign, ArrowRightLeft, ShieldCheck, Tag, Minus, Plus, Package } from "lucide-react";
+import { Disc, DollarSign, ArrowRightLeft, ShieldCheck, Tag, Minus, Plus, Package, Play, Pause, Waves } from "lucide-react";
 import { LazyImage } from "@/components/ui/LazyImage";
 import type { UserAsset } from "@/types/inventory";
 import { userAssetService } from "@/services/userAssetService";
@@ -16,6 +16,9 @@ export default function UserAssetCard({ asset, onUpdate, readonly = false }: Use
     const [showPricing, setShowPricing] = useState(false);
     const [price, setPrice] = useState(asset.valuation?.toString() || "");
     const [localStock, setLocalStock] = useState(asset.stock ?? 1);
+    const [isHovered, setIsHovered] = useState(false);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const audioRef = useRef<HTMLAudioElement | null>(null);
 
     const handleStockChange = async (delta: number) => {
         const newStock = Math.max(0, localStock + delta);
@@ -56,11 +59,45 @@ export default function UserAssetCard({ asset, onUpdate, readonly = false }: Use
         }
     };
 
+    const togglePlay = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (asset.metadata.preview_url) {
+            if (audioRef.current) {
+                if (isPlaying) {
+                    audioRef.current.pause();
+                    setIsPlaying(false);
+                } else {
+                    audioRef.current.play()
+                        .then(() => setIsPlaying(true))
+                        .catch(err => {
+                            console.error("Audio playback failed:", err);
+                        });
+                }
+            }
+        } else {
+            // Fallback: Si tiene spotify_id o youtube_id, podríamos delegar
+            // por ahora mantenemos el comportamiento de navegación si no hay preview
+            if (!readonly) {
+                window.location.href = `/archivo/${asset.id}#play`;
+            }
+        }
+    };
+
     return (
         <motion.div
             layout
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => {
+                setIsHovered(false);
+                if (isPlaying && audioRef.current) {
+                    audioRef.current.pause();
+                    setIsPlaying(false);
+                }
+            }}
             className="group relative bg-white/[0.03] border border-white/5 rounded-[2rem] overflow-hidden hover:border-primary/30 transition-all duration-500"
         >
             {/* Image Container */}
@@ -70,10 +107,32 @@ export default function UserAssetCard({ asset, onUpdate, readonly = false }: Use
                     alt={asset.metadata.title}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60" />
+                <div className={`absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent transition-opacity duration-500 ${isHovered ? 'opacity-90' : 'opacity-60'}`} />
+
+                {/* Audio Player */}
+                {asset.metadata.preview_url && (
+                    <audio
+                        ref={audioRef}
+                        src={asset.metadata.preview_url}
+                        onEnded={() => setIsPlaying(false)}
+                        preload="none"
+                    />
+                )}
+
+                {/* Play Button Overlay */}
+                {(asset.metadata.preview_url || asset.metadata.spotify_id || asset.metadata.youtube_id) && (
+                    <div className={`absolute inset-0 flex items-center justify-center transition-all duration-500 z-30 ${isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}`}>
+                        <button
+                            onClick={togglePlay}
+                            className={`w-12 h-12 rounded-full flex items-center justify-center backdrop-blur-md transition-all ${isPlaying ? 'bg-primary text-black shadow-lg shadow-primary/20' : 'bg-primary/90 text-black hover:scale-110'}`}
+                        >
+                            {isPlaying ? <Pause size={20} fill="currentColor" /> : <Play size={20} className="ml-0.5" fill="currentColor" />}
+                        </button>
+                    </div>
+                )}
 
                 {/* Status Badges */}
-                <div className="absolute top-4 left-4 flex flex-col gap-2">
+                <div className="absolute top-4 left-4 flex flex-col gap-2 z-20">
                     {asset.isTradeable && (
                         <div className="bg-primary text-black px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-xl">
                             <ArrowRightLeft className="w-3 h-3" /> Disponible
@@ -83,18 +142,55 @@ export default function UserAssetCard({ asset, onUpdate, readonly = false }: Use
                         <ShieldCheck className="w-3 h-3 text-primary" /> Propiedad Verificada
                     </div>
                 </div>
+
+                {/* BPM / Key Overlay (Bottom Left) */}
+                <div className={`absolute left-4 bottom-4 flex gap-2 transition-all duration-500 z-20 ${isHovered ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`}>
+                    {asset.metadata.bpm && (
+                        <div className="bg-black/80 backdrop-blur-md px-2 py-1 rounded-lg border border-white/10">
+                            <span className="text-[7px] text-white/40 block leading-none uppercase tracking-widest mb-0.5">BPM</span>
+                            <span className="text-[10px] font-black text-white">{asset.metadata.bpm}</span>
+                        </div>
+                    )}
+                    {asset.metadata.key && (
+                        <div className="bg-black/80 backdrop-blur-md px-2 py-1 rounded-lg border border-white/10">
+                            <span className="text-[7px] text-white/40 block leading-none uppercase tracking-widest mb-0.5">KEY</span>
+                            <span className="text-[10px] font-black text-primary">{asset.metadata.key}</span>
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Content */}
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-4 relative">
                 <div className="space-y-1">
-                    <h3 className="text-sm font-black text-white uppercase tracking-tight truncate">
+                    <h3 className="text-sm font-black text-white uppercase tracking-tight truncate group-hover:text-primary transition-colors">
                         {asset.metadata.title}
                     </h3>
                     <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest truncate">
                         {asset.metadata.artist}
                     </p>
                 </div>
+
+                {/* Tracklist Resumido (On Hover) */}
+                {isHovered && asset.tracklist && asset.tracklist.length > 0 && (
+                    <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        className="overflow-hidden border-l-2 border-primary/30 pl-3 py-1"
+                    >
+                        <ul className="space-y-1">
+                            {asset.tracklist.slice(0, 3).map((track, i) => (
+                                <li key={i} className="text-[9px] font-mono text-gray-400 truncate">
+                                    <span className="text-primary/50 mr-2">{track.position}</span>
+                                    {track.title}
+                                </li>
+                            ))}
+                            {asset.tracklist.length > 3 && (
+                                <li className="text-[8px] text-gray-600 italic">+{asset.tracklist.length - 3} pistas más...</li>
+                            )}
+                        </ul>
+                    </motion.div>
+                )}
 
                 <div className="flex items-center justify-between pt-2 border-t border-white/5">
                     <div className="flex flex-col">
@@ -108,6 +204,11 @@ export default function UserAssetCard({ asset, onUpdate, readonly = false }: Use
                         >
                             <Tag className="w-4 h-4 text-gray-400" />
                         </button>
+                    )}
+                    {isPlaying && (
+                        <div className="flex items-center gap-1 text-primary">
+                            <Waves size={14} className="animate-pulse" />
+                        </div>
                     )}
                 </div>
 
@@ -160,7 +261,7 @@ export default function UserAssetCard({ asset, onUpdate, readonly = false }: Use
 
             {/* Pricing Overlay */}
             {showPricing && (
-                <div className="absolute inset-0 bg-black/90 backdrop-blur-sm p-6 flex flex-col justify-center gap-4 animate-in fade-in zoom-in duration-300">
+                <div className="absolute inset-0 bg-black/90 backdrop-blur-sm p-6 flex flex-col justify-center gap-4 animate-in fade-in zoom-in duration-300 z-50">
                     <h4 className="text-[10px] font-black text-primary uppercase tracking-widest mb-2">Definir Precio de Oferta</h4>
                     <div className="relative">
                         <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
