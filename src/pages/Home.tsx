@@ -14,22 +14,16 @@ import { useAuth } from "@/context/AuthContext";
 import { useLoading } from "@/context/LoadingContext";
 import { generateWhatsAppLink } from "@/utils/whatsapp";
 import { whatsappService } from "@/services/whatsappService";
-import type { OrderData } from "@/utils/whatsapp";
-import { pushViewItem, pushViewItemFromOrder, pushWhatsAppContactFromOrder, pushWizardStep } from "@/utils/analytics";
+import { pushViewItem, pushWhatsAppContactFromOrder, pushWizardStep } from "@/utils/analytics";
 import { SEO } from "@/components/SEO";
 import { useLote } from "@/context/LoteContext";
 import { PremiumShowcase } from "@/components/PremiumShowcase";
 import { inventoryService } from "@/services/inventoryService";
 import { tradeService } from "@/services/tradeService";
-import { purchaseRequestService } from "@/services/purchaseRequestService";
-import { fastCheckoutService } from "@/services/fastCheckoutService";
-import { userAssetService } from "@/services/userAssetService";
 import { useHealth } from "@/context/HealthContext";
-import { ADMIN_UID } from "@/constants/admin";
 import { CompactSearchCard } from "@/components/ui/CompactSearchCard";
 import { CardSkeleton } from "@/components/ui/Skeleton";
 import ItemConfigModal from "@/components/discogs/ItemConfigModal";
-import type { BatchItem } from "@/context/LoteContext";
 
 
 
@@ -66,20 +60,9 @@ export default function Home() {
     const [searchParams, setSearchParams] = useSearchParams();
     const { addItemToBatch, addItemFromInventory, isInLote, totalCount, loteItems } = useLote();
 
-    const [intent, setIntent] = useState<Intent | null>(null);
     const [query, setQuery] = useState("");
-    const [format, setFormat] = useState<Format | null>(null);
-    const [condition, setCondition] = useState<Condition | null>(null);
-    const { showLoading, hideLoading, isLoading: isSubmitting } = useLoading();
-    const [isSuccess, setIsSuccess] = useState(false);
+    const { showLoading, hideLoading } = useLoading();
     const [step, setStep] = useState(1);
-    const [submittedOrder, setSubmittedOrder] = useState<any>(null);
-
-    // Sell-specific states
-    const [price, setPrice] = useState("");
-    const [currency, setCurrency] = useState<Currency>("ARS");
-    const [marketPrice, setMarketPrice] = useState<number | null>(null);
-    const [isLoadingMarket, setIsLoadingMarket] = useState(false);
 
     const [isSearchActive, setIsSearchActive] = useState(false);
     const [searchFilter, setSearchFilter] = useState<"todo" | "artistas" | "álbumes">("todo");
@@ -96,9 +79,7 @@ export default function Home() {
     const [currentPage, setCurrentPage] = useState(1);
     const [hasMore, setHasMore] = useState(false);
 
-    // Local Auth UI states (only for the manual form)
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
+    // Wizard & Modal States
     const observerTarget = useRef<HTMLDivElement>(null);
     const [searchHistory, setSearchHistory] = useState<any[]>([]); // To allow "Go Back" in drill-downs
     const [selectedArtist, setSelectedArtist] = useState<{ id: number, name: string } | null>(null);
@@ -135,38 +116,19 @@ export default function Home() {
 
     // Analytics tracking for Item Views
     useEffect(() => {
-        if (publicOrder) {
-            pushViewItemFromOrder(publicOrder);
-        } else if (selectedItem) {
-            pushViewItem(selectedItem, intent || "OBSERVANDO");
+        if (selectedItem) {
+            pushViewItem(selectedItem, "OBSERVANDO");
         }
-    }, [selectedItem?.id, publicOrder?.order_number, intent]);
+    }, [selectedItem?.id]);
 
-    // Automatic Addition Effect - Zero Confirmation Flow
+    // Automatic Addition Effect - Deprecated in favor of explicit Wizard selection (V23.5)
+    /*
     useEffect(() => {
         if (selectedItem && format && condition) {
-            const existing = loteItems.find(i => i.id === selectedItem.id);
-
-            if (!existing ||
-                existing.format !== format ||
-                existing.condition !== condition ||
-                (price && existing.price !== parseFloat(price))) {
-
-                addItemToBatch({
-                    id: selectedItem.id,
-                    title: selectedItem.title,
-                    artist: (selectedItem as any).normalizedArtist,
-                    album: (selectedItem as any).normalizedAlbum,
-                    cover_image: selectedItem.cover_image || selectedItem.thumb,
-                    format,
-                    condition,
-                    price: price ? parseFloat(price) : undefined,
-                    currency,
-                    source: 'DISCOGS'
-                });
-            }
+            // ... auto-add logic removed ...
         }
     }, [format, condition, selectedItem, loteItems, addItemToBatch]);
+    */
 
     // normalizer for Discogs data to ensure high-fidelity artist/album separation
     const normalizeDiscogsData = (data: any) => {
@@ -468,7 +430,7 @@ export default function Home() {
                     normalizedAlbum: normalized.normalizedAlbum
                 } as any);
 
-                // ACTIVAR WIZARD CONFIG (Protocolo V21.3)
+                // ACTIVAR WIZARD CONFIG (Protocolo V21.3) - Unificado V23.5
                 setSelectedSearchItem({
                     ...normalized,
                     cover_image: normalized.images?.[0]?.uri || normalized.thumb || '',
@@ -479,7 +441,8 @@ export default function Home() {
                 });
                 setShowConfigModal(true);
 
-                setIsSearchActive(false); // Salimos del modo búsqueda para ver el detalle
+                // No cerramos el detalle inmediatamente, dejamos que el modal se superponga
+                // setIsSearchActive(false); 
 
             } catch (error) {
                 console.error("Error loading release details:", error);
@@ -581,16 +544,8 @@ export default function Home() {
     const handleResetSelection = useCallback(() => {
         setSelectedItem(null);
         setQuery("");
-        setFormat(null);
-        setCondition(null);
-        setIntent(null);
-        setPrice("");
-        setCurrency("ARS");
-        setMarketPrice(null);
-        setIsLoadingMarket(false);
         setSearchResults([]);
         setHasMore(false);
-        setStep(1);
         setIsSearchActive(false);
 
         // Clean URL if we are coming from a dynamic route
@@ -672,305 +627,10 @@ export default function Home() {
         }
     };
 
-    const performSubmission = async (uid: string, intentOverride?: Intent) => {
-        if (!selectedItem) return;
+    // Legacy Submission Handlers removed in V23.5 in favor of Lote Flow consolidation
+    // All purchase/offer intents now go through /revisar-lote via ItemConfigModal -> LoteContext
 
-        showLoading("Ingresando al La Batea...");
-        try {
-            // 1. Ingreso al La Batea (Sovereignty Snapshot)
-            const inventoryId = await inventoryService.importFromDiscogs(
-                selectedItem,
-                {
-                    stock: isAdmin ? 1 : 0,
-                    price: price ? parseFloat(price) : 0,
-                    condition: `${condition || "N/A"} (${format || "N/A"})`,
-                    status: isAdmin ? "active" : "archived"
-                }
-            );
-
-            // 2. Create the Trade
-            const resolvedIntent = intentOverride || intent;
-            const manifest = {
-                requestedItems: resolvedIntent === 'COMPRAR' ? [inventoryId] : [],
-                offeredItems: resolvedIntent === 'VENDER' ? [inventoryId] : [],
-                cashAdjustment: price ? parseFloat(price) : 0
-            };
-
-            const tradeId = await tradeService.createTrade({
-                participants: {
-                    senderId: uid,
-                    receiverId: ADMIN_UID
-                },
-                manifest,
-                type: 'exchange',
-                tradeOrigin: 'DISCOGS'
-            });
-
-            // Note: createTrade() already calls resolveTrade() internally for direct_sale trades.
-            // No need for a separate resolveTrade() call here.
-
-            // 4. Redirect to Order View
-            navigate(`/orden/${tradeId}`);
-
-        } catch (error) {
-            console.error("Error creating trade/inventory:", error);
-            alert(TEXTS.perfil.profile.genericError || "Error al procesar la operación.");
-        } finally {
-            hideLoading();
-        }
-    };
-
-    // Handlers for Architecture V3.0 Desacoplamiento
-    const handleExternalOrder = async () => {
-        if (!selectedItem || !user) return;
-        showLoading("Registrando pedido privado...");
-        try {
-            let fullData = selectedItem;
-            // Asegurar Ingesta de Alta Fidelidad para pedidos externos
-            if (!selectedItem.isLocal) {
-                const details = await discogsService.getReleaseDetails(selectedItem.id.toString());
-                fullData = { ...selectedItem, ...details };
-            }
-
-            await purchaseRequestService.createRequest(
-                user.uid,
-                user.email || "",
-                (user.displayName || user.email || "Usuario") as string,
-                fullData
-            );
-            setIsSuccess(true);
-            setSubmittedOrder({ type: 'order' });
-        } catch (error) {
-            console.error("Error creating purchase request:", error);
-            alert("Error al registrar el pedido.");
-        } finally {
-            hideLoading();
-        }
-    };
-
-    const handleAddToCollection = async () => {
-        if (!selectedItem || !user) return;
-        showLoading("Añadiendo a tu batea...");
-        try {
-            let fullData = selectedItem;
-
-            // Si es un item externo de Discogs, necesitamos la "Ingesta de Alta Fidelidad"
-            if (!selectedItem.isLocal) {
-                const details = await discogsService.getReleaseDetails(selectedItem.id.toString());
-                fullData = { ...selectedItem, ...details };
-            }
-
-            // Transform DiscogsSearchResult (or full details) to initial UserAsset shape
-            await userAssetService.addAsset(user.uid, {
-                metadata: {
-                    title: (fullData as any).normalizedAlbum || fullData.title,
-                    artist: (fullData as any).normalizedArtist || "Varios",
-                    year: parseInt(fullData.year || "0") || 0,
-                    genres: fullData.genre || (fullData as any).genres || [],
-                    styles: (fullData as any).style || (fullData as any).styles || [],
-                    format_description: Array.isArray(fullData.format) ? fullData.format.join(", ") : (fullData as any).format || "Vinyl"
-                },
-                media: {
-                    thumbnail: fullData.thumb,
-                    full_res_image_url: fullData.cover_image || fullData.thumb
-                },
-                originalInventoryId: fullData.isLocal ? fullData.id.toString() : "",
-                tracklist: (fullData as any).tracklist || [],
-                labels: (fullData as any).labels || []
-            } as any);
-
-            alert("¡Añadido a tu batea!");
-            handleResetSelection();
-        } catch (error) {
-            console.error("Error adding to collection:", error);
-            alert("Error al añadir a la batea.");
-        } finally {
-            hideLoading();
-        }
-    };
-
-    const handleBuyNow = async () => {
-        if (!selectedItem || !user) return;
-        if (!selectedItem.isLocal) return;
-
-        showLoading("Procesando compra instantánea...");
-        try {
-            const tradeId = await fastCheckoutService.processPurchase(
-                user.uid,
-                selectedItem.id.toString(),
-                (selectedItem as any).price || 0
-            );
-            setIsSuccess(true);
-            setSubmittedOrder({ id: tradeId, type: 'purchase' });
-            navigate(`/orden/${tradeId}`);
-        } catch (error) {
-            console.error("FastCheckout error:", error);
-            alert("Error en la compra rápida.");
-        } finally {
-            hideLoading();
-        }
-    };
-
-    // Fetch market price from Discogs for the selected release
-    const fetchMarketPrice = async () => {
-        if (!selectedItem) return;
-        setIsLoadingMarket(true);
-        try {
-            const releaseData = await discogsService.getReleaseDetails(selectedItem.id.toString());
-            if (releaseData?.lowest_price) {
-                setMarketPrice(releaseData.lowest_price);
-            } else {
-                setMarketPrice(null);
-            }
-        } catch (error) {
-            console.error("Market price fetch error:", error);
-            setMarketPrice(null);
-        } finally {
-            setIsLoadingMarket(false);
-        }
-    };
-
-    // Handle intent selection (Add to Lote)
-    const handleIntentSelect = (selectedIntent: Intent) => {
-        setIntent(selectedIntent);
-
-        pushWizardStep('wizard_intent_selected', {
-            intent: selectedIntent,
-            item_id: selectedItem?.id,
-            item_title: selectedItem?.title
-        });
-
-        if (selectedIntent === "VENDER") {
-            fetchMarketPrice();
-            setStep(2); // price step
-            pushWizardStep('wizard_sale_start', { item_id: selectedItem?.id });
-            setTimeout(() => {
-                scrollToElement(actionsRef, 80);
-                priceInputRef.current?.focus();
-            }, 100);
-            return;
-        }
-
-        // For COMPRAR: Direct single item checkout
-        if (user) {
-            pushWizardStep('wizard_purchase_start', { item_id: selectedItem?.id });
-            performSubmission(user.uid, selectedIntent);
-            setIsSuccess(true);
-            scrollToTop();
-        } else {
-            setStep(3); // Auth step
-            pushWizardStep('wizard_auth_step', { item_id: selectedItem?.id });
-        }
-    };
-
-    // Handle price confirmation for VENDER
-    const handlePriceConfirm = () => {
-        if (!price || parseFloat(price) <= 0) {
-            alert(TEXTS.perfil.negotiation.priceLabel || "Ingresa un precio válido.");
-            return;
-        }
-
-        if (user) {
-            performSubmission(user.uid);
-            setIsSuccess(true);
-            scrollToTop();
-        } else {
-            setStep(3); // Auth step
-        }
-    };
-
-    const handleGoogleSignIn = async () => {
-        showLoading(TEXTS.login.auth.googleSignIn);
-        try {
-            const googleUser = await signInWithGoogle();
-            if (googleUser) {
-                await performSubmission(googleUser.uid);
-                setIsSuccess(true);
-                scrollToTop();
-            }
-        } catch (error) {
-            console.error("Google Auth error:", error);
-            alert(TEXTS.perfil.profile.genericError);
-        } finally {
-            hideLoading();
-        }
-    };
-
-    const handleAuthAction = async (e?: React.FormEvent) => {
-        if (e) e.preventDefault();
-        if (!email || !password) return;
-
-        showLoading(TEXTS.global.common.loadingGeneric);
-        try {
-            const loggedUser = await authenticateUser(email, password);
-            if (loggedUser) {
-                await performSubmission(loggedUser.uid);
-                setIsSuccess(true);
-                scrollToTop();
-            }
-        } catch (error) {
-            console.error("Manual Auth error:", error);
-            alert(TEXTS.perfil.profile.genericError);
-        } finally {
-            hideLoading();
-        }
-    };
-
-    if (isSuccess) {
-        return (
-            <div className="min-h-[70vh] flex flex-col items-center justify-center text-center space-y-8 px-4 font-sans">
-                <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className="w-24 h-24 retro-gradient rounded-full flex items-center justify-center shadow-[0_0_50px_rgba(255,184,0,0.3)]"
-                >
-                    <CheckCircle2 className="h-12 w-12 text-black" />
-                </motion.div>
-                <div className="space-y-4">
-                    <h2 className="text-4xl md:text-6xl font-display font-black text-white uppercase tracking-tighter">{TEXTS.global.success.orderRegistered}</h2>
-                    <p className="text-gray-500 text-lg md:text-xl max-w-md mx-auto font-medium">
-                        {TEXTS.global.success.successMessage}
-                    </p>
-                </div>
-                <div className="flex flex-col items-center gap-4 w-full max-w-sm mx-auto">
-                    {submittedOrder && (
-                        <button
-                            onClick={() => {
-                                pushWhatsAppContactFromOrder(submittedOrder);
-                                if (intent === "COMPRAR") {
-                                    window.open(whatsappService.generatePurchaseLink({
-                                        id: selectedItem?.id?.toString() || '',
-                                        title: selectedItem?.title || '',
-                                        artist: (selectedItem as any)?.artist || (selectedItem as any)?.normalizedArtist || 'Desconocido'
-                                    }), "_blank");
-                                } else {
-                                    window.open(whatsappService.generateRequestLink({
-                                        id: selectedItem?.id?.toString() || '',
-                                        title: selectedItem?.title || '',
-                                        artist: (selectedItem as any)?.artist || (selectedItem as any)?.normalizedArtist || 'Desconocido'
-                                    }, dbUser?.username || "Usuario"), "_blank");
-                                }
-                            }}
-                            className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-500 text-white px-8 py-4 rounded-2xl font-black uppercase text-xs tracking-widest transition-all shadow-lg shadow-green-500/20"
-                        >
-                            <MessageCircle className="h-5 w-5" />
-                            {TEXTS.global.success.contactWhatsApp}
-                        </button>
-                    )}
-                    <button
-                        onClick={() => {
-                            setIsSuccess(false);
-                            setSubmittedOrder(null);
-                            handleResetSelection();
-                        }}
-                        className="w-full bg-white/5 border border-white/10 text-white px-8 py-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-white/10 transition-all"
-                    >
-                        {TEXTS.global.success.newSearch}
-                    </button>
-                </div>
-            </div>
-        );
-    }
+    // Success view removed from Home.tsx - Now handled by RevisarLote.tsx success state
 
     return (
         <div className={`bg-[#050505] font-sans selection:bg-primary/30 text-white overflow-x-hidden flex flex-col relative w-full transition-all ${isSearchActive ? 'h-[100dvh] overflow-hidden' : 'min-h-screen'}`}>
@@ -991,21 +651,12 @@ export default function Home() {
                         "name": selectedItem.title,
                         "image": [selectedItem.cover_image || selectedItem.thumb],
                         "description": `Formato físico de ${selectedItem.title}.`,
-                        ...(marketPrice ? {
-                            "offers": {
-                                "@type": "Offer",
-                                "priceCurrency": "USD",
-                                "price": marketPrice.toString(),
-                                "availability": "https://schema.org/InStock"
-                            }
-                        } : {})
                     }}
                 />
             ) : (
                 <SEO
                     title={TEXTS.global.common.seo.home.title}
                     description={TEXTS.global.common.seo.home.desc}
-                    image={TEXTS.global.common.seo.home.ogImage}
                     url="https://oldiebutgoldie.com.ar"
                     schema={{
                         "@context": "https://schema.org",
@@ -1420,51 +1071,22 @@ export default function Home() {
                             onConfirm={handleConfigConfirm}
                         />
 
-                        {/* Step 1: Format, Condition, Intent (REFACTORED FOR V3) */}
+                        {/* Step 1: Format, Condition, Intent (DEPRECATED BUTTONS V23.5) */}
                         {step === 1 && !publicOrder && (
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 className="space-y-8"
                             >
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    {/* Legacy buttons only for local items now, as Discogs items are handled by the Wizard */}
-                                    {/* Unificando botones para Items Locales y de Discogs (Protocolo V21.1) */}
+                                <div className="text-center py-10">
+                                    <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">
+                                        Configurá tu pedido en el modal superior
+                                    </p>
                                     <button
-                                        onClick={handleExternalOrder}
-                                        className="flex flex-col items-center justify-center gap-3 p-8 rounded-3xl bg-primary text-black hover:scale-[1.02] transition-all group"
+                                        onClick={() => setShowConfigModal(true)}
+                                        className="mt-6 px-10 py-4 bg-primary text-black font-black uppercase tracking-widest rounded-2xl hover:scale-105 transition-all shadow-xl shadow-primary/20"
                                     >
-                                        <Package className="w-8 h-8 group-hover:rotate-12 transition-transform" />
-                                        <div className="text-center">
-                                            <span className="block font-black uppercase text-sm tracking-widest">Pedir Disco</span>
-                                            <span className="block text-[10px] uppercase font-bold opacity-60">Lo buscamos por vos</span>
-                                        </div>
-                                    </button>
-
-                                    <button
-                                        onClick={handleAddToCollection}
-                                        className="flex flex-col items-center justify-center gap-3 p-8 rounded-3xl bg-white/5 border border-white/10 text-white hover:bg-primary hover:text-black transition-all group"
-                                    >
-                                        <Disc className="w-8 h-8 group-hover:animate-spin-slow transition-transform" />
-                                        <div className="text-center">
-                                            <span className="block font-black uppercase text-sm tracking-widest">A Mi Batea</span>
-                                            <span className="block text-[10px] uppercase font-bold opacity-60">Solo para colección</span>
-                                        </div>
-                                    </button>
-
-                                    <button
-                                        onClick={() => {
-                                            setIntent("VENDER");
-                                            setStep(1);
-                                            // Activa el flujo de oferta/intercambio
-                                        }}
-                                        className="flex flex-col items-center justify-center gap-3 p-8 rounded-3xl bg-white/5 border border-white/10 text-gray-400 hover:border-primary/40 hover:text-white transition-all group"
-                                    >
-                                        <MessageCircle className="w-8 h-8 group-hover:scale-110 transition-transform" />
-                                        <div className="text-center">
-                                            <span className="block font-black uppercase text-sm tracking-widest">Intercambio</span>
-                                            <span className="block text-[10px] uppercase font-bold opacity-60">Proponer Negocio</span>
-                                        </div>
+                                        Configurar Pedido
                                     </button>
                                 </div>
 
@@ -1476,149 +1098,7 @@ export default function Home() {
                             </motion.div>
                         )}
 
-                        {/* Step 2: (VENDER only) Price & Currency */}
-                        {step === 2 && intent === "VENDER" && (
-                            <motion.div
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="bg-[#0A0A0A] border-2 border-primary/40 rounded-[2rem] p-8 md:p-12 space-y-10 shadow-2xl"
-                            >
-                                <div className="text-center space-y-4">
-                                    <h3 className="text-3xl md:text-4xl font-display font-black text-white uppercase tracking-tighter">{TEXTS.perfil.negotiation.sellPriceTitle}</h3>
-                                    <p className="text-[10px] font-black text-gray-600 uppercase tracking-widest italic">{TEXTS.perfil.negotiation.marketValueSubtitle}</p>
-                                </div>
-
-                                {/* Market Price Anchor */}
-                                {isLoadingMarket ? (
-                                    <div className="flex items-center justify-center gap-3 py-4 px-6 bg-white/[0.02] border border-white/5 rounded-xl">
-                                        <div className="h-3 w-3 border-2 border-primary/40 border-t-primary rounded-full animate-spin" />
-                                        <span className="text-[10px] font-mono font-bold text-gray-600 uppercase tracking-widest">{TEXTS.perfil.negotiation.consultingMarket}</span>
-                                    </div>
-                                ) : marketPrice !== null && (
-                                    <div className="flex items-center gap-3 py-4 px-6 bg-primary/[0.04] border border-primary/10 rounded-xl">
-                                        <TrendingUp className="h-4 w-4 text-primary/70 flex-shrink-0" />
-                                        <span className="text-[11px] font-mono font-bold text-primary/80 uppercase tracking-wider">
-                                            {TEXTS.perfil.negotiation.marketRef} {marketPrice.toFixed(2)}
-                                        </span>
-                                    </div>
-                                )}
-
-                                <div className="space-y-6">
-                                    <label className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 italic block px-4"> {TEXTS.perfil.negotiation.currencyLabel} </label>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        {(["ARS", "USD"] as Currency[]).map(c => (
-                                            <button
-                                                key={c}
-                                                onClick={() => setCurrency(c)}
-                                                className={`py-5 rounded-2xl text-xs font-black tracking-widest border-2 transition-all flex items-center justify-center gap-2 ${currency === c ? 'bg-primary border-primary text-black' : 'bg-white/5 border-white/5 text-gray-500'}`}
-                                            >
-                                                <DollarSign className="h-4 w-4" />
-                                                {c === "ARS" ? TEXTS.perfil.negotiation.currencyARS : TEXTS.perfil.negotiation.currencyUSD}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="space-y-6">
-                                    <label className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 italic block px-4"> {TEXTS.perfil.negotiation.priceLabel} </label>
-                                    <div className="relative">
-                                        <span className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-500 font-black text-lg">
-                                            {currency === "ARS" ? "$" : "US$"}
-                                        </span>
-                                        <input
-                                            ref={priceInputRef}
-                                            id="sell_price"
-                                            name="price"
-                                            type="number"
-                                            min="0"
-                                            step="0.01"
-                                            value={price}
-                                            onChange={e => setPrice(e.target.value)}
-                                            placeholder="0.00"
-                                            className="w-full bg-white/5 border-2 border-white/5 rounded-2xl py-6 pl-16 pr-8 text-white text-2xl font-black focus:border-primary/40 focus:outline-none transition-all"
-                                        />
-                                    </div>
-                                </div>
-
-                                <button
-                                    onClick={handlePriceConfirm}
-                                    disabled={!price}
-                                    className="w-full bg-primary text-black py-8 rounded-2xl font-black uppercase text-xs tracking-widest shadow-[0_0_40px_rgba(255,184,0,0.2)] hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
-                                >
-                                    {TEXTS.perfil.negotiation.addSellBatch}
-                                </button>
-
-                                <div ref={actionsRef} />
-
-                                <button onClick={() => { setIntent(null); setStep(1); }} className="w-full text-[10px] font-black uppercase text-gray-700 hover:text-white transition-colors">{TEXTS.perfil.negotiation.back}</button>
-                            </motion.div>
-                        )}
-
-                        {/* Step 3: Auth (only if NOT logged in) */}
-                        {step === 3 && (
-                            <motion.div
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="bg-[#0A0A0A] border-2 border-primary/40 rounded-[2rem] p-8 md:p-12 space-y-10 shadow-2xl"
-                            >
-                                <div className="text-center space-y-4">
-                                    <h3 className="text-3xl md:text-4xl font-display font-black text-white uppercase tracking-tighter">{TEXTS.login.auth.syncNetwork}</h3>
-                                    <p className="text-[10px] font-black text-gray-600 uppercase tracking-widest italic">{TEXTS.login.auth.securityProtocol}</p>
-                                </div>
-
-                                <div className="space-y-6">
-                                    <button
-                                        onClick={handleGoogleSignIn}
-                                        className="w-full bg-white text-black py-6 rounded-2xl font-black uppercase text-xs flex items-center justify-center gap-4 hover:bg-primary transition-all"
-                                    >
-                                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="" className="w-5 h-5" />
-                                        {TEXTS.login.auth.googleSignIn}
-                                    </button>
-
-                                    <div className="relative flex items-center gap-4 py-2">
-                                        <div className="flex-1 h-px bg-white/10" />
-                                        <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">{TEXTS.login.auth.manualCredentials}</span>
-                                        <div className="flex-1 h-px bg-white/10" />
-                                    </div>
-
-                                    <form onSubmit={handleAuthAction} className="space-y-4">
-                                        <div className="relative">
-                                            <Mail className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-700" />
-                                            <input
-                                                id="auth_email"
-                                                name="email"
-                                                type="email"
-                                                value={email}
-                                                onChange={e => setEmail(e.target.value)}
-                                                placeholder={TEXTS.login.auth.emailPlaceholder}
-                                                className="w-full bg-white/5 border-2 border-white/5 rounded-2xl py-6 pl-16 pr-8 text-white focus:border-primary/40 focus:outline-none transition-all"
-                                            />
-                                        </div>
-                                        <div className="relative">
-                                            <Layers className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-700" />
-                                            <input
-                                                id="auth_password"
-                                                name="password"
-                                                type="password"
-                                                value={password}
-                                                onChange={e => setPassword(e.target.value)}
-                                                placeholder={TEXTS.login.auth.passwordPlaceholder}
-                                                className="w-full bg-white/5 border-2 border-white/5 rounded-2xl py-6 pl-16 pr-8 text-white focus:border-primary/40 focus:outline-none transition-all"
-                                            />
-                                        </div>
-                                        <button
-                                            type="submit"
-                                            disabled={isSubmitting}
-                                            className="w-full bg-primary text-black py-8 rounded-2xl font-black uppercase text-xs tracking-widest shadow-[0_0_40px_rgba(255,184,0,0.2)] hover:scale-[1.02] active:scale-95 transition-all"
-                                        >
-                                            {isSubmitting ? TEXTS.login.auth.connecting : TEXTS.login.auth.registerAndLink}
-                                        </button>
-                                    </form>
-
-                                    <button onClick={() => setStep(intent === "VENDER" ? 2 : 1)} className="w-full text-[10px] font-black uppercase text-gray-700 hover:text-white transition-colors">{TEXTS.perfil.negotiation.back}</button>
-                                </div>
-                            </motion.div>
-                        )}
+                        {/* Step 2 & 3 (Legacy) removed for flow consolidation */}
                     </motion.div>
                 )}
             </AnimatePresence>
