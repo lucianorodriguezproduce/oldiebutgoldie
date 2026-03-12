@@ -94,16 +94,26 @@ export default function PublicOrderView() {
         return () => unsub();
     }, [id]);
 
-    // Live Config & Proposals
+    // Live Config & Proposals (Protocol V25.3)
     useEffect(() => {
         const unsubConfig = siteConfigService.onSnapshotConfig(setConfig);
 
         let unsubProposals: any;
-        if (id && isOwner) {
+        // Listen to proposals if it's an auction (everyone) or if it's my order (owner)
+        if (id && (isOwner || order?.type === 'auction')) {
             setLoadingProposals(true);
             const proposalsRef = collection(db, "trades", id, "proposals");
-            unsubProposals = onSnapshot(query(proposalsRef, orderBy("timestamp", "desc")), (snap) => {
-                setProposals(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            // Order by highest bid for auctions, by timestamp for others
+            const q = order?.type === 'auction' 
+                ? query(proposalsRef, orderBy("manifest.cashAdjustment", "desc"), orderBy("timestamp", "desc"))
+                : query(proposalsRef, orderBy("timestamp", "desc"));
+
+            unsubProposals = onSnapshot(q, (snap) => {
+                const props = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                setProposals(props);
+                setLoadingProposals(false);
+            }, (err) => {
+                console.error("Proposals Sync Error:", err);
                 setLoadingProposals(false);
             });
         }
@@ -112,7 +122,7 @@ export default function PublicOrderView() {
             unsubConfig();
             if (unsubProposals) unsubProposals();
         };
-    }, [id, isOwner]);
+    }, [id, isOwner, order?.type]);
 
     // Handle incoming buy intents via URL params
     useEffect(() => {
@@ -578,6 +588,183 @@ export default function PublicOrderView() {
                 )}
 
                 {/* Price & Negotiation Visibility (TAREA 4) */}
+                {/* === AUCTION ROOM DUAL LAYOUT (Protocol V25.3) === */}
+                {order.type === 'auction' ? (
+                    <div className="mt-12 grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        {/* LEFT PANEL: The Item Card */}
+                        <div className="space-y-6">
+                            <div className="relative group rounded-[3rem] overflow-hidden bg-[#0A0A0A] border border-white/10 shadow-2xl transition-all">
+                                {coverImage ? (
+                                    <img src={coverImage} className="w-full aspect-square object-cover transition-transform duration-700 group-hover:scale-110" alt="" />
+                                ) : (
+                                    <div className="w-full aspect-square flex items-center justify-center bg-white/[0.02]">
+                                        <Disc className="w-24 h-24 text-white/5 animate-pulse" />
+                                    </div>
+                                )}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-60" />
+                                
+                                <div className="absolute top-6 left-6 right-6 flex justify-between items-start pointer-events-none">
+                                    <div className="px-4 py-2 bg-black/60 backdrop-blur-md border border-white/10 rounded-2xl flex items-center gap-2">
+                                        <Clock className="w-4 h-4 text-primary animate-pulse" />
+                                        {(() => {
+                                            const now = Date.now();
+                                            const endDate = order.auction_end_date?.toMillis ? order.auction_end_date.toMillis() : new Date(order.auction_end_date).getTime();
+                                            const isFinished = now > endDate;
+                                            return (
+                                                <span className={`text-xs font-black uppercase tracking-widest ${isFinished ? 'text-red-400' : 'text-white'}`}>
+                                                    {isFinished ? 'CERRADA' : 'EN VIVO'}
+                                                </span>
+                                            );
+                                        })()}
+                                    </div>
+                                    <div className="px-4 py-2 bg-primary text-black rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-primary/20">
+                                        Subasta
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="p-8 bg-white/[0.03] border border-white/10 rounded-[2.5rem] space-y-4">
+                                <div className="flex flex-col">
+                                    <h2 className="text-4xl font-display font-black text-white uppercase tracking-tighter leading-none">{displayAlbum || 'Sin Título'}</h2>
+                                    <h3 className="text-xl font-bold text-gray-500 uppercase tracking-widest mt-2">{displayArtist || 'Varios Artistas'}</h3>
+                                </div>
+                                <div className="flex flex-wrap gap-2 pt-4">
+                                    <span className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black text-gray-400 uppercase tracking-widest">{format}</span>
+                                    <span className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black text-gray-400 uppercase tracking-widest">{condition}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* RIGHT PANEL: Interaction Console */}
+                        <div className="space-y-6">
+                            {order.status === 'accepted' ? (
+                                <div className="h-full flex flex-col justify-center">
+                                    <div className="p-12 text-center space-y-4 bg-emerald-500/5 border border-dashed border-emerald-500/20 rounded-[3rem]">
+                                        <Trophy className="w-16 h-16 text-emerald-400 mx-auto" />
+                                        <h4 className="text-3xl font-display font-black text-white uppercase tracking-tighter">Subasta Adjudicada</h4>
+                                        <p className="text-sm font-bold text-gray-500 uppercase tracking-widest">Coordinando entrega en el chat inferior</p>
+                                    </div>
+                                </div>
+                            ) : isOwner ? (
+                                /* SELLER EXPERIENCE */
+                                <div className="flex flex-col h-full bg-[#0E0E0E] border border-white/10 rounded-[3rem] overflow-hidden shadow-2xl">
+                                    <div className="p-8 border-b border-white/5 flex items-center justify-between">
+                                        <h4 className="text-xl font-display font-black text-white uppercase tracking-tight">Panel de Martillero</h4>
+                                        <div className="flex items-center gap-2">
+                                            <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                                            <span className="text-[10px] font-black text-primary uppercase tracking-widest">En Vivo</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex-1 overflow-y-auto p-6 space-y-4 min-h-[400px]">
+                                        {loadingProposals ? (
+                                            <div className="h-full flex flex-col items-center justify-center space-y-4 opacity-50">
+                                                <Clock className="w-8 h-8 text-primary animate-spin" />
+                                                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Escaneando pujas...</p>
+                                            </div>
+                                        ) : proposals.length === 0 ? (
+                                            <div className="h-full flex flex-col items-center justify-center space-y-6 opacity-30 text-center px-8">
+                                                <Disc className="w-16 h-16 text-white" />
+                                                <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Esperando al primer postor del coliseo</p>
+                                            </div>
+                                        ) : (
+                                            proposals.map((prop, idx) => (
+                                                <motion.div 
+                                                    initial={{ opacity: 0, x: 20 }}
+                                                    animate={{ opacity: 1, x: 0 }}
+                                                    key={prop.id} 
+                                                    className={`p-5 rounded-[2rem] border transition-all ${idx === 0 ? 'bg-primary/10 border-primary/30 shadow-lg shadow-primary/5' : 'bg-white/[0.02] border-white/10'}`}
+                                                >
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center font-black text-white text-xs">
+                                                                {prop.senderName?.charAt(0)}
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">{idx === 0 ? 'OFERTA LÍDER' : 'ANTERIOR'}</p>
+                                                                <p className="text-white font-black">@{prop.senderName}</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <p className="text-2xl font-display font-black text-primary">
+                                                                ${prop.manifest?.cashAdjustment?.toLocaleString()}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        onClick={handleAcceptWinningBid}
+                                                        disabled={isExecuting}
+                                                        className="w-full mt-4 py-4 bg-white text-black rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-primary transition-all active:scale-95 shadow-xl shadow-black/20"
+                                                    >
+                                                        Aceptar Oferta y Cerrar
+                                                    </button>
+                                                </motion.div>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+                            ) : (
+                                /* BUYER EXPERIENCE */
+                                <div className="flex flex-col h-full bg-[#0E0E0E] border border-white/10 rounded-[3rem] overflow-hidden shadow-2xl">
+                                    <div className="p-8 border-b border-white/5 space-y-1">
+                                        <h4 className="text-xl font-display font-black text-white uppercase tracking-tight">Coliseo de Subastas</h4>
+                                        <p className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em]">Pujar en tiempo real</p>
+                                    </div>
+                                    <div className="p-8 space-y-8 flex-1">
+                                        <div className="p-6 bg-primary/10 border border-primary/20 rounded-[2rem] flex items-center justify-between shadow-inner">
+                                            <div className="space-y-1">
+                                                <p className="text-[9px] font-black text-primary/60 uppercase tracking-widest">Oferta más alta</p>
+                                                <p className="text-4xl font-display font-black text-white">
+                                                    ${(order.current_highest_bid || order.starting_price || 0).toLocaleString()}
+                                                </p>
+                                            </div>
+                                            <Flame className="w-12 h-12 text-primary opacity-20" />
+                                        </div>
+                                        <div className="space-y-4">
+                                            <div className="relative">
+                                                <span className="absolute left-6 top-1/2 -translate-y-1/2 text-2xl font-display font-black text-gray-600">$</span>
+                                                <input 
+                                                    type="number"
+                                                    placeholder={`Superar $${(order.current_highest_bid || order.starting_price || 0).toLocaleString()}`}
+                                                    value={offerAmount}
+                                                    onChange={(e) => setOfferAmount(e.target.value)}
+                                                    className="w-full bg-white/[0.03] border border-white/10 rounded-2xl py-6 pl-12 pr-6 text-2xl font-display font-black text-white outline-none focus:border-primary transition-all placeholder:text-gray-800"
+                                                />
+                                            </div>
+                                            <button 
+                                                onClick={async () => {
+                                                    if (!user) { setShowLoginDrawer(true); return; }
+                                                    if (!dbUser?.username) { setShowIdentityGuard(true); return; }
+                                                    const amount = parseFloat(offerAmount);
+                                                    const currentMin = order.current_highest_bid || order.starting_price || 0;
+                                                    if (isNaN(amount) || (order.current_highest_bid ? amount <= currentMin : amount < currentMin)) {
+                                                        alert(`La puja debe superar los $${currentMin.toLocaleString()}`);
+                                                        return;
+                                                    }
+                                                    setIsExecuting(true);
+                                                    showLoading("Enviando Puja...");
+                                                    try {
+                                                        await tradeService.submitBid(id!, user.uid, amount, dbUser.username);
+                                                        setOfferAmount("");
+                                                    } catch (err: any) {
+                                                        alert(err.message || "Error al pujar.");
+                                                    } finally {
+                                                        setIsExecuting(false);
+                                                        hideLoading();
+                                                    }
+                                                }}
+                                                disabled={isExecuting}
+                                                className="w-full py-6 bg-primary text-black rounded-2xl font-black uppercase text-sm tracking-[0.2em] shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
+                                            >
+                                                {isExecuting ? 'Procesando...' : 'Elevar Puja'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                ) : (
+                    /* ORIGINAL DIRECT SALE / EXCHANGE UI (LOCKED IN WRAPPER) */
                 <div className="space-y-6 pt-6 border-t border-white/5">
                     <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 italic">{TEXTS.global.common.negotiationSummary}</h3>
 
@@ -633,7 +820,9 @@ export default function PublicOrderView() {
                                 </div>
                             );
                         })()}
+                        </div>
                     </div>
+                )}
 
                     {/* === P2P COORDINATION CHAT (Protocol V24.6) === */}
                     {(() => {
