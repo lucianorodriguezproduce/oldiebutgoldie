@@ -48,12 +48,13 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
     const isExchange = order?.type === 'exchange';
     const isAuction = order?.type === 'auction';
     const isAdminNegotiation = order?.type === 'admin_negotiation';
-    const isPurchase = order?.type === 'direct_sale' || (isAdminNegotiation && order.manifest?.requestedItems?.length > 0 && order.manifest?.offeredItems?.length === 0);
+    const isDirectSaleP2P = order?.type === 'direct_sale';
+    const isPurchase = isDirectSaleP2P || (isAdminNegotiation && order.manifest?.requestedItems?.length > 0 && order.manifest?.offeredItems?.length === 0);
     const isSale = order?.type === 'admin_negotiation' && order.manifest?.offeredItems?.length > 0;
 
     const orderIntent = (order && (order.intent || order.details?.intent))
         ? (order.intent || order.details.intent)
-        : (isPurchase ? 'COMPRAR' : isExchange ? 'INTERCAMBIO' : isAuction ? 'SUBASTA' : 'VENDER');
+        : (isDirectSaleP2P ? 'VENDER' : isPurchase ? 'COMPRAR' : isExchange ? 'INTERCAMBIO' : isAuction ? 'SUBASTA' : 'VENDER');
 
     const orderStatus = order?.status || 'pending';
     const orderType = isAdminNegotiation ? (isSale ? 'sell' : 'buy') : (order?.type || 'buy');
@@ -360,7 +361,7 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                                 {isHot && <Flame className="h-3 w-3 ml-0.5" />}
                             </span>
                         )}
-                        {(isBatch || order.is_admin_offer) && (
+                        {(isBatch || order.is_admin_offer || isDirectSaleP2P) && (
                             order.is_admin_offer || order.user_id === 'MKPlxxi9JENQt0hS3V1QNeF8oOS2' || order.user_id === 'oldiebutgoldie' || isAdminEmail(order.user_email) ? (
                                 <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-primary/20 to-primary/40 border border-primary/50 text-primary text-[9px] font-black uppercase tracking-widest shadow-[0_0_10px_rgba(255,184,0,0.2)]">
                                     {TEXTS.global.badges.storeObg}
@@ -390,10 +391,10 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 md:gap-3 mt-1">
-                        <span className={`px-2 md:px-3 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest border ${isExchange ? "bg-violet-500/10 text-violet-400 border-violet-500/20" : intent.includes("COMPRAR") ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-secondary/10 text-secondary border-secondary/20"
+                        <span className={`px-2 md:px-3 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest border ${isExchange ? "bg-violet-500/10 text-violet-400 border-violet-500/20" : orderIntent.includes("COMPRAR") ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-secondary/10 text-secondary border-secondary/20"
                             }`}>
                             {isExchange && <Handshake className="w-3 h-3 inline mr-1" />}
-                            {intent}
+                            {orderIntent}
                         </span>
                         {!isBatch && (
                             <>
@@ -410,7 +411,7 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                                 isAuction ? 'bg-orange-500/10 border border-orange-500/20 text-orange-400' : 'bg-primary/10 border border-primary/20 text-primary'
                             }`}>
                                 {isAuction ? <Flame className="h-4 w-4" /> : <DollarSign className="h-4 w-4" />}
-                                {canSeePrice ? (
+                                {canSeePrice || isDirectSaleP2P ? (
                                     <>
                                         <span className="text-[10px] opacity-50 mr-1">{isAuction ? (order.current_highest_bid ? 'PUJA ACTUAL:' : 'INICIO:') : ''}</span>
                                         {`${(order.details?.currency || order.currency || 'ARS') === "USD" ? "US$" : "$"} ${(order.current_highest_bid || order.totalPrice || order.details?.price || order.starting_price || 0).toLocaleString()}`}
@@ -486,7 +487,7 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                         )
                     ) : (
                         /* BUY BUTTON (Standard) */
-                        context === 'public' && (order.is_admin_offer || isInventoryItem) && status !== 'completed' && status !== 'venta_finalizada' && status !== 'cancelled' && (
+                        context === 'public' && (order.is_admin_offer || isInventoryItem || isDirectSaleP2P) && status !== 'completed' && status !== 'venta_finalizada' && status !== 'cancelled' && (
                             <Link
                                 to={isInventoryItem ? `/album/${order.id}` : `/orden/${order.id}?action=buy`}
                                 onClick={(e) => e.stopPropagation()}

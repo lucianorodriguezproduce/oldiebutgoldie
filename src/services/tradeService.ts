@@ -83,7 +83,7 @@ const bateaToLegacy = async (trade: any) => {
             cover_image: firstItem.cover_image,
             price: trade.manifest?.cashAdjustment || 0,
             currency: "ARS",
-            intent: "COMPRAR" // Por defecto en Trades por ahora
+            intent: trade.type === 'direct_sale' ? "VENDER" : "COMPRAR"
         },
         // Inyectar metadatos para OrderCard
         artist: firstItem.artist,
