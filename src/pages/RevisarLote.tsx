@@ -15,7 +15,6 @@ import { TEXTS } from "@/constants/texts";
 import { inventoryService } from "@/services/inventoryService";
 import { tradeService } from "@/services/tradeService";
 import { userAssetService } from "@/services/userAssetService";
-import { purchaseRequestService } from "@/services/purchaseRequestService";
 import { discogsService } from "@/lib/discogs";
 import { ADMIN_UID } from "@/constants/admin";
 import { useEffect as useReactEffect } from "react";
@@ -120,34 +119,47 @@ export default function RevisarLote() {
                     createdDocs.push(invTradeId);
                 }
 
-                // Discogs items in a "COMPRAR" context also become Archived Inventory + Purchase Requests
-                for (const item of discogsItems) {
-                    const itemId = item.id.toString();
-                    let fullData: any = item;
-                    try {
-                        const details = item.type === 'master'
-                            ? await discogsService.getMasterDetails(itemId)
-                            : await discogsService.getReleaseDetails(itemId);
-                        fullData = { ...item, ...details };
-                    } catch (e) {
-                        console.warn(`[Lote-Hydration] Falló hidratación para ${item.title} (ID: ${itemId}, Type: ${item.type}), usando data del lote.`);
-                    }
+                if (discogsItems.length > 0) {
+                    const importedDiscogsIds = await Promise.all(discogsItems.map(async (item) => {
+                        const itemId = item.id.toString();
+                        let fullData: any = item;
+                        try {
+                            const details = item.type === 'master'
+                                ? await discogsService.getMasterDetails(itemId)
+                                : await discogsService.getReleaseDetails(itemId);
+                            fullData = { ...item, ...details };
+                        } catch (e) {
+                            console.warn(`[Lote-Hydration] Falló hidratación para ${item.title} (ID: ${itemId}, Type: ${item.type}), usando data del lote.`);
+                        }
 
-                    const invId = await inventoryService.importFromDiscogs(fullData as any, {
-                        stock: 0,
-                        price: item.price || 0,
-                        condition: item.condition,
-                        status: 'archived'
-                    });
+                        return await inventoryService.importFromDiscogs(fullData as any, {
+                            stock: 0,
+                            price: item.price || 0,
+                            condition: item.condition,
+                            status: 'archived'
+                        });
+                    }));
 
-                    const reqId = await purchaseRequestService.createRequest(uid, currentUser.email || "", currentUser.displayName || "", { ...fullData, internalInventoryId: invId }, transactionId);
-                    createdDocs.push(reqId);
+                    const discogsTradeId = await tradeService.createTrade({
+                        participants: { senderId: uid, receiverId: ADMIN_UID },
+                        manifest: {
+                            requestedItems: importedDiscogsIds,
+                            offeredItems: [],
+                            cashAdjustment: totalEstimated,
+                            currency: 'ARS'
+                        },
+                        type: 'admin_negotiation',
+                        isPublicOrder: false,
+                        tradeOrigin: 'DISCOGS',
+                        transactionId
+                    } as any);
+                    createdDocs.push(discogsTradeId);
                 }
             }
 
-            // 2. Logic for PEDIR (External items)
+            // 2. Logic for PEDIR (External items - Unified via Trades V23.5)
             if (action === 'PEDIR') {
-                for (const item of discogsItems) {
+                const importedDiscogsIds = await Promise.all(discogsItems.map(async (item) => {
                     const itemId = item.id.toString();
                     let fullData: any = item;
                     try {
@@ -160,16 +172,28 @@ export default function RevisarLote() {
                     }
 
                     // Importar a inventario (archived) para que "viaje al archivo" (Protocolo V21.1)
-                    const invId = await inventoryService.importFromDiscogs(fullData as any, {
+                    return await inventoryService.importFromDiscogs(fullData as any, {
                         stock: 0,
                         price: item.price || 0,
                         condition: item.condition,
                         status: 'archived'
                     });
+                }));
 
-                    const reqId = await purchaseRequestService.createRequest(uid, currentUser.email || "", currentUser.displayName || "", { ...fullData, internalInventoryId: invId }, transactionId);
-                    createdDocs.push(reqId);
-                }
+                const tradeId = await tradeService.createTrade({
+                    participants: { senderId: uid, receiverId: ADMIN_UID },
+                    manifest: {
+                        requestedItems: importedDiscogsIds,
+                        offeredItems: [],
+                        cashAdjustment: calculatedTotal,
+                        currency: 'ARS'
+                    },
+                    type: 'admin_negotiation',
+                    isPublicOrder: false,
+                    tradeOrigin: 'DISCOGS',
+                    transactionId
+                } as any);
+                createdDocs.push(tradeId);
             }
 
             // 3. Logic for OFRECER (C2B Negotiation)

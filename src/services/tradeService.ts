@@ -100,23 +100,9 @@ export const tradeService = {
         // This allows the same store item to be in multiple pending exchange proposals.
         const allItems = [...(trade.manifest?.requestedItems || []), ...(trade.manifest?.offeredItems || [])];
 
-        const activeTradesQuery = query(
-            collection(db, COLLECTION_NAME),
-            where("status", "in", ["pending", "counter_offer", "accepted"])
-        );
-
-        const activeSnap = await getDocs(activeTradesQuery);
-        const doubleBooking = activeSnap.docs.some(doc => {
-            const data = doc.data() as Trade;
-            // Only block if an existing DIRECT SALE already locks these items
-            if (data.type !== 'direct_sale') return false;
-            const existingItems = [...(data.manifest?.requestedItems || []), ...(data.manifest?.offeredItems || [])];
-            return allItems.some(id => existingItems.includes(id));
-        });
-
-        if (doubleBooking) {
-            throw new Error("ASSET_LOCKED: Uno o más ítems ya están en una venta directa activa.");
-        }
+        // --- ASSET LOCKING ---
+        // Eliminated broad check that caused permission errors for non-admin users.
+        // resolveTrade() performs atomic stock validation during resolution.
 
         // --- TYPE DETERMINATION ---
         // Direct sale ONLY if origin is INVENTORY and intent is buy (no offeredItems)
