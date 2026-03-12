@@ -1228,84 +1228,87 @@ export default function PublicOrderView() {
                             );
                         }
 
-                        if (!['cancelled'].includes(order.status)) {
-                            return (
-                                <div className="mt-8 p-6 md:p-10 bg-gradient-to-br from-primary/10 to-secondary/10 border border-primary/30 rounded-[3rem] flex flex-col items-center gap-6 justify-center shadow-[0_0_50px_rgba(255,184,0,0.1)] transition-all animate-in fade-in zoom-in duration-500">
-                                    <div className="text-center space-y-2">
-                                        <h4 className="text-2xl md:text-3xl font-display font-black text-white uppercase tracking-tighter">¡Lo Quiero!</h4>
-                                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest max-w-xs mx-auto">Asegura esta pieza única antes que otro coleccionista.</p>
-                                    </div>
+                {/* New Buying Zone V24 - Redesigned & Centered */}
+                <div className="flex flex-col items-center justify-center py-12 px-4 space-y-8 max-w-lg mx-auto scroll-mt-32" id="buy-section">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        whileInView={{ opacity: 1, scale: 1 }}
+                        viewport={{ once: true }}
+                        className="w-full text-center space-y-4"
+                    >
+                        <h2 className="text-3xl md:text-5xl font-display font-black text-white italic tracking-tighter uppercase">
+                            ¡Lo Quiero!
+                        </h2>
+                        <p className="text-gray-400 font-medium tracking-wide text-sm md:text-base">
+                            Este ítem está disponible para compra directa e inmediata.
+                        </p>
+                    </motion.div>
 
-                                    {user ? (
-                                        <div className="flex flex-col sm:flex-row w-full max-w-md gap-3">
-                                            {showOfferInput ? (
-                                                <div className="flex items-center gap-2 bg-black/40 p-2 rounded-2xl border border-white/10 flex-1">
-                                                    <span className="text-gray-500 font-bold pl-3">$</span>
-                                                    <input
-                                                        type="number"
-                                                        placeholder="Oferta"
-                                                        value={offerAmount}
-                                                        onChange={(e) => setOfferAmount(e.target.value)}
-                                                        className="bg-transparent border-none text-white font-black w-full focus:ring-0 outline-none placeholder:text-gray-600 text-sm"
-                                                        autoFocus
-                                                    />
-                                                    <button
-                                                        onClick={handleMakeOffer}
-                                                        disabled={!offerAmount}
-                                                        className="px-4 py-2 bg-secondary hover:bg-secondary/80 disabled:opacity-50 text-black font-black uppercase tracking-widest text-[10px] rounded-xl transition-all"
-                                                    >
-                                                        Enviar
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setShowOfferInput(false)}
-                                                        className="px-2 text-gray-500 hover:text-white transition-colors"
-                                                    >
-                                                        ✕
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                <>
-                                                    <button
-                                                        onClick={() => addItemFromInventory(order)}
-                                                        className={`flex-1 px-6 py-5 rounded-2xl border transition-all flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[11px] ${isInLote(order.id)
-                                                            ? 'bg-primary border-primary text-black shadow-lg shadow-primary/20'
-                                                            : 'border-primary/30 text-primary hover:bg-primary/10'
-                                                            }`}
-                                                    >
-                                                        {isInLote(order.id) ? (
-                                                            <><Check className="w-4 h-4" /> En el Lote</>
-                                                        ) : (
-                                                            <><Plus className="w-4 h-4" /> Añadir al Lote</>
-                                                        )}
-                                                    </button>
-
-                                                    <button
-                                                        onClick={handleQuickBuy}
-                                                        className="flex-[1.5] px-8 py-5 rounded-2xl bg-gradient-to-r from-primary to-secondary hover:from-primary/80 hover:to-secondary/80 text-black font-black uppercase tracking-widest text-xs shadow-xl shadow-secondary/20 hover:shadow-secondary/40 transition-all transform hover:-translate-y-1"
-                                                    >
-                                                        ¡Comprar Ahora!
-                                                    </button>
-                                                </>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        <div className="flex flex-col w-full max-w-md gap-4 items-center">
-                                            <div className="w-full text-center px-4 py-4 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-wider text-gray-400">
-                                                Inicia sesión para adquirir o proponer precio
-                                            </div>
-
-                                            <button
-                                                onClick={() => setShowLoginDrawer(true)}
-                                                disabled={isExecuting}
-                                                className={`w-full px-8 py-5 rounded-2xl bg-gradient-to-r from-primary to-secondary text-black font-black uppercase tracking-widest text-xs shadow-xl shadow-secondary/20 transition-all transform ${isExecuting ? 'opacity-50 cursor-not-allowed' : 'hover:from-primary/80 hover:to-secondary/80 hover:shadow-secondary/40 hover:-translate-y-1'}`}
-                                            >
-                                                {isExecuting ? 'Procesando...' : '¡Anotarme para Comprar!'}
-                                            </button>
-                                        </div>
-                                    )}
+                    {/* Price Card */}
+                    <div className="w-full bg-gradient-to-br from-white/[0.05] to-transparent border border-white/10 rounded-[2.5rem] p-8 md:p-12 flex flex-col items-center justify-center space-y-6 shadow-2xl backdrop-blur-xl group hover:border-primary/30 transition-all duration-500">
+                        {canSeePrice || order?.isPublicOrder ? (
+                            <div className="flex flex-col items-center">
+                                <span className="text-xs font-black text-primary uppercase tracking-[0.3em] mb-2 opacity-70">Precio Final</span>
+                                <div className="text-5xl md:text-7xl font-display font-black text-white tracking-tighter group-hover:scale-105 transition-transform duration-500">
+                                    <span className="text-primary mr-1">
+                                        {(order?.currency || order?.details?.currency || 'ARS') === "USD" ? "US$" : "$"}
+                                    </span>
+                                    {(order?.totalPrice || order?.details?.price || 0).toLocaleString()}
                                 </div>
-                            );
-                        }
+                            </div>
+                        ) : (
+                            <div className="py-4 px-8 bg-white/5 rounded-2xl border border-white/10 flex items-center gap-2">
+                                <ShieldCheck className="w-5 h-5 text-primary" />
+                                <span className="text-sm font-bold text-gray-400 uppercase tracking-widest">Precio por Privado</span>
+                            </div>
+                        )}
+
+                        <div className="flex flex-col sm:flex-row w-full gap-4 px-4">
+                            {user ? (
+                                <button
+                                    onClick={handleBuyAction}
+                                    className="w-full group relative overflow-hidden rounded-2xl shadow-xl shadow-primary/20 hover:shadow-primary/40 transition-all active:scale-95"
+                                >
+                                    <div className="absolute inset-0 bg-gradient-to-r from-primary via-secondary to-primary bg-[length:200%_auto] animate-shimmer" />
+                                    <div className="relative py-5 flex items-center justify-center gap-3">
+                                        <ShoppingBag className="w-6 h-6 text-black" />
+                                        <span className="text-black font-black text-lg uppercase tracking-widest">{TEXTS.global.common.addToBatch}</span>
+                                    </div>
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={() => setShowLoginDrawer(true)}
+                                    className="w-full py-5 rounded-2xl bg-gradient-to-r from-primary to-secondary text-black font-black uppercase tracking-widest text-sm shadow-xl shadow-secondary/20 hover:shadow-secondary/40 transition-all active:scale-95"
+                                >
+                                    Inicia sesión para Comprar
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-4 text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em] opacity-40">
+                        <div className="h-px w-8 bg-white/10" />
+                        Transacción Segura via OBG
+                        <div className="h-px w-8 bg-white/10" />
+                    </div>
+                </div>
+
+                {/* Mobile Sticky Buy Bar V24.1 (Restored) */}
+                <div className="lg:hidden fixed bottom-0 left-0 right-0 z-[60] p-4 bg-gradient-to-t from-black via-black/90 to-transparent pointer-events-none">
+                    <motion.div
+                        initial={{ y: 100 }}
+                        animate={{ y: 0 }}
+                        className="max-w-md mx-auto pointer-events-auto"
+                    >
+                        <button
+                            onClick={handleBuyAction}
+                            className="w-full bg-primary text-black py-5 rounded-2xl font-black uppercase tracking-widest shadow-2xl flex items-center justify-center gap-3 active:scale-95 transition-transform"
+                        >
+                            <ShoppingBag className="w-5 h-5" />
+                            {TEXTS.global.common.addToBatch}
+                        </button>
+                    </motion.div>
+                </div>
                         return null;
                     })()}
 

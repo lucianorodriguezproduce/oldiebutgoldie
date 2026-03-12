@@ -147,7 +147,12 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
 
     // Ownership check for privacy
     const isOwner = user?.uid === order.user_id;
-    const canSeePrice = isAdmin || isOwner || order.is_admin_offer;
+    // Price is visible if:
+    // 1. Admin
+    // 2. Owner
+    // 3. Admin offers (store items)
+    // 4. Public orders (P2P Auctions/Sales)
+    const canSeePrice = isAdmin || isOwner || order.is_admin_offer || order.isPublicOrder === true;
 
 
     const getStatusBadge = (status: string) => {
@@ -211,7 +216,11 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
 
     // Fallback intent for legacy admin orders
     const isSellerOfferLegacy = order.admin_offer_price || order.adminPrice;
-    const intent = isExchange ? 'INTERCAMBIO' : (isBatch ? (orderType === 'buy' ? TEXTS.global.badges.buying : TEXTS.global.badges.forSale) : (orderIntent || (isSellerOfferLegacy ? 'VENDER' : 'COMPRAR')));
+    
+    // Explicitly handle P2P direct sales as 'VENDER' (Sell)
+    const normalizedIntent = isDirectSaleP2P ? 'VENDER' : orderIntent;
+    
+    const intent = isExchange ? 'INTERCAMBIO' : (isBatch ? (orderType === 'buy' ? TEXTS.global.badges.buying : TEXTS.global.badges.forSale) : (normalizedIntent || (isSellerOfferLegacy ? 'VENDER' : 'COMPRAR')));
     const format = isBatch ? 'Varios Formatos' : (order.details?.format || 'N/A');
     const condition = isBatch ? 'Varias Condiciones' : (order.details?.condition || 'N/A');
     const status = orderStatus;
