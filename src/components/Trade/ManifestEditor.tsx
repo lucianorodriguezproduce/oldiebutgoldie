@@ -44,6 +44,14 @@ export default function ManifestEditor({
     const resolveItems = async () => {
         const allIds = [...manifest.offeredItems, ...manifest.requestedItems];
         const details: Record<string, any> = { ...itemDetails };
+        
+        // --- PHASE 0: Use cached items from manifest if available ---
+        if (manifest.items && Array.isArray(manifest.items)) {
+            manifest.items.forEach((it: any) => {
+                const id = it.id || it.userAssetId || it.id?.toString();
+                if (id) details[id] = it;
+            });
+        }
 
         await Promise.all(allIds.map(async id => {
             if (!details[id]) {

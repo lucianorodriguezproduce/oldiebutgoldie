@@ -152,7 +152,13 @@ export default function TradeConsole({ trade, onUpdate, onClose }: TradeConsoleP
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <h3 className="text-2xl font-black text-white uppercase tracking-tighter">
-                        {isEditing ? "Editando Propuesta" : "Detalle de Propuesta"}
+                        {isEditing ? (
+                            "Editando Propuesta"
+                        ) : (
+                            trade.manifest.requestedItems.length > 0 && trade.manifest.offeredItems.length === 0 ? "Detalle de Compra" :
+                            trade.manifest.offeredItems.length > 0 && trade.manifest.requestedItems.length === 0 ? "Detalle de Venta" :
+                            "Detalle de Propuesta"
+                        )}
                     </h3>
                     {getStatusBadge(trade.status)}
                 </div>

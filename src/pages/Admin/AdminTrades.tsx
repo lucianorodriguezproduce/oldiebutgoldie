@@ -281,35 +281,48 @@ export default function AdminTrades() {
                         {trades.filter(t => {
                             const type = t.type || 'exchange';
                             return activeView === 'exchange' ? type === 'exchange' : (type === 'direct_sale' || type === 'admin_negotiation');
-                        }).map(trade => (
-                            <motion.div
-                                key={trade.id}
-                                layoutId={trade.id}
-                                onClick={() => setSelectedTrade(trade)}
-                                className={`group relative bg-white/[0.02] border rounded-[2rem] overflow-hidden transition-all cursor-pointer p-6 space-y-6 ${selectedTrade?.id === trade.id ? 'border-primary border-2 shadow-lg shadow-primary/10' : 'border-white/5 hover:border-primary/30'
-                                    }`}
-                            >
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2.5 bg-white/5 rounded-xl">
-                                            {trade.type === 'direct_sale' ? <ShoppingBag className="h-4 w-4 text-emerald-400" /> : <User className="h-4 w-4 text-gray-400" />}
+                        }).map(trade => {
+                            const isPurchase = trade.manifest.requestedItems.length > 0 && trade.manifest.offeredItems.length === 0;
+                            const isSale = trade.manifest.offeredItems.length > 0 && trade.manifest.requestedItems.length === 0;
+                            const isExchange = trade.manifest.requestedItems.length > 0 && trade.manifest.offeredItems.length > 0;
+
+                            return (
+                                <motion.div
+                                    key={trade.id}
+                                    layoutId={trade.id}
+                                    onClick={() => setSelectedTrade(trade)}
+                                    className={`group relative bg-white/[0.02] border rounded-[2rem] overflow-hidden transition-all cursor-pointer p-6 space-y-6 ${selectedTrade?.id === trade.id ? 'border-primary border-2 shadow-lg shadow-primary/10' : 'border-white/5 hover:border-primary/30'
+                                        }`}
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2.5 bg-white/5 rounded-xl">
+                                                {trade.type === 'direct_sale' || isPurchase ? (
+                                                    <ShoppingBag className="h-4 w-4 text-emerald-400" />
+                                                ) : isSale ? (
+                                                    <DollarSign className="h-4 w-4 text-orange-400" />
+                                                ) : (
+                                                    <User className="h-4 w-4 text-gray-400" />
+                                                )}
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest leading-none">
+                                                    {trade.type === 'direct_sale' || isPurchase ? 'COMPRA (PEDIDO)' : isSale ? 'VENTA (OFERTA)' : 'INTERCAMBIO'}
+                                                </span>
+                                                <span className="text-xs font-bold text-white truncate max-w-[120px]">
+                                                    {(trade.participants.senderId || 'Anon').slice(-8)}
+                                                </span>
+                                            </div>
                                         </div>
-                                        <div className="flex flex-col">
-                                            <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest leading-none">
-                                                {trade.type === 'direct_sale' ? 'Comprador' : 'Proponente'}
-                                            </span>
-                                            <span className="text-xs font-bold text-white truncate max-w-[120px]">{(trade.participants.senderId || 'Anon').slice(-8)}</span>
-                                        </div>
+                                        {getStatusBadge(trade.status)}
+                                        <button
+                                            onClick={(e) => trade.id && handleDeleteTrade(e, trade.id)}
+                                            className="p-2 hover:bg-red-500/20 text-gray-700 hover:text-red-500 rounded-xl transition-all"
+                                            title="Eliminar Trade"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </button>
                                     </div>
-                                    {getStatusBadge(trade.status)}
-                                    <button
-                                        onClick={(e) => trade.id && handleDeleteTrade(e, trade.id)}
-                                        className="p-2 hover:bg-red-500/20 text-gray-700 hover:text-red-500 rounded-xl transition-all"
-                                        title="Eliminar Trade"
-                                    >
-                                        <Trash2 className="h-4 w-4" />
-                                    </button>
-                                </div>
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-1">
@@ -345,10 +358,14 @@ export default function AdminTrades() {
                                             <span>TURNO DEL CLIENTE</span>
                                         )}
                                     </div>
-                                    <ChevronRight className="h-4 w-4 text-gray-700 group-hover:text-primary transition-colors" />
+                                    <div className="flex items-center gap-2 text-primary group-hover:translate-x-1 transition-transform">
+                                        <span className="text-[10px] font-black uppercase tracking-widest">Ver Detalle</span>
+                                        <ChevronRight className="h-4 w-4" />
+                                    </div>
                                 </div>
                             </motion.div>
-                        ))}
+                        );
+                    })}
                     </div>
                 )}
             </div>

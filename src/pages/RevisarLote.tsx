@@ -199,6 +199,7 @@ export default function RevisarLote() {
             // 3. Logic for OFRECER (C2B Negotiation)
             if (action === 'OFRECER') {
                 const allInventoryIds = inventoryItems.map(i => i.id.toString());
+                const hydratedItems: any[] = [];
 
                 // For Discogs, we must import them first as archived inventory to use in trade
                 const importedDiscogsIds = await Promise.all(discogsItems.map(async (item) => {
@@ -209,8 +210,14 @@ export default function RevisarLote() {
                             ? await discogsService.getMasterDetails(itemId)
                             : await discogsService.getReleaseDetails(itemId);
                         fullData = { ...item, ...details };
+                        hydratedItems.push({
+                            ...fullData,
+                            userAssetId: itemId,
+                            price: item.price || 0
+                        });
                     } catch (e) {
                         console.warn(`[Lote-Hydration] Falló hidratación para ${item.title} (ID: ${itemId}, Type: ${item.type}), usando data del lote.`);
+                        hydratedItems.push(item);
                     }
                     return await inventoryService.importFromDiscogs(fullData as any, { stock: 0, price: item.price || 0, condition: item.condition, status: 'archived' });
                 }));
@@ -218,10 +225,11 @@ export default function RevisarLote() {
                 const tradeId = await tradeService.createTrade({
                     participants: { senderId: uid, receiverId: ADMIN_UID },
                     manifest: {
-                        requestedItems: [...allInventoryIds, ...importedDiscogsIds],
-                        offeredItems: [],
+                        requestedItems: [],
+                        offeredItems: [...allInventoryIds, ...importedDiscogsIds],
                         cashAdjustment: Number(totalPrice) || calculatedTotal,
-                        currency: currency || 'ARS'
+                        currency: currency || 'ARS',
+                        items: hydratedItems // Ensure items are visible to admin
                     },
                     type: 'admin_negotiation',
                     isPublicOrder: false,
