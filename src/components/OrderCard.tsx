@@ -373,9 +373,13 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                             </span>
                         )}
                         {(isBatch || order.is_admin_offer || isDirectSaleP2P) && (
-                            order.is_admin_offer || order.user_id === 'MKPlxxi9JENQt0hS3V1QNeF8oOS2' || order.user_id === 'oldiebutgoldie' || isAdminEmail(order.user_email) ? (
+                            (order.is_admin_offer || order.user_id === 'MKPlxxi9JENQt0hS3V1QNeF8oOS2' || order.user_id === 'oldiebutgoldie' || isAdminEmail(order.user_email)) && !isDirectSaleP2P ? (
                                 <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-primary/20 to-primary/40 border border-primary/50 text-primary text-[9px] font-black uppercase tracking-widest shadow-[0_0_10px_rgba(255,184,0,0.2)]">
                                     {TEXTS.global.badges.storeObg}
+                                </span>
+                            ) : isDirectSaleP2P ? (
+                                <span className="px-2 py-0.5 rounded-full bg-primary/20 border border-primary/50 text-primary text-[9px] font-black uppercase tracking-widest shadow-lg shadow-primary/10">
+                                    VENTA DIRECTA
                                 </span>
                             ) : (
                                 <span className="px-2 py-0.5 rounded-full bg-slate-500/10 border border-slate-500/30 text-slate-400 text-[9px] font-black uppercase tracking-widest">

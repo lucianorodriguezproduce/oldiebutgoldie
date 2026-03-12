@@ -635,66 +635,77 @@ export default function PublicOrderView() {
                         })()}
                     </div>
 
-                    {/* === AUCTION TRADE ACTIONS (Protocol V24.5) === */}
-                    {order.type === 'auction' && (() => {
-                        const now = Date.now();
-                        const endDate = order.auction_end_date?.toMillis ? order.auction_end_date.toMillis() : new Date(order.auction_end_date).getTime();
-                        const isFinished = now > endDate;
+                    {/* === P2P COORDINATION CHAT (Protocol V24.6) === */}
+                    {(() => {
                         const isAccepted = order.status === 'accepted';
-                        const isWinner = user?.uid === order.highest_bidder_uid;
-                        const hasWinner = !!order.highest_bidder_uid;
+                        const isP2P = order.isPublicOrder === true;
+                        
+                        // Participants: 
+                        // Auctions use highest_bidder_uid. 
+                        // Direct Sales use buyer_uid.
+                        const isBuyer = user?.uid === order.highest_bidder_uid || user?.uid === order.buyer_uid;
+                        const canChat = isOwner || isBuyer || isAdmin;
 
-                        if (isAccepted) {
-                            if (isOwner || isWinner || isAdmin) {
-                                return (
-                                    <div className="mt-8 space-y-6">
-                                        <div className="p-8 bg-emerald-500/5 border border-emerald-500/20 rounded-[2.5rem] flex flex-col items-center gap-4 text-center">
-                                            <Trophy className="w-12 h-12 text-emerald-400" />
-                                            <div>
-                                                <h4 className="text-2xl font-display font-black text-white uppercase tracking-tight">Subasta Adjudicada</h4>
-                                                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">
-                                                    {isOwner ? `Vendido a @${order.highest_bidder_name}` : `¡Es tuyo! Coordiná con el vendedor`}
-                                                </p>
-                                            </div>
-                                            <TradeChat 
-                                                tradeId={id!} 
-                                                currentUser={user} 
-                                                trade={order}
-                                                otherParticipantName={isOwner ? `@${order.highest_bidder_name || 'Comprador'}` : `@${order.user_name || 'Vendedor'}`} 
-                                            />
+                        if (isAccepted && isP2P && canChat) {
+                            return (
+                                <div className="mt-8 space-y-6">
+                                    <div className="p-8 bg-emerald-500/5 border border-emerald-500/20 rounded-[2.5rem] flex flex-col items-center gap-4 text-center">
+                                        <div className="flex items-center gap-3">
+                                            <Trophy className="w-8 h-8 text-emerald-400" />
+                                            <MessageCircle className="w-8 h-8 text-primary" />
                                         </div>
+                                        <div>
+                                            <h4 className="text-2xl font-display font-black text-white uppercase tracking-tight">Coordinación en Curso</h4>
+                                            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">
+                                                {isOwner ? `Vendido a @${order.highest_bidder_name || order.buyer_name || 'Comprador'}` : `¡Es tuyo! Coordiná con el vendedor`}
+                                            </p>
+                                        </div>
+                                        <TradeChat 
+                                            tradeId={id!} 
+                                            currentUser={user} 
+                                            trade={order}
+                                            otherParticipantName={isOwner ? `@${order.highest_bidder_name || order.buyer_name || 'Comprador'}` : `@${order.user_name || 'Vendedor'}`} 
+                                        />
+                                    </div>
+                                </div>
+                            );
+                        }
+
+                        // === LEGACY AUCTION HANDLERS (for unfinished auctions) ===
+                        if (order.type === 'auction') {
+                            const now = Date.now();
+                            const endDate = order.auction_end_date?.toMillis ? order.auction_end_date.toMillis() : new Date(order.auction_end_date).getTime();
+                            const isFinished = now > endDate;
+                            const hasWinner = !!order.highest_bidder_uid;
+
+                            if (isOwner && isFinished && !isAccepted && hasWinner) {
+                                return (
+                                    <div className="mt-8 p-8 bg-primary/10 border border-primary/30 rounded-[2.5rem] flex flex-col items-center gap-6 text-center shadow-2xl shadow-primary/10">
+                                        <div className="space-y-2">
+                                            <h4 className="text-2xl font-display font-black text-white uppercase tracking-tight">¡Subasta Finalizada!</h4>
+                                            <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">
+                                                Oferta Ganadora: <span className="text-primary">${order.current_highest_bid?.toLocaleString()}</span> por <span className="text-white">@{order.highest_bidder_name}</span>
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={handleAcceptWinningBid}
+                                            disabled={isExecuting}
+                                            className="w-full md:w-auto px-10 py-5 bg-primary text-black font-black uppercase tracking-widest text-sm rounded-2xl hover:scale-105 transition-all shadow-xl shadow-primary/20"
+                                        >
+                                            {isExecuting ? "Procesando..." : "Aceptar Oferta Ganadora"}
+                                        </button>
                                     </div>
                                 );
                             }
-                        }
 
-                        if (isOwner && isFinished && !isAccepted && hasWinner) {
-                            return (
-                                <div className="mt-8 p-8 bg-primary/10 border border-primary/30 rounded-[2.5rem] flex flex-col items-center gap-6 text-center shadow-2xl shadow-primary/10">
-                                    <div className="space-y-2">
-                                        <h4 className="text-2xl font-display font-black text-white uppercase tracking-tight">¡Subasta Finalizada!</h4>
-                                        <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">
-                                            Oferta Ganadora: <span className="text-primary">${order.current_highest_bid?.toLocaleString()}</span> por <span className="text-white">@{order.highest_bidder_name}</span>
-                                        </p>
+                            if (isFinished && !hasWinner && !isAccepted) {
+                                return (
+                                    <div className="mt-8 p-8 bg-white/5 border border-white/10 rounded-[2.5rem] flex flex-col items-center gap-3 text-center opacity-50">
+                                        <Disc className="w-8 h-8 text-white/20" />
+                                        <h4 className="text-xl font-display font-black text-white uppercase tracking-tight">Subasta Cerrada sin ofertas</h4>
                                     </div>
-                                    <button
-                                        onClick={handleAcceptWinningBid}
-                                        disabled={isExecuting}
-                                        className="w-full md:w-auto px-10 py-5 bg-primary text-black font-black uppercase tracking-widest text-sm rounded-2xl hover:scale-105 transition-all shadow-xl shadow-primary/20"
-                                    >
-                                        {isExecuting ? "Procesando..." : "Aceptar Oferta Ganadora"}
-                                    </button>
-                                </div>
-                            );
-                        }
-
-                        if (isFinished && !hasWinner && !isAccepted) {
-                            return (
-                                <div className="mt-8 p-8 bg-white/5 border border-white/10 rounded-[2.5rem] flex flex-col items-center gap-3 text-center opacity-50">
-                                    <Disc className="w-8 h-8 text-white/20" />
-                                    <h4 className="text-xl font-display font-black text-white uppercase tracking-tight">Subasta Cerrada sin ofertas</h4>
-                                </div>
-                            );
+                                );
+                            }
                         }
 
                         return null;

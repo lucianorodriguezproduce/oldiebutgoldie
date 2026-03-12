@@ -112,6 +112,10 @@ export const getCleanOrderMetadata = (order: any) => {
         order.thumb ||
         "https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png";
 
+    // 4. PRICE & CURRENCY EXTRACTION (New for P2P Sync)
+    const price = order.totalPrice || order.details?.price || order.manifest?.cashAdjustment || order.starting_price || 0;
+    const currency = order.currency || order.details?.currency || order.manifest?.currency || 'ARS';
+
     return {
         artist,
         album,
@@ -119,6 +123,9 @@ export const getCleanOrderMetadata = (order: any) => {
         condition,
         image: image.startsWith('http://') ? image.replace('http://', 'https://') : image,
         isBatch,
-        itemsCount: items.length
+        itemsCount: items.length,
+        price,
+        currency,
+        isP2P: !!order.isPublicOrder
     };
 };

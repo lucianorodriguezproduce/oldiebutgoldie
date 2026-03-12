@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useLoading } from '@/context/LoadingContext';
 import { LazyImage } from '@/components/ui/LazyImage';
+import { getCleanOrderMetadata } from '@/utils/orderMetadata';
 
 interface DirectPurchaseModalProps {
     isOpen: boolean;
@@ -22,19 +23,12 @@ export default function DirectPurchaseModal({ isOpen, onClose, order }: DirectPu
 
     if (!order) return null;
 
-    // Calculamos el precio con fallbacks profundos (V24.8)
-    // 1. totalPrice (Trade V2)
-    // 2. details.price (Trade Legacy)
-    // 3. price raíz (Inventory Item)
-    // 4. Suma de items
-    const price = order.totalPrice || 
-                  order.details?.price || 
-                  order.price ||
-                  order.items?.reduce((acc: number, item: any) => acc + (item.price || 0), 0) || 
-                  0;
-                  
-    const currency = order.currency || order.details?.currency || "ARS";
-    const image = order.thumbnailUrl || order.details?.cover_image || order.image;
+    // Calculamos metadatos con el helper centralizado (V24.9)
+    const meta = getCleanOrderMetadata(order);
+    const price = meta.price || 0;
+    const currency = meta.currency || "ARS";
+    const image = meta.image;
+    const { artist, album } = meta;
 
     const handleConfirm = async () => {
         if (!user || !dbUser?.username || isProcessing) return;
