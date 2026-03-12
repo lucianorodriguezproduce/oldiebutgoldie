@@ -156,5 +156,17 @@ export const userAssetService = {
         });
 
         return inventoryRef.id;
+    },
+
+    /**
+     * Obtiene la lista de usuarios que tienen al menos un item activo en su batea
+     */
+    async getUsersWithAssets(): Promise<any[]> {
+        const q = query(
+            collection(db, "users"),
+            where("stats.collectionItemCount", ">", 0)
+        );
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
     }
 };

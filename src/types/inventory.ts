@@ -71,13 +71,16 @@ export interface Trade {
         receiverId: string; // Default to Admin
     };
     manifest: TradeManifest;
-    status: "pending" | "accepted" | "counter_offer" | "completed" | "completed_unpaid" | "in_process" | "cancelled" | "resolved" | "rejected";
-    type: "direct_sale" | "exchange" | "admin_negotiation" | "p2p_market";
+    status: "pending" | "accepted" | "counter_offer" | "completed" | "completed_unpaid" | "in_process" | "cancelled" | "resolved" | "rejected" | "pending_publish_fee";
+    type: "direct_sale" | "exchange" | "admin_negotiation" | "p2p_market" | "auction";
     isPublicOrder?: boolean; // True if it should appear in the global market
     currentTurn: string; // UID of the user who must decide
     negotiationHistory: TradeManifest[]; // Previous versions of the manifest
     timestamp: any;
     transactionId?: string; // Links segmented orders from a mixed lote
+    // Protocol V24.2: Auction fields
+    auction_end_date?: any;
+    starting_price?: number;
 }
 
 export interface UserAsset {

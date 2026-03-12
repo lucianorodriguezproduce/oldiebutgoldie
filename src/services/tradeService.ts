@@ -116,8 +116,8 @@ export const tradeService = {
                 : hasNoOfferedItems; // Fallback: comportamiento legacy
 
         const tradeType = trade.type || (isDirectSale ? "direct_sale" : "exchange");
-        // FIX: Always start as "pending" — resolveTrade() will atomically transition to "completed"
-        const initialStatus = "pending";
+        // FIX: Respect status override (V24.2)
+        const initialStatus = (trade as any).status || "pending";
 
         const { tradeOrigin, ...tradeWithoutOrigin } = trade;
         const tradeData = {

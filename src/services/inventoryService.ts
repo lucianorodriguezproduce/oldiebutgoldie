@@ -338,7 +338,7 @@ export const inventoryService = {
             timestamp: serverTimestamp()
         }, { merge: true });
 
-        return internalId;
+        return { id: internalId, item: newItem };
     },
 
     async deleteItem(id: string) {

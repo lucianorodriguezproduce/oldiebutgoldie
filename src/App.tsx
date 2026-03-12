@@ -58,6 +58,7 @@ const ArticleDetail = lazy(() => import("@/pages/ArticleDetail"));
 const Eventos = lazy(() => import("@/pages/Eventos"));
 const Profile = lazy(() => import("@/pages/Profile"));
 const RevisarLote = lazy(() => import("@/pages/RevisarLote"));
+const PublicationCheckout = lazy(() => import('./pages/PublicationCheckout'));
 const TradeConstructor = lazy(() => import("@/pages/TradeConstructor"));
 const Store = lazy(() => import("@/pages/Store"));
 const PublicProfile = lazy(() => import("@/pages/PublicProfile"));
@@ -184,6 +185,11 @@ function AppContent() {
               <Route path="/comunidad/:id" element={<ArticleDetail />} />
               <Route path="/guias" element={<Guias />} />
               <Route path="/eventos" element={<Eventos />} />
+            <Route path="/checkout/publication/:tradeId" element={<PublicationCheckout />} />
+            <Route
+                path="/trade/new"
+                element={siteConfig?.allow_p2p_public_offers === false ? <Navigate to="/tienda" replace /> : <TradeConstructor />}
+              />
               <Route path="/archivo" element={<Archivo />} />
               <Route path="/archivo/:id" element={<ArchivoItem />} />
 

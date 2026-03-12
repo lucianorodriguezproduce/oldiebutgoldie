@@ -320,33 +320,29 @@ export default function RevisarLote() {
                 const rawYear = fullData.year || fullData.metadata?.year || '0';
                 const safeYear = parseInt(String(rawYear)) || 0;
 
-                await userAssetService.addAsset(user.uid, {
-                    metadata: {
-                        title: parsedTitle || 'Sin Título',
-                        artist: parsedArtist || 'Desconocido',
-                        year: safeYear,
-                        genres: fullData.genres || fullData.genre || fullData.metadata?.genres || [],
-                        styles: fullData.styles || fullData.style || fullData.metadata?.styles || [],
-                        format_description: String(fullData.format || fullData.metadata?.format_description || 'Vinyl'),
-                        country: fullData.country || fullData.metadata?.country || 'Unknown'
-                    },
-                    media: {
-                        thumbnail: fullData.cover_image || fullData.thumb || fullData.media?.thumbnail || '',
-                        full_res_image_url: fullData.cover_image || fullData.thumb || fullData.media?.full_res_image_url || ''
-                    },
-                    originalInventoryId: String(item.id),
-                    valuation: item.price || 0,
-                    tracklist: fullData.tracklist || [],
-                    labels: fullData.labels || []
-                } as any);
-
-                // También importar a inventario (archived) para que "viaje al archivo" (Protocolo V21.6)
-                await inventoryService.importFromDiscogs(fullData as any, {
+                // 1. También importar a inventario (archived) para que "viaje al archivo" (Protocolo V21.6)
+                // Usamos el nuevo retorno enriquecido (V25.0)
+                const importResult = await inventoryService.importFromDiscogs(fullData as any, {
                     stock: 0,
                     price: item.price || 0,
                     condition: item.condition,
                     status: 'archived'
                 });
+
+                const enrichedItem = importResult.item;
+
+                // 2. Guardar en User Assets con Metadata de Alta Fidelidad
+                await userAssetService.addAsset(user.uid, {
+                    metadata: {
+                        ...enrichedItem.metadata,
+                        isBatch: enrichedItem.metadata.isBatch || false
+                    },
+                    media: enrichedItem.media,
+                    originalInventoryId: importResult.id,
+                    valuation: item.price || 0,
+                    tracklist: enrichedItem.tracklist || [],
+                    labels: enrichedItem.labels || []
+                } as any);
             }
 
             if (inventoryItems.length > 0) {
