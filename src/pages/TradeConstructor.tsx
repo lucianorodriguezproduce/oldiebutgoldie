@@ -235,7 +235,7 @@ export default function TradeConstructor() {
                     },
                     type: modalidad,
                     tradeOrigin: 'DISCOGS',
-                    isPublicOrder: modalidad !== "exchange", // Sales and Auctions are inherently public proposals
+                    isPublicOrder: siteConfig?.allow_p2p_public_offers === true || modalidad !== "exchange", // Public if toggle is ON or if it's a market proposal (sale/auction)
                     status: 'pending_publish_fee' // V24.2 requirement
                 };
 
