@@ -21,6 +21,7 @@ import { pushLeadGenerated } from "@/utils/analytics";
 import type { Trade, InventoryItem, UserAsset } from "@/types/inventory";
 
 import { ADMIN_UID } from "@/constants/admin";
+import { scrubData } from "@/utils/firestore";
 
 const COLLECTION_NAME = "trades";
 
@@ -133,7 +134,7 @@ export const tradeService = {
             createdAt: serverTimestamp(),
             timestamp: serverTimestamp()
         };
-        const docRef = await addDoc(collection(db, COLLECTION_NAME), tradeData);
+        const docRef = await addDoc(collection(db, COLLECTION_NAME), scrubData(tradeData));
 
         // Tracking DataLayer
         if (tradeData.type === 'admin_negotiation') {
@@ -173,12 +174,12 @@ export const tradeService = {
             ? trade.participants.receiverId
             : trade.participants.senderId;
 
-        await updateDoc(docRef, {
+        await updateDoc(docRef, scrubData({
             manifest: newManifest,
             negotiationHistory: arrayUnion(trade.manifest),
             status: "counter_offer",
             currentTurn: nextTurn
-        });
+        }));
 
         // Create notification for the recipient
         const { addDoc, collection, serverTimestamp } = await import("firebase/firestore");
