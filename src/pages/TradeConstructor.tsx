@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, ArrowRight, CheckCircle2, Disc, ShoppingBag, DollarSign, Search, X, Plus, Minus, MessageCircle, AlertCircle } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, Disc, ShoppingBag, DollarSign, Search, X, Plus, Minus, MessageCircle, AlertCircle, User, Users } from "lucide-react";
 import { serverTimestamp, doc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
