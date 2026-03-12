@@ -59,7 +59,7 @@ export default function PublicOrders() {
 
                         // Rule 2: Non-owners only see public exchanges when market is open
                         const isMarketOpen = config?.p2p_global_enabled || config?.allow_p2p_public_offers || false;
-                        const isPublicExchange = (o.type === 'exchange' || o.intent === 'INTERCAMBIO' || o.type === 'direct_sale') && 
+                        const isPublicExchange = (o.type === 'exchange' || o.intent === 'INTERCAMBIO' || o.type === 'direct_sale' || o.type === 'auction') && 
                                                o.isPublicOrder === true && 
                                                o.status === 'pending';
                         

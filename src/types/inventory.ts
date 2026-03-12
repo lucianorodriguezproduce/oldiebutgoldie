@@ -68,10 +68,12 @@ export interface Trade {
     id?: string;
     participants: {
         senderId: string;
+        senderName?: string;
         receiverId: string; // Default to Admin
+        receiverName?: string;
     };
     manifest: TradeManifest;
-    status: "pending" | "accepted" | "counter_offer" | "completed" | "completed_unpaid" | "in_process" | "cancelled" | "resolved" | "rejected" | "pending_publish_fee";
+    status: "pending" | "accepted" | "counter_offer" | "completed" | "venta_finalizada" | "completed_unpaid" | "in_process" | "cancelled" | "resolved" | "rejected" | "pending_publish_fee";
     type: "direct_sale" | "exchange" | "admin_negotiation" | "p2p_market" | "auction";
     isPublicOrder?: boolean; // True if it should appear in the global market
     currentTurn: string; // UID of the user who must decide
@@ -83,7 +85,9 @@ export interface Trade {
     starting_price?: number;
     current_highest_bid?: number;
     highest_bidder_uid?: string;
+    highest_bidder_name?: string;
     bid_count?: number;
+    acceptedAt?: any;
 }
 
 export interface UserAsset {

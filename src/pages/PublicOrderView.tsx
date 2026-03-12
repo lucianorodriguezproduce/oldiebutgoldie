@@ -20,6 +20,7 @@ import { ADMIN_UID, isAdminEmail } from "@/constants/admin";
 import { siteConfigService } from "@/services/siteConfigService";
 import type { SiteConfig } from "@/services/siteConfigService";
 import TradeChat from "@/components/Trade/TradeChat";
+import AuctionWinnerModal from "@/components/Trades/AuctionWinnerModal";
 const ArchivoItem = lazy(() => import("@/pages/ArchivoItem"));
 
 export default function PublicOrderView() {
@@ -34,6 +35,7 @@ export default function PublicOrderView() {
     const { addItemFromInventory, isInLote } = useLote();
     const [isExecuting, setIsExecuting] = useState(false);
     const [showRejectConfirm, setShowRejectConfirm] = useState(false);
+    const [isWinnerModalOpen, setIsWinnerModalOpen] = useState(false);
 
     const isOwner = user?.uid === order?.user_id;
     const isAdminOrder = order?.user_id === ADMIN_UID || order?.user_id === "oldiebutgoldie" || isAdminEmail(order?.user_email);
@@ -244,22 +246,7 @@ export default function PublicOrderView() {
 
     const handleAcceptWinningBid = async () => {
         if (!id || !user || isExecuting) return;
-        
-        const confirmed = window.confirm("¿Aceptar la oferta ganadora y proceder a la coordinación?");
-        if (!confirmed) return;
-
-        setIsExecuting(true);
-        showLoading("Resolviendo subasta...");
-        try {
-            await tradeService.acceptWinningBid(id, user.uid);
-            setOrder((prev: any) => ({ ...prev, status: 'accepted' }));
-        } catch (error: any) {
-            console.error("Accept error:", error);
-            alert(error.message || "Error al aceptar la oferta");
-        } finally {
-            setIsExecuting(false);
-            hideLoading();
-        }
+        setIsWinnerModalOpen(true);
     };
 
     if (loading) {
@@ -1427,6 +1414,11 @@ export default function PublicOrderView() {
                     }}
                 />
             )}
+            <AuctionWinnerModal 
+                isOpen={isWinnerModalOpen}
+                onClose={() => setIsWinnerModalOpen(false)}
+                order={order}
+            />
         </div >
     );
 }

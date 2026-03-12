@@ -581,33 +581,52 @@ export const tradeService = {
 
     async acceptWinningBid(tradeId: string, userId: string) {
         const tradeRef = doc(db, COLLECTION_NAME, tradeId);
-        const tradeSnap = await getDoc(tradeRef);
+        const messagesRef = collection(db, COLLECTION_NAME, tradeId, "messages");
         
-        if (!tradeSnap.exists()) throw new Error("Subasta no encontrada");
-        const tradeData = tradeSnap.data() as Trade;
-        
-        if (tradeData.participants.senderId !== userId) {
-            throw new Error("Solo el vendedor puede aceptar la oferta ganadora");
-        }
-        
-        if (!tradeData.highest_bidder_uid) {
-            throw new Error("No hay ofertas para aceptar");
-        }
+        return await runTransaction(db, async (transaction) => {
+            const tradeSnap = await transaction.get(tradeRef);
+            if (!tradeSnap.exists()) throw new Error("Subasta no encontrada");
+            
+            const tradeData = tradeSnap.data() as Trade;
+            
+            if (tradeData.participants.senderId !== userId) {
+                throw new Error("Solo el vendedor puede aceptar la oferta ganadora");
+            }
+            
+            if (!tradeData.highest_bidder_uid) {
+                throw new Error("No hay ofertas para aceptar");
+            }
 
-        await updateDoc(tradeRef, {
-            status: "accepted",
-            acceptedAt: serverTimestamp(),
-            currentTurn: tradeData.highest_bidder_uid // Coordination pass to winner
-        });
+            if (tradeData.status === "accepted") {
+                throw new Error("La subasta ya ha sido aceptada");
+            }
 
-        // Add notification for winner
-        await addDoc(collection(db, "notifications"), {
-            user_id: tradeData.highest_bidder_uid,
-            title: "¡Ganaste la Subasta!",
-            message: `El vendedor aceptó tu oferta por "${tradeData.manifest.items?.[0]?.title || 'el disco'}". El chat de coordinación está abierto.`,
-            read: false,
-            timestamp: serverTimestamp(),
-            order_id: tradeId
+            // 1. Update status
+            transaction.update(tradeRef, {
+                status: "accepted",
+                acceptedAt: serverTimestamp(),
+                currentTurn: tradeData.highest_bidder_uid // Coordination pass to winner
+            });
+
+            // 2. Generate automated message
+            const newMessageRef = doc(messagesRef);
+            transaction.set(newMessageRef, {
+                sender_uid: "system",
+                text: `¡Subasta Finalizada! ${tradeData.participants?.senderName || 'El vendedor'} ha aceptado la oferta de @${tradeData.highest_bidder_name || 'Ganador'}. Coordinen aquí el envío.`,
+                timestamp: serverTimestamp(),
+                read_status: false
+            });
+
+            // 3. Add notification for winner
+            const notificationRef = doc(collection(db, "notifications"));
+            transaction.set(notificationRef, {
+                user_id: tradeData.highest_bidder_uid,
+                title: "¡Ganaste la Subasta!",
+                message: `El vendedor aceptó tu oferta por "${tradeData.manifest.items?.[0]?.title || 'el disco'}". El chat de coordinación está abierto.`,
+                read: false,
+                timestamp: serverTimestamp(),
+                order_id: tradeId
+            });
         });
     },
 
