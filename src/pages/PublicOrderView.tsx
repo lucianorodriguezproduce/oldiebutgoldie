@@ -5,7 +5,7 @@ import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { db, auth } from "@/lib/firebase";
 import { SEO } from "@/components/SEO";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Music, Disc, Lock, Clock, Eye, ChevronDown, Share2, ChevronRight, Plus, Check, ShoppingBag, Handshake, CheckCircle2, XCircle, MessageCircle, Trash2, Trophy, Star, Flame } from "lucide-react";
+import { ChevronLeft, Music, Disc, Lock, Clock, Eye, ChevronDown, Share2, ChevronRight, Plus, Check, ShoppingBag, Handshake, CheckCircle2, XCircle, MessageCircle, Trash2, Trophy, Star, Flame, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useLote } from "@/context/LoteContext";
 import { useLoading } from "@/context/LoadingContext";
@@ -1266,13 +1266,13 @@ export default function PublicOrderView() {
                         <div className="flex flex-col sm:flex-row w-full gap-4 px-4">
                             {user ? (
                                 <button
-                                    onClick={handleBuyAction}
+                                    onClick={handleQuickBuy}
                                     className="w-full group relative overflow-hidden rounded-2xl shadow-xl shadow-primary/20 hover:shadow-primary/40 transition-all active:scale-95"
                                 >
                                     <div className="absolute inset-0 bg-gradient-to-r from-primary via-secondary to-primary bg-[length:200%_auto] animate-shimmer" />
                                     <div className="relative py-5 flex items-center justify-center gap-3">
                                         <ShoppingBag className="w-6 h-6 text-black" />
-                                        <span className="text-black font-black text-lg uppercase tracking-widest">{TEXTS.global.common.addToBatch}</span>
+                                        <span className="text-black font-black text-lg uppercase tracking-widest">Añadir al Lote</span>
                                     </div>
                                 </button>
                             ) : (
@@ -1301,11 +1301,11 @@ export default function PublicOrderView() {
                         className="max-w-md mx-auto pointer-events-auto"
                     >
                         <button
-                            onClick={handleBuyAction}
+                            onClick={handleQuickBuy}
                             className="w-full bg-primary text-black py-5 rounded-2xl font-black uppercase tracking-widest shadow-2xl flex items-center justify-center gap-3 active:scale-95 transition-transform"
                         >
                             <ShoppingBag className="w-5 h-5" />
-                            {TEXTS.global.common.addToBatch}
+                            Añadir al Lote
                         </button>
                     </motion.div>
                 </div>
