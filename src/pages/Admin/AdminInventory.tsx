@@ -154,8 +154,21 @@ export default function AdminInventory() {
         if (!discogsId) return;
         showLoading("Importando desde Discogs al La Batea...");
         try {
-            const release = await discogsService.getReleaseDetails(discogsId);
-            await inventoryService.importFromDiscogs(release, {
+            let releaseData: any;
+            try {
+                // Try as release first
+                releaseData = await discogsService.getReleaseDetails(discogsId);
+            } catch (e) {
+                // Try as master if release fails
+                const master = await discogsService.getMasterDetails(discogsId);
+                if (master.main_release) {
+                    releaseData = await discogsService.getReleaseDetails(master.main_release.toString());
+                } else {
+                    releaseData = { ...master, id: master.id }; // Fallback to master data
+                }
+            }
+
+            await inventoryService.importFromDiscogs(releaseData, {
                 price: manualData.price || 0,
                 stock: manualData.stock || 1,
                 condition: manualData.condition,

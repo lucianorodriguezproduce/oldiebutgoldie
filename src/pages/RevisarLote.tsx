@@ -124,10 +124,16 @@ export default function RevisarLote() {
                         const itemId = item.id.toString();
                         let fullData: any = item;
                         try {
-                            const details = item.type === 'master'
-                                ? await discogsService.getMasterDetails(itemId)
-                                : await discogsService.getReleaseDetails(itemId);
-                            fullData = { ...item, ...details };
+                            if (item.type === 'master') {
+                                const master = await discogsService.getMasterDetails(itemId);
+                                if (master.main_release) {
+                                    fullData = await discogsService.getReleaseDetails(master.main_release.toString());
+                                } else {
+                                    fullData = { ...item, ...master };
+                                }
+                            } else {
+                                fullData = await discogsService.getReleaseDetails(itemId);
+                            }
                         } catch (e) {
                             console.warn(`[Lote-Hydration] Falló hidratación para ${item.title} (ID: ${itemId}, Type: ${item.type}), usando data del lote.`);
                         }
@@ -163,10 +169,16 @@ export default function RevisarLote() {
                     const itemId = item.id.toString();
                     let fullData: any = item;
                     try {
-                        const details = item.type === 'master'
-                            ? await discogsService.getMasterDetails(itemId)
-                            : await discogsService.getReleaseDetails(itemId);
-                        fullData = { ...item, ...details };
+                        if (item.type === 'master') {
+                            const master = await discogsService.getMasterDetails(itemId);
+                            if (master.main_release) {
+                                fullData = await discogsService.getReleaseDetails(master.main_release.toString());
+                            } else {
+                                fullData = { ...item, ...master };
+                            }
+                        } else {
+                            fullData = await discogsService.getReleaseDetails(itemId);
+                        }
                     } catch (e) {
                         console.warn(`[Lote-Hydration] Falló hidratación para ${item.title} (ID: ${itemId}, Type: ${item.type}), usando data del lote.`);
                     }
@@ -206,10 +218,16 @@ export default function RevisarLote() {
                     const itemId = item.id.toString();
                     let fullData: any = item;
                     try {
-                        const details = item.type === 'master'
-                            ? await discogsService.getMasterDetails(itemId)
-                            : await discogsService.getReleaseDetails(itemId);
-                        fullData = { ...item, ...details };
+                        if (item.type === 'master') {
+                            const master = await discogsService.getMasterDetails(itemId);
+                            if (master.main_release) {
+                                fullData = await discogsService.getReleaseDetails(master.main_release.toString());
+                            } else {
+                                fullData = { ...item, ...master };
+                            }
+                        } else {
+                            fullData = await discogsService.getReleaseDetails(itemId);
+                        }
                         hydratedItems.push({
                             ...fullData,
                             userAssetId: itemId,
@@ -274,10 +292,16 @@ export default function RevisarLote() {
                 let fullData: any = item;
                 try {
                     // Intentamos obtener el release completo para tener el tracklist y más metadata
-                    const details = item.type === 'master'
-                        ? await discogsService.getMasterDetails(itemId)
-                        : await discogsService.getReleaseDetails(itemId);
-                    fullData = { ...item, ...details };
+                    if (item.type === 'master') {
+                        const master = await discogsService.getMasterDetails(itemId);
+                        if (master.main_release) {
+                            fullData = await discogsService.getReleaseDetails(master.main_release.toString());
+                        } else {
+                            fullData = { ...item, ...master };
+                        }
+                    } else {
+                        fullData = await discogsService.getReleaseDetails(itemId);
+                    }
                 } catch (e) {
                     console.warn(`[Batea-Resilience] No se pudo hidratar ${item.title} (ID: ${itemId}, Type: ${item.type}), usando data parcial.`);
                 }

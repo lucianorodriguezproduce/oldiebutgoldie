@@ -213,10 +213,9 @@ export const inventoryService = {
         let finalKey = "";
         let finalPreviewUrl = "";
 
-        if (resolvedYoutubeId) {
-            console.log(`[Quota-Safe] YouTube ID found in Discogs/Metadata for ${parsedTitle}. Skipping proactive search.`);
-        } else {
-            console.log(`[Quota-Action] No YouTube ID found for ${parsedTitle}. Initiating efficiency flow (YouTube First)...`);
+        // 1. YouTube Enrichment (if missing)
+        if (!resolvedYoutubeId) {
+            console.log(`[Quota-Action] No YouTube ID found for ${parsedTitle}. Initiating search...`);
 
             // 1. Intentar YouTube API Primario
             try {
@@ -241,12 +240,13 @@ export const inventoryService = {
                 }
             } catch (e) {
                 // Silencio Positivo (YouTube Falló o 403/404)
-                console.warn(`[Redundancia-Crítica] YouTube API falló o rechazó. Invocando Sound Savior (Spotify)...`);
+                console.warn(`[Redundancia-Crítica] YouTube API falló o rechazó.`);
             }
+        }
 
-            // 2. Enriquecimiento Obligatorio (V16.5): Fallback y Extracción Sonora (Spotify)
-
-
+        // 2. Spotify Enrichment (if missing or always to get audio features/preview)
+        if (!finalSpotifyId) {
+            console.log(`[Quota-Action] Searching Spotify for ${parsedTitle} enrichment...`);
             try {
                 let spotifyMatch = await spotifyService.searchAlbum(cleanArtist, cleanTitle);
 
@@ -263,12 +263,13 @@ export const inventoryService = {
                 if (spotifyMatch) {
                     finalSpotifyId = spotifyMatch.spotify_id;
                     if (spotifyMatch.preview_url) finalPreviewUrl = spotifyMatch.preview_url;
+                    // Note: BPM/Key extraction usually happens in a separate background process or via V17.5 player
                     console.log(`[batea-Import] The Sound Savior actuó: Spotify ID -> ${finalSpotifyId}`);
                 }
             } catch (e) {
-                // Silencio
+                console.warn(`[Redundancia-Crítica] Spotify API falló.`);
             }
-        } // Closing the 'else' block
+        }
 
         // 3. Protocolo de Enriquecimiento (V15.6)
         const tracklistArray = (discogsData.tracklist || []).map((t: any) => ({
@@ -534,9 +535,34 @@ export const inventoryService = {
             // 3. Extract tracklist if empty (re-fetch Discogs)
             if (newTracklist.length === 0 && item.reference?.originalDiscogsId) {
                 try {
-                    const discogsRes = await fetch(`/api/proxy?path=/releases/${item.reference.originalDiscogsId}`);
-                    if (discogsRes.ok) {
-                        const discogsData = await discogsRes.json();
+                    let discogsData: any;
+                    const id = item.reference.originalDiscogsId.toString();
+                    
+                    try {
+                        // Try as release first
+                        const discogsRes = await fetch(`/api/proxy?path=/releases/${id}`);
+                        if (discogsRes.ok) {
+                            discogsData = await discogsRes.json();
+                        } else {
+                            throw new Error("No es un release válido o no encontrado");
+                        }
+                    } catch (e) {
+                        // Try as master if release fails
+                        const masterRes = await fetch(`/api/proxy?path=/masters/${id}`);
+                        if (masterRes.ok) {
+                            const master = await masterRes.json();
+                            if (master.main_release) {
+                                const mainReleaseRes = await fetch(`/api/proxy?path=/releases/${master.main_release}`);
+                                if (mainReleaseRes.ok) {
+                                    discogsData = await mainReleaseRes.json();
+                                }
+                            } else {
+                                discogsData = master; // Fallback to master if no main release
+                            }
+                        }
+                    }
+
+                    if (discogsData) {
                         newTracklist = (discogsData.tracklist || []).map((t: any) => ({
                             position: t.position || "",
                             title: t.title || "",
