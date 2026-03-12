@@ -4,11 +4,14 @@ import { motion } from "framer-motion";
 import { CheckCircle2, CreditCard, ShieldCheck, ArrowRight, Loader2, Sparkles } from "lucide-react";
 import { tradeService } from "@/services/tradeService";
 import { useLoading } from "@/context/LoadingContext";
+import { useAuth } from "@/context/AuthContext";
 
 export default function PublicationCheckout() {
     const { tradeId } = useParams();
     const navigate = useNavigate();
     const { showLoading, hideLoading } = useLoading();
+    const { user } = useAuth();
+    
     const [isProcessing, setIsProcessing] = useState(false);
     const [isPaid, setIsPaid] = useState(false);
 
@@ -17,25 +20,34 @@ export default function PublicationCheckout() {
     }, [tradeId, navigate]);
 
     const handleSimulatePayment = async () => {
-        if (!tradeId) return;
+        if (!tradeId || !user) {
+            console.error("[checkout] Missing tradeId or user:", { tradeId, userId: user?.uid });
+            alert("No estás autenticado o la operación es inválida.");
+            return;
+        }
+
         setIsProcessing(true);
         showLoading("Procesando pago de publicación...");
 
         try {
+            console.log(`[checkout] Starting payment simulation for trade: ${tradeId}`);
+            
             // Simulamos un delay de red
             await new Promise(resolve => setTimeout(resolve, 2000));
             
-            // Actualizamos el estado del trade a 'pending' (para que sea visible/activo según la lógica de mercado)
-            // El usuario pidió que cambie el estado a 'active'.
-            // En nuestro motor, 'pending' es el estado base para trades que esperan respuesta.
-            // Pero para P2P market, 'pending' es lo que el feed filtra.
+            // Actualizamos el estado del trade a 'pending'
+            console.log(`[checkout] Updating trade status to 'pending'...`);
             await tradeService.updateTradeStatus(tradeId, 'pending');
             
+            console.log(`[checkout] Payment successful for trade: ${tradeId}`);
             setIsPaid(true);
             hideLoading();
-        } catch (error) {
-            console.error("Error updating trade status:", error);
-            alert("Error al procesar el pago. Intenta nuevamente.");
+        } catch (error: any) {
+            console.error("[checkout] Error during payment simulation:", error);
+            const errorMessage = error.code === 'permission-denied' 
+                ? "Error de permisos: No eres el dueño de esta publicación o no tienes autorización."
+                : "Error al procesar el pago. Intenta nuevamente.";
+            alert(errorMessage);
             setIsProcessing(false);
             hideLoading();
         }
@@ -43,7 +55,7 @@ export default function PublicationCheckout() {
 
     if (isPaid) {
         return (
-            <div className="min-h-[80vh] flex items-center justify-center p-6">
+            <div className="min-h-[80vh] flex items-center justify-center p-6 bg-black">
                 <motion.div 
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -70,7 +82,7 @@ export default function PublicationCheckout() {
     }
 
     return (
-        <div className="min-h-[90vh] py-12 px-6">
+        <div className="min-h-[90vh] py-12 px-6 bg-black">
             <div className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
                 {/* Left: Info */}
                 <div className="space-y-8">

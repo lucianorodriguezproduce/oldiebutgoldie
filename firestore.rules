@@ -134,12 +134,15 @@ service cloud.firestore {
         isAdmin() ||
         request.resource.data.participants.senderId == request.auth.uid
       );
-      
+      // Regla de actualización: Participantes o Admin
       allow update: if request.auth != null && (
         isAdmin() ||
-        request.auth.uid == (resource.data.participants.senderId || 'none') ||
-        request.auth.uid == (resource.data.participants.receiverId || 'none') ||
-        (resource.data.isPublicOrder == true && (request.resource.data.highest_bidder_uid == request.auth.uid || request.resource.data.status == 'accepted'))
+        resource.data.participants.senderId == request.auth.uid || 
+        resource.data.participants.receiverId == request.auth.uid ||
+        (resource.data.isPublicOrder == true && (
+          request.resource.data.highest_bidder_uid == request.auth.uid || 
+          request.resource.data.status == 'accepted'
+        ))
       );
       
       allow delete: if isAdmin();
