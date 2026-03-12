@@ -137,7 +137,7 @@ export default function TradeConsole({ trade, onUpdate, onClose }: TradeConsoleP
             case 'in_process':
                 return <span className="bg-blue-500/10 text-blue-500 border border-blue-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 animate-pulse"><Disc className="h-3 w-3" /> EN PROCESO (BÚSQUEDA)</span>;
             case 'accepted':
-                return <span className="bg-green-500/10 text-green-500 border border-green-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5"><CheckCircle2 className="h-3 w-3" /> ACCEPTED</span>;
+                return <span className="bg-orange-500/10 text-orange-500 border border-orange-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 animate-pulse"><Handshake className="h-3 w-3" /> PENDIENTE PAGO / COORDINANDO</span>;
             case 'cancelled':
                 return <span className="bg-red-500/10 text-red-500 border border-red-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5"><XCircle className="h-3 w-3" /> CANCELLED</span>;
             case 'counter_offer':
@@ -194,7 +194,7 @@ export default function TradeConsole({ trade, onUpdate, onClose }: TradeConsoleP
                         </>
                     ) : (
                         <>
-                            {trade.status === 'completed_unpaid' && isAdmin ? (
+                            {(trade.status === 'completed_unpaid' || trade.status === 'accepted') && (isAdmin || user?.uid === trade.participants.senderId) ? (
                                 <button
                                     onClick={handleMarkAsPaid}
                                     className="flex-1 flex items-center justify-center gap-3 py-4 bg-green-500 text-black rounded-2xl font-black uppercase tracking-widest hover:bg-white transition-all shadow-lg shadow-green-500/20"

@@ -59,7 +59,7 @@ const bateaToLegacy = async (trade: any) => {
     const statusMap: Record<string, string> = {
         "pending": "pending",
         "counter_offer": "counteroffered",
-        "accepted": "completed",
+        "accepted": "accepted",
         "completed": "completed",
         "cancelled": "cancelled",
         "resolved": "completed",
@@ -604,6 +604,8 @@ export const tradeService = {
             // 1. Update status
             transaction.update(tradeRef, {
                 status: "accepted",
+                isPaid: false,
+                payment_status: 'pending',
                 acceptedAt: serverTimestamp(),
                 currentTurn: tradeData.highest_bidder_uid // Coordination pass to winner
             });
@@ -748,6 +750,8 @@ export const tradeService = {
             // 1. Atomic status update
             transaction.update(tradeRef, {
                 status: "accepted",
+                isPaid: false,
+                payment_status: 'pending',
                 highest_bidder_uid: buyerUid,
                 highest_bidder_name: buyerName,
                 acceptedAt: serverTimestamp(),
