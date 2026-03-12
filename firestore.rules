@@ -15,9 +15,10 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == userId;
     }
 
-    // Branding & Config - Solo Admin
+    // Branding & Config - Solo Admin (Lectura pública para site_config)
     match /settings/{document=**} {
-      allow read, write: if isAdmin();
+      allow read: if isAdmin() || document == "site_config";
+      allow write: if isAdmin();
     }
 
     // Telemetry - Creación libre, gestión Admin
@@ -100,7 +101,12 @@ service cloud.firestore {
       // Regla recursiva para campos anidados si se requiere
       match /{allPaths=**} {
         allow read: if true;
-        allow write: if isAdmin();
+        allow write: if isAdmin() || (
+          request.auth != null && 
+          request.resource.data.logistics.stock == resource.data.logistics.stock - 1 &&
+          request.resource.data.logistics.price == resource.data.logistics.price &&
+          request.resource.data.metadata == resource.data.metadata
+        );
       }
     }
 

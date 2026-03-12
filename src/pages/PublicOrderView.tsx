@@ -132,12 +132,14 @@ export default function PublicOrderView() {
         setIsExecuting(true);
         showLoading("Confirmando compra...");
         try {
-            // INTEGRACIÓN DEL MOTOR TRANSACCIONAL (Soberanía Atómica)
-            // Resolvemos el trade usando el manifiesto actual para gatillar descuento de stock y creación de user_assets
-            await tradeService.resolveTrade(id, order.manifest);
-
-            // Notificación al Admin (La Batea)
-            if (order.is_admin_offer || order.participants?.receiverId === ADMIN_UID || order.participants?.receiverId === "oldiebutgoldie") {
+            const isStorePurchase = isAdminOrder || order.participants?.receiverId === ADMIN_UID;
+            
+            if (isStorePurchase) {
+                // INTEGRACIÓN DEL MOTOR TRANSACCIONAL (Soberanía Atómica)
+                // Resolvemos el trade usando el manifiesto actual para gatillar descuento de stock y creación de user_assets
+                await tradeService.resolveTrade(id, order.manifest);
+                
+                // Notificación al Admin (La Batea)
                 await addDoc(collection(db, "notifications"), {
                     userId: "oldiebutgoldie",
                     orderId: id,
@@ -149,14 +151,21 @@ export default function PublicOrderView() {
                     sender_email: user.email,
                     sender_name: user.displayName || "Usuario",
                 });
+
+                setOrder((prev: any) => ({ ...prev, status: "venta_finalizada" }));
+                alert("¡Compra exitosa! El disco ya es parte de tu colección.");
+                
+                // ÉXITO: Redirección inmediata para evitar el "Bloqueo Visionario"
+                setTimeout(() => {
+                    navigate('/perfil');
+                }, 1500);
+            } else {
+                // P2P Direct Sale: Just mark as accepted
+                await tradeService.updateTradeStatus(id, 'accepted');
+                setOrder((prev: any) => ({ ...prev, status: 'accepted' }));
+                alert("¡Pedido enviado! El vendedor ha sido notificado para coordinar la entrega.");
+                navigate('/comercio');
             }
-
-            setOrder((prev: any) => ({ ...prev, status: "venta_finalizada" }));
-
-            // ÉXITO: Redirección inmediata para evitar el "Bloqueo Visionario"
-            setTimeout(() => {
-                navigate('/perfil');
-            }, 1500);
         } catch (error: any) {
             console.error("Buy error:", error);
             let errorMessage = "Hubo un error al procesar tu compra. Por favor intenta nuevamente o contáctanos por WhatsApp.";

@@ -34,7 +34,7 @@ export const Navbar = () => {
     const navItems = [
         { path: "/", label: TEXTS.global.navigation.home, icon: Search },
         { path: "/tienda", label: TEXTS.global.navigation.tienda, icon: Disc },
-        ...(config?.allow_p2p_public_offers || isAdmin ? [{ path: "/comercio", label: TEXTS.global.navigation.activity, icon: ShoppingBag }] : []),
+        ...(config?.p2p_global_enabled || config?.allow_p2p_public_offers || isAdmin ? [{ path: "/comercio", label: TEXTS.global.navigation.activity, icon: ShoppingBag }] : []),
         { path: "/archivo", label: TEXTS.global.navigation.archivo, icon: Box },
         { path: "/comunidad", label: TEXTS.global.navigation.editorial, icon: BookOpen },
     ];

@@ -120,16 +120,17 @@ export const tradeService = {
         const initialStatus = (trade as any).status || "pending";
 
         const { tradeOrigin, ...tradeWithoutOrigin } = trade;
+        const receiverId = trade.participants.receiverId || ADMIN_UID;
         const tradeData = {
             ...tradeWithoutOrigin,
             participants: {
                 ...trade.participants,
-                receiverId: trade.participants.receiverId || ADMIN_UID
+                receiverId
             },
             type: tradeType,
             isPublicOrder: trade.isPublicOrder || false,
             status: initialStatus as any,
-            currentTurn: trade.participants.receiverId || ADMIN_UID,
+            currentTurn: receiverId,
             negotiationHistory: [],
             createdAt: serverTimestamp(),
             timestamp: serverTimestamp()
@@ -141,15 +142,20 @@ export const tradeService = {
             pushLeadGenerated('c2b_offer', tradeData.manifest?.cashAdjustment || 0, tradeData.manifest?.items?.length || 1, docRef.id);
         }
 
-        // --- AUTO-RESOLUTION: For direct sales, decrement stock immediately ---
-        if (isDirectSale) {
-            console.log(`[batea] Direct sale detected. Auto-resolving trade: ${docRef.id}`);
+        // --- AUTO-RESOLUTION: Only for store direct sales (OBG Shop) ---
+        // P2P Direct sales should stay pending/accepted so the seller can resolve (due to security permissions)
+        const isStoreDirectSale = isDirectSale && (receiverId === ADMIN_UID || receiverId === 'oldiebutgoldie');
+
+        if (isStoreDirectSale) {
+            console.log(`[batea] Store direct sale detected. Auto-resolving trade: ${docRef.id}`);
             try {
                 await this.resolveTrade(docRef.id, trade.manifest as any);
             } catch (error) {
-                console.error("[batea] Error during auto-resolution of direct sale:", error);
+                console.error("[batea] Error during auto-resolution of store direct sale:", error);
                 throw error;
             }
+        } else if (isDirectSale) {
+            console.log(`[batea] P2P Direct sale created: ${docRef.id}. Waiting for acceptance/resolution.`);
         } else {
             console.log(`[batea] Exchange/negotiation created: ${docRef.id} (origin: ${tradeOrigin || 'legacy'})`);
         }
