@@ -406,17 +406,30 @@ export const inventoryService = {
     },
 
     async getRecentAdditions(limitCount: number = 20) {
-        const q = query(
-            collection(db, COLLECTION_NAME),
-            where("logistics.status", "==", "active"),
-            limit(50) // Fetch more to sort in memory
-        );
-        const snapshot = await getDocs(q);
-        return snapshot.docs
-            .map(doc => ({ id: doc.id, ...doc.data() } as InventoryItem))
-            .filter(item => item.logistics.stock > 0)
-            .sort((a, b) => ((b as any).timestamp?.seconds || 0) - ((a as any).timestamp?.seconds || 0))
-            .slice(0, limitCount);
+        try {
+            const q = query(
+                collection(db, COLLECTION_NAME),
+                where("logistics.status", "==", "active"),
+                orderBy("timestamp", "desc"),
+                limit(limitCount)
+            );
+            const snapshot = await getDocs(q);
+            return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InventoryItem));
+        } catch (error) {
+            console.error("Error in getRecentAdditions:", error);
+            // Fallback: fetch without order by (if index is missing) and sort in memory
+            const q = query(
+                collection(db, COLLECTION_NAME),
+                where("logistics.status", "==", "active"),
+                limit(limitCount * 2)
+            );
+            const snapshot = await getDocs(q);
+            return snapshot.docs
+                .map(doc => ({ id: doc.id, ...doc.data() } as InventoryItem))
+                .filter(item => item.logistics.stock > 0)
+                .sort((a, b) => ((b as any).timestamp?.seconds || 0) - ((a as any).timestamp?.seconds || 0))
+                .slice(0, limitCount);
+        }
     },
 
     onSnapshotInventory(callback: (items: InventoryItem[]) => void) {

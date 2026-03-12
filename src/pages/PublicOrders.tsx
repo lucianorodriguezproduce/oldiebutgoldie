@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, orderBy, onSnapshot, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, getDocs, where, or } from 'firebase/firestore';
 import { Link } from 'react-router-dom';
 import { Clock, ShoppingBag, Music, ShieldCheck, BadgeDollarSign, Disc } from 'lucide-react';
 import { db } from '@/lib/firebase';
@@ -36,7 +36,32 @@ export default function PublicOrders() {
 
         const startTradesListener = async () => {
             try {
-                const q = query(collection(db, 'trades'), orderBy('createdAt', 'desc'));
+                let q;
+                if (isAdmin) {
+                    q = query(collection(db, 'trades'), orderBy('createdAt', 'desc'));
+                } else {
+                    // Filter at query level to match security rules
+                    const publicFilter = where('isPublicOrder', '==', true);
+                    
+                    if (user?.uid) {
+                        q = query(
+                            collection(db, 'trades'),
+                            or(
+                                publicFilter,
+                                where('participants.senderId', '==', user.uid),
+                                where('participants.receiverId', '==', user.uid)
+                            ),
+                            orderBy('createdAt', 'desc')
+                        );
+                    } else {
+                        q = query(
+                            collection(db, 'trades'),
+                            publicFilter,
+                            orderBy('createdAt', 'desc')
+                        );
+                    }
+                }
+
                 unsubscribeTrades = onSnapshot(q, async (snapshot) => {
                     const tradeData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
 
