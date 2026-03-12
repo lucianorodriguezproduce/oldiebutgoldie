@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingBag, X, CheckCircle2, MessageSquare, Disc, User } from 'lucide-react';
+import { X, ShieldCheck, MessageCircle, ShoppingBag, Disc } from 'lucide-react';
 import { tradeService } from '@/services/tradeService';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -17,21 +17,19 @@ export default function DirectPurchaseModal({ isOpen, onClose, order }: DirectPu
     const { user, dbUser } = useAuth();
     const navigate = useNavigate();
     const { showLoading, hideLoading } = useLoading();
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
 
     if (!order) return null;
 
-    const price = order.totalPrice || order.details?.price || 0;
+    // Calculamos el precio sumando los items si totalPrice/details.price fallan
+    const price = order.details?.price || order.totalPrice || order.items?.reduce((acc: number, item: any) => acc + (item.price || 0), 0) || 0;
     const currency = order.currency || order.details?.currency || "ARS";
-    const artist = order.artist || order.details?.artist;
-    const album = order.album || order.details?.album;
-    const image = order.thumbnailUrl || order.details?.cover_image || order.image;
-    const sellerName = order.participants?.senderName || order.user_name || "Comunidad OBG";
+    const image = order.thumbnailUrl || order.details?.cover_image;
 
     const handleConfirm = async () => {
-        if (!user || !dbUser?.username || isSubmitting) return;
+        if (!user || !dbUser?.username || isProcessing) return;
 
-        setIsSubmitting(true);
+        setIsProcessing(true);
         showLoading("Procesando compra...");
 
         try {
@@ -42,7 +40,7 @@ export default function DirectPurchaseModal({ isOpen, onClose, order }: DirectPu
             console.error("Purchase error:", error);
             alert(error.message || "Error al procesar la compra");
         } finally {
-            setIsSubmitting(false);
+            setIsProcessing(false);
             hideLoading();
         }
     };
@@ -50,98 +48,114 @@ export default function DirectPurchaseModal({ isOpen, onClose, order }: DirectPu
     return (
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
-                    {/* Overlay */}
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
+                        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
                         onClick={onClose}
-                        className="absolute inset-0 bg-black/80 backdrop-blur-md"
                     />
-
-                    {/* Modal Content */}
+                    
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                        className="relative w-full max-w-lg bg-white/[0.03] border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl shadow-primary/10"
+                        className="relative w-full max-w-lg bg-[#0A0A0A] border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl"
                     >
                         {/* Header */}
-                        <div className="p-6 md:p-8 flex items-center justify-between border-b border-white/5">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-primary/10 rounded-xl">
-                                    <ShoppingBag className="w-5 h-5 text-primary" />
+                        <div className="p-8 border-b border-white/5 space-y-4">
+                            <div className="flex items-center justify-between">
+                                <div className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-black text-emerald-400 uppercase tracking-widest">
+                                    Compra Directa
                                 </div>
-                                <h2 className="text-xl font-display font-black text-white uppercase tracking-widest">Confirmar Compra</h2>
+                                <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full transition-colors">
+                                    <X size={20} className="text-gray-500" />
+                                </button>
                             </div>
-                            <button 
-                                onClick={onClose}
-                                className="p-2 hover:bg-white/5 rounded-full transition-colors group"
-                            >
-                                <X className="w-5 h-5 text-gray-500 group-hover:text-white transition-colors" />
-                            </button>
+                            <div className="space-y-1">
+                                <h2 className="text-3xl font-display font-black text-white uppercase tracking-tighter">Confirmar Compra</h2>
+                                <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Estás a un paso de obtener esta pieza</p>
+                            </div>
                         </div>
 
-                        {/* Order Preview */}
-                        <div className="p-6 md:p-8 space-y-8">
-                            <div className="flex items-center gap-6">
-                                <div className="w-24 h-24 md:w-32 md:h-32 rounded-2xl overflow-hidden border border-white/10 bg-black/40 flex-shrink-0 shadow-lg relative">
+                        {/* Body */}
+                        <div className="p-8 space-y-8">
+                            {/* Item Preview */}
+                            <div className="flex gap-6 items-center">
+                                <div className="w-24 h-24 rounded-2xl overflow-hidden border border-white/10 flex-shrink-0 bg-black/40">
                                     {image ? (
-                                        <LazyImage src={image} alt={album} className="w-full h-full object-cover" />
+                                        <LazyImage src={image} alt="" className="w-full h-full object-cover" />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center">
-                                            <Disc className="w-10 h-10 text-white/10" />
+                                            <Disc className="w-10 h-10 text-white/5" />
                                         </div>
                                     )}
                                 </div>
-                                <div className="flex-1 min-w-0 space-y-2">
-                                    <h3 className="text-xl md:text-2xl font-display font-black text-white uppercase tracking-tight truncate leading-tight">
-                                        {artist || album}
-                                    </h3>
-                                    {artist && album && (
-                                        <p className="text-sm font-bold text-gray-400 uppercase tracking-widest truncate opacity-80">
-                                            {album}
-                                        </p>
-                                    )}
-                                    <div className="flex items-center gap-2 pt-2 text-gray-400">
-                                        <User className="w-4 h-4" />
-                                        <span className="text-xs font-black uppercase tracking-widest">{sellerName}</span>
+                                <div className="space-y-1 min-w-0">
+                                    <h3 className="text-xl font-black text-white uppercase truncate">{order.album || order.details?.album}</h3>
+                                    <p className="text-sm font-bold text-gray-500 uppercase tracking-widest truncate">{order.artist || order.details?.artist}</p>
+                                    <div className="flex items-center gap-2 mt-2">
+                                        <span className="px-2 py-0.5 rounded bg-white/5 text-[10px] font-bold text-gray-400 border border-white/10">
+                                            {order.items?.[0]?.condition || 'VG+'}
+                                        </span>
+                                        <span className="px-2 py-0.5 rounded bg-white/5 text-[10px] font-bold text-gray-400 border border-white/10">
+                                            {order.items?.[0]?.format || 'Vinyl'}
+                                        </span>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Price Section */}
-                            <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-6 flex items-center justify-between group-hover:border-primary/20 transition-all">
-                                <span className="text-xs font-black text-gray-500 uppercase tracking-[0.2em]">Total a Pagar</span>
-                                <div className="text-3xl font-display font-black text-primary">
-                                    {currency === 'USD' ? 'US$' : '$'} {price.toLocaleString()}
+                            {/* Price Summary */}
+                            <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-6 space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Precio del ítem</span>
+                                    <span className="text-lg font-mono font-bold text-white">
+                                        {currency === 'USD' ? 'US$' : '$'} {price.toLocaleString()}
+                                    </span>
+                                </div>
+                                <div className="flex items-center justify-between pt-4 border-t border-white/5">
+                                    <span className="text-xs font-black text-white uppercase tracking-widest">Total a pagar</span>
+                                    <span className="text-3xl font-mono font-black text-primary">
+                                        {currency === 'USD' ? 'US$' : '$'} {price.toLocaleString()}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Safety Info */}
+                            <div className="flex gap-4 p-4 bg-blue-500/5 border border-blue-500/10 rounded-2xl">
+                                <ShieldCheck className="w-6 h-6 text-blue-400 flex-shrink-0" />
+                                <div className="space-y-1">
+                                    <h4 className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Transacción Protegida</h4>
+                                    <p className="text-[10px] font-bold text-blue-400/60 uppercase leading-relaxed">
+                                        Al confirmar, se abrirá un chat directo con el vendedor para coordinar el pago y envío.
+                                    </p>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Footer / Action */}
-                        <div className="p-6 md:p-8 pt-0">
+                        {/* Actions */}
+                        <div className="p-8 pt-0 flex gap-3">
+                            <button
+                                onClick={onClose}
+                                className="flex-1 py-5 rounded-2xl border border-white/10 text-white font-black uppercase text-xs tracking-widest hover:bg-white/5 transition-all"
+                            >
+                                Cancelar
+                            </button>
                             <button
                                 onClick={handleConfirm}
-                                disabled={isSubmitting || !user}
-                                className="relative w-full group overflow-hidden"
+                                disabled={isProcessing || !user}
+                                className="flex-[2] py-5 rounded-2xl bg-primary text-black font-black uppercase text-xs tracking-widest hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:scale-100 flex items-center justify-center gap-2 shadow-[0_0_40px_rgba(204,255,0,0.2)]"
                             >
-                                <div className="absolute inset-0 bg-gradient-to-r from-primary to-secondary transition-all duration-300 group-hover:scale-105" />
-                                <div className="relative px-8 py-5 flex items-center justify-center gap-3">
-                                    {isSubmitting ? (
-                                        <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
-                                    ) : (
-                                        <>
-                                            <MessageSquare className="w-5 h-5 text-black" />
-                                            <span className="text-black font-black uppercase tracking-[0.15em] text-sm">Confirmar y Chatear</span>
-                                        </>
-                                    )}
-                                </div>
+                                {isProcessing ? (
+                                    <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                                ) : (
+                                    <>
+                                        <MessageCircle size={16} />
+                                        Confirmar y Chatear
+                                    </>
+                                )}
                             </button>
-                            <p className="mt-4 text-center text-[10px] text-gray-500 font-bold uppercase tracking-widest opacity-60">
-                                Al confirmar, el trato quedará cerrado y se abrirá el chat de coordinación.
-                            </p>
                         </div>
                     </motion.div>
                 </div>
