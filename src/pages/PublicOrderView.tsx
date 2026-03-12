@@ -1428,8 +1428,10 @@ export default function PublicOrderView() {
                             );
                         }
 
-                {/* New Buying Zone V24 - Redesigned & Centered */}
-                <div className="flex flex-col items-center justify-center py-12 px-4 space-y-8 max-w-lg mx-auto scroll-mt-32" id="buy-section">
+                        return (
+                            <>
+                                {/* New Buying Zone V24 - Redesigned & Centered */}
+                                <div className="flex flex-col items-center justify-center py-12 px-4 space-y-8 max-w-lg mx-auto scroll-mt-32" id="buy-section">
                     <motion.div
                         initial={{ opacity: 0, scale: 0.9 }}
                         whileInView={{ opacity: 1, scale: 1 }}
@@ -1508,9 +1510,9 @@ export default function PublicOrderView() {
                             Añadir al Lote
                         </button>
                     </motion.div>
-                </div>
-                        return null;
-                    })()}
+                        </>
+                    );
+                })())}
 
                     {/* Metadata Footer */}
                     <div className="p-8 pb-[env(safe-area-inset-bottom)] rounded-[2.5rem] bg-white/[0.02] border border-white/5 flex flex-col md:flex-row justify-between gap-8 items-start md:items-center">
