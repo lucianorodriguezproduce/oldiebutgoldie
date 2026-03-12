@@ -38,7 +38,7 @@ export default function PublicOrders() {
             try {
                 let q;
                 if (isAdmin) {
-                    q = query(collection(db, 'trades'), orderBy('createdAt', 'desc'));
+                    q = query(collection(db, 'trades'));
                 } else {
                     // Filter at query level to match security rules
                     const publicFilter = where('isPublicOrder', '==', true);
@@ -50,14 +50,12 @@ export default function PublicOrders() {
                                 publicFilter,
                                 where('participants.senderId', '==', user.uid),
                                 where('participants.receiverId', '==', user.uid)
-                            ),
-                            orderBy('createdAt', 'desc')
+                            )
                         );
                     } else {
                         q = query(
                             collection(db, 'trades'),
-                            publicFilter,
-                            orderBy('createdAt', 'desc')
+                            publicFilter
                         );
                     }
                 }

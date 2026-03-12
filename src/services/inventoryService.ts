@@ -410,8 +410,7 @@ export const inventoryService = {
             const q = query(
                 collection(db, COLLECTION_NAME),
                 where("logistics.status", "==", "active"),
-                orderBy("timestamp", "desc"),
-                limit(limitCount)
+                limit(limitCount * 2) // Fetch same buffer as fallback
             );
             const snapshot = await getDocs(q);
             return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InventoryItem));
