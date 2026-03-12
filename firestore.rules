@@ -109,10 +109,24 @@ service cloud.firestore {
       allow read: if request.auth != null && (
         isAdmin() ||
         request.auth.uid == resource.data.participants.senderId ||
-        request.auth.uid == resource.data.participants.receiverId
+        request.auth.uid == resource.data.participants.receiverId ||
+        request.auth.uid == resource.data.highest_bidder_uid
       );
       allow write: if request.auth != null;
       allow delete: if isAdmin();
+
+      // Messaging Engine (Protocol V24.5)
+      match /messages/{messageId} {
+        allow read: if request.auth != null && (
+          isAdmin() ||
+          request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.senderId ||
+          request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.highest_bidder_uid
+        );
+        allow create: if request.auth != null && (
+          request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.senderId ||
+          request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.highest_bidder_uid
+        );
+      }
     }
 
     // User Assets - Soberanía y Blindaje: Solo dueño o Admin

@@ -1,15 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { useParams, Link, useSearchParams, useNavigate } from "react-router-dom";
-import { doc, getDoc, updateDoc, increment, arrayUnion, serverTimestamp, addDoc, collection, onSnapshot } from "firebase/firestore";
+import { doc, getDoc, updateDoc, increment, arrayUnion, serverTimestamp, addDoc, collection, onSnapshot, query, orderBy } from "firebase/firestore";
 import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { db, auth } from "@/lib/firebase";
 import { SEO } from "@/components/SEO";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Music, Disc, Lock, Clock, Eye, ChevronDown, Share2, ChevronRight, Plus, Check, ShoppingBag, Handshake, CheckCircle2, XCircle, MessageCircle } from "lucide-react";
+import { ChevronLeft, Music, Disc, Lock, Clock, Eye, ChevronDown, Share2, ChevronRight, Plus, Check, ShoppingBag, Handshake, CheckCircle2, XCircle, MessageCircle, Trash2, Trophy, Star, Flame } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useLote } from "@/context/LoteContext";
 import { useLoading } from "@/context/LoadingContext";
-import { query, orderBy } from "firebase/firestore";
 import { formatDate, getReadableDate } from "@/utils/date";
 import { TEXTS } from "@/constants/texts";
 import { pushViewItemFromOrder, pushHotOrderDetected } from "@/utils/analytics";
@@ -20,7 +19,8 @@ import { generateWhatsAppAcceptDealMsg } from "@/utils/whatsapp";
 import { ADMIN_UID, isAdminEmail } from "@/constants/admin";
 import { siteConfigService } from "@/services/siteConfigService";
 import type { SiteConfig } from "@/services/siteConfigService";
-import { Trash2, Trophy, Star } from "lucide-react";
+import TradeChat from "@/components/Trade/TradeChat";
+const ArchivoItem = lazy(() => import("@/pages/ArchivoItem"));
 
 export default function PublicOrderView() {
     const { id } = useParams<{ id: string }>();
@@ -229,6 +229,26 @@ export default function PublicOrderView() {
             console.error("Offer error:", error);
             alert("Hubo un error al enviar tu oferta.");
         } finally {
+            hideLoading();
+        }
+    };
+
+    const handleAcceptWinningBid = async () => {
+        if (!id || !user || isExecuting) return;
+        
+        const confirmed = window.confirm("¿Aceptar la oferta ganadora y proceder a la coordinación?");
+        if (!confirmed) return;
+
+        setIsExecuting(true);
+        showLoading("Resolviendo subasta...");
+        try {
+            await tradeService.acceptWinningBid(id, user.uid);
+            setOrder((prev: any) => ({ ...prev, status: 'accepted' }));
+        } catch (error: any) {
+            console.error("Accept error:", error);
+            alert(error.message || "Error al aceptar la oferta");
+        } finally {
+            setIsExecuting(false);
             hideLoading();
         }
     };
@@ -618,7 +638,69 @@ export default function PublicOrderView() {
                         })()}
                     </div>
 
-                    {/* Transactional Action Buttons & Ownership Shields */}
+                    {/* === AUCTION TRADE ACTIONS (Protocol V24.5) === */}
+                    {order.type === 'auction' && (() => {
+                        const now = Date.now();
+                        const endDate = order.auction_end_date?.toMillis ? order.auction_end_date.toMillis() : new Date(order.auction_end_date).getTime();
+                        const isFinished = now > endDate;
+                        const isAccepted = order.status === 'accepted';
+                        const isWinner = user?.uid === order.highest_bidder_uid;
+                        const hasWinner = !!order.highest_bidder_uid;
+
+                        if (isAccepted) {
+                            if (isOwner || isWinner || isAdmin) {
+                                return (
+                                    <div className="mt-8 space-y-6">
+                                        <div className="p-8 bg-emerald-500/5 border border-emerald-500/20 rounded-[2.5rem] flex flex-col items-center gap-4 text-center">
+                                            <Trophy className="w-12 h-12 text-emerald-400" />
+                                            <div>
+                                                <h4 className="text-2xl font-display font-black text-white uppercase tracking-tight">Subasta Adjudicada</h4>
+                                                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">
+                                                    {isOwner ? `Vendido a @${order.highest_bidder_name}` : `¡Es tuyo! Coordiná con el vendedor`}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <TradeChat 
+                                            tradeId={id!} 
+                                            currentUser={user} 
+                                            otherParticipantName={isOwner ? `@${order.highest_bidder_name}` : `@${order.user_name}`} 
+                                        />
+                                    </div>
+                                );
+                            }
+                        }
+
+                        if (isOwner && isFinished && !isAccepted && hasWinner) {
+                            return (
+                                <div className="mt-8 p-8 bg-primary/10 border border-primary/30 rounded-[2.5rem] flex flex-col items-center gap-6 text-center shadow-2xl shadow-primary/10">
+                                    <div className="space-y-2">
+                                        <h4 className="text-2xl font-display font-black text-white uppercase tracking-tight">¡Subasta Finalizada!</h4>
+                                        <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">
+                                            Oferta Ganadora: <span className="text-primary">${order.current_highest_bid?.toLocaleString()}</span> por <span className="text-white">@{order.highest_bidder_name}</span>
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={handleAcceptWinningBid}
+                                        disabled={isExecuting}
+                                        className="w-full md:w-auto px-10 py-5 bg-primary text-black font-black uppercase tracking-widest text-sm rounded-2xl hover:scale-105 transition-all shadow-xl shadow-primary/20"
+                                    >
+                                        {isExecuting ? "Procesando..." : "Aceptar Oferta Ganadora"}
+                                    </button>
+                                </div>
+                            );
+                        }
+
+                        if (isFinished && !hasWinner && !isAccepted) {
+                            return (
+                                <div className="mt-8 p-8 bg-white/5 border border-white/10 rounded-[2.5rem] flex flex-col items-center gap-3 text-center opacity-50">
+                                    <Disc className="w-8 h-8 text-white/20" />
+                                    <h4 className="text-xl font-display font-black text-white uppercase tracking-tight">Subasta Cerrada sin ofertas</h4>
+                                </div>
+                            );
+                        }
+
+                        return null;
+                    })()}
 
                     {/* === EXCHANGE TRADE ACTIONS (FIX-1) === */}
                     {isExchange && (() => {

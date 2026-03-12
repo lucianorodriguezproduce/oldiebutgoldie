@@ -551,7 +551,8 @@ export const tradeService = {
                 highest_bidder_uid: userId,
                 highest_bidder_name: username,
                 bid_count: (tradeData.bid_count || 0) + 1,
-                last_bid_at: serverTimestamp()
+                last_bid_at: serverTimestamp(),
+                status: "pending_resolution" // Track finished state
             });
             
             // 4. Record as Proposal (Subcollection) for history
@@ -569,6 +570,56 @@ export const tradeService = {
             });
             
             return { tradeId, amount };
+        });
+    },
+
+    async acceptWinningBid(tradeId: string, userId: string) {
+        const tradeRef = doc(db, COLLECTION_NAME, tradeId);
+        const tradeSnap = await getDoc(tradeRef);
+        
+        if (!tradeSnap.exists()) throw new Error("Subasta no encontrada");
+        const tradeData = tradeSnap.data() as Trade;
+        
+        if (tradeData.participants.senderId !== userId) {
+            throw new Error("Solo el vendedor puede aceptar la oferta ganadora");
+        }
+        
+        if (!tradeData.highest_bidder_uid) {
+            throw new Error("No hay ofertas para aceptar");
+        }
+
+        await updateDoc(tradeRef, {
+            status: "accepted",
+            acceptedAt: serverTimestamp(),
+            currentTurn: tradeData.highest_bidder_uid // Coordination pass to winner
+        });
+
+        // Add notification for winner
+        await addDoc(collection(db, "notifications"), {
+            user_id: tradeData.highest_bidder_uid,
+            title: "¡Ganaste la Subasta!",
+            message: `El vendedor aceptó tu oferta por "${tradeData.manifest.items?.[0]?.title || 'el disco'}". El chat de coordinación está abierto.`,
+            read: false,
+            timestamp: serverTimestamp(),
+            order_id: tradeId
+        });
+    },
+
+    async sendMessage(tradeId: string, senderId: string, text: string) {
+        const messagesRef = collection(db, COLLECTION_NAME, tradeId, "messages");
+        await addDoc(messagesRef, {
+            sender_uid: senderId,
+            text,
+            timestamp: serverTimestamp(),
+            read_status: false
+        });
+    },
+
+    onSnapshotMessages(tradeId: string, callback: (messages: any[]) => void) {
+        const messagesRef = collection(db, COLLECTION_NAME, tradeId, "messages");
+        const q = query(messagesRef, orderBy("timestamp", "asc"));
+        return onSnapshot(q, (snapshot) => {
+            callback(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         });
     },
 
