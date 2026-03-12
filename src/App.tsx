@@ -170,13 +170,15 @@ function AppContent() {
               <Route path="/tienda" element={<Store />} />
               <Route path="/u/:username" element={<PublicProfile />} />
 
-              {/* P2P Routes with Guard (V24.8) */}
+              {/* P2P Routes with Guard (V24.8 Access Persistence Fix) */}
               <Route
                 path="/comercio"
                 element={
-                  (siteConfig?.p2p_global_enabled || siteConfig?.allow_p2p_public_offers || isAdmin) 
-                    ? <PublicOrders /> 
-                    : <Navigate to="/tienda" replace />
+                  siteConfig === null 
+                    ? <div className="min-h-screen bg-black" /> 
+                    : (siteConfig?.p2p_global_enabled || siteConfig?.allow_p2p_public_offers || isAdmin) 
+                      ? <PublicOrders /> 
+                      : <Navigate to="/tienda" replace />
                 }
               />
 
@@ -207,9 +209,11 @@ function AppContent() {
                 <Route
                   path="/trade/new"
                   element={
-                    (siteConfig?.p2p_global_enabled || siteConfig?.allow_p2p_public_offers || isAdmin)
-                      ? <TradeConstructor />
-                      : <Navigate to="/tienda" replace />
+                    siteConfig === null
+                      ? <div className="min-h-screen bg-black" />
+                      : (siteConfig?.p2p_global_enabled || siteConfig?.allow_p2p_public_offers || isAdmin)
+                        ? <TradeConstructor />
+                        : <Navigate to="/tienda" replace />
                   }
                 />
               </Route>

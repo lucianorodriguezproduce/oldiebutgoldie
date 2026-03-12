@@ -44,7 +44,7 @@ export default function TradeConstructor() {
 
     // Load Community Users
     useEffect(() => {
-        if (siteConfig?.p2p_global_enabled && viewMode === 'community') {
+        if ((siteConfig?.p2p_global_enabled || siteConfig?.allow_p2p_public_offers) && viewMode === 'community') {
             const loadUsers = async () => {
                 try {
                     const users = await userAssetService.getUsersWithAssets();

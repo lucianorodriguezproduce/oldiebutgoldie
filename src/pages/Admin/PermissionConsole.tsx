@@ -75,6 +75,35 @@ export default function PermissionConsole() {
                     </div>
                 </motion.div>
 
+                {/* Master P2P Control (Protocol V24.8) */}
+                <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    className={`p-8 rounded-[2.5rem] border transition-all ${config.p2p_global_enabled ? 'bg-primary/5 border-primary/20' : 'bg-white/5 border-white/10'}`}
+                >
+                    <div className="flex items-start justify-between">
+                        <div className="space-y-4">
+                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${config.p2p_global_enabled ? 'bg-primary text-black' : 'bg-white/5 text-gray-500'}`}>
+                                <Shield className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-display font-black text-white uppercase tracking-tight">Master P2P Switch</h3>
+                                <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mt-1">Habilitar visibilidad pública del Mercado P2P</p>
+                            </div>
+                        </div>
+                        <Switch
+                            enabled={config.p2p_global_enabled}
+                            onChange={() => handleToggle('p2p_global_enabled' as any)}
+                        />
+                    </div>
+                    <div className="mt-8 pt-6 border-t border-white/5">
+                        <p className="text-[10px] font-mono text-gray-600 leading-relaxed uppercase">
+                            {config.p2p_global_enabled
+                                ? "ESTADO: GLOBAL. El acceso a /comercio está abierto para todos los usuarios."
+                                : "ESTADO: DESACTIVADO. Solo administradores pueden ver el mercado activo."}
+                        </p>
+                    </div>
+                </motion.div>
+
                 {/* P2P Offers Permission */}
                 <motion.div
                     whileHover={{ scale: 1.02 }}
@@ -86,8 +115,8 @@ export default function PermissionConsole() {
                                 <ShoppingBag className="w-6 h-6" />
                             </div>
                             <div>
-                                <h3 className="text-xl font-display font-black text-white uppercase tracking-tight">Mercado P2P</h3>
-                                <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mt-1">Habilitar ofertas entre coleccionistas particulares</p>
+                                <h3 className="text-xl font-display font-black text-white uppercase tracking-tight">Ofertas Públicas</h3>
+                                <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mt-1">Permitir que usuarios hagan ofertas en discos de otros</p>
                             </div>
                         </div>
                         <Switch
@@ -98,8 +127,8 @@ export default function PermissionConsole() {
                     <div className="mt-8 pt-6 border-t border-white/5">
                         <p className="text-[10px] font-mono text-gray-600 leading-relaxed uppercase">
                             {config.allow_p2p_public_offers
-                                ? "ESTADO: DESBLOQUEADO. El Coliseo permite ofertas libres entre usuarios finales."
-                                : "ESTADO: PROTEGIDO. Solo se permiten ofertas dirigidas al La Batea Central (Oldie But Goldie)."}
+                                ? "ESTADO: HABILITADO. Los botones de 'Ofertar' son visibles para el público."
+                                : "ESTADO: BLOQUEADO. Las ofertas públicas están restringidas."}
                         </p>
                     </div>
                 </motion.div>

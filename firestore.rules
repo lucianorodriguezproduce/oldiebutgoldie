@@ -15,10 +15,13 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == userId;
     }
 
-    // Branding & Config - Solo Admin (Lectura pública para site_config)
-    match /settings/{document=**} {
-      allow read: if isAdmin() || document == "site_config";
+    // Branding & Config
+    match /settings/site_config {
+      allow read: if true;
       allow write: if isAdmin();
+    }
+    match /settings/{document=**} {
+      allow read, write: if isAdmin();
     }
 
     // Telemetry - Creación libre, gestión Admin

@@ -58,9 +58,9 @@ export default function PublicOrders() {
                         if (isOwner) return true;
 
                         // Rule 2: Non-owners only see public exchanges when market is open
-                        const isMarketOpen = config?.p2p_global_enabled ?? false;
-                        const isPublicExchange = (o.type === 'exchange' || o.intent === 'INTERCAMBIO') && o.isPublicOrder === true;
-
+                        const isMarketOpen = config?.p2p_global_enabled || config?.allow_p2p_public_offers || false;
+                        const isPublicExchange = (o.type === 'exchange' || o.intent === 'INTERCAMBIO' || o.type === 'direct_sale') && o.isPublicOrder === true;
+                        
                         return isMarketOpen && isPublicExchange;
                     });
 
