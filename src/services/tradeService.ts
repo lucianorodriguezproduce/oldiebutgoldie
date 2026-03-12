@@ -323,30 +323,39 @@ export const tradeService = {
                 if (isAdmin) {
                     if (snap.exists()) {
                         const invData = snap.data() as InventoryItem;
-                        const currentStock = invData.logistics.stock || 0;
-                        if (currentStock <= 0) throw new Error(`Stock insuficiente en La Batea: ${invData.metadata.title}`);
+                        const isArchived = invData.logistics?.status === 'archived';
+                        
+                        // If it's a real inventory item, check and decrement stock
+                        if (!isArchived) {
+                            const currentStock = invData.logistics.stock || 0;
+                            if (currentStock <= 0) throw new Error(`Stock insuficiente en La Batea: ${invData.metadata.title}`);
 
-                        transaction.update(ref, {
-                            "logistics.stock": currentStock - 1,
-                            "logistics.status": (currentStock - 1) === 0 ? "sold_out" : "active"
-                        });
+                            transaction.update(ref, {
+                                "logistics.stock": currentStock - 1,
+                                "logistics.status": (currentStock - 1) === 0 ? "sold_out" : "active"
+                            });
 
-                        const newAssetRef = doc(collection(db, "user_assets"));
-                        transaction.set(newAssetRef, {
-                            ownerId: senderId,
-                            originalInventoryId: itemId,
-                            valuation: invData.logistics.price || 0,
-                            isTradeable: false,
-                            metadata: invData.metadata,
-                            media: invData.media,
-                            reference: invData.reference || null,
-                            tracklist: invData.tracklist || [],
-                            labels: invData.labels || [],
-                            items: invData.items || [],
-                            acquiredAt: serverTimestamp(),
-                            stock: 1,
-                            status: "active"
-                        });
+                            const newAssetRef = doc(collection(db, "user_assets"));
+                            transaction.set(newAssetRef, {
+                                ownerId: senderId,
+                                originalInventoryId: itemId,
+                                valuation: invData.logistics.price || 0,
+                                isTradeable: false,
+                                metadata: invData.metadata,
+                                media: invData.media,
+                                reference: invData.reference || null,
+                                tracklist: invData.tracklist || [],
+                                labels: invData.labels || [],
+                                items: invData.items || [],
+                                acquiredAt: serverTimestamp(),
+                                stock: 1,
+                                status: "active"
+                            });
+                        } else {
+                            // If it's archived (External Request), we just let the trade resolve to 'in_process'
+                            // without touching stock or creating assets yet.
+                            console.log(`[batea] External request item ${itemId} detected. Skipping stock decrement.`);
+                        }
                     }
                 } else {
                     if (!snap.exists()) throw new Error(`Activo no encontrado: ${itemId}`);
@@ -433,7 +442,27 @@ export const tradeService = {
                 }
             }
 
-            transaction.update(tradeRef, { status: "completed", resolvedAt: serverTimestamp() });
+            // ═══════════════════════════════════════════════════════
+            // PHASE 3: STATUS DETERMINATION
+            // ═══════════════════════════════════════════════════════
+            
+            let finalStatus: Trade['status'] = "completed";
+            
+            // If it's a direct sale, mark as completed_unpaid (V23.5)
+            if (tradeData.type === 'direct_sale') {
+                finalStatus = "completed_unpaid";
+            }
+            
+            // If it's an admin negotiation for Discogs items, mark as in_process
+            if (tradeData.type === 'admin_negotiation' && tradeData.manifest.requestedItems.length > 0) {
+                // Check if any item is a Discogs/Archived item (stock 0)
+                const isExternalRequest = requestedReads.some(r => r.isAdmin && r.snap.exists() && r.snap.data()?.logistics?.status === 'archived');
+                if (isExternalRequest) {
+                    finalStatus = "in_process";
+                }
+            }
+
+            transaction.update(tradeRef, { status: finalStatus, resolvedAt: serverTimestamp() });
         });
     },
 

@@ -6,7 +6,7 @@ import {
     XCircle,
     Clock,
     User,
-    ShoppingBag,
+    DollarSign,
     AlertCircle,
     Disc,
     Edit2
@@ -16,7 +16,7 @@ import { tradeService } from "@/services/tradeService";
 import type { Trade, TradeManifest } from "@/types/inventory";
 import { useLoading } from "@/context/LoadingContext";
 import { useAuth } from "@/context/AuthContext";
-import { isAdminEmail } from "@/constants/admin";
+import { ADMIN_UID, isAdminEmail } from "@/constants/admin";
 import ManifestEditor from "./ManifestEditor";
 
 interface TradeConsoleProps {
@@ -31,28 +31,62 @@ export default function TradeConsole({ trade, onUpdate, onClose }: TradeConsoleP
     const [isEditing, setIsEditing] = useState(false);
     const [editedManifest, setEditedManifest] = useState<TradeManifest | null>(null);
 
-    const isAdmin = isAdminEmail(user?.email) || user?.uid === 'MKPlxxi9JENQt0hS3V1QNeF8oOS2';
+    const isAdmin = isAdminEmail(user?.email) || user?.uid === ADMIN_UID;
     // isMyTurn is true if the current turn matches the user's uid, or if it's the admin's turn and the current user is an admin.
-    const isMyTurn = trade.currentTurn === user?.uid || (trade.currentTurn === 'admin' && isAdmin);
+    const isMyTurn = trade.currentTurn === user?.uid || (trade.currentTurn === 'admin' && isAdmin) || (trade.currentTurn === ADMIN_UID && isAdmin);
 
     // Admin can always action if the status is counter_offer or contraoferta_usuario
-    const canAction = (trade.status !== 'accepted' && trade.status !== 'cancelled' && isMyTurn) ||
-        (isAdmin && ['counter_offer', 'contraoferta_usuario', 'contraofertado'].includes(trade.status));
+    const canAction = (trade.status !== 'accepted' && trade.status !== 'completed' && trade.status !== 'cancelled' && isMyTurn) ||
+        (isAdmin && ['counter_offer', 'contraoferta_usuario', 'contraofertado', 'completed_unpaid', 'in_process'].includes(trade.status));
 
     const handleAcceptTrade = async () => {
         if (!trade.id) return;
-        const confirm = window.confirm("¿Confirmar resolución de Trade? Esto descontará stock automáticamente.");
+        const confirm = window.confirm("¿Confirmar resolución de Trade? Esto gestionará el stock y los activos según el tipo de operación.");
         if (!confirm) return;
 
-        showLoading("Resolviendo conflicto de stock...");
+        showLoading("Resolviendo transacción...");
         try {
             await tradeService.resolveTrade(trade.id, trade.manifest);
-            alert("Trade aceptado y stock actualizado correctamente.");
+            alert("Operación procesada correctamente.");
             onUpdate();
             onClose();
         } catch (error: any) {
             console.error("Error accepting trade:", error);
             alert(`Error crítico: ${error.message}`);
+        } finally {
+            hideLoading();
+        }
+    };
+
+    const handleMarkAsPaid = async () => {
+        if (!trade.id) return;
+        if (!window.confirm("¿Confirmar que este pedido ha sido pagado? El estado pasará a COMPLETADO.")) return;
+        
+        showLoading("Actualizando estado de pago...");
+        try {
+            await tradeService.updateTradeStatus(trade.id, 'completed');
+            alert("Pedido marcado como PAGADO.");
+            onUpdate();
+            onClose();
+        } catch (error) {
+            console.error("Error marking as paid:", error);
+        } finally {
+            hideLoading();
+        }
+    };
+
+    const handleFoundRequest = async () => {
+        if (!trade.id) return;
+        if (!window.confirm("¿Confirmar que el hallazgo ha sido completado? Pasará a PENDIENTE DE PAGO.")) return;
+
+        showLoading("Actualizando hallazgo...");
+        try {
+            await tradeService.updateTradeStatus(trade.id, 'completed_unpaid');
+            alert("El hallazgo ahora está pendiente de pago.");
+            onUpdate();
+            onClose();
+        } catch (error) {
+            console.error("Error updating finding status:", error);
         } finally {
             hideLoading();
         }
@@ -96,8 +130,14 @@ export default function TradeConsole({ trade, onUpdate, onClose }: TradeConsoleP
         switch (status) {
             case 'pending':
                 return <span className="bg-amber-500/10 text-amber-500 border border-amber-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 animate-pulse"><Clock className="h-3 w-3" /> PENDING</span>;
+            case 'completed':
+                return <span className="bg-green-500/10 text-green-500 border border-green-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5"><CheckCircle2 className="h-3 w-3" /> COMPLETADO</span>;
+            case 'completed_unpaid':
+                return <span className="bg-orange-500/10 text-orange-500 border border-orange-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 animate-pulse"><DollarSign className="h-3 w-3" /> PENDIENTE PAGO</span>;
+            case 'in_process':
+                return <span className="bg-blue-500/10 text-blue-500 border border-blue-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 animate-pulse"><Disc className="h-3 w-3" /> EN PROCESO (BÚSQUEDA)</span>;
             case 'accepted':
-                return <span className="bg-green-500/10 text-green-500 border border-green-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5"><CheckCircle2 className="h-3 w-3" /> COMPLETED</span>;
+                return <span className="bg-green-500/10 text-green-500 border border-green-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5"><CheckCircle2 className="h-3 w-3" /> ACCEPTED</span>;
             case 'cancelled':
                 return <span className="bg-red-500/10 text-red-500 border border-red-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5"><XCircle className="h-3 w-3" /> CANCELLED</span>;
             case 'counter_offer':
@@ -148,12 +188,29 @@ export default function TradeConsole({ trade, onUpdate, onClose }: TradeConsoleP
                         </>
                     ) : (
                         <>
-                            <button
-                                onClick={handleAcceptTrade}
-                                className="flex-1 flex items-center justify-center gap-3 py-4 bg-primary text-black rounded-2xl font-black uppercase tracking-widest hover:bg-white transition-all shadow-lg shadow-primary/20"
-                            >
-                                <CheckCircle2 className="h-5 w-5" /> Aceptar Propuesta
-                            </button>
+                            {trade.status === 'completed_unpaid' && isAdmin ? (
+                                <button
+                                    onClick={handleMarkAsPaid}
+                                    className="flex-1 flex items-center justify-center gap-3 py-4 bg-green-500 text-black rounded-2xl font-black uppercase tracking-widest hover:bg-white transition-all shadow-lg shadow-green-500/20"
+                                >
+                                    <DollarSign className="h-5 w-5" /> Confirmar Pago
+                                </button>
+                            ) : trade.status === 'in_process' && isAdmin ? (
+                                <button
+                                    onClick={handleFoundRequest}
+                                    className="flex-1 flex items-center justify-center gap-3 py-4 bg-primary text-black rounded-2xl font-black uppercase tracking-widest hover:bg-white transition-all shadow-lg shadow-primary/20"
+                                >
+                                    <CheckCircle2 className="h-5 w-5" /> Pedido Encontrado
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={handleAcceptTrade}
+                                    className="flex-1 flex items-center justify-center gap-3 py-4 bg-primary text-black rounded-2xl font-black uppercase tracking-widest hover:bg-white transition-all shadow-lg shadow-primary/20"
+                                >
+                                    <CheckCircle2 className="h-5 w-5" /> Aceptar Propuesta
+                                </button>
+                            )}
+                            
                             <button
                                 onClick={() => { setEditedManifest(trade.manifest); setIsEditing(true); }}
                                 className="flex-1 flex items-center justify-center gap-3 py-4 bg-white/5 text-white border border-white/10 rounded-2xl font-black uppercase tracking-widest hover:bg-primary hover:text-black transition-all"

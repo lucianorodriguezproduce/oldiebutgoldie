@@ -71,7 +71,7 @@ export interface Trade {
         receiverId: string; // Default to Admin
     };
     manifest: TradeManifest;
-    status: "pending" | "accepted" | "counter_offer" | "completed" | "cancelled" | "resolved" | "rejected";
+    status: "pending" | "accepted" | "counter_offer" | "completed" | "completed_unpaid" | "in_process" | "cancelled" | "resolved" | "rejected";
     type: "direct_sale" | "exchange" | "admin_negotiation" | "p2p_market";
     isPublicOrder?: boolean; // True if it should appear in the global market
     currentTurn: string; // UID of the user who must decide
