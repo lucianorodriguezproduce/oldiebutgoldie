@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, ArrowRight, CheckCircle2, Disc, ShoppingBag, DollarSign, Search, X, Plus, Minus, MessageCircle, AlertCircle, User, Users } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, Disc, ShoppingBag, DollarSign, Search, X, Plus, Minus, MessageCircle, AlertCircle, User, Users, Star } from "lucide-react";
 import { serverTimestamp, doc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
@@ -811,8 +811,19 @@ export default function TradeConstructor() {
                                                 <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center group-hover:bg-primary/10 transition-colors shrink-0">
                                                     <User className="w-6 h-6 text-gray-400 group-hover:text-primary transition-colors" />
                                                 </div>
-                                                <div className="overflow-hidden">
-                                                    <p className="text-white font-black uppercase tracking-tight text-sm truncate">@{u.username || 'anon'}</p>
+                                                <div className="overflow-hidden flex-1">
+                                                    <div className="flex items-center justify-between">
+                                                        <p className="text-white font-black uppercase tracking-tight text-sm truncate">@{u.username || 'anon'}</p>
+                                                        {u.stats?.rating_count > 0 ? (
+                                                            <div className="flex items-center gap-1 shrink-0">
+                                                                <Star className="w-2.5 h-2.5 fill-primary text-primary" />
+                                                                <span className="text-[9px] font-black text-white">{u.stats.rating_average.toFixed(1)}</span>
+                                                                <span className="text-[9px] font-bold text-gray-500">({u.stats.rating_count})</span>
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-[8px] font-black text-primary/40 uppercase tracking-widest bg-primary/5 px-2 py-0.5 rounded-full border border-primary/10">Nuevo</span>
+                                                        )}
+                                                    </div>
                                                     <p className="text-gray-500 font-bold text-[9px] tracking-widest uppercase truncate">{u.display_name}</p>
                                                     <p className="text-primary font-black text-[9px] uppercase tracking-widest mt-1">
                                                         {u.stats?.collectionItemCount || 0} discos en batea

@@ -616,10 +616,50 @@ export const tradeService = {
     },
 
     onSnapshotMessages(tradeId: string, callback: (messages: any[]) => void) {
-        const messagesRef = collection(db, COLLECTION_NAME, tradeId, "messages");
-        const q = query(messagesRef, orderBy("timestamp", "asc"));
-        return onSnapshot(q, (snapshot) => {
-            callback(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        const q = query(
+            collection(db, "trades", tradeId, "messages"),
+            orderBy("timestamp", "asc")
+        );
+        return onSnapshot(q, (snap) => {
+            const msgs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            callback(msgs);
+        });
+    },
+
+    async submitTradeReview(tradeId: string, review: { reviewer_uid: string, reviewee_uid: string, rating: number, comment?: string }) {
+        return runTransaction(db, async (transaction) => {
+            const tradeRef = doc(db, "trades", tradeId);
+            const userRef = doc(db, "users", review.reviewee_uid);
+            const reviewRef = doc(collection(db, "reviews"));
+
+            const tradeSnap = await transaction.get(tradeRef);
+            const userSnap = await transaction.get(userRef);
+
+            if (!tradeSnap.exists()) throw new Error("TRADE_NOT_FOUND");
+            if (!userSnap.exists()) throw new Error("USER_NOT_FOUND");
+
+            const userData = userSnap.data();
+            const currentStats = userData.stats || { rating_average: 0, rating_count: 0 };
+            
+            const newCount = (currentStats.rating_count || 0) + 1;
+            const newAverage = ((currentStats.rating_average || 0) * (currentStats.rating_count || 0) + review.rating) / newCount;
+
+            // 1. Update Trade status
+            transaction.update(tradeRef, { status: 'completed' });
+
+            // 2. Create Review
+            transaction.set(reviewRef, {
+                ...review,
+                trade_id: tradeId,
+                created_at: serverTimestamp()
+            });
+
+            // 3. Update User stats
+            transaction.update(userRef, {
+                "stats.rating_average": newAverage,
+                "stats.rating_count": newCount,
+                updatedAt: serverTimestamp()
+            });
         });
     },
 
@@ -668,5 +708,4 @@ export const tradeService = {
             // or decrement inventory stock if applicable.
         });
     }
-
 };

@@ -659,12 +659,13 @@ export default function PublicOrderView() {
                                                     {isOwner ? `Vendido a @${order.highest_bidder_name}` : `¡Es tuyo! Coordiná con el vendedor`}
                                                 </p>
                                             </div>
+                                            <TradeChat 
+                                                tradeId={id!} 
+                                                currentUser={user} 
+                                                trade={order}
+                                                otherParticipantName={isOwner ? `@${order.highest_bidder_name || 'Comprador'}` : `@${order.user_name || 'Vendedor'}`} 
+                                            />
                                         </div>
-                                        <TradeChat 
-                                            tradeId={id!} 
-                                            currentUser={user} 
-                                            otherParticipantName={isOwner ? `@${order.highest_bidder_name}` : `@${order.user_name}`} 
-                                        />
                                     </div>
                                 );
                             }

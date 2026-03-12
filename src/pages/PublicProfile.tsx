@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useLoading } from "@/context/LoadingContext";
-import { ShieldAlert, User as UserIcon, Lock, Users, ArrowRight, Clock, Ban } from "lucide-react";
+import { ShieldAlert, User as UserIcon, Lock, Users, ArrowRight, Clock, Ban, Star, Trophy } from "lucide-react";
 import type { DbUser } from "@/types/user";
 import { useAuth } from "@/context/AuthContext";
 import { getConnectionStatus, requestConnection, acceptConnection, breakConnection } from "@/services/connectionService";
@@ -154,8 +154,17 @@ export default function PublicProfile() {
                     </p>
                 </div>
 
-                <div className="px-4 py-2 bg-primary/10 text-primary border border-primary/20 rounded-full text-[10px] font-black uppercase tracking-widest">
-                    Identidad Social Verificada ✓
+                <div className="flex flex-col items-center gap-2">
+                    <div className="px-4 py-2 bg-primary/10 text-primary border border-primary/20 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                        Identidad Social Verificada ✓
+                    </div>
+                    {profileUser.stats?.rating_count > 0 && (
+                        <div className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full px-4 py-1.5">
+                            <Star className="w-3 h-3 fill-primary text-primary" />
+                            <span className="text-sm font-black text-white">{profileUser.stats.rating_average.toFixed(1)}</span>
+                            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">({profileUser.stats.rating_count} reseñas)</span>
+                        </div>
+                    )}
                 </div>
 
                 {/* Connection Controls */}
