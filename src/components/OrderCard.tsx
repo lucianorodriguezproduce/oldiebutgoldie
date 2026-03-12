@@ -34,6 +34,7 @@ import { useLoading } from '@/context/LoadingContext';
 import { tradeService } from '@/services/tradeService';
 import { isAdminEmail } from '@/constants/admin';
 import { CountdownTimer } from './Auction/CountdownTimer';
+import DirectPurchaseModal from './Trades/DirectPurchaseModal';
 
 interface OrderCardProps {
     order: any; // Using any or an extended OrderData to catch legacy fields without crashing
@@ -68,6 +69,7 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
     );
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [auctionFinished, setAuctionFinished] = useState(false);
+    const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
 
     const handleBid = async (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -486,17 +488,39 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                             </div>
                         )
                     ) : (
-                        /* BUY BUTTON (Standard) */
+                        /* BUY BUTTON (Standard / P2P) */
                         context === 'public' && (order.is_admin_offer || isInventoryItem || isDirectSaleP2P) && status !== 'completed' && status !== 'venta_finalizada' && status !== 'cancelled' && (
-                            <Link
-                                to={isInventoryItem ? `/album/${order.id}` : `/orden/${order.id}?action=buy`}
-                                onClick={(e) => e.stopPropagation()}
-                                className="w-full px-6 py-4 bg-gradient-to-r from-primary to-secondary text-black font-black uppercase tracking-widest text-[11px] md:text-sm rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all text-center lg:mt-auto"
-                            >
-                                ¡COMPRAR!
-                            </Link>
+                            isDirectSaleP2P ? (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (!user) {
+                                            alert("Debes iniciar sesión para comprar.");
+                                            return;
+                                        }
+                                        setIsPurchaseModalOpen(true);
+                                    }}
+                                    className="w-full px-6 py-4 bg-gradient-to-r from-primary to-secondary text-black font-black uppercase tracking-widest text-[11px] md:text-sm rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all text-center lg:mt-auto"
+                                >
+                                    ¡COMPRAR!
+                                </button>
+                            ) : (
+                                <Link
+                                    to={isInventoryItem ? `/album/${order.id}` : `/orden/${order.id}?action=buy`}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="w-full px-6 py-4 bg-gradient-to-r from-primary to-secondary text-black font-black uppercase tracking-widest text-[11px] md:text-sm rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all text-center lg:mt-auto"
+                                >
+                                    ¡COMPRAR!
+                                </Link>
+                            )
                         )
                     )}
+
+                    <DirectPurchaseModal 
+                        isOpen={isPurchaseModalOpen}
+                        onClose={() => setIsPurchaseModalOpen(false)}
+                        order={order}
+                    />
 
                     {/* QuickOffer Component for Admins - Minimalist & Validated */}
                     {context === 'admin' && status !== 'completed' && status !== 'venta_finalizada' && status !== 'cancelled' && (

@@ -713,5 +713,36 @@ export const tradeService = {
             // and update userAssets status to 'sold' or transfer owner,
             // or decrement inventory stock if applicable.
         });
+    },
+
+    async executeDirectPurchase(tradeId: string, buyerUid: string, buyerName: string) {
+        const tradeRef = doc(db, COLLECTION_NAME, tradeId);
+        const messagesRef = collection(db, COLLECTION_NAME, tradeId, "messages");
+
+        await runTransaction(db, async (transaction) => {
+            const tradeSnap = await transaction.get(tradeRef);
+            if (!tradeSnap.exists()) throw new Error("TRADE_NOT_FOUND");
+            
+            const tradeData = tradeSnap.data() as Trade;
+            if (tradeData.status !== "pending") throw new Error("TRADE_NOT_AVAILABLE");
+
+            // 1. Atomic status update
+            transaction.update(tradeRef, {
+                status: "accepted",
+                highest_bidder_uid: buyerUid,
+                highest_bidder_name: buyerName,
+                acceptedAt: serverTimestamp(),
+                currentTurn: tradeData.participants?.senderId // Open coordination for the seller
+            });
+
+            // 2. Generate automated message
+            const newMessageRef = doc(messagesRef);
+            transaction.set(newMessageRef, {
+                sender_uid: "system",
+                text: `¡Hola! ${buyerName} ha comprado este disco. Coordinen aquí el envío.`,
+                timestamp: serverTimestamp(),
+                read_status: false
+            });
+        });
     }
 };
