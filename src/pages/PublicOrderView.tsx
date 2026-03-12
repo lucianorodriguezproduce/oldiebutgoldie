@@ -39,7 +39,8 @@ export default function PublicOrderView() {
 
     const isOwner = user?.uid === order?.user_id;
     const isAdminOrder = order?.user_id === ADMIN_UID || order?.user_id === "oldiebutgoldie" || isAdminEmail(order?.user_email);
-    const canSeePrice = isAdmin || isOwner || isAdminOrder;
+    // Public Price Visibility: Admin, Owner, or if it's a public direct sale
+    const canSeePrice = isAdmin || isOwner || isAdminOrder || (order?.isPublicOrder && order?.type === 'direct_sale');
 
     const [offerAmount, setOfferAmount] = useState<string>("");
     const [showOfferInput, setShowOfferInput] = useState(false);
@@ -1229,45 +1230,45 @@ export default function PublicOrderView() {
 
                         if (!['cancelled'].includes(order.status)) {
                             return (
-                                <div className="fixed bottom-0 left-0 right-0 z-[100] md:static mt-0 md:mt-8 p-4 md:p-8 bg-black/90 md:bg-gradient-to-br md:from-primary/10 md:to-secondary/10 border-t md:border border-white/10 md:border-primary/30 md:rounded-[2.5rem] flex flex-col md:flex-row items-center gap-4 md:gap-6 justify-between shadow-[0_-20px_40px_rgba(0,0,0,0.5)] md:shadow-[0_0_30px_rgba(255,184,0,0.1)] backdrop-blur-md md:backdrop-blur-none transition-all">
-                                    <div className="hidden md:block space-y-2 text-left">
-                                        <h4 className="text-xl font-display font-black text-white uppercase tracking-tight">Adquirir Coleccionable</h4>
-                                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Asegura esta pieza antes que otro coleccionista</p>
+                                <div className="mt-8 p-6 md:p-10 bg-gradient-to-br from-primary/10 to-secondary/10 border border-primary/30 rounded-[3rem] flex flex-col items-center gap-6 justify-center shadow-[0_0_50px_rgba(255,184,0,0.1)] transition-all animate-in fade-in zoom-in duration-500">
+                                    <div className="text-center space-y-2">
+                                        <h4 className="text-2xl md:text-3xl font-display font-black text-white uppercase tracking-tighter">¡Lo Quiero!</h4>
+                                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest max-w-xs mx-auto">Asegura esta pieza única antes que otro coleccionista.</p>
                                     </div>
 
                                     {user ? (
-                                        <div className="flex flex-row w-full md:w-auto gap-2 md:gap-4">
+                                        <div className="flex flex-col sm:flex-row w-full max-w-md gap-3">
                                             {showOfferInput ? (
-                                                <div className="flex items-center gap-2 bg-black/40 p-2 rounded-2xl border border-white/10 flex-1 md:flex-none">
-                                                    <span className="text-gray-500 font-bold pl-2 md:pl-3">$</span>
+                                                <div className="flex items-center gap-2 bg-black/40 p-2 rounded-2xl border border-white/10 flex-1">
+                                                    <span className="text-gray-500 font-bold pl-3">$</span>
                                                     <input
                                                         type="number"
                                                         placeholder="Oferta"
                                                         value={offerAmount}
                                                         onChange={(e) => setOfferAmount(e.target.value)}
-                                                        className="bg-transparent border-none text-white font-black w-20 md:w-24 focus:ring-0 outline-none placeholder:text-gray-600 text-xs md:text-sm"
+                                                        className="bg-transparent border-none text-white font-black w-full focus:ring-0 outline-none placeholder:text-gray-600 text-sm"
                                                         autoFocus
                                                     />
                                                     <button
                                                         onClick={handleMakeOffer}
                                                         disabled={!offerAmount}
-                                                        className="px-3 md:px-4 py-2 bg-secondary hover:bg-secondary/80 disabled:opacity-50 text-black font-black uppercase tracking-widest text-[9px] md:text-[10px] rounded-xl transition-all"
+                                                        className="px-4 py-2 bg-secondary hover:bg-secondary/80 disabled:opacity-50 text-black font-black uppercase tracking-widest text-[10px] rounded-xl transition-all"
                                                     >
                                                         Enviar
                                                     </button>
                                                     <button
                                                         onClick={() => setShowOfferInput(false)}
-                                                        className="px-2 md:px-3 py-2 text-gray-500 hover:text-white transition-colors"
+                                                        className="px-2 text-gray-500 hover:text-white transition-colors"
                                                     >
                                                         ✕
                                                     </button>
                                                 </div>
                                             ) : (
-                                                <div className="flex gap-2 flex-grow">
+                                                <>
                                                     <button
                                                         onClick={() => addItemFromInventory(order)}
-                                                        className={`px-4 md:px-6 py-3 md:py-4 rounded-2xl border transition-all text-center flex-1 md:flex-none whitespace-nowrap flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[9px] md:text-[10px] ${isInLote(order.id)
-                                                            ? 'bg-primary border-primary text-black'
+                                                        className={`flex-1 px-6 py-5 rounded-2xl border transition-all flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[11px] ${isInLote(order.id)
+                                                            ? 'bg-primary border-primary text-black shadow-lg shadow-primary/20'
                                                             : 'border-primary/30 text-primary hover:bg-primary/10'
                                                             }`}
                                                     >
@@ -1278,38 +1279,27 @@ export default function PublicOrderView() {
                                                         )}
                                                     </button>
 
-                                                    {/* Haggle feature deactivated/latent
                                                     <button
-                                                        onClick={() => setShowOfferInput(true)}
-                                                        className="px-4 md:px-6 py-3 md:py-4 rounded-2xl border border-yellow-500/30 text-yellow-500 font-black uppercase tracking-widest text-[9px] md:text-[10px] hover:bg-yellow-500/10 transition-all text-center flex-1 md:flex-none whitespace-nowrap"
+                                                        onClick={handleQuickBuy}
+                                                        className="flex-[1.5] px-8 py-5 rounded-2xl bg-gradient-to-r from-primary to-secondary hover:from-primary/80 hover:to-secondary/80 text-black font-black uppercase tracking-widest text-xs shadow-xl shadow-secondary/20 hover:shadow-secondary/40 transition-all transform hover:-translate-y-1"
                                                     >
-                                                        Regatear
+                                                        ¡Comprar Ahora!
                                                     </button>
-                                                    */}
-                                                </div>
+                                                </>
                                             )}
-
-                                            <button
-                                                onClick={handleQuickBuy}
-                                                className="px-4 md:px-8 py-3 md:py-4 rounded-2xl bg-gradient-to-r from-primary to-secondary hover:from-primary/80 hover:to-secondary/80 text-black font-black uppercase tracking-widest text-[10px] md:text-xs shadow-xl shadow-secondary/20 hover:shadow-secondary/40 transition-all text-center flex-1 md:flex-none transform hover:-translate-y-1 whitespace-nowrap"
-                                            >
-                                                ¡Comprar Ahora!
-                                            </button>
                                         </div>
                                     ) : (
-                                        <div className="flex flex-col md:flex-row w-full md:w-auto gap-3 items-center">
-                                            <div className="w-full md:w-auto text-center px-4 py-3 md:py-4 bg-white/5 border border-white/10 rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-wider text-gray-400">
-                                                Inicia sesión para negociar o proponer precio
+                                        <div className="flex flex-col w-full max-w-md gap-4 items-center">
+                                            <div className="w-full text-center px-4 py-4 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-wider text-gray-400">
+                                                Inicia sesión para adquirir o proponer precio
                                             </div>
 
                                             <button
-                                                onClick={() => {
-                                                    handleQuickBuy();
-                                                }}
+                                                onClick={() => setShowLoginDrawer(true)}
                                                 disabled={isExecuting}
-                                                className={`w-full md:w-auto px-4 md:px-8 py-3 md:py-4 rounded-2xl bg-gradient-to-r from-primary to-secondary text-black font-black uppercase tracking-widest text-[10px] md:text-xs shadow-xl shadow-secondary/20 transition-all text-center flex-1 md:flex-none transform whitespace-nowrap ${isExecuting ? 'opacity-50 cursor-not-allowed' : 'hover:from-primary/80 hover:to-secondary/80 hover:shadow-secondary/40 hover:-translate-y-1'}`}
+                                                className={`w-full px-8 py-5 rounded-2xl bg-gradient-to-r from-primary to-secondary text-black font-black uppercase tracking-widest text-xs shadow-xl shadow-secondary/20 transition-all transform ${isExecuting ? 'opacity-50 cursor-not-allowed' : 'hover:from-primary/80 hover:to-secondary/80 hover:shadow-secondary/40 hover:-translate-y-1'}`}
                                             >
-                                                {isExecuting ? 'Procesando...' : '¡Comprar Ahora!'}
+                                                {isExecuting ? 'Procesando...' : '¡Anotarme para Comprar!'}
                                             </button>
                                         </div>
                                     )}

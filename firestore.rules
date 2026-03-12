@@ -98,7 +98,14 @@ service cloud.firestore {
     match /inventory/{itemId} {
       allow read: if true;
       allow create: if request.auth != null && (isAdmin() || request.resource.data.logistics.status == "archived");
-      allow update: if request.auth != null && (isAdmin() || request.resource.data.logistics.status == "archived");
+      allow update: if request.auth != null && (
+        isAdmin() || 
+        request.resource.data.logistics.status == "archived" ||
+        // Permitir cambio a 'sold' o similar durante una compra válida (Soberanía Atómica)
+        (resource.data.logistics.status == "active" && 
+         request.resource.data.logistics.status in ["sold", "venta_finalizada", "completed"] &&
+         request.resource.data.logistics.price == resource.data.logistics.price)
+      );
       allow delete: if isAdmin();
 
       // Regla recursiva para campos anidados si se requiere
@@ -124,15 +131,30 @@ service cloud.firestore {
       allow write: if request.auth != null;
       allow delete: if isAdmin();
 
+      // Proposals Subcollection - Pujas del Coliseo
+      match /proposals/{proposalId} {
+        allow read: if request.auth != null && (
+          isAdmin() ||
+          request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.senderId ||
+          request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.receiverId ||
+          request.auth.uid == resource.data.senderId
+        );
+        allow create: if request.auth != null && 
+          request.resource.data.senderId == request.auth.uid;
+        allow update, delete: if isAdmin() || (request.auth != null && resource.data.senderId == request.auth.uid);
+      }
+
       // Messaging Engine (Protocol V24.5)
       match /messages/{messageId} {
         allow read: if request.auth != null && (
           isAdmin() ||
           request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.senderId ||
+          request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.receiverId ||
           request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.highest_bidder_uid
         );
         allow create: if request.auth != null && (
           request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.senderId ||
+          request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.receiverId ||
           request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.highest_bidder_uid
         );
       }

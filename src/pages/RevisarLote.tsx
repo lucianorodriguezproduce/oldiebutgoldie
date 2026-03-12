@@ -92,7 +92,6 @@ export default function RevisarLote() {
     };
 
     const performSubmission = async (uid: string, action: 'PEDIR' | 'OFRECER' | 'COMPRAR') => {
-        const currentUser = user || { email: "Sin email", displayName: "Usuario Registrado" };
         const transactionId = `TX-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`.toUpperCase();
 
         try {
@@ -106,17 +105,31 @@ export default function RevisarLote() {
             // 1. Logic for COMPRAR (Direct Sale for Inventory, Request for Discogs)
             if (action === 'COMPRAR') {
                 if (inventoryItems.length > 0) {
-                    const invTradeId = await tradeService.createTrade({
-                        participants: { senderId: uid, receiverId: ADMIN_UID },
-                        manifest: {
-                            requestedItems: inventoryItems.map(i => i.id.toString()),
-                            offeredItems: [],
-                            cashAdjustment: totalInventory
-                        },
-                        tradeOrigin: 'INVENTORY',
-                        transactionId
-                    } as any);
-                    createdDocs.push(invTradeId);
+                    // Group inventory items by sellerId to support P2P vendors
+                    const itemsBySeller = inventoryItems.reduce((acc, item) => {
+                        const sId = item.sellerId || ADMIN_UID;
+                        if (!acc[sId]) acc[sId] = [];
+                        acc[sId].push(item);
+                        return acc;
+                    }, {} as Record<string, typeof inventoryItems>);
+
+                    for (const [sellerId, items] of Object.entries(itemsBySeller)) {
+                        const totalCash = items.reduce((acc, i) => acc + (i.price || 0), 0);
+                        const isStoreOrder = sellerId === ADMIN_UID || sellerId === "oldiebutgoldie";
+
+                        const tradeId = await tradeService.createTrade({
+                            participants: { senderId: uid, receiverId: sellerId },
+                            manifest: {
+                                requestedItems: items.map(i => i.id.toString()),
+                                offeredItems: [],
+                                cashAdjustment: totalCash
+                            },
+                            tradeOrigin: 'INVENTORY',
+                            // For store orders, we might want to flag them differently or use special types if needed
+                            transactionId
+                        } as any);
+                        createdDocs.push(tradeId);
+                    }
                 }
 
                 if (discogsItems.length > 0) {

@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
+import { ADMIN_UID } from "@/constants/admin";
 
 export interface BatchItem {
     id: number | string;
@@ -12,6 +13,7 @@ export interface BatchItem {
     price?: number;
     currency?: string;
     source: 'DISCOGS' | 'INVENTORY';
+    sellerId?: string;
     type?: string;
     // Metadata Enriquecido (V21.4)
     genre?: string[];
@@ -97,7 +99,8 @@ export function LoteProvider({ children }: { children: ReactNode }) {
             condition: orderData.logistics?.condition || orderData.details?.condition || orderData.condition || "Usado",
             price: orderData.logistics?.price || orderData.adminPrice || orderData.totalPrice || 0,
             currency: orderData.adminCurrency || orderData.currency || "ARS",
-            source: 'INVENTORY'
+            source: 'INVENTORY',
+            sellerId: orderData.user_id || ADMIN_UID
         };
 
         addItemToBatch(newItem);
