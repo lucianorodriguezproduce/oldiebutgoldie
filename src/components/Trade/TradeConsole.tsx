@@ -97,7 +97,7 @@ export default function TradeConsole({ trade, onUpdate, onClose }: TradeConsoleP
 
         showLoading("Enviando contra-oferta...");
         try {
-            await tradeService.counterTrade(trade.id, editedManifest, user.uid);
+            await tradeService.counterTrade(trade.id, editedManifest, user.uid, isAdmin);
             alert("Contra-oferta enviada correctamente.");
             setIsEditing(false);
             onUpdate();

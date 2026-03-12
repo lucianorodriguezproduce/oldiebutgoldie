@@ -157,13 +157,13 @@ export const tradeService = {
         return docRef.id;
     },
 
-    async counterTrade(tradeId: string, newManifest: Trade['manifest'], myUid: string) {
+    async counterTrade(tradeId: string, newManifest: Trade['manifest'], myUid: string, isAdminForce: boolean = false) {
         const docRef = doc(db, COLLECTION_NAME, tradeId);
         const tradeSnap = await getDoc(docRef);
         if (!tradeSnap.exists()) throw new Error("Trade not found");
 
         const trade = tradeSnap.data() as Trade;
-        const isAdmin = (myUid === ADMIN_UID);
+        const isAdmin = isAdminForce || (myUid === ADMIN_UID);
         
         // Turn validation (standardized)
         const isMyTurn = trade.currentTurn === myUid || (isAdmin && (trade.currentTurn === 'admin' || trade.currentTurn === ADMIN_UID));
