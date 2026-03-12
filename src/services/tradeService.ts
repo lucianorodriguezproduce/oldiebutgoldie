@@ -162,7 +162,11 @@ export const tradeService = {
         if (!tradeSnap.exists()) throw new Error("Trade not found");
 
         const trade = tradeSnap.data() as Trade;
-        if (trade.currentTurn !== myUid) throw new Error("Not your turn");
+        const isAdmin = (myUid === ADMIN_UID);
+        
+        // Turn validation (standardized)
+        const isMyTurn = trade.currentTurn === myUid || (isAdmin && (trade.currentTurn === 'admin' || trade.currentTurn === ADMIN_UID));
+        if (!isMyTurn) throw new Error("Not your turn");
 
         // Determine next turn
         const nextTurn = trade.participants.senderId === myUid
@@ -301,16 +305,25 @@ export const tradeService = {
             }
 
             // --- Read all offered items ---
-            const offeredReads: { ref: any; snap: any; itemId: string; isAdmin: boolean }[] = [];
+            const offeredReads: { ref: any; snap: any; itemId: string; isAdmin: boolean; isExternal?: boolean }[] = [];
             for (const itemId of manifest.offeredItems) {
                 if (senderId === ADMIN_UID) {
                     const itemRef = doc(db, "inventory", String(itemId));
                     const itemSnap = await transaction.get(itemRef);
                     offeredReads.push({ ref: itemRef, snap: itemSnap, itemId, isAdmin: true });
                 } else {
+                    // Try user_assets first
                     const assetRef = doc(db, "user_assets", String(itemId));
                     const assetSnap = await transaction.get(assetRef);
-                    offeredReads.push({ ref: assetRef, snap: assetSnap, itemId, isAdmin: false });
+                    
+                    if (assetSnap.exists()) {
+                        offeredReads.push({ ref: assetRef, snap: assetSnap, itemId, isAdmin: false });
+                    } else {
+                        // Fallback to archived inventory (C2B Offer of external item)
+                        const itemRef = doc(db, "inventory", String(itemId));
+                        const itemSnap = await transaction.get(itemRef);
+                        offeredReads.push({ ref: itemRef, snap: itemSnap, itemId, isAdmin: false, isExternal: true });
+                    }
                 }
             }
 
@@ -375,7 +388,7 @@ export const tradeService = {
             }
 
             // --- Process offered items (Sender -> Receiver) ---
-            for (const { ref, snap, itemId, isAdmin } of offeredReads) {
+            for (const { ref, snap, itemId, isAdmin, isExternal } of offeredReads) {
                 if (isAdmin) {
                     if (snap.exists()) {
                         const invData = snap.data() as InventoryItem;
@@ -401,6 +414,28 @@ export const tradeService = {
                             status: "active"
                         });
                     }
+                } else if (isExternal) {
+                    // C2B Flow: User offers an archived item from inventory
+                    if (!snap.exists()) throw new Error(`Ítem externo no encontrado en inventario: ${itemId}`);
+                    const invData = snap.data() as InventoryItem;
+                    
+                    // We don't always decrement stock for archived items if they are just placeholders,
+                    // but for consistency we'll treat them as single-unit items if they are being 'transferred'.
+                    // Actually, if it's archived, it's safer to just create the asset for the receiver.
+                    
+                    const newAssetRef = doc(collection(db, "user_assets"));
+                    transaction.set(newAssetRef, {
+                        ownerId: receiverId,
+                        originalInventoryId: itemId,
+                        valuation: invData.logistics.price || 0,
+                        isTradeable: false,
+                        metadata: invData.metadata,
+                        media: invData.media,
+                        items: invData.items || [],
+                        acquiredAt: serverTimestamp(),
+                        stock: 1,
+                        status: "active"
+                    });
                 } else {
                     if (!snap.exists()) throw new Error(`Activo ofrecido no encontrado: ${itemId}`);
                     const assetData = snap.data() as UserAsset;

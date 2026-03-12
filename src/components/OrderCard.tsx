@@ -44,10 +44,17 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
     if (!order) return null;
 
     // Extracción tolerante a fallas para órdenes V1
-    const orderIntent = (order && (order.intent || order.details?.intent)) ? (order.intent || order.details.intent) : (order.type === 'direct_sale' ? 'COMPRAR' : order.type === 'exchange' ? 'INTERCAMBIO' : 'VENDER');
-    const orderStatus = order?.status || 'pending';
-    const orderType = order?.type || 'buy';
     const isExchange = order?.type === 'exchange';
+    const isAdminNegotiation = order?.type === 'admin_negotiation';
+    const isPurchase = order?.type === 'direct_sale' || (isAdminNegotiation && order.manifest?.requestedItems?.length > 0 && order.manifest?.offeredItems?.length === 0);
+    const isSale = order?.type === 'admin_negotiation' && order.manifest?.offeredItems?.length > 0;
+
+    const orderIntent = (order && (order.intent || order.details?.intent))
+        ? (order.intent || order.details.intent)
+        : (isPurchase ? 'COMPRAR' : isExchange ? 'INTERCAMBIO' : 'VENDER');
+
+    const orderStatus = order?.status || 'pending';
+    const orderType = isAdminNegotiation ? (isSale ? 'sell' : 'buy') : (order?.type || 'buy');
 
     const { user, isAdmin } = useAuth();
     const { showLoading, hideLoading } = useLoading();

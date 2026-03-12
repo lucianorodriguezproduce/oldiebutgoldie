@@ -219,17 +219,37 @@ export default function ManifestEditor({
 
                 {isLocked ? (
                     <div className="text-2xl font-black text-white">
-                        {manifest.cashAdjustment > 0 ? "+" : ""} ${manifest.cashAdjustment.toLocaleString()}
+                        {manifest.cashAdjustment > 0 ? "RECIBES: " : manifest.cashAdjustment < 0 ? "PAGAS: " : ""} ${Math.abs(manifest.cashAdjustment).toLocaleString()}
                     </div>
                 ) : (
-                    <div className="flex items-center gap-4">
-                        <input
-                            type="number"
-                            value={manifest.cashAdjustment}
-                            onChange={(e) => handleUpdateCash(parseFloat(e.target.value) || 0)}
-                            className="bg-black/40 border border-white/10 rounded-2xl px-6 py-4 text-xl font-black text-white w-full focus:border-primary/40 focus:outline-none transition-all"
-                            placeholder="Monto de ajuste..."
-                        />
+                    <div className="space-y-4">
+                        <div className="flex bg-white/5 p-1 rounded-xl w-fit">
+                            <button
+                                onClick={() => handleUpdateCash(Math.abs(manifest.cashAdjustment))}
+                                className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${manifest.cashAdjustment >= 0 ? "bg-emerald-500 text-black" : "text-gray-500 hover:text-white"}`}
+                            >
+                                Recibir
+                            </button>
+                            <button
+                                onClick={() => handleUpdateCash(-Math.abs(manifest.cashAdjustment))}
+                                className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${manifest.cashAdjustment < 0 ? "bg-red-500 text-white" : "text-gray-500 hover:text-white"}`}
+                            >
+                                Ofrecer/Pagar
+                            </button>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <input
+                                type="number"
+                                value={Math.abs(manifest.cashAdjustment)}
+                                onChange={(e) => {
+                                    const val = parseFloat(e.target.value) || 0;
+                                    const isNegative = manifest.cashAdjustment < 0;
+                                    handleUpdateCash(isNegative ? -val : val);
+                                }}
+                                className="bg-black/40 border border-white/10 rounded-2xl px-6 py-4 text-xl font-black text-white w-full focus:border-primary/40 focus:outline-none transition-all"
+                                placeholder="Monto de ajuste..."
+                            />
+                        </div>
                     </div>
                 )}
             </div>
