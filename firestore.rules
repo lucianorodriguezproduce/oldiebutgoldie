@@ -2,103 +2,239 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Función central de administración
+    // Core Functions
     function isAdmin() {
       return request.auth != null && (
-        request.auth.uid == 'oldiebutgoldie' || 
-        request.auth.uid == 'L227yvVSt6RzE0X8hLg0lD6DHe22' || 
-        request.auth.token.email == 'lucianorodriguezproduce@gmail.com'
+        request.auth.uid == "MKPlxxi9JENQt0hS3V1QNeF8oOS2" ||
+        request.auth.uid == "oldiebutgoldie" ||
+        request.auth.uid == "L227yvVSt6RzE0X8hLg0lD6DHe22" ||
+        request.auth.token.email == "admin@discography.ai" ||
+        request.auth.token.email == "lucianorodriguez.produce@gmail.com" ||
+        request.auth.token.email == "lucianorodriguezproduce@gmail.com"
       );
     }
 
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // Branding & Config
+    match /settings/site_config {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /settings/{document=**} {
+      allow read, write: if isAdmin();
+    }
+
+    // Telemetry - Creación libre, gestión Admin
+    match /interactions/{document=**} {
+      allow create: if true;
+      allow read, delete: if isAdmin();
+    }
+    
+    // User data - Lectura para perfiles (usernames), escritura solo dueño o Admin
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if isOwner(userId) || isAdmin();
+    }
+
+    // Usernames Registry - Lectura pública para búsquedas
+    match /usernames/{username} {
+      allow read: if true;
+      allow write: if request.auth != null && (
+        !exists(/databases/$(database)/documents/usernames/$(username)) || 
+        get(/databases/$(database)/documents/usernames/$(username)).data.uid == request.auth.uid
+      ) || isAdmin();
+    }
+
+    // Connections - Soberanía compartida entre las partes
+    match /connections/{connectionId} {
+      allow read: if request.auth != null && (
+        isAdmin() ||
+        !exists(/databases/$(database)/documents/connections/$(connectionId)) ||
+        request.auth.uid == resource.data.requesterId || 
+        request.auth.uid == resource.data.receiverId
+      );
+      allow create: if request.auth != null && 
+        request.auth.uid == request.resource.data.requesterId;
+      allow update, delete: if request.auth != null && (
+        request.auth.uid == resource.data.requesterId || 
+        request.auth.uid == resource.data.receiverId ||
+        isAdmin()
+      );
+    }
+
+    // Editorial - Lectura pública, gestión Admin
+    match /editorial/{document=**} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Subscribers - Suscripción libre, gestión Admin
+    match /subscribers/{document=**} {
+      allow create: if true;
+      allow read, delete: if isAdmin();
+    }
+
+    // Leads - Solo Admin
+    match /leads/{document=**} {
+      allow read, write: if isAdmin();
+    }
+
+    // Orders - Pedidos públicos, gestión Admin
+    match /orders/{document=**} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update, delete: if isAdmin();
+    }
+
+    // Notifications - Solo dueño o Admin
+    match /notifications/{document=**} {
+      allow read, write, delete: if request.auth != null && (
+        resource == null || resource.data.uid == request.auth.uid || isAdmin()
+      );
+    }
+
+    // Inventory - El Búnker: Lectura pública. 
     match /inventory/{itemId} {
       allow read: if true;
-      allow write: if isAdmin();
-    }
-
-    match /users/{userId} {
-      allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == userId || isAdmin();
-    }
-
-    match /market_orders/{orderId} {
-      allow read: if true;
-      allow write: if isAdmin() || (request.auth != null && request.resource.data.userId == request.auth.uid);
-    }
-
-    match /notifications/{notificationId} {
-      allow read: if request.auth != null && resource.data.user_id == request.auth.uid;
-      allow create: if request.auth != null;
-      allow update: if request.auth != null && resource.data.user_id == request.auth.uid;
+      allow create: if request.auth != null && (isAdmin() || request.resource.data.logistics.status == "archived");
+      allow update: if request.auth != null && (
+        isAdmin() || 
+        request.resource.data.logistics.status == "archived" ||
+        (resource.data.logistics.status == "active" && 
+         request.resource.data.logistics.status in ["sold", "venta_finalizada", "completed"] &&
+         request.resource.data.logistics.price == resource.data.logistics.price)
+      );
       allow delete: if isAdmin();
+
+      match /{allPaths=**} {
+        allow read: if true;
+        allow write: if isAdmin() || (
+          request.auth != null && 
+          request.resource.data.logistics.stock == resource.data.logistics.stock - 1 &&
+          request.resource.data.logistics.price == resource.data.logistics.price &&
+          request.resource.data.metadata == resource.data.metadata
+        );
+      }
     }
 
-    match /user_assets/{assetId} {
-      allow read: if true;
-      allow write: if request.auth != null && (resource.data.ownerId == request.auth.uid || request.resource.data.ownerId == request.auth.uid) || isAdmin();
-    }
-
+    // Trades - Negociaciones: Solo participantes o Admin, o lectura pública si es oferta de mercado
     match /trades/{tradeId} {
-      // Regla de lectura: Participantes o Admin
-      allow read: if request.auth != null && (
-        resource.data.participants.senderId == request.auth.uid || 
-        resource.data.participants.receiverId == request.auth.uid ||
-        resource.data.isPublicOrder == true ||
-        isAdmin()
+      allow read: if (request.auth != null && (
+        isAdmin() ||
+        request.auth.uid == resource.data.participants.senderId ||
+        request.auth.uid == resource.data.participants.receiverId ||
+        request.auth.uid == resource.data.highest_bidder_uid
+      )) || resource.data.isPublicOrder == true;
+      
+      // FIX: El write se separó para manejar correctamente el 'create' sin 'resource.data'
+      allow create: if request.auth != null && (
+        isAdmin() ||
+        request.resource.data.participants.senderId == request.auth.uid
       );
       
-      // Regla de creación: Usuario autenticado debe ser el senderId
-      allow create: if request.auth != null && 
-                    request.resource.data.participants.senderId == request.auth.uid;
-
-      // Regla de actualización: Participantes o Admin
       allow update: if request.auth != null && (
-        resource.data.participants.senderId == request.auth.uid || 
-        resource.data.participants.receiverId == request.auth.uid ||
-        (resource.data.isPublicOrder == true && request.auth.uid == resource.data.highest_bidder_uid) ||
-        (resource.data.isPublicOrder == true && resource.data.status == 'accepted' && (request.resource.data.status == 'accepted')) ||
-        isAdmin()
+        isAdmin() ||
+        request.auth.uid == (resource.data.participants.senderId || 'none') ||
+        request.auth.uid == (resource.data.participants.receiverId || 'none') ||
+        (resource.data.isPublicOrder == true && (request.resource.data.highest_bidder_uid == request.auth.uid || request.resource.data.status == 'accepted'))
       );
-
+      
       allow delete: if isAdmin();
 
-      // Subcolección de ofertas (Negociaciones V2)
+      // Proposals Subcollection - Pujas del Coliseo
       match /proposals/{proposalId} {
-        allow read: if true;
-        allow create: if request.auth != null;
-        allow update: if isAdmin() || (request.auth != null && (
-          get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.senderId == request.auth.uid ||
-          get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.receiverId == request.auth.uid
-        ));
+        allow read: if request.auth != null && (
+          isAdmin() ||
+          request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.senderId ||
+          request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.receiverId ||
+          request.auth.uid == resource.data.senderId
+        );
+        allow create: if request.auth != null && 
+          request.resource.data.senderId == request.auth.uid;
+        allow update, delete: if isAdmin() || (request.auth != null && resource.data.senderId == request.auth.uid);
       }
 
-      // Subcolección de chats
+      // Messaging Engine (Protocol V24.5)
       match /messages/{messageId} {
         allow read: if request.auth != null && (
-          get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.senderId == request.auth.uid ||
-          get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.receiverId == request.auth.uid ||
-          (get(/databases/$(database)/documents/trades/$(tradeId)).data.isPublicOrder == true && 
-           get(/databases/$(database)/documents/trades/$(tradeId)).data.highest_bidder_uid == request.auth.uid) ||
-          isAdmin()
+          isAdmin() ||
+          request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.senderId ||
+          request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.receiverId ||
+          request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.highest_bidder_uid
         );
         allow create: if request.auth != null && (
-          get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.senderId == request.auth.uid ||
-          get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.receiverId == request.auth.uid ||
-          (get(/databases/$(database)/documents/trades/$(tradeId)).data.isPublicOrder == true && 
-           get(/databases/$(database)/documents/trades/$(tradeId)).data.highest_bidder_uid == request.auth.uid) ||
-          isAdmin()
+          request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.senderId ||
+          request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.receiverId ||
+          request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.highest_bidder_uid
         );
       }
     }
 
-    match /reviews/{reviewId} {
-      allow read: if true;
-      allow create: if request.auth != null;
+    // User Assets - Soberanía y Blindaje: Solo dueño o Admin
+    match /user_assets/{assetId} {
+      allow read: if resource == null || resource.data.status == "active" || (request.auth != null && (isAdmin() || resource.data.ownerId == request.auth.uid || resource.data.uid == request.auth.uid));
+      allow create: if request.auth != null && (request.resource.data.ownerId == request.auth.uid || request.resource.data.uid == request.auth.uid || isAdmin());
+      allow update, delete: if request.auth != null && (resource.data.ownerId == request.auth.uid || resource.data.uid == request.auth.uid || isAdmin());
     }
 
-    match /settings/{settingId} {
+    // Lotes y Carritos - Gestión Admin
+    match /lotes/{document=**} {
+      allow read, write: if isAdmin();
+    }
+
+    // Purchase Requests - Abierto para creación de usuario
+    match /purchase_requests/{requestId} {
+      allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
+      allow read: if request.auth != null && (resource.data.uid == request.auth.uid || isAdmin());
+      allow update, delete: if isAdmin();
+    }
+
+    match /p2p_market/{document=**} {
+      allow read, write: if isAdmin();
+    }
+
+    // Internal Categories - Lectura pública, gestión Admin
+    match /internal_categories/{categoryId} {
       allow read: if true;
       allow write: if isAdmin();
+    }
+
+    // Articles & Editorial Assets - Lectura pública, gestión Admin
+    match /articles/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Analytics Intents & Missed Searches - Gestión Admin
+    match /analytics_intents/{document=**} {
+      allow create: if true;
+      allow read, delete: if isAdmin();
+    }
+    match /missed_searches/{document=**} {
+      allow create: if true;
+      allow read, delete: if isAdmin();
+    }
+
+    // System Cache & Config
+    match /system_cache/{document=**} {
+      allow read, write: if true; 
+    }
+    match /system_config/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin(); 
+    }
+
+    // Reputation System (Protocol V24.6)
+    match /reviews/{reviewId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && (
+        request.auth.uid == request.resource.data.reviewer_uid &&
+        get(/databases/$(database)/documents/trades/$(request.resource.data.trade_id)).data.status == "accepted"
+      );
+      allow update, delete: if isAdmin();
     }
   }
 }
