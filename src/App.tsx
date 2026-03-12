@@ -196,7 +196,7 @@ function AppContent() {
                 <Route path="/perfil" element={<Profile />} />
                 <Route
                   path="/trade/new"
-                  element={siteConfig?.p2p_global_enabled === false ? <Navigate to="/tienda" replace /> : <TradeConstructor />}
+                  element={siteConfig?.allow_p2p_public_offers === false ? <Navigate to="/tienda" replace /> : <TradeConstructor />}
                 />
               </Route>
             </Route>

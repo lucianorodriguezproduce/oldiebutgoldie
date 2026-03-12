@@ -172,10 +172,10 @@ export default function PublicOrders() {
                             <div className="py-20 flex flex-col items-center justify-center text-center space-y-4">
                                 <Disc className="w-16 h-16 text-white/10 mb-2 animate-[spin_10s_linear_infinite]" />
                                 <h3 className="text-xl font-display font-black text-white uppercase tracking-widest">
-                                    {config?.p2p_global_enabled === false ? "Mercado en Mantenimiento" : TEXTS.comercio.publicActivity.noActivity}
+                                    {config?.allow_p2p_public_offers === false ? "Mercado en Mantenimiento" : TEXTS.comercio.publicActivity.noActivity}
                                 </h3>
                                 <p className="text-gray-500 font-medium max-w-md">
-                                    {config?.p2p_global_enabled === false
+                                    {config?.allow_p2p_public_offers === false
                                         ? "El mercado global P2P está desactivado temporalmente. Solo podés ver tus propias negociaciones privadas en este momento."
                                         : TEXTS.comercio.publicActivity.noPublicOrders}
                                 </p>
