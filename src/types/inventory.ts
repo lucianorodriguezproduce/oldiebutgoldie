@@ -78,9 +78,12 @@ export interface Trade {
     negotiationHistory: TradeManifest[]; // Previous versions of the manifest
     timestamp: any;
     transactionId?: string; // Links segmented orders from a mixed lote
-    // Protocol V24.2: Auction fields
+    // Protocol V24.2 & V24.4: Auction fields
     auction_end_date?: any;
     starting_price?: number;
+    current_highest_bid?: number;
+    highest_bidder_uid?: string;
+    bid_count?: number;
 }
 
 export interface UserAsset {

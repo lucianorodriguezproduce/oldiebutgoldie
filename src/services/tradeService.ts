@@ -519,6 +519,59 @@ export const tradeService = {
         return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     },
 
+    async submitBid(tradeId: string, userId: string, amount: number, username: string) {
+        const tradeRef = doc(db, COLLECTION_NAME, tradeId);
+        
+        return await runTransaction(db, async (transaction) => {
+            const tradeSnap = await transaction.get(tradeRef);
+            if (!tradeSnap.exists()) throw new Error("Subasta no encontrada");
+            
+            const tradeData = tradeSnap.data() as Trade;
+            
+            // 1. Validation: Time
+            const now = Date.now();
+            const endDate = tradeData.auction_end_date?.toMillis ? tradeData.auction_end_date.toMillis() : new Date(tradeData.auction_end_date).getTime();
+            if (now > endDate) {
+                throw new Error("La subasta ha cerrado");
+            }
+            
+            // 2. Validation: Amount
+            const currentMin = tradeData.current_highest_bid || tradeData.starting_price || 0;
+            // First bid must be >= starting_price, subsequent must be > current_highest_bid
+            const isFirstBid = !tradeData.current_highest_bid;
+            if (isFirstBid) {
+                if (amount < currentMin) throw new Error(`La oferta inicial debe ser al menos de $${currentMin.toLocaleString()}`);
+            } else {
+                if (amount <= currentMin) throw new Error(`Debes superar la oferta actual de $${currentMin.toLocaleString()}`);
+            }
+            
+            // 3. Update Trade record
+            transaction.update(tradeRef, {
+                current_highest_bid: amount,
+                highest_bidder_uid: userId,
+                highest_bidder_name: username,
+                bid_count: (tradeData.bid_count || 0) + 1,
+                last_bid_at: serverTimestamp()
+            });
+            
+            // 4. Record as Proposal (Subcollection) for history
+            const proposalRef = doc(collection(db, COLLECTION_NAME, tradeId, "proposals"));
+            transaction.set(proposalRef, {
+                senderId: userId,
+                senderName: username,
+                type: 'bid',
+                manifest: {
+                    cashAdjustment: amount,
+                    currency: 'ARS'
+                },
+                status: "pending",
+                timestamp: serverTimestamp()
+            });
+            
+            return { tradeId, amount };
+        });
+    },
+
     async resolvePublicProposal(tradeId: string, proposalId: string) {
         const tradeRef = doc(db, COLLECTION_NAME, tradeId);
         const proposalRef = doc(db, COLLECTION_NAME, tradeId, "proposals", proposalId);

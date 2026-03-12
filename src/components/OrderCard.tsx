@@ -33,6 +33,7 @@ import { getCleanOrderMetadata } from '@/utils/orderMetadata';
 import { useLoading } from '@/context/LoadingContext';
 import { tradeService } from '@/services/tradeService';
 import { isAdminEmail } from '@/constants/admin';
+import { CountdownTimer } from './Auction/CountdownTimer';
 
 interface OrderCardProps {
     order: any; // Using any or an extended OrderData to catch legacy fields without crashing
@@ -45,22 +46,58 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
 
     // Extracción tolerante a fallas para órdenes V1
     const isExchange = order?.type === 'exchange';
+    const isAuction = order?.type === 'auction';
     const isAdminNegotiation = order?.type === 'admin_negotiation';
     const isPurchase = order?.type === 'direct_sale' || (isAdminNegotiation && order.manifest?.requestedItems?.length > 0 && order.manifest?.offeredItems?.length === 0);
     const isSale = order?.type === 'admin_negotiation' && order.manifest?.offeredItems?.length > 0;
 
     const orderIntent = (order && (order.intent || order.details?.intent))
         ? (order.intent || order.details.intent)
-        : (isPurchase ? 'COMPRAR' : isExchange ? 'INTERCAMBIO' : 'VENDER');
+        : (isPurchase ? 'COMPRAR' : isExchange ? 'INTERCAMBIO' : isAuction ? 'SUBASTA' : 'VENDER');
 
     const orderStatus = order?.status || 'pending';
     const orderType = isAdminNegotiation ? (isSale ? 'sell' : 'buy') : (order?.type || 'buy');
 
-    const { user, isAdmin } = useAuth();
+    const { user, dbUser, isAdmin } = useAuth();
     const { showLoading, hideLoading } = useLoading();
     const [isExpanded, setIsExpanded] = useState(false);
     const [quickOffer, setQuickOffer] = useState("");
+    const [bidAmount, setBidAmount] = useState(
+        (order.current_highest_bid || order.starting_price || 0) + 1000
+    );
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [auctionFinished, setAuctionFinished] = useState(false);
+
+    const handleBid = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!user || isSubmitting || auctionFinished) return;
+        
+        if (!dbUser?.username) {
+            alert("Debes reclamar un @usuario para poder pujar en subastas.");
+            return;
+        }
+
+        const amount = parseFloat(bidAmount as any);
+        const currentMin = order.current_highest_bid || order.starting_price || 0;
+        
+        if (amount <= currentMin) {
+            alert(`Tu oferta debe ser mayor a $${currentMin.toLocaleString()}`);
+            return;
+        }
+
+        setIsSubmitting(true);
+        showLoading("Enviando puja...");
+        try {
+            await tradeService.submitBid(order.id, user.uid, amount, dbUser.username);
+            alert("¡Puja enviada con éxito!");
+        } catch (error: any) {
+            console.error("Bid error:", error);
+            alert(error.message || "Error al enviar la puja");
+        } finally {
+            setIsSubmitting(false);
+            hideLoading();
+        }
+    };
 
     const lastNegotiation = order.negotiationHistory?.[order.negotiationHistory.length - 1];
     const requiresAction = context === 'admin' && lastNegotiation?.sender === 'user';
@@ -368,11 +405,16 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                         )}
 
                         {/* Premium Price Badge */}
-                        {(order.details?.price || order.totalPrice) && (
-                            <span className="flex items-center gap-1.5 bg-primary/10 border border-primary/20 text-primary px-3 py-1 rounded-lg text-xs md:text-sm font-black shadow-sm shadow-primary/5 ml-auto md:ml-2">
-                                <DollarSign className="h-4 w-4" />
+                        {(order.details?.price || order.totalPrice || order.starting_price || order.current_highest_bid) && (
+                            <span className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs md:text-sm font-black shadow-sm ml-auto md:ml-2 ${
+                                isAuction ? 'bg-orange-500/10 border border-orange-500/20 text-orange-400' : 'bg-primary/10 border border-primary/20 text-primary'
+                            }`}>
+                                {isAuction ? <Flame className="h-4 w-4" /> : <DollarSign className="h-4 w-4" />}
                                 {canSeePrice ? (
-                                    `${(order.details?.currency || order.currency) === "USD" ? "US$" : "$"} ${((order.details?.price || order.totalPrice) || 0).toLocaleString()}`
+                                    <>
+                                        <span className="text-[10px] opacity-50 mr-1">{isAuction ? (order.current_highest_bid ? 'PUJA ACTUAL:' : 'INICIO:') : ''}</span>
+                                        {`${(order.details?.currency || order.currency || 'ARS') === "USD" ? "US$" : "$"} ${(order.current_highest_bid || order.totalPrice || order.details?.price || order.starting_price || 0).toLocaleString()}`}
+                                    </>
                                 ) : (
                                     <span className="text-primary/50 italic text-[10px]">{TEXTS.global.common.private}</span>
                                 )}
@@ -402,18 +444,57 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
 
                 {/* Right Status Panel */}
                 <div className="flex flex-col w-full lg:w-auto mt-4 lg:mt-0 gap-3 md:gap-4 flex-shrink-0 border-t border-white/5 lg:border-t-0 pt-4 lg:pt-0">
-                    <div className="flex w-full justify-start lg:justify-end">
+                    <div className="flex w-full justify-start lg:justify-end gap-2">
+                        {isAuction && (
+                            <CountdownTimer 
+                                endDate={order.auction_end_date} 
+                                onEnd={() => setAuctionFinished(true)} 
+                            />
+                        )}
                         {getStatusBadge(status)}
                     </div>
 
-                    {context === 'public' && (order.is_admin_offer || isInventoryItem) && status !== 'completed' && status !== 'venta_finalizada' && status !== 'cancelled' && (
-                        <Link
-                            to={isInventoryItem ? `/album/${order.id}` : `/orden/${order.id}?action=buy`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="w-full px-6 py-4 bg-gradient-to-r from-primary to-secondary text-black font-black uppercase tracking-widest text-[11px] md:text-sm rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all text-center lg:mt-auto"
-                        >
-                            ¡COMPRAR!
-                        </Link>
+                    {isAuction ? (
+                        /* BIDDING UI */
+                        context === 'public' && !auctionFinished && status !== 'resolved' && (
+                            <div className="flex flex-col gap-2 w-full lg:w-48 mt-auto" onClick={e => e.stopPropagation()}>
+                                <div className="flex items-center gap-2 group/bid">
+                                    <div className="relative flex-1">
+                                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-primary/50 group-focus-within/bid:text-primary transition-colors" />
+                                        <input
+                                            type="number"
+                                            value={bidAmount}
+                                            onChange={e => setBidAmount(e.target.value)}
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-3 py-3 text-sm font-mono text-white focus:border-primary/40 outline-none transition-all"
+                                            placeholder="Monto"
+                                        />
+                                    </div>
+                                    <button
+                                        onClick={handleBid}
+                                        disabled={isSubmitting || !user}
+                                        className="h-[46px] px-6 bg-primary text-black rounded-xl font-black uppercase text-xs tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-primary/20 disabled:opacity-50"
+                                    >
+                                        {isSubmitting ? (
+                                            <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                                        ) : "PUJAR"}
+                                    </button>
+                                </div>
+                                {!user && (
+                                    <p className="text-[8px] text-gray-500 font-bold uppercase text-center">Inicia sesión para pujar</p>
+                                )}
+                            </div>
+                        )
+                    ) : (
+                        /* BUY BUTTON (Standard) */
+                        context === 'public' && (order.is_admin_offer || isInventoryItem) && status !== 'completed' && status !== 'venta_finalizada' && status !== 'cancelled' && (
+                            <Link
+                                to={isInventoryItem ? `/album/${order.id}` : `/orden/${order.id}?action=buy`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="w-full px-6 py-4 bg-gradient-to-r from-primary to-secondary text-black font-black uppercase tracking-widest text-[11px] md:text-sm rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all text-center lg:mt-auto"
+                            >
+                                ¡COMPRAR!
+                            </Link>
+                        )
                     )}
 
                     {/* QuickOffer Component for Admins - Minimalist & Validated */}
