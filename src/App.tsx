@@ -174,11 +174,9 @@ function AppContent() {
               <Route
                 path="/comercio"
                 element={
-                  siteConfig === null 
-                    ? <div className="min-h-screen bg-black" /> 
-                    : (siteConfig?.p2p_global_enabled || siteConfig?.allow_p2p_public_offers || isAdmin) 
-                      ? <PublicOrders /> 
-                      : <Navigate to="/tienda" replace />
+                  (siteConfig === null || siteConfig?.p2p_global_enabled || siteConfig?.allow_p2p_public_offers || isAdmin) 
+                    ? <PublicOrders /> 
+                    : <Navigate to="/tienda" replace />
                 }
               />
 
@@ -209,11 +207,9 @@ function AppContent() {
                 <Route
                   path="/trade/new"
                   element={
-                    siteConfig === null
-                      ? <div className="min-h-screen bg-black" />
-                      : (siteConfig?.p2p_global_enabled || siteConfig?.allow_p2p_public_offers || isAdmin)
-                        ? <TradeConstructor />
-                        : <Navigate to="/tienda" replace />
+                    (siteConfig === null || siteConfig?.p2p_global_enabled || siteConfig?.allow_p2p_public_offers || isAdmin)
+                      ? <TradeConstructor />
+                      : <Navigate to="/tienda" replace />
                   }
                 />
               </Route>

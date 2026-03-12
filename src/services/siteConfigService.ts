@@ -33,11 +33,19 @@ export const siteConfigService = {
         await updateDoc(docRef, changes);
     },
 
-    onSnapshotConfig(callback: (config: SiteConfig) => void) {
-        return onSnapshot(doc(db, CONFIG_DOC_PATH), (snap) => {
-            if (snap.exists()) {
-                callback(snap.data() as SiteConfig);
+    onSnapshotConfig(callback: (config: SiteConfig | null) => void) {
+        return onSnapshot(doc(db, CONFIG_DOC_PATH), 
+            (snap) => {
+                if (snap.exists()) {
+                    callback(snap.data() as SiteConfig);
+                } else {
+                    callback(null);
+                }
+            },
+            (error) => {
+                console.error("Config Snapshot Error (V24.8 Robust):", error);
+                callback(null); // Fallback to null (Optimistic logic will handle it)
             }
-        });
+        );
     }
 };
