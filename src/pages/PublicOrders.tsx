@@ -59,9 +59,11 @@ export default function PublicOrders() {
 
                         // Rule 2: Non-owners only see public exchanges when market is open
                         const isMarketOpen = config?.p2p_global_enabled || config?.allow_p2p_public_offers || false;
+                        
+                        // BROADENED STATUS: 'pending' (new) or 'pending_resolution' (auctions with bids or P2P being resolved)
                         const isPublicExchange = (o.type === 'exchange' || o.intent === 'INTERCAMBIO' || o.type === 'direct_sale' || o.type === 'auction') && 
                                                o.isPublicOrder === true && 
-                                               o.status === 'pending';
+                                               (o.status === 'pending' || o.status === 'pending_resolution');
                         
                         return isMarketOpen && isPublicExchange;
                     });
@@ -80,6 +82,10 @@ export default function PublicOrders() {
                         return timeB - timeA;
                     }));
                     setLoading(false);
+                }, (error) => {
+                    console.error("Firestore listener failed:", error);
+                    // Ensure loading is stopped even on permission errors
+                    setLoading(false);
                 });
             } catch (error) {
                 console.error("Error fetching trades:", error);
@@ -91,7 +97,7 @@ export default function PublicOrders() {
         return () => {
             if (unsubscribeTrades) unsubscribeTrades();
         };
-    }, [isAdmin, user?.uid, config?.p2p_global_enabled]);
+    }, [isAdmin, user?.uid, config?.p2p_global_enabled, config?.allow_p2p_public_offers]);
 
     return (
         <div className="min-h-screen bg-black pt-12">
