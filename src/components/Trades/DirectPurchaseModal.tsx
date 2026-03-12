@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ShieldCheck, MessageCircle, ShoppingBag, Disc } from 'lucide-react';
+import { X, ShieldCheck, MessageCircle, Disc } from 'lucide-react';
 import { tradeService } from '@/services/tradeService';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -21,10 +22,19 @@ export default function DirectPurchaseModal({ isOpen, onClose, order }: DirectPu
 
     if (!order) return null;
 
-    // Calculamos el precio sumando los items si totalPrice/details.price fallan
-    const price = order.details?.price || order.totalPrice || order.items?.reduce((acc: number, item: any) => acc + (item.price || 0), 0) || 0;
+    // Calculamos el precio con fallbacks profundos (V24.8)
+    // 1. totalPrice (Trade V2)
+    // 2. details.price (Trade Legacy)
+    // 3. price raíz (Inventory Item)
+    // 4. Suma de items
+    const price = order.totalPrice || 
+                  order.details?.price || 
+                  order.price ||
+                  order.items?.reduce((acc: number, item: any) => acc + (item.price || 0), 0) || 
+                  0;
+                  
     const currency = order.currency || order.details?.currency || "ARS";
-    const image = order.thumbnailUrl || order.details?.cover_image;
+    const image = order.thumbnailUrl || order.details?.cover_image || order.image;
 
     const handleConfirm = async () => {
         if (!user || !dbUser?.username || isProcessing) return;
@@ -33,125 +43,127 @@ export default function DirectPurchaseModal({ isOpen, onClose, order }: DirectPu
         showLoading("Procesando compra...");
 
         try {
+            console.log(`[purchase] Executing direct purchase for order: ${order.id} by user: ${user.uid}`);
             await tradeService.executeDirectPurchase(order.id, user.uid, dbUser.username);
             onClose();
             navigate(`/orden/${order.id}`);
         } catch (error: any) {
-            console.error("Purchase error:", error);
-            alert(error.message || "Error al procesar la compra");
+            console.error("[purchase] Purchase error:", error);
+            alert(error.message || "Error al procesar la compra. Revisa los permisos o tu conexión.");
         } finally {
             setIsProcessing(false);
             hideLoading();
         }
     };
 
-    return (
+    // Usamos Portals para evitar que el transform del padre (OrderCard) rompa el centrado
+    return createPortal(
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+                        className="absolute inset-0 bg-black/90 backdrop-blur-md"
                         onClick={onClose}
                     />
                     
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                        initial={{ opacity: 0, scale: 0.9, y: 40 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                        className="relative w-full max-w-lg bg-[#0A0A0A] border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl"
+                        exit={{ opacity: 0, scale: 0.9, y: 40 }}
+                        className="relative w-full max-w-lg bg-[#0A0A0A] border border-white/10 rounded-[3rem] overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.8)]"
                     >
-                        {/* Header */}
-                        <div className="p-8 border-b border-white/5 space-y-4">
-                            <div className="flex items-center justify-between">
-                                <div className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-black text-emerald-400 uppercase tracking-widest">
-                                    Compra Directa
-                                </div>
-                                <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full transition-colors">
-                                    <X size={20} className="text-gray-500" />
-                                </button>
+                        {/* Header Section */}
+                        <div className="p-8 pb-4 flex items-center justify-between">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 border border-primary/20 rounded-full">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                                <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Transacción Protegida</span>
                             </div>
-                            <div className="space-y-1">
-                                <h2 className="text-3xl font-display font-black text-white uppercase tracking-tighter">Confirmar Compra</h2>
-                                <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Estás a un paso de obtener esta pieza</p>
-                            </div>
+                            <button 
+                                onClick={onClose} 
+                                className="p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl transition-all active:scale-95"
+                            >
+                                <X size={18} className="text-gray-400" />
+                            </button>
                         </div>
 
-                        {/* Body */}
+                        {/* Title Section */}
+                        <div className="px-8 space-y-2">
+                            <h2 className="text-4xl font-display font-black text-white uppercase tracking-tighter leading-none">Confirmar <span className="text-primary">Compra</span></h2>
+                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest leading-relaxed">Estás a un paso de obtener esta pieza de colección</p>
+                        </div>
+
+                        {/* Body Summary */}
                         <div className="p-8 space-y-8">
-                            {/* Item Preview */}
-                            <div className="flex gap-6 items-center">
-                                <div className="w-24 h-24 rounded-2xl overflow-hidden border border-white/10 flex-shrink-0 bg-black/40">
+                            {/* Item Information */}
+                            <div className="flex gap-6 items-center bg-white/[0.03] p-4 rounded-3xl border border-white/5">
+                                <div className="w-24 h-24 rounded-2xl overflow-hidden border border-white/10 flex-shrink-0 shadow-2xl">
                                     {image ? (
                                         <LazyImage src={image} alt="" className="w-full h-full object-cover" />
                                     ) : (
-                                        <div className="w-full h-full flex items-center justify-center">
-                                            <Disc className="w-10 h-10 text-white/5" />
+                                        <div className="w-full h-full flex items-center justify-center bg-black/40">
+                                            <Disc className="w-8 h-8 text-white/5" />
                                         </div>
                                     )}
                                 </div>
-                                <div className="space-y-1 min-w-0">
-                                    <h3 className="text-xl font-black text-white uppercase truncate">{order.album || order.details?.album}</h3>
-                                    <p className="text-sm font-bold text-gray-500 uppercase tracking-widest truncate">{order.artist || order.details?.artist}</p>
+                                <div className="space-y-1.5 min-w-0">
+                                    <h3 className="text-xl font-black text-white uppercase truncate tracking-tight">{order.album || order.details?.album || 'Álbum Desconocido'}</h3>
+                                    <p className="text-xs font-bold text-gray-500 uppercase tracking-widest truncate opacity-80">{order.artist || order.details?.artist || 'Artista Desconocido'}</p>
                                     <div className="flex items-center gap-2 mt-2">
-                                        <span className="px-2 py-0.5 rounded bg-white/5 text-[10px] font-bold text-gray-400 border border-white/10">
-                                            {order.items?.[0]?.condition || 'VG+'}
+                                        <span className="px-2 py-0.5 rounded bg-primary/20 text-[9px] font-black text-primary border border-primary/30 uppercase tracking-tighter">
+                                            {order.items?.[0]?.condition || order.condition || 'VG+'}
                                         </span>
-                                        <span className="px-2 py-0.5 rounded bg-white/5 text-[10px] font-bold text-gray-400 border border-white/10">
-                                            {order.items?.[0]?.format || 'Vinyl'}
+                                        <span className="px-2 py-0.5 rounded bg-white/5 text-[9px] font-black text-gray-400 border border-white/10 uppercase tracking-tighter">
+                                            {order.items?.[0]?.format || order.format || 'Vinyl'}
                                         </span>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Price Summary */}
-                            <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-6 space-y-4">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Precio del ítem</span>
-                                    <span className="text-lg font-mono font-bold text-white">
-                                        {currency === 'USD' ? 'US$' : '$'} {price.toLocaleString()}
-                                    </span>
+                            {/* Financial Grid */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 space-y-1">
+                                    <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Valor Unitario</span>
+                                    <p className="text-xl font-mono font-bold text-white/50">{currency === 'USD' ? 'US$' : '$'} {price.toLocaleString()}</p>
                                 </div>
-                                <div className="flex items-center justify-between pt-4 border-t border-white/5">
-                                    <span className="text-xs font-black text-white uppercase tracking-widest">Total a pagar</span>
-                                    <span className="text-3xl font-mono font-black text-primary">
-                                        {currency === 'USD' ? 'US$' : '$'} {price.toLocaleString()}
-                                    </span>
+                                <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10 space-y-1 text-right">
+                                    <span className="text-[8px] font-black text-primary uppercase tracking-widest">Total Final</span>
+                                    <p className="text-3xl font-display font-black text-primary tracking-tighter">{currency === 'USD' ? 'US$' : '$'}{price.toLocaleString()}</p>
                                 </div>
                             </div>
 
-                            {/* Safety Info */}
-                            <div className="flex gap-4 p-4 bg-blue-500/5 border border-blue-500/10 rounded-2xl">
-                                <ShieldCheck className="w-6 h-6 text-blue-400 flex-shrink-0" />
+                            {/* Security Pledge */}
+                            <div className="flex gap-4 p-5 bg-[#0e1117] border border-blue-500/20 rounded-[2rem]">
+                                <ShieldCheck className="w-8 h-8 text-blue-400 flex-shrink-0 mt-1" />
                                 <div className="space-y-1">
-                                    <h4 className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Transacción Protegida</h4>
-                                    <p className="text-[10px] font-bold text-blue-400/60 uppercase leading-relaxed">
-                                        Al confirmar, se abrirá un chat directo con el vendedor para coordinar el pago y envío.
+                                    <h4 className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Protección al Comprador</h4>
+                                    <p className="text-[10px] font-bold text-gray-500 uppercase leading-relaxed tracking-tight">
+                                        Al confirmar, OldieButGoldie abrirá un chat directo para que coordines el envío. No liberes dinero sin antes verificar la llegada del disco.
                                     </p>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Actions */}
-                        <div className="p-8 pt-0 flex gap-3">
+                        {/* CTA Section */}
+                        <div className="p-8 pt-0 flex gap-4">
                             <button
                                 onClick={onClose}
-                                className="flex-1 py-5 rounded-2xl border border-white/10 text-white font-black uppercase text-xs tracking-widest hover:bg-white/5 transition-all"
+                                className="flex-1 py-6 rounded-2xl border border-white/5 text-gray-500 font-black uppercase text-[10px] tracking-widest hover:bg-white/5 hover:text-white transition-all"
                             >
                                 Cancelar
                             </button>
                             <button
                                 onClick={handleConfirm}
                                 disabled={isProcessing || !user}
-                                className="flex-[2] py-5 rounded-2xl bg-primary text-black font-black uppercase text-xs tracking-widest hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:scale-100 flex items-center justify-center gap-2 shadow-[0_0_40px_rgba(204,255,0,0.2)]"
+                                className="flex-[2] py-6 rounded-2xl bg-white text-black font-black uppercase text-[10px] tracking-[0.2em] hover:bg-primary transition-all disabled:opacity-50 flex items-center justify-center gap-3 shadow-[0_20px_40px_rgba(255,255,255,0.05)] active:scale-95"
                             >
                                 {isProcessing ? (
-                                    <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                                    <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
                                 ) : (
                                     <>
-                                        <MessageCircle size={16} />
+                                        <MessageCircle size={18} />
                                         Confirmar y Chatear
                                     </>
                                 )}
@@ -160,6 +172,7 @@ export default function DirectPurchaseModal({ isOpen, onClose, order }: DirectPu
                     </motion.div>
                 </div>
             )}
-        </AnimatePresence>
+        </AnimatePresence>,
+        document.body
     );
 }

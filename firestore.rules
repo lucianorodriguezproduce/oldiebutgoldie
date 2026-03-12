@@ -160,7 +160,7 @@ service cloud.firestore {
         allow update, delete: if isAdmin() || (request.auth != null && resource.data.senderId == request.auth.uid);
       }
 
-      // Messaging Engine (Protocol V24.5)
+      // Messaging Engine (Protocol V24.8)
       match /messages/{messageId} {
         allow read: if request.auth != null && (
           isAdmin() ||
@@ -171,7 +171,10 @@ service cloud.firestore {
         allow create: if request.auth != null && (
           request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.senderId ||
           request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.receiverId ||
-          request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.highest_bidder_uid
+          request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.highest_bidder_uid ||
+          // Permiso especial para transacciones de compra directa P2P
+          (get(/databases/$(database)/documents/trades/$(tradeId)).data.isPublicOrder == true && 
+           get(/databases/$(database)/documents/trades/$(tradeId)).data.status == "pending")
         );
       }
     }
