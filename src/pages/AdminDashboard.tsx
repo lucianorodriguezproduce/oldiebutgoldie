@@ -1,10 +1,15 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { TEXTS } from '@/constants/texts';
-import { LineChart, Activity, MousePointerClick, TrendingUp, Search, Users, Clock, ArrowUpRight } from 'lucide-react';
+import { 
+    LineChart, Activity, MousePointerClick, TrendingUp, Search, 
+    Users, Clock, ArrowUpRight, ShieldAlert, Trash2, Database, 
+    Sparkles, Loader2 
+} from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { runReport } from '@/services/analyticsService';
 import type { AnalyticsDataPoint } from '@/services/analyticsService';
+import { maintenanceService } from '@/services/maintenanceService';
 
 export interface SearchConsoleData {
     query: string;
@@ -28,6 +33,7 @@ export default function AdminDashboard() {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedKeyword, setSelectedKeyword] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isPurging, setIsPurging] = useState<Record<string, boolean>>({});
 
     useEffect(() => {
         const fetchAnalytics = async () => {
@@ -254,6 +260,109 @@ export default function AdminDashboard() {
                             ))}
                         </tbody>
                     </table>
+                </div>
+            </motion.div>
+
+            {/* System Maintenance Section (Protocol V29.0) */}
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }} className="bg-white/5 border border-white/10 rounded-2xl p-8 mt-8">
+                <div className="flex items-center gap-3 mb-8">
+                    <div className="p-3 bg-red-500/10 rounded-xl">
+                        <ShieldAlert className="w-6 h-6 text-red-500" />
+                    </div>
+                    <div>
+                        <h2 className="text-xl font-display font-black text-white uppercase italic tracking-tighter">Mantenimiento Global</h2>
+                        <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mt-1">Purga de datos etéreos y consistencia</p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {/* Analytics Purge */}
+                    <div className="flex flex-col gap-4 p-5 bg-black/40 border border-white/5 rounded-2xl hover:border-white/10 transition-colors">
+                        <div className="flex items-center gap-3 text-white">
+                            <MousePointerClick className="w-4 h-4 text-primary" />
+                            <span className="text-xs font-black uppercase tracking-widest">Analíticas</span>
+                        </div>
+                        <p className="text-[11px] text-gray-500 font-medium">Elimina registros de visualizaciones de más de 30 días.</p>
+                        <button
+                            onClick={async () => {
+                                setIsPurging(prev => ({ ...prev, analytics: true }));
+                                const count = await maintenanceService.purgeAnalyticsIntents();
+                                alert(`Purga completada: ${count} registros eliminados.`);
+                                setIsPurging(prev => ({ ...prev, analytics: false }));
+                            }}
+                            disabled={isPurging.analytics}
+                            className="mt-auto px-4 py-2.5 bg-white/5 hover:bg-white/10 disabled:opacity-50 text-[10px] font-black uppercase tracking-widest text-white rounded-xl flex items-center justify-center gap-2 transition-all"
+                        >
+                            {isPurging.analytics ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                            Purgar Analíticas
+                        </button>
+                    </div>
+
+                    {/* Notifications Purge */}
+                    <div className="flex flex-col gap-4 p-5 bg-black/40 border border-white/5 rounded-2xl hover:border-white/10 transition-colors">
+                        <div className="flex items-center gap-3 text-white">
+                            <Sparkles className="w-4 h-4 text-blue-400" />
+                            <span className="text-xs font-black uppercase tracking-widest">Notificaciones</span>
+                        </div>
+                        <p className="text-[11px] text-gray-500 font-medium">Borra notificaciones leídas (&gt;15d) y antiguas (&gt;45d).</p>
+                        <button
+                            onClick={async () => {
+                                setIsPurging(prev => ({ ...prev, notif: true }));
+                                const count = await maintenanceService.purgeNotifications();
+                                alert(`Limpieza realizada: ${count} notificaciones purgadas.`);
+                                setIsPurging(prev => ({ ...prev, notif: false }));
+                            }}
+                            disabled={isPurging.notif}
+                            className="mt-auto px-4 py-2.5 bg-white/5 hover:bg-white/10 disabled:opacity-50 text-[10px] font-black uppercase tracking-widest text-white rounded-xl flex items-center justify-center gap-2 transition-all"
+                        >
+                            {isPurging.notif ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                            Limpiar Alertas
+                        </button>
+                    </div>
+
+                    {/* Stale Trades Purge */}
+                    <div className="flex flex-col gap-4 p-5 bg-black/40 border border-white/5 rounded-2xl hover:border-white/10 transition-colors">
+                        <div className="flex items-center gap-3 text-white">
+                            <Search className="w-4 h-4 text-orange-400" />
+                            <span className="text-xs font-black uppercase tracking-widest">Trades Muertos</span>
+                        </div>
+                        <p className="text-[11px] text-gray-500 font-medium">Elimina órdenes canceladas o rechazadas de más de 60 días.</p>
+                        <button
+                            onClick={async () => {
+                                setIsPurging(prev => ({ ...prev, trades: true }));
+                                const count = await maintenanceService.purgeStaleTrades();
+                                alert(`Purga de trades: ${count} registros eliminados.`);
+                                setIsPurging(prev => ({ ...prev, trades: false }));
+                            }}
+                            disabled={isPurging.trades}
+                            className="mt-auto px-4 py-2.5 bg-white/5 hover:bg-white/10 disabled:opacity-50 text-[10px] font-black uppercase tracking-widest text-white rounded-xl flex items-center justify-center gap-2 transition-all"
+                        >
+                            {isPurging.trades ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                            Limpiar Historial
+                        </button>
+                    </div>
+
+                    {/* Inventory Archiving */}
+                    <div className="flex flex-col gap-4 p-5 bg-black/40 border border-white/5 rounded-2xl hover:border-white/10 transition-colors">
+                        <div className="flex items-center gap-3 text-white">
+                            <Database className="w-4 h-4 text-emerald-400" />
+                            <span className="text-xs font-black uppercase tracking-widest">Inventario</span>
+                        </div>
+                        <p className="text-[11px] text-gray-500 font-medium">Archiva discos sin stock que no tengan actividad reciente.</p>
+                        <button
+                            onClick={async () => {
+                                setIsPurging(prev => ({ ...prev, inv: true }));
+                                const count = await maintenanceService.archiveSoldOutItems();
+                                alert(`Mantenimiento: ${count} discos movidos al archivo.`);
+                                setIsPurging(prev => ({ ...prev, inv: false }));
+                            }}
+                            disabled={isPurging.inv}
+                            className="mt-auto px-4 py-2.5 bg-white/5 hover:bg-white/10 disabled:opacity-50 text-[10px] font-black uppercase tracking-widest text-white rounded-xl flex items-center justify-center gap-2 transition-all"
+                        >
+                            {isPurging.inv ? <Loader2 className="w-3 h-3 animate-spin" /> : <Database className="w-3 h-3" />}
+                            Archivar Agotados
+                        </button>
+                    </div>
                 </div>
             </motion.div>
         </div>
