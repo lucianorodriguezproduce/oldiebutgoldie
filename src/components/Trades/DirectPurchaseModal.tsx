@@ -34,16 +34,18 @@ export default function DirectPurchaseModal({ isOpen, onClose, order }: DirectPu
         if (!user || !dbUser?.username || isProcessing) return;
 
         setIsProcessing(true);
-        showLoading("Procesando compra...");
+        showLoading("Iniciando contacto...");
 
         try {
-            console.log(`[purchase] Executing direct purchase for order: ${order.id} by user: ${user.uid}`);
-            await tradeService.executeDirectPurchase(order.id, user.uid, dbUser.username);
+            console.log(`[contact] Starting inquiry for order: ${order.id} by user: ${user.uid}`);
+            // Usamos el nuevo método de consulta en lugar de compra directa
+            await tradeService.startInquiry(order.id, user.uid, dbUser.username);
             onClose();
+            // Navegamos al detalle de la orden donde se abrirá el chat privado
             navigate(`/orden/${order.id}`);
         } catch (error: any) {
-            console.error("[purchase] Purchase error:", error);
-            alert(error.message || "Error al procesar la compra. Revisa los permisos o tu conexión.");
+            console.error("[contact] Inquiry error:", error);
+            alert(error.message || "Error al iniciar el contacto. Revisa tu conexión.");
         } finally {
             setIsProcessing(false);
             hideLoading();
@@ -73,7 +75,7 @@ export default function DirectPurchaseModal({ isOpen, onClose, order }: DirectPu
                         <div className="p-8 pb-4 flex items-center justify-between">
                             <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 border border-primary/20 rounded-full">
                                 <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                                <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Transacción Protegida</span>
+                                <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Contacto Directo</span>
                             </div>
                             <button 
                                 onClick={onClose} 
@@ -85,8 +87,8 @@ export default function DirectPurchaseModal({ isOpen, onClose, order }: DirectPu
 
                         {/* Title Section */}
                         <div className="px-8 space-y-2">
-                            <h2 className="text-4xl font-display font-black text-white uppercase tracking-tighter leading-none">Confirmar <span className="text-primary">Compra</span></h2>
-                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest leading-relaxed">Estás a un paso de obtener esta pieza de colección</p>
+                            <h2 className="text-4xl font-display font-black text-white uppercase tracking-tighter leading-none">Me <span className="text-primary">Interesa</span></h2>
+                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest leading-relaxed">Inicia un chat privado con el vendedor para coordinar</p>
                         </div>
 
                         {/* Body Summary */}
@@ -119,11 +121,11 @@ export default function DirectPurchaseModal({ isOpen, onClose, order }: DirectPu
                             {/* Financial Grid */}
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 space-y-1">
-                                    <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Valor Unitario</span>
+                                    <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Valor de Referencia</span>
                                     <p className="text-xl font-mono font-bold text-white/50">{currency === 'USD' ? 'US$' : '$'} {price.toLocaleString()}</p>
                                 </div>
                                 <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10 space-y-1 text-right">
-                                    <span className="text-[8px] font-black text-primary uppercase tracking-widest">Total Final</span>
+                                    <span className="text-[8px] font-black text-primary uppercase tracking-widest">Precio Publicado</span>
                                     <p className="text-3xl font-display font-black text-primary tracking-tighter">{currency === 'USD' ? 'US$' : '$'}{price.toLocaleString()}</p>
                                 </div>
                             </div>
@@ -132,9 +134,9 @@ export default function DirectPurchaseModal({ isOpen, onClose, order }: DirectPu
                             <div className="flex gap-4 p-5 bg-[#0e1117] border border-blue-500/20 rounded-[2rem]">
                                 <ShieldCheck className="w-8 h-8 text-blue-400 flex-shrink-0 mt-1" />
                                 <div className="space-y-1">
-                                    <h4 className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Protección al Comprador</h4>
+                                    <h4 className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Mercado P2P Directo</h4>
                                     <p className="text-[10px] font-bold text-gray-500 uppercase leading-relaxed tracking-tight">
-                                        Al confirmar, OldieButGoldie abrirá un chat directo para que coordines el envío. No liberes dinero sin antes verificar la llegada del disco.
+                                        Al contactar, abrirás un chat privado con el vendedor. El disco seguirá público hasta que el vendedor te lo adjudique a vos.
                                     </p>
                                 </div>
                             </div>
@@ -158,7 +160,7 @@ export default function DirectPurchaseModal({ isOpen, onClose, order }: DirectPu
                                 ) : (
                                     <>
                                         <MessageCircle size={18} />
-                                        Confirmar y Chatear
+                                        Contactar y Chatear
                                     </>
                                 )}
                             </button>

@@ -17,9 +17,10 @@ interface TradeChatProps {
     currentUser: any;
     trade: any;
     otherParticipantName: string;
+    buyerId?: string; // Nuevo: Para conversaciones privadas en el Marketplace
 }
 
-export default function TradeChat({ tradeId, currentUser, trade, otherParticipantName }: TradeChatProps) {
+export default function TradeChat({ tradeId, currentUser, trade, otherParticipantName, buyerId }: TradeChatProps) {
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState("");
     const [isSending, setIsSending] = useState(false);
@@ -35,16 +36,21 @@ export default function TradeChat({ tradeId, currentUser, trade, otherParticipan
     const isCompleted = trade?.status === 'completed';
 
     useEffect(() => {
-        const unsub = tradeService.onSnapshotMessages(tradeId, (msgs) => {
+        const callback = (msgs: Message[]) => {
             setMessages(msgs);
             setTimeout(() => {
                 if (scrollRef.current) {
                     scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
                 }
             }, 100);
-        });
+        };
+
+        const unsub = buyerId 
+            ? tradeService.onSnapshotPrivateMessages(tradeId, buyerId, callback)
+            : tradeService.onSnapshotMessages(tradeId, callback);
+            
         return () => unsub();
-    }, [tradeId]);
+    }, [tradeId, buyerId]);
 
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -52,7 +58,11 @@ export default function TradeChat({ tradeId, currentUser, trade, otherParticipan
 
         setIsSending(true);
         try {
-            await tradeService.sendMessage(tradeId, currentUser.uid, newMessage.trim());
+            if (buyerId) {
+                await tradeService.sendPrivateMessage(tradeId, buyerId, currentUser.uid, newMessage.trim());
+            } else {
+                await tradeService.sendMessage(tradeId, currentUser.uid, newMessage.trim());
+            }
             setNewMessage("");
         } catch (error) {
             console.error("Chat error:", error);

@@ -9,6 +9,7 @@ import {
     getDoc,
     doc,
     updateDoc,
+    setDoc,
     orderBy,
     arrayUnion,
     runTransaction,
@@ -639,6 +640,105 @@ export const tradeService = {
             text,
             timestamp: serverTimestamp(),
             read_status: false
+        });
+    },
+
+    async startInquiry(tradeId: string, buyerUid: string, buyerName: string) {
+        const conversationRef = doc(db, COLLECTION_NAME, tradeId, "conversations", buyerUid);
+        const snap = await getDoc(conversationRef);
+        
+        if (!snap.exists()) {
+            await updateDoc(doc(db, COLLECTION_NAME, tradeId), {
+                has_active_interactions: true
+            });
+
+            await setDoc(conversationRef, {
+                buyerId: buyerUid,
+                buyerName: buyerName,
+                lastMessage: "Consulta iniciada",
+                timestamp: serverTimestamp(),
+                status: "pending"
+            });
+
+            // System message to initialize
+            await this.sendPrivateMessage(tradeId, buyerUid, "system", `¡Hola! @${buyerName} está interesado en este disco. Usen este chat para coordinar.`);
+        }
+        return buyerUid;
+    },
+
+    async sendPrivateMessage(tradeId: string, buyerId: string, senderId: string, text: string) {
+        const messagesRef = collection(db, COLLECTION_NAME, tradeId, "conversations", buyerId, "messages");
+        await addDoc(messagesRef, {
+            sender_uid: senderId,
+            text,
+            timestamp: serverTimestamp(),
+            read_status: false
+        });
+
+        // Update conversation metadata
+        const conversationRef = doc(db, COLLECTION_NAME, tradeId, "conversations", buyerId);
+        await updateDoc(conversationRef, {
+            lastMessage: text,
+            timestamp: serverTimestamp()
+        });
+    },
+
+    onSnapshotPrivateMessages(tradeId: string, buyerId: string, callback: (messages: any[]) => void) {
+        const q = query(
+            collection(db, COLLECTION_NAME, tradeId, "conversations", buyerId, "messages"),
+            orderBy("timestamp", "asc")
+        );
+        return onSnapshot(q, (snap) => {
+            const msgs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            callback(msgs);
+        });
+    },
+
+    onSnapshotConversations(tradeId: string, callback: (conversations: any[]) => void) {
+        const q = query(
+            collection(db, COLLECTION_NAME, tradeId, "conversations"),
+            orderBy("timestamp", "desc")
+        );
+        return onSnapshot(q, (snap) => {
+            const convs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            callback(convs);
+        });
+    },
+
+    async adjudicateTrade(tradeId: string, buyerId: string, buyerName: string) {
+        const tradeRef = doc(db, COLLECTION_NAME, tradeId);
+        const messagesRef = collection(db, COLLECTION_NAME, tradeId, "messages");
+        const convRef = doc(db, COLLECTION_NAME, tradeId, "conversations", buyerId);
+
+        await runTransaction(db, async (transaction) => {
+            const tradeSnap = await transaction.get(tradeRef);
+            if (!tradeSnap.exists()) throw new Error("TRADE_NOT_FOUND");
+            
+            const tradeData = tradeSnap.data() as Trade;
+            if (tradeData.status !== "pending") throw new Error("TRADE_NOT_AVAILABLE");
+
+            // 1. Atomic status update (Legacy compatibility)
+            transaction.update(tradeRef, {
+                status: "accepted",
+                isPaid: false,
+                payment_status: 'pending',
+                buyer_uid: buyerId,
+                buyer_name: buyerName,
+                acceptedAt: serverTimestamp(),
+                currentTurn: tradeData.participants?.senderId // Open coordination for the seller
+            });
+
+            // 2. Mark conversation as accepted
+            transaction.update(convRef, { status: "accepted" });
+
+            // 3. Generate automated message in the MAIN legacy chat for coordination
+            const newMessageRef = doc(messagesRef);
+            transaction.set(newMessageRef, {
+                sender_uid: "system",
+                text: `¡Trato cerrado! ${buyerName} es el comprador adjudicado.`,
+                timestamp: serverTimestamp(),
+                read_status: false
+            });
         });
     },
 
