@@ -195,57 +195,7 @@ export default function PublicOrderView() {
         );
     })();
 
-    const coordinationChatBlock = (() => {
-        const isAccepted = order.status === 'accepted';
-        const isP2P = order.isPublicOrder === true;
-        const isDirectSale = order.type === 'direct_sale';
-        
-        // Buyer logic: Can chat if adjudicated OR if has initiated an inquiry (market model)
-        const isAdjudicatedBuyer = user?.uid === order.highest_bidder_uid || user?.uid === order.buyer_uid;
-        const hasActiveInquiry = !isOwner && !isAdmin && user; // We check if current user can chat privately
-        
-        const canChat = isOwner || isAdjudicatedBuyer || isAdmin || (isDirectSale && hasActiveInquiry);
-        
-        // Determinar qué buyerId usar:
-        // 1. Si está adjudicado, usamos el ID del comprador oficial (para legacy y finalización)
-        // 2. Si es una consulta en curso de un interesado, usamos su propio UID
-        const currentBuyerId = isAdjudicatedBuyer ? (order.highest_bidder_uid || order.buyer_uid) : (user?.uid);
-        const buyerName = isAdjudicatedBuyer ? (order.highest_bidder_name || order.buyer_name || 'Comprador') : (dbUser?.username || 'Interesado');
-
-        if (isP2P && canChat) {
-            // Solo mostramos el chat si:
-            // a) Está aceptado (flujo final)
-            // b) Es venta directa P2P y soy el dueño (ve la consola - manejado en otro bloque?) o el interesado
-            if (isAccepted || (isDirectSale && !isOwner)) {
-                return (
-                    <div className="mt-8 space-y-6">
-                        <div className="p-8 bg-emerald-500/5 border border-emerald-500/20 rounded-[2.5rem] flex flex-col items-center gap-4 text-center">
-                            <div className="flex items-center gap-3">
-                                {isAccepted ? <Trophy className="w-8 h-8 text-emerald-400" /> : <ShieldCheck className="w-8 h-8 text-primary" />}
-                                <MessageCircle className="w-8 h-8 text-primary" />
-                            </div>
-                            <div>
-                                <h4 className="text-2xl font-display font-black text-white uppercase tracking-tight">
-                                    {isAccepted ? "Coordinación en Curso" : "Contacto con el Vendedor"}
-                                </h4>
-                                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">
-                                    {isOwner ? `Chat con @${buyerName}` : isAccepted ? `¡Es tuyo! Coordiná con el vendedor` : `Conversación privada por este disco`}
-                                </p>
-                            </div>
-                            <TradeChat 
-                                tradeId={id!} 
-                                currentUser={user} 
-                                trade={order} 
-                                otherParticipantName={isOwner ? `@${buyerName}` : `@${order.user_name || 'Vendedor'}`} 
-                                buyerId={isDirectSale ? currentBuyerId : undefined} // Solo usamos subcolección para Direct Sale
-                            />
-                        </div>
-                    </div>
-                );
-            }
-        }
-        return null;
-    })();
+    const coordinationChatBlock = null;
 
     const auctionHandlersBlock = (() => {
         if (order.type !== 'auction') return null;

@@ -64,6 +64,7 @@ const Store = lazy(() => import("@/pages/Store"));
 const PublicProfile = lazy(() => import("@/pages/PublicProfile"));
 const Archivo = lazy(() => import("@/pages/Archivo"));
 const ArchivoItem = lazy(() => import("@/pages/ArchivoItem"));
+const MessageCenter = lazy(() => import("@/pages/MessageCenter"));
 
 // Admin Lazy
 const AdminLayout = lazy(() => import("@/components/Admin/AdminLayout"));
@@ -204,6 +205,7 @@ function AppContent() {
 
               <Route element={<ProtectedRoute />}>
                 <Route path="/perfil" element={<Profile />} />
+                <Route path="/mensajes" element={<MessageCenter />} />
                 <Route
                   path="/trade/new"
                   element={

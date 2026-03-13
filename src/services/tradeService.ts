@@ -14,7 +14,8 @@ import {
     arrayUnion,
     runTransaction,
     onSnapshot,
-    deleteDoc
+    deleteDoc,
+    collectionGroup
 } from "firebase/firestore";
 
 import { pushLeadGenerated } from "@/utils/analytics";
@@ -290,7 +291,7 @@ export const tradeService = {
             const tradeSnap = await transaction.get(tradeRef);
             if (!tradeSnap.exists()) throw new Error("Trade no encontrado");
 
-            const tradeData = tradeSnap.data() as Trade;
+            const tradeData = tradeSnap.data() as any;
 
             if (tradeData.status === "completed") {
                 throw new Error("TRADE_ALREADY_PROCESSED");
@@ -644,6 +645,13 @@ export const tradeService = {
     },
 
     async startInquiry(tradeId: string, buyerUid: string, buyerName: string) {
+        const tradeRef = doc(db, COLLECTION_NAME, tradeId);
+        const tradeSnap = await getDoc(tradeRef);
+        const tradeData = tradeSnap.exists() ? tradeSnap.data() as any : null;
+        const sellerId = tradeData?.participants?.senderId;
+        const title = tradeData?.manifest?.items?.[0]?.title || tradeData?.details?.album || "Disco Desconocido";
+        const cover = tradeData?.manifest?.items?.[0]?.cover_image || tradeData?.media?.thumbnail || "";
+
         const conversationRef = doc(db, COLLECTION_NAME, tradeId, "conversations", buyerUid);
         const snap = await getDoc(conversationRef);
         
@@ -651,10 +659,27 @@ export const tradeService = {
             await setDoc(conversationRef, {
                 buyerId: buyerUid,
                 buyerName: buyerName,
+                sellerId: sellerId,
+                tradeId: tradeId,
+                title: title,
+                cover: cover,
                 lastMessage: "Consulta iniciada",
                 timestamp: serverTimestamp(),
                 status: "pending"
             });
+
+            // Notification for Seller
+            if (sellerId) {
+                await addDoc(collection(db, "notifications"), {
+                    user_id: sellerId,
+                    title: "Nuevo interesado 📩",
+                    message: `¡@${buyerName} está interesado en "${title}"! Te envió un mensaje.`,
+                    read: false,
+                    timestamp: serverTimestamp(),
+                    order_id: tradeId,
+                    type: "order"
+                });
+            }
 
             // System message to initialize
             await this.sendPrivateMessage(tradeId, buyerUid, "system", `¡Hola! @${buyerName} está interesado en este disco. Usen este chat para coordinar.`);
@@ -673,10 +698,29 @@ export const tradeService = {
 
         // Update conversation metadata
         const conversationRef = doc(db, COLLECTION_NAME, tradeId, "conversations", buyerId);
+        const convSnap = await getDoc(conversationRef);
+        const convData = convSnap.data();
+
         await updateDoc(conversationRef, {
             lastMessage: text,
             timestamp: serverTimestamp()
         });
+
+        // Notification for the other party
+        if (senderId !== "system") {
+            const recipientId = senderId === buyerId ? convData?.sellerId : buyerId;
+            if (recipientId) {
+                await addDoc(collection(db, "notifications"), {
+                    user_id: recipientId,
+                    title: "Nuevo mensaje 💬",
+                    message: `Tienes un mensaje por "${convData?.title || 'tu batea'}"`,
+                    read: false,
+                    timestamp: serverTimestamp(),
+                    order_id: tradeId,
+                    type: "order"
+                });
+            }
+        }
     },
 
     onSnapshotPrivateMessages(tradeId: string, buyerId: string, callback: (messages: any[]) => void) {
@@ -735,7 +779,38 @@ export const tradeService = {
                 timestamp: serverTimestamp(),
                 read_status: false
             });
+
+            // 4. Notification for winner
+            const notificationRef = doc(collection(db, "notifications"));
+            transaction.set(notificationRef, {
+                user_id: buyerId,
+                title: "¡Trato Adjudicado! 🏆",
+                message: `El vendedor aceptó tu oferta por "${tradeData.details?.album || 'el disco'}". ¡Ya es tuyo!`,
+                read: false,
+                timestamp: serverTimestamp(),
+                order_id: tradeId,
+                type: "order"
+            });
         });
+    },
+
+    async getUserConversations(userId: string) {
+        // Use collectionGroup to find all conversations where the user is either the buyer or the seller
+        const qBuyer = query(collectionGroup(db, "conversations"), where("buyerId", "==", userId));
+        const qSeller = query(collectionGroup(db, "conversations"), where("sellerId", "==", userId));
+
+        const [snapBuyer, snapSeller] = await Promise.all([
+            getDocs(qBuyer),
+            getDocs(qSeller)
+        ]);
+
+        const rawConvsMap = new Map<string, any>();
+        snapBuyer.docs.forEach(doc => rawConvsMap.set(doc.id, { id: doc.id, ...doc.data() }));
+        snapSeller.docs.forEach(doc => rawConvsMap.set(doc.id, { id: doc.id, ...doc.data() }));
+
+        return Array.from(rawConvsMap.values()).sort((a, b) => 
+            (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0)
+        );
     },
 
     onSnapshotMessages(tradeId: string, callback: (messages: any[]) => void) {

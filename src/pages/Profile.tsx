@@ -480,8 +480,14 @@ export default function Profile() {
                                     onClick={() => setActiveTab("trades")}
                                     className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === "trades" ? "bg-primary text-black" : "text-gray-500 hover:text-white"}`}
                                 >
-                                    Actividad Reciente
+                                    Actividad
                                 </button>
+                                <Link
+                                    to="/mensajes"
+                                    className="px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all text-gray-500 hover:text-white"
+                                >
+                                    Mensajes
+                                </Link>
                                 <button
                                     onClick={() => setActiveTab("collection")}
                                     className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === "collection" ? "bg-primary text-black" : "text-gray-500 hover:text-white"}`}
