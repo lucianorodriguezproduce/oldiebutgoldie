@@ -648,10 +648,6 @@ export const tradeService = {
         const snap = await getDoc(conversationRef);
         
         if (!snap.exists()) {
-            await updateDoc(doc(db, COLLECTION_NAME, tradeId), {
-                has_active_interactions: true
-            });
-
             await setDoc(conversationRef, {
                 buyerId: buyerUid,
                 buyerName: buyerName,
