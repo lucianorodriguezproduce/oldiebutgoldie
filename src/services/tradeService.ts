@@ -754,7 +754,7 @@ export const tradeService = {
             const tradeSnap = await transaction.get(tradeRef);
             if (!tradeSnap.exists()) throw new Error("TRADE_NOT_FOUND");
             
-            const tradeData = tradeSnap.data() as Trade;
+            const tradeData = tradeSnap.data() as any;
             if (tradeData.status !== "pending") throw new Error("TRADE_NOT_AVAILABLE");
 
             // 1. Atomic status update (Legacy compatibility)
@@ -877,7 +877,7 @@ export const tradeService = {
             if (!tradeSnap.exists()) throw new Error("Orden madre no encontrada");
             if (!proposalSnap.exists()) throw new Error("Propuesta no encontrada");
 
-            const tradeData = tradeSnap.data() as Trade;
+            const tradeData = tradeSnap.data() as any;
             if (tradeData.status === "resolved") throw new Error("ORDER_ALREADY_RESOLVED");
 
             // 1. Mark winning proposal
@@ -915,7 +915,7 @@ export const tradeService = {
             const tradeSnap = await transaction.get(tradeRef);
             if (!tradeSnap.exists()) throw new Error("TRADE_NOT_FOUND");
             
-            const tradeData = tradeSnap.data() as Trade;
+            const tradeData = tradeSnap.data() as any;
             if (tradeData.status !== "pending") throw new Error("TRADE_NOT_AVAILABLE");
 
             // 1. Atomic status update
