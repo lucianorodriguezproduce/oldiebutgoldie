@@ -46,7 +46,7 @@ export default function NotificationBell() {
 
         const q = query(
             collection(db, "notifications"),
-            where("user_id", "==", user.uid),
+            where("uid", "==", user.uid),
             orderBy("timestamp", "desc")
         );
 

@@ -46,7 +46,8 @@ export const requestConnection = async (requester: DbUser, receiverId: string) =
         // Add notification for receiver
         const notifRef = doc(collection(db, "notifications"));
         transaction.set(notifRef, {
-            user_id: receiverId,
+            uid: receiverId,
+            user_id: receiverId, // Legacy
             title: "Nueva Solicitud de Conexión",
             message: `@${requester.username} quiere conectar con vos.`,
             read: false,
@@ -72,7 +73,8 @@ export const acceptConnection = async (userId: string, targetId: string) => {
 
     // Add notification for requester
     await addDoc(collection(db, "notifications"), {
-        user_id: targetId,
+        uid: targetId,
+        user_id: targetId, // Legacy
         title: "Conexión Aceptada",
         message: "Tu solicitud de conexión ha sido aceptada. Ahora podés ver su colección completa.",
         read: false,

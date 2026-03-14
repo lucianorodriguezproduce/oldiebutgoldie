@@ -128,6 +128,7 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
 
             const currSymbol = currency === "USD" ? "US$" : "$";
             await addDoc(collection(db, "notifications"), {
+                uid: (order.participants?.senderId || order.user_id),
                 user_id: (order.participants?.senderId || order.user_id),
                 title: TEXTS.admin.admin.counterOfferReceived,
                 message: `Oldie but Goldie propone ${currSymbol} ${priceVal.toLocaleString()} para tu operación.`,

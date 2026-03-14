@@ -60,6 +60,7 @@ interface ProfileItem {
 
 import { tradeService } from "@/services/tradeService";
 import { inventoryService } from "@/services/inventoryService";
+import { ADMIN_UID } from "@/constants/admin";
 import type { Trade, InventoryItem, TradeManifest } from "@/types/inventory";
 import ManifestEditor from "@/components/Trade/ManifestEditor";
 import TradeChat from "@/components/Trade/TradeChat";
@@ -247,6 +248,7 @@ export default function Profile() {
             });
 
             await addDoc(collection(db, "notifications"), {
+                uid: ADMIN_UID,
                 user_id: "admin",
                 title: "Venta Finalizada 🎉",
                 message: `${user.displayName || 'Un cliente'} ha ACEPTADO el trato por la operación #${order.id?.slice(-6).toUpperCase()}.`,
@@ -286,6 +288,7 @@ export default function Profile() {
             });
 
             await addDoc(collection(db, "notifications"), {
+                uid: ADMIN_UID,
                 user_id: "admin",
                 title: "Nueva Contraoferta del Usuario",
                 message: `${user?.displayName || 'Cliente'} propone ${order.currency || '$'} ${priceVal.toLocaleString()} por el pedido ${order.order_number || order.id}.`,

@@ -645,12 +645,28 @@ export const tradeService = {
     },
 
     async startInquiry(tradeId: string, buyerUid: string, buyerName: string) {
+        let sellerId = ADMIN_UID;
+        let title = "Disco Desconocido";
+        let cover = "";
+
         const tradeRef = doc(db, COLLECTION_NAME, tradeId);
         const tradeSnap = await getDoc(tradeRef);
-        const tradeData = tradeSnap.exists() ? tradeSnap.data() as any : null;
-        const sellerId = tradeData?.participants?.senderId;
-        const title = tradeData?.manifest?.items?.[0]?.title || tradeData?.details?.album || "Disco Desconocido";
-        const cover = tradeData?.manifest?.items?.[0]?.cover_image || tradeData?.media?.thumbnail || "";
+        
+        if (tradeSnap.exists()) {
+            const tradeData = tradeSnap.data() as any;
+            sellerId = tradeData.participants?.senderId || ADMIN_UID;
+            title = tradeData.manifest?.items?.[0]?.title || tradeData.details?.album || title;
+            cover = tradeData.manifest?.items?.[0]?.cover_image || tradeData.media?.thumbnail || "";
+        } else {
+            // Check inventory (Direct Sale from shop)
+            const itemRef = doc(db, "inventory", tradeId);
+            const itemSnap = await getDoc(itemRef);
+            if (itemSnap.exists()) {
+                const itemData = itemSnap.data() as any;
+                title = itemData.metadata?.title || title;
+                cover = itemData.media?.thumbnail || "";
+            }
+        }
 
         const conversationRef = doc(db, COLLECTION_NAME, tradeId, "conversations", buyerUid);
         const snap = await getDoc(conversationRef);
@@ -712,7 +728,8 @@ export const tradeService = {
             const recipientId = senderId === buyerId ? convData?.sellerId : buyerId;
             if (recipientId) {
                 await addDoc(collection(db, "notifications"), {
-                    user_id: recipientId,
+                    uid: recipientId,
+                    user_id: recipientId, // Legacy
                     title: "Nuevo mensaje 💬",
                     message: `Tienes un mensaje por "${convData?.title || 'tu batea'}"`,
                     read: false,
@@ -806,8 +823,9 @@ export const tradeService = {
         ]);
 
         const rawConvsMap = new Map<string, any>();
-        snapBuyer.docs.forEach(doc => rawConvsMap.set(doc.id, { id: doc.id, ...doc.data() }));
-        snapSeller.docs.forEach(doc => rawConvsMap.set(doc.id, { id: doc.id, ...doc.data() }));
+        // Use composite key path to prevent collisions (buyerUid is the doc id)
+        snapBuyer.docs.forEach(doc => rawConvsMap.set(doc.ref.path, { id: doc.id, ...doc.data() }));
+        snapSeller.docs.forEach(doc => rawConvsMap.set(doc.ref.path, { id: doc.id, ...doc.data() }));
 
         return Array.from(rawConvsMap.values()).sort((a, b) => 
             (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0)
