@@ -41,8 +41,8 @@ export default function DirectPurchaseModal({ isOpen, onClose, order }: DirectPu
             // Usamos el nuevo método de consulta en lugar de compra directa
             await tradeService.startInquiry(order.id, user.uid, dbUser.username);
             onClose();
-            // Navegamos al detalle de la orden donde se abrirá el chat privado
-            navigate(`/orden/${order.id}`);
+            // Navegamos al perfil donde se abrirá el drawer de la orden con el chat
+            navigate(`/perfil?order=${order.id}&chat=true`);
         } catch (error: any) {
             console.error("[contact] Inquiry error:", error);
             alert(error.message || "Error al iniciar el contacto. Revisa tu conexión.");

@@ -62,6 +62,7 @@ import { tradeService } from "@/services/tradeService";
 import { inventoryService } from "@/services/inventoryService";
 import type { Trade, InventoryItem, TradeManifest } from "@/types/inventory";
 import ManifestEditor from "@/components/Trade/ManifestEditor";
+import TradeChat from "@/components/Trade/TradeChat";
 import UserCollection from "@/components/Profile/UserCollection";
 
 export default function Profile() {
@@ -137,7 +138,10 @@ export default function Profile() {
                 setSelectedOrder(found);
             }
             // Clean URL to prevent re-triggering
-            setSearchParams({}, { replace: true });
+            const newParams = new URLSearchParams(searchParams);
+            newParams.delete("order");
+            newParams.delete("chat");
+            setSearchParams(newParams, { replace: true });
         }
     }, [trades, ordersLoading, searchParams]);
 
@@ -578,6 +582,23 @@ export default function Profile() {
                 footer={
                     selectedOrder && (
                         <div className="space-y-4">
+                            {/* Chat Integration */}
+                            {(searchParams.get("chat") === "true" || selectedOrder.type === 'direct_sale') && (
+                                <div className="mt-4 pb-4">
+                                    <div className="flex items-center gap-2 mb-4 px-1">
+                                        <MessageCircle className="w-4 h-4 text-primary" />
+                                        <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Chat de Coordinación</h4>
+                                    </div>
+                                    <TradeChat 
+                                        tradeId={selectedOrder.id} 
+                                        currentUser={user} 
+                                        trade={selectedOrder} 
+                                        otherParticipantName={selectedOrder.user_name || "Vendedor OBG"}
+                                        buyerId={selectedOrder.participants?.senderId === user?.uid ? undefined : user?.uid}
+                                    />
+                                </div>
+                            )}
+
                             {/* Negotiation Actions Footer */}
                             {!isNegotiating && selectedOrder.status !== "completed" && selectedOrder.status !== "venta_finalizada" && selectedOrder.status !== "cancelled" && (
                                 <>

@@ -682,7 +682,8 @@ export const tradeService = {
             }
 
             // System message to initialize
-            await this.sendPrivateMessage(tradeId, buyerUid, "system", `¡Hola! @${buyerName} está interesado en este disco. Usen este chat para coordinar.`);
+            const orderLink = `https://www.oldiebutgoldie.com.ar/orden/${tradeId}`;
+            await this.sendPrivateMessage(tradeId, buyerUid, "system", `¡Hola! @${buyerName} está interesado en este disco: ${orderLink}. Usen este chat para coordinar.`);
         }
         return buyerUid;
     },
