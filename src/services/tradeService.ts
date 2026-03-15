@@ -655,7 +655,10 @@ export const tradeService = {
         
         if (tradeSnap.exists()) {
             const tradeData = tradeSnap.data() as any;
-            sellerId = tradeData.participants?.senderId || ADMIN_UID;
+            // Check if it's a direct sale to admin or a store-managed trade
+            const isStoreTrade = tradeData.type === 'direct_sale' && (tradeData.participants?.receiverId === ADMIN_UID || tradeData.is_admin_offer);
+            
+            sellerId = isStoreTrade ? ADMIN_UID : (tradeData.participants?.senderId || ADMIN_UID);
             title = tradeData.manifest?.items?.[0]?.title || tradeData.details?.album || title;
             cover = tradeData.manifest?.items?.[0]?.cover_image || tradeData.media?.thumbnail || "";
         } else {
@@ -678,6 +681,7 @@ export const tradeService = {
                     },
                     type: 'direct_sale',
                     status: 'pending',
+                    is_admin_offer: true, // Identify as store offer
                     manifest: {
                         requestedItems: [tradeId],
                         offeredItems: [],

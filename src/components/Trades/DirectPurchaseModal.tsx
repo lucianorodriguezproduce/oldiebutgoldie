@@ -31,7 +31,12 @@ export default function DirectPurchaseModal({ isOpen, onClose, order }: DirectPu
     const { artist, album } = meta;
 
     const handleConfirm = async () => {
-        if (!user || !dbUser?.username || isProcessing) return;
+        if (!user || isProcessing) return;
+
+        if (!dbUser?.username) {
+            alert("Debes reclamar un @usuario en tu perfil para poder realizar consultas.");
+            return;
+        }
 
         setIsProcessing(true);
         showLoading("Iniciando contacto...");
@@ -105,14 +110,14 @@ export default function DirectPurchaseModal({ isOpen, onClose, order }: DirectPu
                                     )}
                                 </div>
                                 <div className="space-y-1.5 min-w-0">
-                                    <h3 className="text-xl font-black text-white uppercase truncate tracking-tight">{order.album || order.details?.album || 'Álbum Desconocido'}</h3>
-                                    <p className="text-xs font-bold text-gray-500 uppercase tracking-widest truncate opacity-80">{order.artist || order.details?.artist || 'Artista Desconocido'}</p>
+                                    <h3 className="text-xl font-black text-white uppercase truncate tracking-tight">{album}</h3>
+                                    <p className="text-xs font-bold text-gray-500 uppercase tracking-widest truncate opacity-80">{artist}</p>
                                     <div className="flex items-center gap-2 mt-2">
                                         <span className="px-2 py-0.5 rounded bg-primary/20 text-[9px] font-black text-primary border border-primary/30 uppercase tracking-tighter">
-                                            {order.items?.[0]?.condition || order.condition || 'VG+'}
+                                            {meta.condition}
                                         </span>
                                         <span className="px-2 py-0.5 rounded bg-white/5 text-[9px] font-black text-gray-400 border border-white/10 uppercase tracking-tighter">
-                                            {order.items?.[0]?.format || order.format || 'Vinyl'}
+                                            {meta.format}
                                         </span>
                                     </div>
                                 </div>

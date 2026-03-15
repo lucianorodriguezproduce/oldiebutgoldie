@@ -597,7 +597,7 @@ export default function Profile() {
                                         currentUser={user} 
                                         trade={selectedOrder} 
                                         otherParticipantName={selectedOrder.user_name || "Vendedor OBG"}
-                                        buyerId={selectedOrder.participants?.senderId === user?.uid ? undefined : user?.uid}
+                                        buyerId={selectedOrder.participants?.senderId || user?.uid}
                                     />
                                 </div>
                             )}
