@@ -658,7 +658,7 @@ export const tradeService = {
             // Check if it's a direct sale to admin or a store-managed trade
             const isStoreTrade = tradeData.type === 'direct_sale' && (tradeData.participants?.receiverId === ADMIN_UID || tradeData.is_admin_offer);
             
-            sellerId = isStoreTrade ? ADMIN_UID : (tradeData.participants?.senderId || ADMIN_UID);
+            sellerId = isStoreTrade ? ADMIN_UID : (tradeData.participants?.senderId || tradeData.user_id || ADMIN_UID);
             title = tradeData.manifest?.items?.[0]?.title || tradeData.details?.album || title;
             cover = tradeData.manifest?.items?.[0]?.cover_image || tradeData.media?.thumbnail || "";
         } else {
@@ -721,12 +721,13 @@ export const tradeService = {
             if (sellerId && sellerId !== buyerUid) {
                 await addDoc(collection(db, "notifications"), {
                     user_id: sellerId,
-                    title: "Nuevo interesado 📩",
-                    message: `¡@${buyerName} está interesado en "${title}"! Te envió un mensaje.`,
+                    title: "Nueva consulta 📬",
+                    message: `${buyerName} te escribió por "${title}".`,
                     read: false,
                     timestamp: serverTimestamp(),
                     order_id: tradeId,
-                    type: "order"
+                    type: "chat",
+                    link: `/mensajes?chat=${tradeId}`
                 });
             }
 
@@ -734,7 +735,7 @@ export const tradeService = {
             const orderLink = `https://www.oldiebutgoldie.com.ar/orden/${tradeId}`;
             await this.sendPrivateMessage(tradeId, buyerUid, "system", `¡Hola! @${buyerName} está interesado en este disco: ${orderLink}. Usen este chat para coordinar.`);
         }
-        return buyerUid;
+        return tradeId;
     },
 
     async sendPrivateMessage(tradeId: string, buyerId: string, senderId: string, text: string) {
@@ -840,7 +841,8 @@ export const tradeService = {
                 read: false,
                 timestamp: serverTimestamp(),
                 order_id: tradeId,
-                type: "order"
+                type: "order",
+                link: `/orden/${tradeId}` // Added link
             });
         });
     },
