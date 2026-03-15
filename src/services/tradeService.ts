@@ -648,6 +648,7 @@ export const tradeService = {
         let sellerId = ADMIN_UID;
         let title = "Disco Desconocido";
         let cover = "";
+        let itemDataForManifest: any = null;
 
         const tradeRef = doc(db, COLLECTION_NAME, tradeId);
         const tradeSnap = await getDoc(tradeRef);
@@ -665,6 +666,34 @@ export const tradeService = {
                 const itemData = itemSnap.data() as any;
                 title = itemData.metadata?.title || title;
                 cover = itemData.media?.thumbnail || "";
+                sellerId = ADMIN_UID; // Shop items belong to Admin
+                itemDataForManifest = itemData;
+
+                // CRITICAL: Create the parent trade document for shop items
+                // This allows the inquiry to be listed in Profile.tsx
+                await setDoc(tradeRef, scrubData({
+                    participants: {
+                        senderId: buyerUid, // In this context, sender of the "intent"
+                        receiverId: ADMIN_UID
+                    },
+                    type: 'direct_sale',
+                    status: 'pending',
+                    manifest: {
+                        requestedItems: [tradeId],
+                        offeredItems: [],
+                        cashAdjustment: itemData.logistics?.price || 0,
+                        currency: itemData.logistics?.currency || 'ARS',
+                        items: [{
+                            id: tradeId,
+                            title: title,
+                            artist: itemData.metadata?.artist || "Varios",
+                            cover_image: cover,
+                            price: itemData.logistics?.price || 0
+                        }]
+                    },
+                    createdAt: serverTimestamp(),
+                    timestamp: serverTimestamp()
+                }));
             }
         }
 
@@ -685,7 +714,7 @@ export const tradeService = {
             });
 
             // Notification for Seller
-            if (sellerId) {
+            if (sellerId && sellerId !== buyerUid) {
                 await addDoc(collection(db, "notifications"), {
                     user_id: sellerId,
                     title: "Nuevo interesado 📩",
