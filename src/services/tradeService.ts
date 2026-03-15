@@ -845,24 +845,33 @@ export const tradeService = {
         });
     },
 
-    async getUserConversations(userId: string) {
-        // Use collectionGroup to find all conversations where the user is either the buyer or the seller
+    onSnapshotUserConversations(userId: string, callback: (conversations: any[]) => void) {
         const qBuyer = query(collectionGroup(db, "conversations"), where("buyerId", "==", userId));
         const qSeller = query(collectionGroup(db, "conversations"), where("sellerId", "==", userId));
 
-        const [snapBuyer, snapSeller] = await Promise.all([
-            getDocs(qBuyer),
-            getDocs(qSeller)
-        ]);
-
         const rawConvsMap = new Map<string, any>();
-        // Use composite key path to prevent collisions (buyerUid is the doc id)
-        snapBuyer.docs.forEach(doc => rawConvsMap.set(doc.ref.path, { id: doc.id, ...doc.data() }));
-        snapSeller.docs.forEach(doc => rawConvsMap.set(doc.ref.path, { id: doc.id, ...doc.data() }));
 
-        return Array.from(rawConvsMap.values()).sort((a, b) => 
-            (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0)
-        );
+        const updateCallback = () => {
+            const sortedConvs = Array.from(rawConvsMap.values()).sort((a, b) => 
+                (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0)
+            );
+            callback(sortedConvs);
+        };
+
+        const unsubBuyer = onSnapshot(qBuyer, (snap) => {
+            snap.docs.forEach(doc => rawConvsMap.set(doc.ref.path, { id: doc.id, ...doc.data() }));
+            updateCallback();
+        });
+
+        const unsubSeller = onSnapshot(qSeller, (snap) => {
+            snap.docs.forEach(doc => rawConvsMap.set(doc.ref.path, { id: doc.id, ...doc.data() }));
+            updateCallback();
+        });
+
+        return () => {
+            unsubBuyer();
+            unsubSeller();
+        };
     },
 
     onSnapshotMessages(tradeId: string, callback: (messages: any[]) => void) {

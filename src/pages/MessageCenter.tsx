@@ -30,24 +30,19 @@ export default function MessageCenter() {
     useEffect(() => {
         if (!user) return;
 
-        const loadConversations = async () => {
-            try {
-                const convs = await tradeService.getUserConversations(user.uid);
-                setConversations(convs);
-                
-                // Auto-select chat from URL if present
-                if (chatIdFromUrl) {
-                    const found = convs.find(c => c.id === chatIdFromUrl || c.tradeId === chatIdFromUrl);
-                    if (found) setSelectedConv(found);
-                }
-            } catch (error) {
-                console.error("Error loading conversations:", error);
-            } finally {
-                setLoading(false);
+        setLoading(true);
+        const unsub = tradeService.onSnapshotUserConversations(user.uid, (convs) => {
+            setConversations(convs);
+            
+            // Auto-select chat from URL if present
+            if (chatIdFromUrl) {
+                const found = convs.find(c => c.id === chatIdFromUrl || c.tradeId === chatIdFromUrl);
+                if (found) setSelectedConv(found);
             }
-        };
+            setLoading(false);
+        });
 
-        loadConversations();
+        return () => unsub();
     }, [user, chatIdFromUrl]);
 
     const filteredConversations = conversations.filter(c => 
