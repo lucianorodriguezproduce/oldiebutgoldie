@@ -846,9 +846,9 @@ export const tradeService = {
 
     async adjudicateTrade(tradeId: string, buyerId: string, buyerName: string) {
         const tradeRef = doc(db, COLLECTION_NAME, tradeId);
-        const messagesRef = collection(db, COLLECTION_NAME, tradeId, "messages");
-        const convId = buyerName.startsWith('@') ? buyerName : `@${buyerName}`;
-        const convRef = doc(db, COLLECTION_NAME, tradeId, "conversations", convId);
+        const buyerUsername = buyerName.startsWith('@') ? buyerName : `@${buyerName}`;
+        const convRef = doc(db, COLLECTION_NAME, tradeId, "conversations", buyerUsername);
+        const convMessagesRef = collection(db, COLLECTION_NAME, tradeId, "conversations", buyerUsername, "messages");
 
         await runTransaction(db, async (transaction) => {
             const tradeSnap = await transaction.get(tradeRef);
@@ -869,13 +869,17 @@ export const tradeService = {
             });
 
             // 2. Mark conversation as accepted (Use set with merge)
-            transaction.set(convRef, { status: "accepted" }, { merge: true });
+            transaction.set(convRef, { 
+                status: "accepted",
+                lastMessage: "¡Trato cerrado!",
+                timestamp: serverTimestamp() 
+            }, { merge: true });
 
-            // 3. Generate automated message in the MAIN legacy chat for coordination
-            const newMessageRef = doc(messagesRef);
+            // 3. Generate automated message in the private chat
+            const newMessageRef = doc(convMessagesRef);
             transaction.set(newMessageRef, {
                 sender_uid: "system",
-                text: `¡Trato cerrado! ${buyerName} es el comprador adjudicado.`,
+                text: `¡Trato cerrado! ${buyerUsername} es el comprador adjudicado. Coordinen aquí el envío.`,
                 timestamp: serverTimestamp(),
                 read_status: false
             });
@@ -1039,7 +1043,11 @@ export const tradeService = {
 
     async executeDirectPurchase(tradeId: string, buyerUid: string, buyerName: string) {
         const tradeRef = doc(db, COLLECTION_NAME, tradeId);
-        const messagesRef = collection(db, COLLECTION_NAME, tradeId, "messages");
+        
+        // 1. Armamos las rutas modernas para el Inbox (Protocolo V29.2)
+        const buyerUsername = buyerName.startsWith('@') ? buyerName : `@${buyerName}`;
+        const convRef = doc(db, COLLECTION_NAME, tradeId, "conversations", buyerUsername);
+        const convMessagesRef = collection(db, COLLECTION_NAME, tradeId, "conversations", buyerUsername, "messages");
 
         await runTransaction(db, async (transaction) => {
             const tradeSnap = await transaction.get(tradeRef);
@@ -1048,22 +1056,36 @@ export const tradeService = {
             const tradeData = tradeSnap.data() as any;
             if (tradeData.status !== "pending") throw new Error("TRADE_NOT_AVAILABLE");
 
-            // 1. Atomic status update
+            // 2. Actualizamos el estado del Trade padre
             transaction.update(tradeRef, {
                 status: "accepted",
                 isPaid: false,
                 payment_status: 'pending',
                 highest_bidder_uid: buyerUid,
-                highest_bidder_name: buyerName,
+                highest_bidder_name: buyerUsername,
                 acceptedAt: serverTimestamp(),
-                currentTurn: tradeData.participants?.senderId // Open coordination for the seller
+                currentTurn: tradeData.participants?.senderId // Le toca al vendedor
             });
 
-            // 2. Generate automated message
-            const newMessageRef = doc(messagesRef);
+            // 3. Creamos/Actualizamos la Conversación para que aparezca en la Bandeja de Entrada
+            transaction.set(convRef, {
+                buyerId: buyerUid,
+                buyerUsername: buyerUsername,
+                buyerName: buyerUsername,
+                sellerId: tradeData.participants?.senderId || ADMIN_UID,
+                tradeId: tradeId,
+                title: tradeData.manifest?.items?.[0]?.title || tradeData.details?.album || "Disco",
+                cover: tradeData.manifest?.items?.[0]?.cover_image || tradeData.media?.thumbnail || "",
+                status: "accepted",
+                lastMessage: "¡Venta Directa confirmada!",
+                timestamp: serverTimestamp()
+            }, { merge: true });
+
+            // 4. Escribimos el mensaje automático adentro del chat privado correcto
+            const newMessageRef = doc(convMessagesRef);
             transaction.set(newMessageRef, {
                 sender_uid: "system",
-                text: `¡Hola! ${buyerName} ha comprado este disco. Coordinen aquí el envío.`,
+                text: `¡Hola! ${buyerUsername} ha comprado este disco mediante Venta Directa. Coordinen aquí el envío.`,
                 timestamp: serverTimestamp(),
                 read_status: false
             });
