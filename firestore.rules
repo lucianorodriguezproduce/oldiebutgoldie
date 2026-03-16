@@ -14,7 +14,7 @@ service cloud.firestore {
       );
     }
 
-    // Collection Group Query para el Inbox (Protocol V28.3 - Root Level Replaced)
+    // Collection Group Query para el Inbox (Protocol V28.3 - Root Level)
     match /{path=**}/conversations/{conversationId} {
       allow read: if request.auth != null && (
         isAdmin() ||
@@ -138,40 +138,46 @@ service cloud.firestore {
         request.auth.uid == resource.data.highest_bidder_uid
       )) || resource.data.isPublicOrder == true;
       
-      // FIX: El write se separó para manejar correctamente el 'create' sin 'resource.data'
       allow create: if request.auth != null && (
         isAdmin() ||
         request.resource.data.participants.senderId == request.auth.uid
       );
-      // Regla de actualización: Participantes o Admin
+      
+      // FIX FUSIONADO: Permite la Venta Directa (accepted) y el Iniciar Chat (pending)
       allow update: if request.auth != null && (
         isAdmin() ||
         resource.data.participants.senderId == request.auth.uid || 
         resource.data.participants.receiverId == request.auth.uid ||
-        (resource.data.isPublicOrder == true && resource.data.status == 'pending')
+        (resource.data.isPublicOrder == true && (
+          request.resource.data.highest_bidder_uid == request.auth.uid || 
+          request.resource.data.status == 'accepted' || // <-- ESTO REVIVE "CONFIRMAR Y CHATEAR"
+          resource.data.status == 'pending'             // <-- ESTO PERMITE "CONTACTAR" (Nuevos chats)
+        ))
       );
       
       allow delete: if isAdmin();
 
-      // Conversations Subcollection - Marketplace Inquiries (Protocol V28.3/V28.4)
-      match /conversations/{buyerUsername} {
-        allow read, write: if request.auth != null && (
+      // Conversations Subcollection - Marketplace Inquiries (Basado en Usernames - Protocolo V28.5)
+      match /conversations/{conversationId} {
+        allow create: if request.auth != null && (
           isAdmin() ||
-          get(/databases/$(database)/documents/usernames/$(buyerUsername)).data.uid == request.auth.uid ||
+          get(/databases/$(database)/documents/usernames/$(request.resource.data.buyerUsername)).data.uid == request.auth.uid
+        );
+        
+        allow read, update, delete: if request.auth != null && (
+          isAdmin() ||
+          get(/databases/$(database)/documents/usernames/$(resource.data.buyerUsername)).data.uid == request.auth.uid ||
           request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.senderId
         );
         
         match /messages/{messageId} {
           allow read, write: if request.auth != null && (
             isAdmin() ||
-            get(/databases/$(database)/documents/usernames/$(buyerUsername)).data.uid == request.auth.uid ||
+            get(/databases/$(database)/documents/usernames/$(get(/databases/$(database)/documents/trades/$(tradeId)/conversations/$(conversationId)).data.buyerUsername)).data.uid == request.auth.uid ||
             request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.senderId
           );
         }
       }
-
-      // Infrastructure: Global access to conversations for MessageCenter.tsx
-      // Deprecated here by Protocol V28.1 (Moved to root)
 
       // Proposals Subcollection - Pujas del Coliseo
       match /proposals/{proposalId} {
@@ -186,7 +192,7 @@ service cloud.firestore {
         allow update, delete: if isAdmin() || (request.auth != null && resource.data.senderId == request.auth.uid);
       }
 
-      // Messaging Engine (Protocol V24.8)
+      // Messaging Engine (Restaurado a la versión que SÍ funcionaba para Venta Directa)
       match /messages/{messageId} {
         allow read: if request.auth != null && (
           isAdmin() ||
@@ -198,7 +204,7 @@ service cloud.firestore {
           request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.senderId ||
           request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.receiverId ||
           request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.highest_bidder_uid ||
-          // Permiso especial para transacciones de compra directa P2P
+          // Permiso especial para transacciones de compra directa P2P (RESTAURADO)
           (get(/databases/$(database)/documents/trades/$(tradeId)).data.isPublicOrder == true && 
            get(/databases/$(database)/documents/trades/$(tradeId)).data.status == "pending")
         );

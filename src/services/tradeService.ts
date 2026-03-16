@@ -878,7 +878,8 @@ export const tradeService = {
     },
 
     onSnapshotUserConversations(userId: string, username: string | null, callback: (conversations: any[]) => void) {
-        if (!username) {
+        if (!userId || !username) {
+            console.warn("[tradeService] onSnapshotUserConversations missing required params:", { userId, username });
             callback([]);
             return () => {};
         }
@@ -900,15 +901,21 @@ export const tradeService = {
             callback(sortedConvs);
         };
 
-        const unsubs = queries.map(q => onSnapshot(q, 
+        const unsubs = queries.map((q, index) => onSnapshot(q, 
             (snap) => {
                 snap.docs.forEach(doc => rawConvsMap.set(doc.ref.path, { id: doc.id, ...doc.data() }));
                 updateCallback();
             },
             (error) => {
-                console.error("[tradeService] Error in onSnapshotUserConversations:", error.message);
-                if (error.message.includes("permissions")) {
-                    console.error("CRITICAL: Missing or insufficient permissions for conversations. Check Firestore Rules.");
+                console.error(`[tradeService] Firestore Snapshot Error (Index ${index}):`, error.code, error.message);
+                console.error("Query Context:", { cleanUsername, queryIndex: index });
+                
+                if (error.code === 'failed-precondition' || error.message.includes("indexes")) {
+                    console.error("CRITICAL: Missing global index for conversations. Follow this link to create it:", error.message);
+                }
+                
+                if (error.code === 'permission-denied') {
+                    console.error("CRITICAL: Permission denied. Check Firestore Rules for collectionGroup('conversations').");
                 }
             }
         ));

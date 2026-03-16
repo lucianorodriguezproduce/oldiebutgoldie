@@ -45,11 +45,18 @@ export default function TradeChat({ tradeId, currentUser, trade, otherParticipan
             }, 100);
         };
 
+        if (!tradeId) {
+            console.warn("[TradeChat] tradeId is missing, skipping listener.");
+            return;
+        }
+
         const unsub = buyerId 
             ? tradeService.onSnapshotPrivateMessages(tradeId, buyerId, callback)
             : tradeService.onSnapshotMessages(tradeId, callback);
             
-        return () => unsub();
+        return () => {
+            if (unsub) unsub();
+        };
     }, [tradeId, buyerId]);
 
     const handleSend = async (e: React.FormEvent) => {
