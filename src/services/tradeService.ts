@@ -775,19 +775,26 @@ export const tradeService = {
             timestamp: serverTimestamp()
         });
 
-        // Notification for the other party
+        // Notification for the other party (Protocol V28.2)
         if (senderId !== "system") {
-            const recipientId = senderId === buyerId ? convData?.sellerId : buyerId;
+            const isBuyerSender = senderId === buyerId;
+            const recipientId = isBuyerSender ? convData?.sellerId : buyerId;
+            const senderName = isBuyerSender ? convData?.buyerName : (convData?.sellerUsername || "Vendedor");
+
             if (recipientId) {
                 await addDoc(collection(db, "notifications"), {
-                    uid: recipientId,
-                    user_id: recipientId, // Legacy
-                    title: "Nuevo mensaje 💬",
-                    message: `Tienes un mensaje por "${convData?.title || 'tu batea'}"`,
+                    userId: recipientId,
+                    type: 'new_message',
+                    title: `Nuevo mensaje de ${senderName}`,
+                    message: text.substring(0, 100) + (text.length > 100 ? '...' : ''),
+                    link: `/mensajes?chat=${tradeId}`,
                     read: false,
+                    createdAt: serverTimestamp(),
+                    // Legacy compatibility
+                    uid: recipientId,
+                    user_id: recipientId,
                     timestamp: serverTimestamp(),
-                    order_id: tradeId,
-                    type: "order"
+                    order_id: tradeId
                 });
             }
         }
@@ -891,10 +898,18 @@ export const tradeService = {
             callback(sortedConvs);
         };
 
-        const unsubs = queries.map(q => onSnapshot(q, (snap) => {
-            snap.docs.forEach(doc => rawConvsMap.set(doc.ref.path, { id: doc.id, ...doc.data() }));
-            updateCallback();
-        }));
+        const unsubs = queries.map(q => onSnapshot(q, 
+            (snap) => {
+                snap.docs.forEach(doc => rawConvsMap.set(doc.ref.path, { id: doc.id, ...doc.data() }));
+                updateCallback();
+            },
+            (error) => {
+                console.error("[tradeService] Error in onSnapshotUserConversations:", error.message);
+                if (error.message.includes("permissions")) {
+                    console.error("CRITICAL: Missing or insufficient permissions for conversations. Check Firestore Rules.");
+                }
+            }
+        ));
 
         return () => {
             unsubs.forEach(unsub => unsub());
