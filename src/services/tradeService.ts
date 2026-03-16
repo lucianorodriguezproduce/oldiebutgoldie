@@ -658,32 +658,24 @@ export const tradeService = {
         let foundInCollection = "none";
 
         const tradeRef = doc(db, COLLECTION_NAME, tradeId);
-        const tradeSnap = await getDoc(tradeRef);
-        
-        if (tradeSnap.exists()) {
-            const tradeData = tradeSnap.data() as any;
-            // FIX: For direct sales, the receiver is the seller
-            const identifiedSeller = tradeData.participants?.receiverId || tradeData.participants?.senderId || ADMIN_UID;
-            sellerId = identifiedSeller;
-            title = tradeData.manifest?.items?.[0]?.title || tradeData.details?.album || title;
-            cover = tradeData.manifest?.items?.[0]?.cover_image || tradeData.media?.thumbnail || "";
-            foundInCollection = "existing_trade";
-        } else {
-            // PROTOCOL V34.0: Priority Search (Ojo de Halcón)
-            
-            // 1. Search in user_assets (P2P Marketplace)
-            const assetRef = doc(db, "user_assets", tradeId);
-            const assetSnap = await getDoc(assetRef);
-            
-            if (assetSnap.exists()) {
-                const assetData = assetSnap.data() as any;
-                title = assetData.metadata?.title || title;
-                cover = assetData.media?.thumbnail || "";
-                sellerId = assetData.ownerId; 
-                foundInCollection = "user_assets";
-                
-                console.log(`[eye-of-hawk] P2P Seller found in user_assets: ${sellerId}`);
-                
+        const [tradeSnap, assetSnap, inventorySnap] = await Promise.all([
+            getDoc(tradeRef),
+            getDoc(doc(db, "user_assets", tradeId)),
+            getDoc(doc(db, "inventory", tradeId))
+        ]);
+
+        // PRIORITY 1: User Assets (P2P Marketplace)
+        if (assetSnap.exists()) {
+            const assetData = assetSnap.data() as any;
+            sellerId = assetData.ownerId;
+            title = assetData.metadata?.title || title;
+            cover = assetData.media?.thumbnail || "";
+            foundInCollection = "user_assets";
+            console.log(`[eye-of-hawk] P2P Item detected. Owner Sovereign: ${sellerId}`);
+
+            // HEALING: If trade exists but has wrong seller, update it. If not exists, create it.
+            if (!tradeSnap.exists() || (tradeSnap.data() as any).participants?.receiverId !== sellerId) {
+                console.log(`[eye-of-hawk] HEALING/CREATING trade for P2P asset: ${tradeId}`);
                 await setDoc(tradeRef, scrubData({
                     participants: {
                         senderId: buyerUid,
@@ -705,51 +697,59 @@ export const tradeService = {
                             price: assetData.valuation || 0
                         }]
                     },
+                    // Preserve createdAt if exists
+                    createdAt: (tradeSnap.exists() ? (tradeSnap.data() as any).createdAt : serverTimestamp()),
+                    timestamp: serverTimestamp()
+                }), { merge: true });
+            }
+        } 
+        // PRIORITY 2: Inventory (Official Shop / Admin)
+        else if (inventorySnap.exists()) {
+            const itemData = inventorySnap.data() as any;
+            sellerId = ADMIN_UID;
+            title = itemData.metadata?.title || title;
+            cover = itemData.media?.thumbnail || "";
+            foundInCollection = "inventory";
+            console.log(`[eye-of-hawk] Shop item detected. Seller Sovereign: ADMIN_UID`);
+
+            if (!tradeSnap.exists()) {
+                await setDoc(tradeRef, scrubData({
+                    participants: {
+                        senderId: buyerUid,
+                        receiverId: ADMIN_UID
+                    },
+                    type: 'direct_sale',
+                    status: 'pending',
+                    is_admin_offer: true,
+                    manifest: {
+                        requestedItems: [tradeId],
+                        offeredItems: [],
+                        cashAdjustment: itemData.logistics?.price || 0,
+                        currency: itemData.logistics?.currency || 'ARS',
+                        items: [{
+                            id: tradeId,
+                            title: title,
+                            artist: itemData.metadata?.artist || "Varios",
+                            cover_image: cover,
+                            price: itemData.logistics?.price || 0
+                        }]
+                    },
                     createdAt: serverTimestamp(),
                     timestamp: serverTimestamp()
                 }));
-            } else {
-                // 2. Search in inventory (Official Shop)
-                const itemRef = doc(db, "inventory", tradeId);
-                const itemSnap = await getDoc(itemRef);
-                
-                if (itemSnap.exists()) {
-                    const itemData = itemSnap.data() as any;
-                    title = itemData.metadata?.title || title;
-                    cover = itemData.media?.thumbnail || "";
-                    sellerId = ADMIN_UID;
-                    foundInCollection = "inventory";
-                    
-                    console.log(`[eye-of-hawk] Shop item found in inventory. Seller: ADMIN_UID`);
-                    
-                    await setDoc(tradeRef, scrubData({
-                        participants: {
-                            senderId: buyerUid,
-                            receiverId: ADMIN_UID
-                        },
-                        type: 'direct_sale',
-                        status: 'pending',
-                        is_admin_offer: true,
-                        manifest: {
-                            requestedItems: [tradeId],
-                            offeredItems: [],
-                            cashAdjustment: itemData.logistics?.price || 0,
-                            currency: itemData.logistics?.currency || 'ARS',
-                            items: [{
-                                id: tradeId,
-                                title: title,
-                                artist: itemData.metadata?.artist || "Varios",
-                                cover_image: cover,
-                                price: itemData.logistics?.price || 0
-                            }]
-                        },
-                        createdAt: serverTimestamp(),
-                        timestamp: serverTimestamp()
-                    }));
-                } else {
-                    console.warn(`[eye-of-hawk] Item ${tradeId} not found in any collection. Defaulting to Admin fallback.`);
-                }
             }
+        }
+        // PRIORITY 3: Existing Trade (for items moved/archived but active in chat)
+        else if (tradeSnap.exists()) {
+            const tradeData = tradeSnap.data() as any;
+            sellerId = tradeData.participants?.receiverId || tradeData.participants?.senderId || ADMIN_UID;
+            title = tradeData.manifest?.items?.[0]?.title || tradeData.details?.album || title;
+            cover = tradeData.manifest?.items?.[0]?.cover_image || tradeData.media?.thumbnail || "";
+            foundInCollection = "existing_trade_only";
+            console.log(`[eye-of-hawk] Orphan trade detected (no asset/inv). Trusting current sellerId: ${sellerId}`);
+        } else {
+            console.warn(`[eye-of-hawk] Item ${tradeId} not found in any collection. Abandoning inquiry.`);
+            throw new Error("ARTICULO_NO_ENCONTRADO");
         }
 
         // --- Fetch Seller Username ---
@@ -819,17 +819,13 @@ export const tradeService = {
         return tradeId;
     },
 
-    async sendPrivateMessage(tradeId: string, buyerId: string, senderId: string, text: string, buyerUsername?: string) {
-        // Force username as primary key (Protocol V29.1)
-        // If buyerId has @, it's actually the username passed as ID
-        const convId = (buyerUsername || (buyerId.startsWith('@') ? buyerId : null));
-        
-        if (!convId) {
-            console.error("[tradeService] sendPrivateMessage failed: NO_USERNAME_PROVIDED", { tradeId, buyerId, buyerUsername });
+    async sendPrivateMessage(tradeId: string, conversationId: string, senderId: string, text: string) {
+        if (!conversationId || !conversationId.startsWith('@')) {
+            console.error("[eye-of-hawk] sendPrivateMessage failed: INVALID_CONVERSATION_ID", { tradeId, conversationId });
             throw new Error("SISTEMA_IDENTIDAD_USERNAME_REQUERIDO");
         }
 
-        const messagesRef = collection(db, COLLECTION_NAME, tradeId, "conversations", convId, "messages");
+        const messagesRef = collection(db, COLLECTION_NAME, tradeId, "conversations", conversationId, "messages");
         await addDoc(messagesRef, {
             sender_uid: senderId,
             text,
@@ -837,10 +833,9 @@ export const tradeService = {
             read_status: false
         });
 
-        // Update conversation metadata using set with merge: true (Protocol V29.1)
-        const conversationRef = doc(db, COLLECTION_NAME, tradeId, "conversations", convId);
+        // Update conversation metadata
+        const conversationRef = doc(db, COLLECTION_NAME, tradeId, "conversations", conversationId);
         
-        // We fetching once for notification mapping
         const convSnap = await getDoc(conversationRef);
         const convData = convSnap.data();
 
@@ -874,10 +869,14 @@ export const tradeService = {
         }
     },
 
-    onSnapshotPrivateMessages(tradeId: string, buyerId: string, callback: (messages: any[]) => void) {
-        // NOTE: buyerId here is actually the conversation ID which is the buyerUsername according to Protocol V28.3
+    onSnapshotPrivateMessages(tradeId: string, conversationId: string, callback: (messages: any[]) => void) {
+        if (!conversationId || !conversationId.startsWith('@')) {
+            console.warn("[eye-of-hawk] onSnapshotPrivateMessages: Identification mismatch avoided. Path requires @username.", { conversationId });
+            return () => {};
+        }
+
         const q = query(
-            collection(db, COLLECTION_NAME, tradeId, "conversations", buyerId, "messages"),
+            collection(db, COLLECTION_NAME, tradeId, "conversations", conversationId, "messages"),
             orderBy("timestamp", "asc")
         );
         return onSnapshot(q, (snap) => {

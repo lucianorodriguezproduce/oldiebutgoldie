@@ -17,10 +17,10 @@ interface TradeChatProps {
     currentUser: any;
     trade: any;
     otherParticipantName: string;
-    buyerId?: string; // Nuevo: Para conversaciones privadas en el Marketplace
+    conversationId?: string; // Standardized: Always includes @username
 }
 
-export default function TradeChat({ tradeId, currentUser, trade, otherParticipantName, buyerId }: TradeChatProps) {
+export default function TradeChat({ tradeId, currentUser, trade, otherParticipantName, conversationId }: TradeChatProps) {
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState("");
     const [isSending, setIsSending] = useState(false);
@@ -59,14 +59,14 @@ export default function TradeChat({ tradeId, currentUser, trade, otherParticipan
             return;
         }
 
-        const unsub = buyerId 
-            ? tradeService.onSnapshotPrivateMessages(tradeId, buyerId, callback)
+        const unsub = conversationId 
+            ? tradeService.onSnapshotPrivateMessages(tradeId, conversationId, callback)
             : tradeService.onSnapshotMessages(tradeId, callback);
             
         return () => {
             if (unsub) unsub();
         };
-    }, [tradeId, buyerId]);
+    }, [tradeId, conversationId]);
 
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -74,10 +74,8 @@ export default function TradeChat({ tradeId, currentUser, trade, otherParticipan
 
         setIsSending(true);
         try {
-            if (buyerId) {
-                // In Protocol V28.3, buyerId prop likely contains the username if passed from MessageCenter
-                const bUsername = buyerId.startsWith('@') ? buyerId : undefined;
-                await tradeService.sendPrivateMessage(tradeId, buyerId, currentUser.uid, newMessage.trim(), bUsername);
+            if (conversationId) {
+                await tradeService.sendPrivateMessage(tradeId, conversationId, currentUser.uid, newMessage.trim());
             } else {
                 await tradeService.sendMessage(tradeId, currentUser.uid, newMessage.trim());
             }

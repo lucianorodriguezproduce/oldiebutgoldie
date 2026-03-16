@@ -185,7 +185,7 @@ export default function MessageCenter() {
                                     }
                                 }}
                                 otherParticipantName={selectedConv.sellerId === user.uid ? (selectedConv.buyerUsername || selectedConv.buyerName || "Cliente") : (selectedConv.sellerUsername || selectedConv.sellerName || "Vendedor")}
-                                buyerId={selectedConv.buyerUsername || selectedConv.buyerId}
+                                conversationId={selectedConv.buyerUsername}
                             />
                         </div>
                     </div>
