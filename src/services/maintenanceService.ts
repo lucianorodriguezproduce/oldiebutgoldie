@@ -9,8 +9,10 @@ import {
     doc,
     serverTimestamp,
     orderBy,
-    limit
+    limit,
+    collectionGroup
 } from "firebase/firestore";
+import { ADMIN_UID } from "@/constants/admin";
 
 export const maintenanceService = {
     /**
@@ -156,5 +158,66 @@ export const maintenanceService = {
 
         console.log(`[Maintenance] Archived ${archivedCount} sold-out items.`);
         return archivedCount;
+    },
+
+    /**
+     * Protocol V36.0: Corregir identidades corruptas en conversaciones.
+     * Detecta chats donde el sellerId fue sobrescrito por el buyerId y los repara 
+     * consultando el Trade madre.
+     */
+    async healConversationIdentities() {
+        const q = query(collectionGroup(db, "conversations"));
+        const snap = await getDocs(q);
+        if (snap.empty) return 0;
+
+        let healedCount = 0;
+        const batch = writeBatch(db);
+
+        for (const docSnap of snap.docs) {
+            const data = docSnap.data() as any;
+            
+            // Si el sellerId es igual al buyerId, hay corrupción segura inducida por el bug previo
+            if (data.sellerId && data.buyerId && data.sellerId === data.buyerId) {
+                const pathParts = docSnap.ref.path.split('/');
+                const tradeId = pathParts[1];
+                
+                try {
+                    const tradeRef = doc(db, "trades", tradeId);
+                    const tradeSnap = await getDocs(query(collection(db, "trades"), where("__name__", "==", tradeId)));
+                    
+                    if (!tradeSnap.empty) {
+                        const tradeData = tradeSnap.docs[0].data();
+                        // El vendedor real es siempre el receiverId original en una compra
+                        const realSellerId = tradeData.participants?.receiverId || tradeData.user_id || ADMIN_UID;
+                        
+                        if (realSellerId && realSellerId !== data.sellerId) {
+                            // Buscar username real
+                            let realSellerUsername = "Vendedor";
+                            const sellerDoc = await getDocs(query(collection(db, "users"), where("__name__", "==", realSellerId)));
+                            if (!sellerDoc.empty) {
+                                const sData = sellerDoc.docs[0].data();
+                                realSellerUsername = sData.username ? (sData.username.startsWith('@') ? sData.username : `@${sData.username}`) : "Vendedor";
+                            }
+
+                            batch.update(docSnap.ref, {
+                                sellerId: realSellerId,
+                                sellerUsername: realSellerUsername,
+                                healedAt: serverTimestamp()
+                            });
+                            healedCount++;
+                        }
+                    }
+                } catch (e) {
+                    console.error(`[Maintenance] Error healing conversation ${docSnap.ref.path}:`, e);
+                }
+            }
+        }
+
+        if (healedCount > 0) {
+            await batch.commit();
+        }
+
+        console.log(`[Maintenance] Healed ${healedCount} conversation identities.`);
+        return healedCount;
     }
 };

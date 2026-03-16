@@ -363,6 +363,32 @@ export default function AdminDashboard() {
                             Archivar Agotados
                         </button>
                     </div>
+
+                    {/* Chat Identity Healing (Protocol V36.0) */}
+                    <div className="flex flex-col gap-4 p-5 bg-primary/5 border border-primary/20 rounded-2xl hover:border-primary/40 transition-colors col-span-1 md:col-span-2 lg:col-span-4 mt-4">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3 text-primary">
+                                <ShieldAlert className="w-5 h-5" />
+                                <span className="text-xs font-black uppercase tracking-widest">Recuperación de Soberanía (V36.0)</span>
+                            </div>
+                            <span className="text-[10px] font-bold bg-primary/20 text-primary px-2 py-0.5 rounded">CRÍTICO</span>
+                        </div>
+                        <p className="text-xs text-gray-400 font-medium">Escanea y repara chats P2P donde el vendedor perdió el acceso debido a la corrupción de IDs durante la compra.</p>
+                        <button
+                            onClick={async () => {
+                                if (!confirm("¿Iniciar curación histórica de chats? Esto reparará la visibilidad para los vendedores.")) return;
+                                setIsPurging(prev => ({ ...prev, heal: true }));
+                                const count = await maintenanceService.healConversationIdentities();
+                                alert(`Curación completada: ${count} chats recuperados.`);
+                                setIsPurging(prev => ({ ...prev, heal: false }));
+                            }}
+                            disabled={isPurging.heal}
+                            className="bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-3 transition-all disabled:opacity-50"
+                        >
+                            {isPurging.heal ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                            Ejecutar Curación de Identidad
+                        </button>
+                    </div>
                 </div>
             </motion.div>
         </div>

@@ -836,8 +836,14 @@ export const tradeService = {
         // Update conversation metadata
         const conversationRef = doc(db, COLLECTION_NAME, tradeId, "conversations", conversationId);
         
+        // Fetch conversation data to identify recipients
         const convSnap = await getDoc(conversationRef);
-        const convData = convSnap.data();
+        const convData = convSnap.data() as any;
+
+        if (!convData) {
+            console.error("[eye-of-hawk] sendPrivateMessage failed: CONVERSATION_DATA_NOT_FOUND");
+            return;
+        }
 
         await setDoc(conversationRef, {
             lastMessage: text,
@@ -846,9 +852,9 @@ export const tradeService = {
 
         // Notification for the other party (Protocol V28.2)
         if (senderId !== "system") {
-            const isBuyerSender = senderId === buyerId;
-            const recipientId = isBuyerSender ? convData?.sellerId : buyerId;
-            const senderName = isBuyerSender ? convData?.buyerName : (convData?.sellerUsername || "Vendedor");
+            const isBuyerSender = senderId === convData.buyerId;
+            const recipientId = isBuyerSender ? convData.sellerId : convData.buyerId;
+            const senderName = isBuyerSender ? (convData.buyerUsername || convData.buyerName) : (convData.sellerUsername || "Vendedor");
 
             if (recipientId) {
                 await addDoc(collection(db, "notifications"), {
@@ -960,16 +966,28 @@ export const tradeService = {
 
         const cleanUsername = username ? (username.startsWith('@') ? username : `@${username}`) : null;
 
-        // Build base queries using UID (Primary) and Username (Fallback/Legacy)
-        const queries = [
-            query(collectionGroup(db, "conversations"), where("buyerId", "==", userId)),
-            query(collectionGroup(db, "conversations"), where("sellerId", "==", userId))
-        ];
+        // BATEA AUDITOR: El Admin ve todo el ecosistema
+        const isMasterAdmin = userId === ADMIN_UID || userId === 'oldiebutgoldie';
 
-        // Add username fallbacks if available (Protocol V31.2)
-        if (cleanUsername) {
-            queries.push(query(collectionGroup(db, "conversations"), where("buyerUsername", "==", cleanUsername)));
-            queries.push(query(collectionGroup(db, "conversations"), where("sellerUsername", "==", cleanUsername)));
+        // Build base queries using UID (Primary) and Username (Fallback/Legacy)
+        let queries = [];
+        
+        if (isMasterAdmin) {
+            console.log("[tradeService] MASTER ADMIN session detected. Loading all active conversations.");
+            queries = [
+                query(collectionGroup(db, "conversations"), orderBy("timestamp", "desc"))
+            ];
+        } else {
+            queries = [
+                query(collectionGroup(db, "conversations"), where("buyerId", "==", userId)),
+                query(collectionGroup(db, "conversations"), where("sellerId", "==", userId))
+            ];
+
+            // Add username fallbacks if available (Protocol V31.2)
+            if (cleanUsername) {
+                queries.push(query(collectionGroup(db, "conversations"), where("buyerUsername", "==", cleanUsername)));
+                queries.push(query(collectionGroup(db, "conversations"), where("sellerUsername", "==", cleanUsername)));
+            }
         }
 
         const rawConvsMap = new Map<string, any>();
@@ -1108,9 +1126,12 @@ export const tradeService = {
         const buyerUsername = buyerName.startsWith('@') ? buyerName : `@${buyerName}`;
         const tradeSnap = await getDoc(tradeRef);
         if (!tradeSnap.exists()) throw new Error("TRADE_NOT_FOUND");
+        
         const tradeData = tradeSnap.data() as any;
-        const isStoreTrade = tradeData.is_admin_offer || tradeData.participants?.senderId === ADMIN_UID;
-        const sellerId = isStoreTrade ? ADMIN_UID : (tradeData.participants?.senderId || tradeData.user_id || ADMIN_UID);
+        
+        // IDENTITY RECOVERY: Priority to original receiver (the Seller)
+        const isStoreTrade = tradeData.is_admin_offer || tradeData.participants?.receiverId === ADMIN_UID;
+        const sellerId = isStoreTrade ? ADMIN_UID : (tradeData.participants?.receiverId || tradeData.user_id || ADMIN_UID);
 
         // Fetch seller details for metadata
         let sellerUsername = "Vendedor";
