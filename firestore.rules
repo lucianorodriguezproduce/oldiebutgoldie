@@ -154,7 +154,11 @@ service cloud.firestore {
           isAdmin() ||
           request.auth.uid == buyerUid || 
           request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.senderId ||
-          request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.receiverId
+          request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.receiverId ||
+          (resource != null && (
+             resource.data.buyerUsername == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.username ||
+             resource.data.sellerUsername == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.username
+          ))
         );
         
         match /messages/{messageId} {
@@ -162,7 +166,9 @@ service cloud.firestore {
             isAdmin() ||
             request.auth.uid == buyerUid || 
             request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.senderId ||
-            request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.receiverId
+            request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.receiverId ||
+            (get(/databases/$(database)/documents/trades/$(tradeId)/conversations/$(buyerUid)).data.buyerUsername == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.username) ||
+            (get(/databases/$(database)/documents/trades/$(tradeId)/conversations/$(buyerUid)).data.sellerUsername == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.username)
           );
         }
       }
@@ -172,7 +178,11 @@ service cloud.firestore {
         allow read: if request.auth != null && (
           isAdmin() ||
           request.auth.uid == buyerUid ||
-          request.auth.uid == resource.data.sellerId
+          request.auth.uid == resource.data.sellerId ||
+          (resource != null && (
+            resource.data.buyerUsername == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.username ||
+            resource.data.sellerUsername == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.username
+          ))
         );
       }
 

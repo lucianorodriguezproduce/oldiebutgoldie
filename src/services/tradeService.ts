@@ -701,14 +701,32 @@ export const tradeService = {
             }
         }
 
+        // --- NEW: Fetch Usernames for identification ---
+        const buyerUsername = buyerName.startsWith('@') ? buyerName : `@${buyerName}`;
+        let sellerUsername = "Vendedor";
+        
+        try {
+            const sellerDoc = await getDoc(doc(db, "users", sellerId));
+            if (sellerDoc.exists()) {
+                const sData = sellerDoc.data();
+                sellerUsername = sData.username ? (sData.username.startsWith('@') ? sData.username : `@${sData.username}`) : "Vendedor";
+            } else if (sellerId === ADMIN_UID) {
+                sellerUsername = "@luciano"; // Hard-fallback for shop items if admin doc is missing
+            }
+        } catch (e) {
+            console.error("Error fetching seller username:", e);
+        }
+
         const conversationRef = doc(db, COLLECTION_NAME, tradeId, "conversations", buyerUid);
         const snap = await getDoc(conversationRef);
         
         if (!snap.exists()) {
             await setDoc(conversationRef, {
                 buyerId: buyerUid,
-                buyerName: buyerName,
+                buyerName: buyerUsername,
+                buyerUsername: buyerUsername,
                 sellerId: sellerId,
+                sellerUsername: sellerUsername,
                 tradeId: tradeId,
                 title: title,
                 cover: cover,
@@ -722,7 +740,7 @@ export const tradeService = {
                 await addDoc(collection(db, "notifications"), {
                     user_id: sellerId,
                     title: "Nueva consulta 📬",
-                    message: `${buyerName} te escribió por "${title}".`,
+                    message: `${buyerUsername} te escribió por "${title}".`,
                     read: false,
                     timestamp: serverTimestamp(),
                     order_id: tradeId,
@@ -733,7 +751,7 @@ export const tradeService = {
 
             // System message to initialize
             const orderLink = `https://www.oldiebutgoldie.com.ar/orden/${tradeId}`;
-            await this.sendPrivateMessage(tradeId, buyerUid, "system", `¡Hola! @${buyerName} está interesado en este disco: ${orderLink}. Usen este chat para coordinar.`);
+            await this.sendPrivateMessage(tradeId, buyerUid, "system", `¡Hola! ${buyerUsername} está interesado en este disco: ${orderLink}. Usen este chat para coordinar.`);
         }
         return tradeId;
     },
@@ -847,9 +865,22 @@ export const tradeService = {
         });
     },
 
-    onSnapshotUserConversations(userId: string, callback: (conversations: any[]) => void) {
-        const qBuyer = query(collectionGroup(db, "conversations"), where("buyerId", "==", userId));
-        const qSeller = query(collectionGroup(db, "conversations"), where("sellerId", "==", userId));
+    onSnapshotUserConversations(userId: string, username: string | null, callback: (conversations: any[]) => void) {
+        // Build base queries using UID (Historical/Security)
+        const queries = [
+            query(collectionGroup(db, "conversations"), where("buyerId", "==", userId)),
+            query(collectionGroup(db, "conversations"), where("sellerId", "==", userId))
+        ];
+
+        // Enrichment: Add Username-based queries to solve the "UID mismatch" issue
+        if (username) {
+            const cleanUsername = username.startsWith('@') ? username : `@${username}`;
+            queries.push(query(collectionGroup(db, "conversations"), where("buyerUsername", "==", cleanUsername)));
+            queries.push(query(collectionGroup(db, "conversations"), where("sellerUsername", "==", cleanUsername)));
+            
+            // Legacy Support (where buyerName was used for username)
+            queries.push(query(collectionGroup(db, "conversations"), where("buyerName", "==", cleanUsername)));
+        }
 
         const rawConvsMap = new Map<string, any>();
 
@@ -860,19 +891,13 @@ export const tradeService = {
             callback(sortedConvs);
         };
 
-        const unsubBuyer = onSnapshot(qBuyer, (snap) => {
+        const unsubs = queries.map(q => onSnapshot(q, (snap) => {
             snap.docs.forEach(doc => rawConvsMap.set(doc.ref.path, { id: doc.id, ...doc.data() }));
             updateCallback();
-        });
-
-        const unsubSeller = onSnapshot(qSeller, (snap) => {
-            snap.docs.forEach(doc => rawConvsMap.set(doc.ref.path, { id: doc.id, ...doc.data() }));
-            updateCallback();
-        });
+        }));
 
         return () => {
-            unsubBuyer();
-            unsubSeller();
+            unsubs.forEach(unsub => unsub());
         };
     },
 

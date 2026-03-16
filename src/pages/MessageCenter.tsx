@@ -18,7 +18,7 @@ import { LazyImage } from "@/components/ui/LazyImage";
 import { useSearchParams } from "react-router-dom";
 
 export default function MessageCenter() {
-    const { user } = useAuth();
+    const { user, dbUser } = useAuth();
     const [searchParams, setSearchParams] = useSearchParams();
     const [conversations, setConversations] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -31,7 +31,7 @@ export default function MessageCenter() {
         if (!user) return;
 
         setLoading(true);
-        const unsub = tradeService.onSnapshotUserConversations(user.uid, (convs) => {
+        const unsub = tradeService.onSnapshotUserConversations(user.uid, dbUser?.username || null, (convs) => {
             setConversations(convs);
             
             // Auto-select chat from URL if present
@@ -43,7 +43,7 @@ export default function MessageCenter() {
         });
 
         return () => unsub();
-    }, [user, chatIdFromUrl]);
+    }, [user, dbUser, chatIdFromUrl]);
 
     const filteredConversations = conversations.filter(c => 
         c.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
