@@ -148,15 +148,12 @@ service cloud.firestore {
         isAdmin() ||
         resource.data.participants.senderId == request.auth.uid || 
         resource.data.participants.receiverId == request.auth.uid ||
-        (resource.data.isPublicOrder == true && (
-          request.resource.data.highest_bidder_uid == request.auth.uid || 
-          request.resource.data.status == 'accepted'
-        ))
+        (resource.data.isPublicOrder == true && resource.data.status == 'pending')
       );
       
       allow delete: if isAdmin();
 
-      // Conversations Subcollection - Marketplace Inquiries (Protocol V28.3)
+      // Conversations Subcollection - Marketplace Inquiries (Protocol V28.3/V28.4)
       match /conversations/{buyerUsername} {
         allow read, write: if request.auth != null && (
           isAdmin() ||

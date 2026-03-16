@@ -702,6 +702,7 @@ export const tradeService = {
         }
 
         // --- NEW: Fetch Usernames for identification ---
+        if (!buyerName) throw new Error("USERNAME_REQUIRED");
         const buyerUsername = buyerName.startsWith('@') ? buyerName : `@${buyerName}`;
         let sellerUsername = "Vendedor";
         
