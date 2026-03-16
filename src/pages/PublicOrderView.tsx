@@ -204,7 +204,7 @@ export default function PublicOrderView() {
                 currentUser={user} 
                 trade={order} 
                 otherParticipantName={user?.uid === order.user_id ? order.highest_bidder_name : order.user_name} 
-                buyerId={order.highest_bidder_name}
+                conversationId={order.highest_bidder_name}
             />
         </div>
     );
