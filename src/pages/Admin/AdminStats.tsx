@@ -14,11 +14,20 @@ import {
     Disc,
     Music,
     PlayCircle,
-    ChevronRight
+    ChevronRight,
+    ShieldAlert,
+    Sparkles,
+    Loader2,
+    Trash2,
+    Database,
+    MousePointerClick,
+    Search as SearchIcon,
+    Clock
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { analyticsService, type CommercialStats } from "@/services/analyticsService";
 import { quotaService, type QuotaStats } from "@/services/quotaService";
+import { maintenanceService } from "@/services/maintenanceService";
 import { 
     AreaChart, 
     Area, 
@@ -39,6 +48,7 @@ export default function AdminStats() {
     const [comStats, setComStats] = useState<CommercialStats | null>(null);
     const [quotaStats, setQuotaStats] = useState<QuotaStats>(quotaService.getStats());
     const [loading, setLoading] = useState(true);
+    const [isPurging, setIsPurging] = useState<Record<string, boolean>>({});
 
     useEffect(() => {
         const load = async () => {
@@ -286,6 +296,110 @@ export default function AdminStats() {
                     </CardContent>
                 </Card>
             </div>
+
+            {/* System Maintenance Section (Protocol V36.0 Integration) */}
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }} className="bg-zinc-900/40 border border-white/5 rounded-[2rem] p-8 mt-8">
+                <div className="flex items-center gap-3 mb-8">
+                    <div className="p-3 bg-red-500/10 rounded-xl">
+                        <ShieldAlert className="w-6 h-6 text-red-500" />
+                    </div>
+                    <div>
+                        <h2 className="text-xl font-display font-black text-white uppercase italic tracking-tighter">Mantenimiento Global</h2>
+                        <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mt-1">Consistencia de Identidad y Purga de Datos</p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {/* Analytics Purge */}
+                    <div className="flex flex-col gap-4 p-5 bg-black/40 border border-white/5 rounded-2xl hover:border-white/10 transition-colors">
+                        <div className="flex items-center gap-3 text-white">
+                            <MousePointerClick className="w-4 h-4 text-primary" />
+                            <span className="text-xs font-black uppercase tracking-widest">Analiticas</span>
+                        </div>
+                        <p className="text-[11px] text-zinc-500 font-medium">Elimina registros de visualizaciones antiguas (&gt;30d).</p>
+                        <button
+                            onClick={async () => {
+                                setIsPurging(prev => ({ ...prev, analytics: true }));
+                                const count = await maintenanceService.purgeAnalyticsIntents();
+                                alert(`Purga completada: ${count} registros eliminados.`);
+                                setIsPurging(prev => ({ ...prev, analytics: false }));
+                            }}
+                            disabled={isPurging.analytics}
+                            className="mt-auto px-4 py-2.5 bg-white/5 hover:bg-white/10 disabled:opacity-50 text-[10px] font-black uppercase tracking-widest text-white rounded-xl flex items-center justify-center gap-2 transition-all"
+                        >
+                            {isPurging.analytics ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                            Purgar Analíticas
+                        </button>
+                    </div>
+
+                    {/* Notifications Purge */}
+                    <div className="flex flex-col gap-4 p-5 bg-black/40 border border-white/5 rounded-2xl hover:border-white/10 transition-colors">
+                        <div className="flex items-center gap-3 text-white">
+                            <Sparkles className="w-4 h-4 text-primary" />
+                            <span className="text-xs font-black uppercase tracking-widest">Notificaciones</span>
+                        </div>
+                        <p className="text-[11px] text-zinc-500 font-medium">Borra notificaciones antiguas y leídas.</p>
+                        <button
+                            onClick={async () => {
+                                setIsPurging(prev => ({ ...prev, notif: true }));
+                                const count = await maintenanceService.purgeNotifications();
+                                alert(`Limpieza realizada: ${count} notificaciones purgadas.`);
+                                setIsPurging(prev => ({ ...prev, notif: false }));
+                            }}
+                            disabled={isPurging.notif}
+                            className="mt-auto px-4 py-2.5 bg-white/5 hover:bg-white/10 disabled:opacity-50 text-[10px] font-black uppercase tracking-widest text-white rounded-xl flex items-center justify-center gap-2 transition-all"
+                        >
+                            {isPurging.notif ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                            Limpiar Alertas
+                        </button>
+                    </div>
+
+                    {/* Inventory Archiving */}
+                    <div className="flex flex-col gap-4 p-5 bg-black/40 border border-white/5 rounded-2xl hover:border-white/10 transition-colors">
+                        <div className="flex items-center gap-3 text-white">
+                            <Database className="w-4 h-4 text-emerald-400" />
+                            <span className="text-xs font-black uppercase tracking-widest">Inventario</span>
+                        </div>
+                        <p className="text-[11px] text-zinc-500 font-medium">Archiva discos sin stock sin actividad reciente.</p>
+                        <button
+                            onClick={async () => {
+                                setIsPurging(prev => ({ ...prev, inv: true }));
+                                const count = await maintenanceService.archiveSoldOutItems();
+                                alert(`Mantenimiento: ${count} discos movidos al archivo.`);
+                                setIsPurging(prev => ({ ...prev, inv: false }));
+                            }}
+                            disabled={isPurging.inv}
+                            className="mt-auto px-4 py-2.5 bg-white/5 hover:bg-white/10 disabled:opacity-50 text-[10px] font-black uppercase tracking-widest text-white rounded-xl flex items-center justify-center gap-2 transition-all"
+                        >
+                            {isPurging.inv ? <Loader2 className="w-3 h-3 animate-spin" /> : <Database className="w-3 h-3" />}
+                            Archivar Agotados
+                        </button>
+                    </div>
+
+                    {/* Chat Identity Healing (Protocol V36.0) */}
+                    <div className="flex flex-col gap-4 p-5 bg-primary/5 border border-primary/20 rounded-2xl hover:border-primary/40 transition-colors">
+                        <div className="flex items-center gap-3 text-primary">
+                            <ShieldAlert className="w-4 h-4" />
+                            <span className="text-xs font-black uppercase tracking-widest">Chat Healing</span>
+                        </div>
+                        <p className="text-[11px] text-zinc-500 font-medium">Repara identidades de chat corruptas (Protocolo V36.0).</p>
+                        <button
+                            onClick={async () => {
+                                if (!confirm("¿Iniciar curación de identidades?")) return;
+                                setIsPurging(prev => ({ ...prev, heal: true }));
+                                const count = await maintenanceService.healConversationIdentities();
+                                alert(`Cura completada: ${count} identidades reparadas.`);
+                                setIsPurging(prev => ({ ...prev, heal: false }));
+                            }}
+                            disabled={isPurging.heal}
+                            className="mt-auto px-4 py-2.5 bg-primary/10 hover:bg-primary/20 disabled:opacity-50 text-[10px] font-black uppercase tracking-widest text-primary rounded-xl flex items-center justify-center gap-2 transition-all"
+                        >
+                            {isPurging.heal ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                            Curar Identidades
+                        </button>
+                    </div>
+                </div>
+            </motion.div>
 
             <footer className="mt-8 flex flex-col items-center gap-4">
                 <div className="w-16 h-px bg-white/10" />
