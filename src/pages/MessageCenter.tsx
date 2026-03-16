@@ -174,7 +174,16 @@ export default function MessageCenter() {
                             <TradeChat 
                                 tradeId={selectedConv.tradeId}
                                 currentUser={user}
-                                trade={{ status: selectedConv.status }} // Minimal mock trade for initial load
+                                trade={{ 
+                                    status: selectedConv.status,
+                                    buyerId: selectedConv.buyerId,
+                                    sellerId: selectedConv.sellerId,
+                                    owner_uid: selectedConv.sellerId, // Needed for reviews
+                                    participants: {
+                                        senderId: selectedConv.buyerId,
+                                        receiverId: selectedConv.sellerId
+                                    }
+                                }}
                                 otherParticipantName={selectedConv.sellerId === user.uid ? (selectedConv.buyerUsername || selectedConv.buyerName || "Cliente") : (selectedConv.sellerUsername || selectedConv.sellerName || "Vendedor")}
                                 buyerId={selectedConv.buyerUsername || selectedConv.buyerId}
                             />

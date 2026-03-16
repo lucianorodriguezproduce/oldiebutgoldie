@@ -664,39 +664,75 @@ export const tradeService = {
             title = tradeData.manifest?.items?.[0]?.title || tradeData.details?.album || title;
             cover = tradeData.manifest?.items?.[0]?.cover_image || tradeData.media?.thumbnail || "";
         } else {
-            // Check inventory (Direct Sale from shop)
-            const itemRef = doc(db, "inventory", tradeId);
-            const itemSnap = await getDoc(itemRef);
-            if (itemSnap.exists()) {
-                const itemData = itemSnap.data() as any;
-                title = itemData.metadata?.title || title;
-                cover = itemData.media?.thumbnail || "";
-                sellerId = ADMIN_UID;
+            // PROTOCOL V33.0: Audit ownership for P2P Marketplace
+            const assetRef = doc(db, "user_assets", tradeId);
+            const assetSnap = await getDoc(assetRef);
+            
+            if (assetSnap.exists()) {
+                const assetData = assetSnap.data() as any;
+                title = assetData.metadata?.title || title;
+                cover = assetData.media?.thumbnail || "";
+                sellerId = assetData.ownerId; // REAL SELLER (Bunker Sovereign)
                 
                 await setDoc(tradeRef, scrubData({
                     participants: {
                         senderId: buyerUid,
-                        receiverId: ADMIN_UID
+                        receiverId: sellerId
                     },
                     type: 'direct_sale',
                     status: 'pending',
-                    is_admin_offer: true,
+                    is_admin_offer: false,
                     manifest: {
                         requestedItems: [tradeId],
                         offeredItems: [],
-                        cashAdjustment: itemData.logistics?.price || 0,
-                        currency: itemData.logistics?.currency || 'ARS',
+                        cashAdjustment: assetData.valuation || 0,
+                        currency: 'ARS',
                         items: [{
                             id: tradeId,
                             title: title,
-                            artist: itemData.metadata?.artist || "Varios",
+                            artist: assetData.metadata?.artist || "Varios",
                             cover_image: cover,
-                            price: itemData.logistics?.price || 0
+                            price: assetData.valuation || 0
                         }]
                     },
                     createdAt: serverTimestamp(),
                     timestamp: serverTimestamp()
                 }));
+            } else {
+                // FALLBACK: Check inventory (Official Shop)
+                const itemRef = doc(db, "inventory", tradeId);
+                const itemSnap = await getDoc(itemRef);
+                if (itemSnap.exists()) {
+                    const itemData = itemSnap.data() as any;
+                    title = itemData.metadata?.title || title;
+                    cover = itemData.media?.thumbnail || "";
+                    sellerId = ADMIN_UID;
+                    
+                    await setDoc(tradeRef, scrubData({
+                        participants: {
+                            senderId: buyerUid,
+                            receiverId: ADMIN_UID
+                        },
+                        type: 'direct_sale',
+                        status: 'pending',
+                        is_admin_offer: true,
+                        manifest: {
+                            requestedItems: [tradeId],
+                            offeredItems: [],
+                            cashAdjustment: itemData.logistics?.price || 0,
+                            currency: itemData.logistics?.currency || 'ARS',
+                            items: [{
+                                id: tradeId,
+                                title: title,
+                                artist: itemData.metadata?.artist || "Varios",
+                                cover_image: cover,
+                                price: itemData.logistics?.price || 0
+                            }]
+                        },
+                        createdAt: serverTimestamp(),
+                        timestamp: serverTimestamp()
+                    }));
+                }
             }
         }
 

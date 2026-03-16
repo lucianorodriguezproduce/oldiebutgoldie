@@ -32,12 +32,15 @@ export default function TradeChat({ tradeId, currentUser, trade, otherParticipan
     const [comment, setComment] = useState("");
     const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
-    const isComprador = currentUser?.uid === trade?.highest_bidder_uid || 
+    const isComprador = currentUser?.uid === trade?.buyerId || 
                        currentUser?.uid === trade?.buyer_uid ||
-                       currentUser?.uid === trade?.buyerId ||
-                       (trade?.type === 'exchange' && currentUser?.uid === trade?.participants?.receiverId) ||
-                       // If loading from MessageCenter mock trade, use the context of buyerUsername
-                       (trade?.buyerUsername && currentUser?.uid === trade?.buyerId);
+                       currentUser?.uid === trade?.participants?.senderId ||
+                       currentUser?.uid === trade?.highest_bidder_uid;
+    
+    const isVendedor = currentUser?.uid === trade?.sellerId ||
+                      currentUser?.uid === trade?.participants?.receiverId ||
+                      currentUser?.uid === trade?.owner_uid ||
+                      currentUser?.uid === trade?.user_id;
     
     const isCompleted = trade?.status === 'completed' || trade?.status === 'venta_finalizada';
 
