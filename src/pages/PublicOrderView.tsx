@@ -55,7 +55,8 @@ export default function PublicOrderView() {
         showLoading(TEXTS.global.common.locatingBatch);
         const unsub = onSnapshot(doc(db, "trades", id), async (tradeSnap) => {
             if (tradeSnap.exists()) {
-                const legacyData = await tradeService.getTradeById(id);
+                const data = { id: tradeSnap.id, ...tradeSnap.data() };
+                const legacyData = await tradeService.bateaToLegacy(data);
                 setOrder(legacyData);
                 if (!order) {
                     pushViewItemFromOrder(legacyData);
@@ -195,7 +196,7 @@ export default function PublicOrderView() {
         );
     })();
 
-    const coordinationChatBlock = (order.status === 'accepted' || order.status === 'completed' || order.status === 'completed_unpaid') && (user?.uid === order.user_id || user?.uid === order.highest_bidder_uid) && (
+    const coordinationChatBlock = (order.status === 'accepted' || order.status === 'completed' || order.status === 'completed_unpaid' || (order.status === 'pending' && order.highest_bidder_uid)) && (user?.uid === order.user_id || user?.uid === order.highest_bidder_uid) && (
         <div className="mt-12 space-y-6 pt-6 border-t border-white/5">
             <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 italic mb-4">Chat de Coordinación</h3>
             <TradeChat 
@@ -203,6 +204,7 @@ export default function PublicOrderView() {
                 currentUser={user} 
                 trade={order} 
                 otherParticipantName={user?.uid === order.user_id ? order.highest_bidder_name : order.user_name} 
+                buyerId={order.highest_bidder_name}
             />
         </div>
     );

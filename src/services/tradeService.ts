@@ -98,6 +98,7 @@ const bateaToLegacy = async (trade: any) => {
 };
 
 export const tradeService = {
+    bateaToLegacy,
     async createTrade(trade: Omit<Trade, 'id' | 'timestamp' | 'status' | 'currentTurn' | 'negotiationHistory'> & { tradeOrigin?: 'INVENTORY' | 'DISCOGS' }) {
         // --- ASSET LOCKING: Only lock items for direct sales ---
         // Exchange trades don't lock items — stock is checked atomically at resolution time.
@@ -707,7 +708,7 @@ export const tradeService = {
                 const sData = sellerDoc.data();
                 sellerUsername = sData.username ? (sData.username.startsWith('@') ? sData.username : `@${sData.username}`) : "Vendedor";
             } else if (sellerId === ADMIN_UID) {
-                sellerUsername = "@luciano";
+                sellerUsername = "@vinilaso";
             }
         } catch (e) {
             console.error("Error fetching seller username:", e);
@@ -751,6 +752,8 @@ export const tradeService = {
                 const notifRef = doc(collection(db, "notifications"));
                 batch.set(notifRef, {
                     uid: sellerId,
+                    userId: sellerId,
+                    user_id: sellerId,
                     title: "Nueva consulta 📬",
                     message: `${buyerUsername} te escribió por "${title}".`,
                     read: false,
