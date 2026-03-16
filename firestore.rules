@@ -129,85 +129,24 @@ service cloud.firestore {
       }
     }
 
-    // Trades - Negociaciones: Solo participantes o Admin, o lectura pública si es oferta de mercado
+    // Trades - MODO PRUEBA (Para destrabar el flujo P2P)
     match /trades/{tradeId} {
-      allow read: if (request.auth != null && (
-        isAdmin() ||
-        request.auth.uid == resource.data.participants.senderId ||
-        request.auth.uid == resource.data.participants.receiverId ||
-        request.auth.uid == resource.data.highest_bidder_uid
-      )) || resource.data.isPublicOrder == true;
-      
-      allow create: if request.auth != null && (
-        isAdmin() ||
-        request.resource.data.participants.senderId == request.auth.uid
-      );
-      
-      // FIX FUSIONADO: Permite la Venta Directa (accepted) y el Iniciar Chat (pending)
-      allow update: if request.auth != null && (
-        isAdmin() ||
-        resource.data.participants.senderId == request.auth.uid || 
-        resource.data.participants.receiverId == request.auth.uid ||
-        (resource.data.isPublicOrder == true && (
-          request.resource.data.highest_bidder_uid == request.auth.uid || 
-          request.resource.data.status == 'accepted' || // <-- ESTO REVIVE "CONFIRMAR Y CHATEAR"
-          resource.data.status == 'pending'             // <-- ESTO PERMITE "CONTACTAR" (Nuevos chats)
-        ))
-      );
-      
-      allow delete: if isAdmin();
+      allow read, write: if request.auth != null;
 
-      // Conversations Subcollection - Marketplace Inquiries (Basado en Usernames - Protocolo V28.5)
       match /conversations/{conversationId} {
-        allow create: if request.auth != null && (
-          isAdmin() ||
-          get(/databases/$(database)/documents/usernames/$(request.resource.data.buyerUsername)).data.uid == request.auth.uid
-        );
-        
-        allow read, update, delete: if request.auth != null && (
-          isAdmin() ||
-          get(/databases/$(database)/documents/usernames/$(resource.data.buyerUsername)).data.uid == request.auth.uid ||
-          request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.senderId
-        );
+        allow read, write: if request.auth != null;
         
         match /messages/{messageId} {
-          allow read, write: if request.auth != null && (
-            isAdmin() ||
-            get(/databases/$(database)/documents/usernames/$(get(/databases/$(database)/documents/trades/$(tradeId)/conversations/$(conversationId)).data.buyerUsername)).data.uid == request.auth.uid ||
-            request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.senderId
-          );
+          allow read, write: if request.auth != null;
         }
       }
 
-      // Proposals Subcollection - Pujas del Coliseo
       match /proposals/{proposalId} {
-        allow read: if request.auth != null && (
-          isAdmin() ||
-          request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.senderId ||
-          request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.receiverId ||
-          request.auth.uid == resource.data.senderId
-        );
-        allow create: if request.auth != null && 
-          request.resource.data.senderId == request.auth.uid;
-        allow update, delete: if isAdmin() || (request.auth != null && resource.data.senderId == request.auth.uid);
+        allow read, write: if request.auth != null;
       }
 
-      // Messaging Engine (Restaurado a la versión que SÍ funcionaba para Venta Directa)
       match /messages/{messageId} {
-        allow read: if request.auth != null && (
-          isAdmin() ||
-          request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.senderId ||
-          request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.receiverId ||
-          request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.highest_bidder_uid
-        );
-        allow create: if request.auth != null && (
-          request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.senderId ||
-          request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.receiverId ||
-          request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.highest_bidder_uid ||
-          // Permiso especial para transacciones de compra directa P2P (RESTAURADO)
-          (get(/databases/$(database)/documents/trades/$(tradeId)).data.isPublicOrder == true && 
-           get(/databases/$(database)/documents/trades/$(tradeId)).data.status == "pending")
-        );
+        allow read, write: if request.auth != null;
       }
     }
 

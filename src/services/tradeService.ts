@@ -15,7 +15,8 @@ import {
     runTransaction,
     onSnapshot,
     deleteDoc,
-    collectionGroup
+    collectionGroup,
+    writeBatch
 } from "firebase/firestore";
 
 import { pushLeadGenerated } from "@/utils/analytics";
@@ -645,19 +646,19 @@ export const tradeService = {
     },
 
     async startInquiry(tradeId: string, buyerUid: string, buyerName: string) {
+        if (!buyerName) throw new Error("USERNAME_REQUIRED");
+        const buyerUsername = buyerName.startsWith('@') ? buyerName : `@${buyerName}`;
+        
         let sellerId = ADMIN_UID;
         let title = "Disco Desconocido";
         let cover = "";
-        let itemDataForManifest: any = null;
 
         const tradeRef = doc(db, COLLECTION_NAME, tradeId);
         const tradeSnap = await getDoc(tradeRef);
         
         if (tradeSnap.exists()) {
             const tradeData = tradeSnap.data() as any;
-            // Check if it's a direct sale to admin or a store-managed trade
             const isStoreTrade = tradeData.type === 'direct_sale' && (tradeData.participants?.receiverId === ADMIN_UID || tradeData.is_admin_offer);
-            
             sellerId = isStoreTrade ? ADMIN_UID : (tradeData.participants?.senderId || tradeData.user_id || ADMIN_UID);
             title = tradeData.manifest?.items?.[0]?.title || tradeData.details?.album || title;
             cover = tradeData.manifest?.items?.[0]?.cover_image || tradeData.media?.thumbnail || "";
@@ -669,19 +670,16 @@ export const tradeService = {
                 const itemData = itemSnap.data() as any;
                 title = itemData.metadata?.title || title;
                 cover = itemData.media?.thumbnail || "";
-                sellerId = ADMIN_UID; // Shop items belong to Admin
-                itemDataForManifest = itemData;
-
-                // CRITICAL: Create the parent trade document for shop items
-                // This allows the inquiry to be listed in Profile.tsx
+                sellerId = ADMIN_UID;
+                
                 await setDoc(tradeRef, scrubData({
                     participants: {
-                        senderId: buyerUid, // In this context, sender of the "intent"
+                        senderId: buyerUid,
                         receiverId: ADMIN_UID
                     },
                     type: 'direct_sale',
                     status: 'pending',
-                    is_admin_offer: true, // Identify as store offer
+                    is_admin_offer: true,
                     manifest: {
                         requestedItems: [tradeId],
                         offeredItems: [],
@@ -701,18 +699,15 @@ export const tradeService = {
             }
         }
 
-        // --- NEW: Fetch Usernames for identification ---
-        if (!buyerName) throw new Error("USERNAME_REQUIRED");
-        const buyerUsername = buyerName.startsWith('@') ? buyerName : `@${buyerName}`;
+        // --- Fetch Seller Username ---
         let sellerUsername = "Vendedor";
-        
         try {
             const sellerDoc = await getDoc(doc(db, "users", sellerId));
             if (sellerDoc.exists()) {
                 const sData = sellerDoc.data();
                 sellerUsername = sData.username ? (sData.username.startsWith('@') ? sData.username : `@${sData.username}`) : "Vendedor";
             } else if (sellerId === ADMIN_UID) {
-                sellerUsername = "@luciano"; // Hard-fallback for shop items if admin doc is missing
+                sellerUsername = "@luciano";
             }
         } catch (e) {
             console.error("Error fetching seller username:", e);
@@ -722,11 +717,14 @@ export const tradeService = {
         const snap = await getDoc(conversationRef);
         
         if (!snap.exists()) {
-            await setDoc(conversationRef, {
-                buyerId: buyerUid, // UID
-                buyerName: buyerUsername,
+            const batch = writeBatch(db);
+            
+            // 1. Create Conversation Document
+            batch.set(conversationRef, {
+                buyerId: buyerUid,
                 buyerUsername: buyerUsername,
-                sellerId: sellerId, // UID
+                buyerName: buyerUsername, // Legacy mapping
+                sellerId: sellerId,
                 sellerUsername: sellerUsername,
                 tradeId: tradeId,
                 title: title,
@@ -736,9 +734,22 @@ export const tradeService = {
                 status: "pending"
             });
 
-            // Notification for Seller
+            // 2. Create Initialization Message in the CORRECT path (Protocol V29.0)
+            const messageId = doc(collection(db, "temp")).id;
+            const messageRef = doc(db, COLLECTION_NAME, tradeId, "conversations", buyerUsername, "messages", messageId);
+            const orderLink = `https://www.oldiebutgoldie.com.ar/orden/${tradeId}`;
+            
+            batch.set(messageRef, {
+                sender_uid: "system",
+                text: `¡Hola! ${buyerUsername} está interesado en este disco: ${orderLink}. Usen este chat para coordinar.`,
+                timestamp: serverTimestamp(),
+                read_status: false
+            });
+
+            // 3. Notification for Seller (Separate write)
             if (sellerId && sellerId !== buyerUid) {
-                await addDoc(collection(db, "notifications"), {
+                const notifRef = doc(collection(db, "notifications"));
+                batch.set(notifRef, {
                     user_id: sellerId,
                     title: "Nueva consulta 📬",
                     message: `${buyerUsername} te escribió por "${title}".`,
@@ -750,9 +761,7 @@ export const tradeService = {
                 });
             }
 
-            // System message to initialize
-            const orderLink = `https://www.oldiebutgoldie.com.ar/orden/${tradeId}`;
-            await this.sendPrivateMessage(tradeId, buyerUid, "system", `¡Hola! ${buyerUsername} está interesado en este disco: ${orderLink}. Usen este chat para coordinar.`);
+            await batch.commit();
         }
         return tradeId;
     },
