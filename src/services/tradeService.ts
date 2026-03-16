@@ -767,8 +767,15 @@ export const tradeService = {
     },
 
     async sendPrivateMessage(tradeId: string, buyerId: string, senderId: string, text: string, buyerUsername?: string) {
-        // buyerId is used as fallback for legacy, but buyerUsername is the primary key (Protocol V28.3)
-        const convId = buyerUsername || buyerId;
+        // Force username as primary key (Protocol V29.1)
+        // If buyerId has @, it's actually the username passed as ID
+        const convId = (buyerUsername || (buyerId.startsWith('@') ? buyerId : null));
+        
+        if (!convId) {
+            console.error("[tradeService] sendPrivateMessage failed: NO_USERNAME_PROVIDED", { tradeId, buyerId, buyerUsername });
+            throw new Error("SISTEMA_IDENTIDAD_USERNAME_REQUERIDO");
+        }
+
         const messagesRef = collection(db, COLLECTION_NAME, tradeId, "conversations", convId, "messages");
         await addDoc(messagesRef, {
             sender_uid: senderId,
@@ -777,15 +784,17 @@ export const tradeService = {
             read_status: false
         });
 
-        // Update conversation metadata
+        // Update conversation metadata using set with merge: true (Protocol V29.1)
         const conversationRef = doc(db, COLLECTION_NAME, tradeId, "conversations", convId);
+        
+        // We fetching once for notification mapping
         const convSnap = await getDoc(conversationRef);
         const convData = convSnap.data();
 
-        await updateDoc(conversationRef, {
+        await setDoc(conversationRef, {
             lastMessage: text,
             timestamp: serverTimestamp()
-        });
+        }, { merge: true });
 
         // Notification for the other party (Protocol V28.2)
         if (senderId !== "system") {
@@ -859,8 +868,8 @@ export const tradeService = {
                 currentTurn: tradeData.participants?.senderId // Open coordination for the seller
             });
 
-            // 2. Mark conversation as accepted
-            transaction.update(convRef, { status: "accepted" });
+            // 2. Mark conversation as accepted (Use set with merge)
+            transaction.set(convRef, { status: "accepted" }, { merge: true });
 
             // 3. Generate automated message in the MAIN legacy chat for coordination
             const newMessageRef = doc(messagesRef);
