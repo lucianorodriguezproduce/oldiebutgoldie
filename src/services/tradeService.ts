@@ -650,21 +650,28 @@ export const tradeService = {
         if (!buyerName) throw new Error("USERNAME_REQUIRED");
         const buyerUsername = buyerName.startsWith('@') ? buyerName : `@${buyerName}`;
         
+        console.log(`[eye-of-hawk] Starting Protocol V34.0 for tradeId: ${tradeId}`);
+        
         let sellerId = ADMIN_UID;
         let title = "Disco Desconocido";
         let cover = "";
+        let foundInCollection = "none";
 
         const tradeRef = doc(db, COLLECTION_NAME, tradeId);
         const tradeSnap = await getDoc(tradeRef);
         
         if (tradeSnap.exists()) {
             const tradeData = tradeSnap.data() as any;
-            const isStoreTrade = tradeData.is_admin_offer || tradeData.participants?.senderId === ADMIN_UID;
-            sellerId = isStoreTrade ? ADMIN_UID : (tradeData.participants?.senderId || tradeData.user_id || ADMIN_UID);
+            // FIX: For direct sales, the receiver is the seller
+            const identifiedSeller = tradeData.participants?.receiverId || tradeData.participants?.senderId || ADMIN_UID;
+            sellerId = identifiedSeller;
             title = tradeData.manifest?.items?.[0]?.title || tradeData.details?.album || title;
             cover = tradeData.manifest?.items?.[0]?.cover_image || tradeData.media?.thumbnail || "";
+            foundInCollection = "existing_trade";
         } else {
-            // PROTOCOL V33.0: Audit ownership for P2P Marketplace
+            // PROTOCOL V34.0: Priority Search (Ojo de Halcón)
+            
+            // 1. Search in user_assets (P2P Marketplace)
             const assetRef = doc(db, "user_assets", tradeId);
             const assetSnap = await getDoc(assetRef);
             
@@ -672,7 +679,10 @@ export const tradeService = {
                 const assetData = assetSnap.data() as any;
                 title = assetData.metadata?.title || title;
                 cover = assetData.media?.thumbnail || "";
-                sellerId = assetData.ownerId; // REAL SELLER (Bunker Sovereign)
+                sellerId = assetData.ownerId; 
+                foundInCollection = "user_assets";
+                
+                console.log(`[eye-of-hawk] P2P Seller found in user_assets: ${sellerId}`);
                 
                 await setDoc(tradeRef, scrubData({
                     participants: {
@@ -699,14 +709,18 @@ export const tradeService = {
                     timestamp: serverTimestamp()
                 }));
             } else {
-                // FALLBACK: Check inventory (Official Shop)
+                // 2. Search in inventory (Official Shop)
                 const itemRef = doc(db, "inventory", tradeId);
                 const itemSnap = await getDoc(itemRef);
+                
                 if (itemSnap.exists()) {
                     const itemData = itemSnap.data() as any;
                     title = itemData.metadata?.title || title;
                     cover = itemData.media?.thumbnail || "";
                     sellerId = ADMIN_UID;
+                    foundInCollection = "inventory";
+                    
+                    console.log(`[eye-of-hawk] Shop item found in inventory. Seller: ADMIN_UID`);
                     
                     await setDoc(tradeRef, scrubData({
                         participants: {
@@ -732,6 +746,8 @@ export const tradeService = {
                         createdAt: serverTimestamp(),
                         timestamp: serverTimestamp()
                     }));
+                } else {
+                    console.warn(`[eye-of-hawk] Item ${tradeId} not found in any collection. Defaulting to Admin fallback.`);
                 }
             }
         }
@@ -758,7 +774,7 @@ export const tradeService = {
             batch.set(conversationRef, {
                 buyerId: buyerUid,
                 buyerUsername: buyerUsername,
-                buyerName: buyerUsername, // Legacy mapping
+                buyerName: buyerUsername,
                 sellerId: sellerId,
                 sellerUsername: sellerUsername,
                 tradeId: tradeId,
@@ -769,7 +785,7 @@ export const tradeService = {
                 status: "pending"
             });
 
-            // 2. Create Initialization Message in the CORRECT path (Protocol V29.0)
+            // 2. Initialization Message
             const messageId = doc(collection(db, "temp")).id;
             const messageRef = doc(db, COLLECTION_NAME, tradeId, "conversations", buyerUsername, "messages", messageId);
             const orderLink = `https://www.oldiebutgoldie.com.ar/orden/${tradeId}`;
@@ -781,13 +797,13 @@ export const tradeService = {
                 read_status: false
             });
 
-            // 3. Notification for Seller (Separate write)
+            // 3. Notification for Seller (Protocol V34.0 Alignment)
             if (sellerId && sellerId !== buyerUid) {
                 const notifRef = doc(collection(db, "notifications"));
                 batch.set(notifRef, {
-                    uid: sellerId,
-                    userId: sellerId,
-                    user_id: sellerId,
+                    uid: sellerId,          // Interaction Standard
+                    userId: sellerId,       // V29 Legacy
+                    user_id: sellerId,      // CORE System Standard
                     title: "Nueva consulta 📬",
                     message: `${buyerUsername} te escribió por "${title}".`,
                     read: false,
