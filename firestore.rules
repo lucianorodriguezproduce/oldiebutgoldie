@@ -149,21 +149,31 @@ service cloud.firestore {
 
       // Conversations Subcollection - Marketplace Inquiries (Protocol V27.2)
       match /conversations/{buyerUid} {
-        // Solo el dueño del Trade (Vendedor) o el Interesado (Comprador) pueden ver/modificar la metadata de la conversación
+        // Solo el Interesado (Comprador) o el Vendedor pueden ver/modificar la metadata de la conversación
         allow read, write: if request.auth != null && (
           isAdmin() ||
           request.auth.uid == buyerUid || 
-          request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.senderId
+          request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.senderId ||
+          request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.receiverId
         );
         
         match /messages/{messageId} {
-          // La misma regla aplica para los mensajes dentro de esa conversación
           allow read, write: if request.auth != null && (
             isAdmin() ||
             request.auth.uid == buyerUid || 
-            request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.senderId
+            request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.senderId ||
+            request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.receiverId
           );
         }
+      }
+
+      // Infrastructure: Global access to conversations for MessageCenter.tsx
+      match /{path=**}/conversations/{buyerUid} {
+        allow read: if request.auth != null && (
+          isAdmin() ||
+          request.auth.uid == buyerUid ||
+          request.auth.uid == resource.data.sellerId
+        );
       }
 
       // Proposals Subcollection - Pujas del Coliseo
