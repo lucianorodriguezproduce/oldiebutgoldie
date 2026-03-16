@@ -60,8 +60,12 @@ export const analyticsService = {
         });
 
         // 3. Fetch Analytics Intents for Views and Top Items
-        // Limit to last 30 days for performance if needed, but here we do global for now
-        const intentsQuery = query(collection(db, "analytics_intents"), where("action", "==", "view"));
+        // Limit for performance and to prevent hangs on massive data
+        const intentsQuery = query(
+            collection(db, "analytics_intents"), 
+            where("action", "==", "view"),
+            limit(1000)
+        );
         const intentsSnap = await getDocs(intentsQuery);
         
         const totalViews = intentsSnap.size;
@@ -70,20 +74,25 @@ export const analyticsService = {
         intentsSnap.forEach(doc => {
             const data = doc.data();
             const itemId = data.item_id;
-            if (itemId) {
+            if (itemId && typeof itemId === 'string') {
                 itemViews[itemId] = (itemViews[itemId] || 0) + 1;
             }
         });
 
-        // Get Top 5 Items (need to cross-reference with inventory for titles)
+        // Get Top 5 Items
         const sortedItemIds = Object.entries(itemViews)
             .sort(([, a], [, b]) => b - a)
             .slice(0, 5);
 
         const topItems = await Promise.all(sortedItemIds.map(async ([id, views]) => {
-            const itemDoc = await getDocs(query(collection(db, "inventory"), where("__name__", "==", id)));
-            const name = !itemDoc.empty ? (itemDoc.docs[0].data() as InventoryItem).metadata.title : "ID: " + id.slice(0, 5);
-            return { name, views };
+            try {
+                // Fetch with a small timeout or just trust the cache
+                const itemDoc = await getDocs(query(collection(db, "inventory"), where("__name__", "==", id)));
+                const name = !itemDoc.empty ? (itemDoc.docs[0].data() as InventoryItem).metadata.title : "Desconocido";
+                return { name, views };
+            } catch (e) {
+                return { name: "ID: " + id.slice(0, 5), views };
+            }
         }));
 
         // Format for Recharts

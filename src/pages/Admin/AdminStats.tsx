@@ -21,8 +21,9 @@ import {
     Trash2,
     Database,
     MousePointerClick,
-    Search as SearchIcon,
-    Clock
+    Search,
+    Clock,
+    LayoutDashboard
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { analyticsService, type CommercialStats } from "@/services/analyticsService";
@@ -51,21 +52,42 @@ export default function AdminStats() {
     const [isPurging, setIsPurging] = useState<Record<string, boolean>>({});
 
     useEffect(() => {
+        let isMounted = true;
+        
+        // Safety timeout: forcedly stop loading after 5 seconds
+        const timer = setTimeout(() => {
+            if (isMounted && loading) {
+                console.warn("[AdminStats] Telemetry load timeout reached.");
+                setLoading(false);
+            }
+        }, 5000);
+
         const load = async () => {
             try {
                 const data = await analyticsService.getCommercialStats();
-                setComStats(data);
+                if (isMounted) {
+                    setComStats(data);
+                    setLoading(false);
+                }
             } catch (e) {
                 console.error("Failed to load commercial stats:", e);
-            } finally {
-                setLoading(false);
+                if (isMounted) setLoading(false);
             }
         };
+
+
         load();
 
-        const handleQuotaUpdate = (e: any) => setQuotaStats(e.detail);
+        const handleQuotaUpdate = (e: any) => {
+            if (isMounted) setQuotaStats(e.detail);
+        };
         window.addEventListener('obg_quota_update', handleQuotaUpdate);
-        return () => window.removeEventListener('obg_quota_update', handleQuotaUpdate);
+        
+        return () => {
+            isMounted = false;
+            clearTimeout(timer);
+            window.removeEventListener('obg_quota_update', handleQuotaUpdate);
+        };
     }, []);
 
     if (loading || !comStats) {
