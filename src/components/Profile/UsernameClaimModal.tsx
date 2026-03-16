@@ -185,7 +185,7 @@ export default function UsernameClaimModal({ isOpen, onSuccess, onClose, forceCl
                                                     type="text"
                                                     value={username}
                                                     onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
-                                                    placeholder="luciano_vinilos"
+                                                    placeholder="tu_nombre_usuario"
                                                     className={`w-full bg-white/5 border ${isAvailable === false ? 'border-red-500/50' : isAvailable === true ? 'border-primary/50' : 'border-white/10'} rounded-2xl pl-10 pr-12 py-4 text-white font-mono focus:outline-none focus:bg-white/10 transition-all`}
                                                 />
                                                 <div className="absolute right-4 top-1/2 -translate-y-1/2">

@@ -707,8 +707,6 @@ export const tradeService = {
             if (sellerDoc.exists()) {
                 const sData = sellerDoc.data();
                 sellerUsername = sData.username ? (sData.username.startsWith('@') ? sData.username : `@${sData.username}`) : "Vendedor";
-            } else if (sellerId === ADMIN_UID) {
-                sellerUsername = "@vinilaso";
             }
         } catch (e) {
             console.error("Error fetching seller username:", e);
@@ -1049,15 +1047,28 @@ export const tradeService = {
         
         // 1. Armamos las rutas modernas para el Inbox (Protocolo V29.2)
         const buyerUsername = buyerName.startsWith('@') ? buyerName : `@${buyerName}`;
+        const tradeSnap = await getDoc(tradeRef);
+        if (!tradeSnap.exists()) throw new Error("TRADE_NOT_FOUND");
+        const tradeData = tradeSnap.data() as any;
+        const sellerId = tradeData.participants?.senderId || ADMIN_UID;
+
+        // Fetch seller details for metadata
+        let sellerUsername = "Vendedor";
+        const sellerDoc = await getDoc(doc(db, "users", sellerId));
+        if (sellerDoc.exists()) {
+            const sData = sellerDoc.data();
+            sellerUsername = sData.username ? (sData.username.startsWith('@') ? sData.username : `@${sData.username}`) : sData.display_name || "Vendedor";
+        }
+
         const convRef = doc(db, COLLECTION_NAME, tradeId, "conversations", buyerUsername);
         const convMessagesRef = collection(db, COLLECTION_NAME, tradeId, "conversations", buyerUsername, "messages");
 
         await runTransaction(db, async (transaction) => {
-            const tradeSnap = await transaction.get(tradeRef);
-            if (!tradeSnap.exists()) throw new Error("TRADE_NOT_FOUND");
+            const currentTradeSnap = await transaction.get(tradeRef);
+            if (!currentTradeSnap.exists()) throw new Error("TRADE_NOT_FOUND");
             
-            const tradeData = tradeSnap.data() as any;
-            if (tradeData.status !== "pending") throw new Error("TRADE_NOT_AVAILABLE");
+            const currentTradeData = currentTradeSnap.data() as any;
+            if (currentTradeData.status !== "pending") throw new Error("TRADE_NOT_AVAILABLE");
 
             // 2. Actualizamos el estado del Trade padre
             transaction.update(tradeRef, {
@@ -1067,7 +1078,7 @@ export const tradeService = {
                 highest_bidder_uid: buyerUid,
                 highest_bidder_name: buyerUsername,
                 acceptedAt: serverTimestamp(),
-                currentTurn: tradeData.participants?.senderId // Le toca al vendedor
+                currentTurn: currentTradeData.participants?.senderId // Le toca al vendedor
             });
 
             // 3. Creamos/Actualizamos la Conversación para que aparezca en la Bandeja de Entrada
@@ -1075,10 +1086,11 @@ export const tradeService = {
                 buyerId: buyerUid,
                 buyerUsername: buyerUsername,
                 buyerName: buyerUsername,
-                sellerId: tradeData.participants?.senderId || ADMIN_UID,
+                sellerId: sellerId,
+                sellerUsername: sellerUsername,
                 tradeId: tradeId,
-                title: tradeData.manifest?.items?.[0]?.title || tradeData.details?.album || "Disco",
-                cover: tradeData.manifest?.items?.[0]?.cover_image || tradeData.media?.thumbnail || "",
+                title: currentTradeData.manifest?.items?.[0]?.title || currentTradeData.details?.album || "Disco",
+                cover: currentTradeData.manifest?.items?.[0]?.cover_image || currentTradeData.media?.thumbnail || "",
                 status: "accepted",
                 lastMessage: "¡Venta Directa confirmada!",
                 timestamp: serverTimestamp()

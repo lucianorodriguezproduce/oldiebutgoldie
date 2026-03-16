@@ -7,10 +7,7 @@ service cloud.firestore {
       return request.auth != null && (
         request.auth.uid == "MKPlxxi9JENQt0hS3V1QNeF8oOS2" ||
         request.auth.uid == "oldiebutgoldie" ||
-        request.auth.uid == "L227yvVSt6RzE0X8hLg0lD6DHe22" ||
-        request.auth.token.email == "admin@discography.ai" ||
-        request.auth.token.email == "lucianorodriguez.produce@gmail.com" ||
-        request.auth.token.email == "lucianorodriguezproduce@gmail.com"
+        request.auth.token.email == "admin@discography.ai"
       );
     }
 
@@ -19,12 +16,12 @@ service cloud.firestore {
       return uname.replace('@', '');
     }
 
-    // Collection Group Query para el Inbox (Protocol V28.3 -> Fixed V30.0)
+    // Collection Group Query para el Inbox (Protocol V28.3 -> Fixed V30.0 -> Dynamic V31.0)
     match /{path=**}/conversations/{conversationId} {
       allow read: if request.auth != null && (
         isAdmin() ||
-        get(/databases/$(database)/documents/usernames/$(getCleanUsername(resource.data.buyerUsername))).data.uid == request.auth.uid ||
-        get(/databases/$(database)/documents/usernames/$(getCleanUsername(resource.data.sellerUsername))).data.uid == request.auth.uid
+        resource.data.buyerId == request.auth.uid ||
+        resource.data.sellerId == request.auth.uid
       );
     }
 
@@ -134,12 +131,38 @@ service cloud.firestore {
       }
     }
 
-    // Trades - MODO PRUEBA (Para destrabar el flujo P2P)
+    // Trades - Protocolo V31.0 P2P
     match /trades/{tradeId} {
-      allow read, write: if request.auth != null;
+      allow read: if request.auth != null && (
+        isAdmin() || 
+        request.auth.uid == resource.data.participants.senderId || 
+        request.auth.uid == resource.data.participants.receiverId ||
+        request.auth.uid == resource.data.highest_bidder_uid ||
+        resource.data.isPublicOrder == true
+      );
+      
+      allow create: if request.auth != null;
+      
+      allow update: if request.auth != null && (
+        isAdmin() ||
+        request.auth.uid == resource.data.participants.senderId || 
+        request.auth.uid == resource.data.participants.receiverId ||
+        request.auth.uid == resource.data.highest_bidder_uid
+      );
 
       match /conversations/{conversationId} {
-        allow read, write: if request.auth != null;
+        allow read: if request.auth != null && (
+          isAdmin() ||
+          resource.data.buyerId == request.auth.uid ||
+          resource.data.sellerId == request.auth.uid ||
+          get(/databases/$(database)/documents/usernames/$(getCleanUsername(resource.data.buyerUsername))).data.uid == request.auth.uid ||
+          get(/databases/$(database)/documents/usernames/$(getCleanUsername(resource.data.sellerUsername))).data.uid == request.auth.uid
+        );
+        allow write: if request.auth != null && (
+          isAdmin() ||
+          resource.data.buyerId == request.auth.uid ||
+          resource.data.sellerId == request.auth.uid
+        );
         
         match /messages/{messageId} {
           allow read, write: if request.auth != null;
@@ -147,11 +170,12 @@ service cloud.firestore {
       }
 
       match /proposals/{proposalId} {
-        allow read, write: if request.auth != null;
-      }
-
-      match /messages/{messageId} {
-        allow read, write: if request.auth != null;
+        allow read: if request.auth != null;
+        allow write: if request.auth != null && (
+          isAdmin() || 
+          request.auth.uid == resource.data.bidder_uid ||
+          request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.senderId
+        );
       }
     }
 

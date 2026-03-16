@@ -250,8 +250,8 @@ export default function Profile() {
             });
 
             await addDoc(collection(db, "notifications"), {
-                uid: ADMIN_UID,
-                user_id: "admin",
+                uid: order.user_id || order.participants?.receiverId || ADMIN_UID,
+                user_id: order.user_id || "counterpart",
                 title: "Venta Finalizada 🎉",
                 message: `${user.displayName || 'Un cliente'} ha ACEPTADO el trato por la operación #${order.id?.slice(-6).toUpperCase()}.`,
                 read: false,
@@ -290,8 +290,8 @@ export default function Profile() {
             });
 
             await addDoc(collection(db, "notifications"), {
-                uid: ADMIN_UID,
-                user_id: "admin",
+                uid: order.user_id || order.participants?.receiverId || ADMIN_UID,
+                user_id: order.user_id || "counterpart",
                 title: "Nueva Contraoferta del Usuario",
                 message: `${user?.displayName || 'Cliente'} propone ${order.currency || '$'} ${priceVal.toLocaleString()} por el pedido ${order.order_number || order.id}.`,
                 read: false,
@@ -604,7 +604,7 @@ export default function Profile() {
                                         tradeId={selectedOrder.id} 
                                         currentUser={user} 
                                         trade={selectedOrder} 
-                                        otherParticipantName={selectedOrder.user_name || "Vendedor OBG"}
+                                        otherParticipantName={selectedOrder.sellerUsername || selectedOrder.user_name || "Vendedor"}
                                         buyerId={selectedOrder.participants?.senderId || user?.uid}
                                     />
                                 </div>
