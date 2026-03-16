@@ -14,12 +14,12 @@ service cloud.firestore {
       );
     }
 
-    // Collection Group Query para el Inbox (Debe estar en la raíz)
+    // Collection Group Query para el Inbox (Protocol V28.3 - Root Level Replaced)
     match /{path=**}/conversations/{conversationId} {
       allow read: if request.auth != null && (
         isAdmin() ||
-        request.auth.uid == resource.data.buyerId ||
-        request.auth.uid == resource.data.sellerId
+        get(/databases/$(database)/documents/usernames/$(resource.data.buyerUsername)).data.uid == request.auth.uid ||
+        get(/databases/$(database)/documents/usernames/$(resource.data.sellerUsername)).data.uid == request.auth.uid
       );
     }
 
@@ -156,28 +156,19 @@ service cloud.firestore {
       
       allow delete: if isAdmin();
 
-      // Conversations Subcollection - Marketplace Inquiries (Protocol V27.2)
-      match /conversations/{buyerUid} {
-        // Solo el Interesado (Comprador) o el Vendedor pueden ver/modificar la metadata de la conversación
+      // Conversations Subcollection - Marketplace Inquiries (Protocol V28.3)
+      match /conversations/{buyerUsername} {
         allow read, write: if request.auth != null && (
           isAdmin() ||
-          request.auth.uid == buyerUid || 
-          request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.senderId ||
-          request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.receiverId ||
-          (resource != null && (
-             resource.data.buyerUsername == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.username ||
-             resource.data.sellerUsername == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.username
-          ))
+          get(/databases/$(database)/documents/usernames/$(buyerUsername)).data.uid == request.auth.uid ||
+          request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.senderId
         );
         
         match /messages/{messageId} {
           allow read, write: if request.auth != null && (
             isAdmin() ||
-            request.auth.uid == buyerUid || 
-            request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.senderId ||
-            request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.receiverId ||
-            (get(/databases/$(database)/documents/trades/$(tradeId)/conversations/$(buyerUid)).data.buyerUsername == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.username) ||
-            (get(/databases/$(database)/documents/trades/$(tradeId)/conversations/$(buyerUid)).data.sellerUsername == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.username)
+            get(/databases/$(database)/documents/usernames/$(buyerUsername)).data.uid == request.auth.uid ||
+            request.auth.uid == get(/databases/$(database)/documents/trades/$(tradeId)).data.participants.senderId
           );
         }
       }

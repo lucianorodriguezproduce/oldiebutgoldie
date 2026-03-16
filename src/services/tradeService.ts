@@ -717,7 +717,7 @@ export const tradeService = {
             console.error("Error fetching seller username:", e);
         }
 
-        const conversationRef = doc(db, COLLECTION_NAME, tradeId, "conversations", buyerUid);
+        const conversationRef = doc(db, COLLECTION_NAME, tradeId, "conversations", buyerUsername);
         const snap = await getDoc(conversationRef);
         
         if (!snap.exists()) {
@@ -756,8 +756,10 @@ export const tradeService = {
         return tradeId;
     },
 
-    async sendPrivateMessage(tradeId: string, buyerId: string, senderId: string, text: string) {
-        const messagesRef = collection(db, COLLECTION_NAME, tradeId, "conversations", buyerId, "messages");
+    async sendPrivateMessage(tradeId: string, buyerId: string, senderId: string, text: string, buyerUsername?: string) {
+        // buyerId is used as fallback for legacy, but buyerUsername is the primary key (Protocol V28.3)
+        const convId = buyerUsername || buyerId;
+        const messagesRef = collection(db, COLLECTION_NAME, tradeId, "conversations", convId, "messages");
         await addDoc(messagesRef, {
             sender_uid: senderId,
             text,
@@ -766,7 +768,7 @@ export const tradeService = {
         });
 
         // Update conversation metadata
-        const conversationRef = doc(db, COLLECTION_NAME, tradeId, "conversations", buyerId);
+        const conversationRef = doc(db, COLLECTION_NAME, tradeId, "conversations", convId);
         const convSnap = await getDoc(conversationRef);
         const convData = convSnap.data();
 
@@ -801,6 +803,7 @@ export const tradeService = {
     },
 
     onSnapshotPrivateMessages(tradeId: string, buyerId: string, callback: (messages: any[]) => void) {
+        // NOTE: buyerId here is actually the conversation ID which is the buyerUsername according to Protocol V28.3
         const q = query(
             collection(db, COLLECTION_NAME, tradeId, "conversations", buyerId, "messages"),
             orderBy("timestamp", "asc")
@@ -825,7 +828,8 @@ export const tradeService = {
     async adjudicateTrade(tradeId: string, buyerId: string, buyerName: string) {
         const tradeRef = doc(db, COLLECTION_NAME, tradeId);
         const messagesRef = collection(db, COLLECTION_NAME, tradeId, "messages");
-        const convRef = doc(db, COLLECTION_NAME, tradeId, "conversations", buyerId);
+        const convId = buyerName.startsWith('@') ? buyerName : `@${buyerName}`;
+        const convRef = doc(db, COLLECTION_NAME, tradeId, "conversations", convId);
 
         await runTransaction(db, async (transaction) => {
             const tradeSnap = await transaction.get(tradeRef);
@@ -873,21 +877,18 @@ export const tradeService = {
     },
 
     onSnapshotUserConversations(userId: string, username: string | null, callback: (conversations: any[]) => void) {
-        // Build base queries using UID (Historical/Security)
-        const queries = [
-            query(collectionGroup(db, "conversations"), where("buyerId", "==", userId)),
-            query(collectionGroup(db, "conversations"), where("sellerId", "==", userId))
-        ];
-
-        // Enrichment: Add Username-based queries to solve the "UID mismatch" issue
-        if (username) {
-            const cleanUsername = username.startsWith('@') ? username : `@${username}`;
-            queries.push(query(collectionGroup(db, "conversations"), where("buyerUsername", "==", cleanUsername)));
-            queries.push(query(collectionGroup(db, "conversations"), where("sellerUsername", "==", cleanUsername)));
-            
-            // Legacy Support (where buyerName was used for username)
-            queries.push(query(collectionGroup(db, "conversations"), where("buyerName", "==", cleanUsername)));
+        if (!username) {
+            callback([]);
+            return () => {};
         }
+
+        const cleanUsername = username.startsWith('@') ? username : `@${username}`;
+
+        // Build base queries using Username ONLY (Protocol V28.3)
+        const queries = [
+            query(collectionGroup(db, "conversations"), where("buyerUsername", "==", cleanUsername)),
+            query(collectionGroup(db, "conversations"), where("sellerUsername", "==", cleanUsername))
+        ];
 
         const rawConvsMap = new Map<string, any>();
 

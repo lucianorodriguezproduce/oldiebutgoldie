@@ -59,7 +59,9 @@ export default function TradeChat({ tradeId, currentUser, trade, otherParticipan
         setIsSending(true);
         try {
             if (buyerId) {
-                await tradeService.sendPrivateMessage(tradeId, buyerId, currentUser.uid, newMessage.trim());
+                // In Protocol V28.3, buyerId prop likely contains the username if passed from MessageCenter
+                const bUsername = buyerId.startsWith('@') ? buyerId : undefined;
+                await tradeService.sendPrivateMessage(tradeId, buyerId, currentUser.uid, newMessage.trim(), bUsername);
             } else {
                 await tradeService.sendMessage(tradeId, currentUser.uid, newMessage.trim());
             }

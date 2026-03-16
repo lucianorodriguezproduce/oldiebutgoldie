@@ -174,7 +174,7 @@ export default function MessageCenter() {
                                 currentUser={user}
                                 trade={{ status: selectedConv.status }} // Minimal mock trade for initial load
                                 otherParticipantName={selectedConv.sellerId === user.uid ? selectedConv.buyerName : "Vendedor"}
-                                buyerId={selectedConv.buyerId}
+                                buyerId={selectedConv.buyerUsername || selectedConv.buyerId}
                             />
                         </div>
                     </div>
