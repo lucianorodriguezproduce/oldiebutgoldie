@@ -901,19 +901,25 @@ export const tradeService = {
     },
 
     onSnapshotUserConversations(userId: string, username: string | null, callback: (conversations: any[]) => void) {
-        if (!userId || !username) {
-            console.warn("[tradeService] onSnapshotUserConversations missing required params:", { userId, username });
+        if (!userId) {
+            console.warn("[tradeService] onSnapshotUserConversations missing userId");
             callback([]);
             return () => {};
         }
 
-        const cleanUsername = username.startsWith('@') ? username : `@${username}`;
+        const cleanUsername = username ? (username.startsWith('@') ? username : `@${username}`) : null;
 
-        // Build base queries using Username ONLY (Protocol V28.3)
+        // Build base queries using UID (Primary) and Username (Fallback/Legacy)
         const queries = [
-            query(collectionGroup(db, "conversations"), where("buyerUsername", "==", cleanUsername)),
-            query(collectionGroup(db, "conversations"), where("sellerUsername", "==", cleanUsername))
+            query(collectionGroup(db, "conversations"), where("buyerId", "==", userId)),
+            query(collectionGroup(db, "conversations"), where("sellerId", "==", userId))
         ];
+
+        // Add username fallbacks if available (Protocol V31.2)
+        if (cleanUsername) {
+            queries.push(query(collectionGroup(db, "conversations"), where("buyerUsername", "==", cleanUsername)));
+            queries.push(query(collectionGroup(db, "conversations"), where("sellerUsername", "==", cleanUsername)));
+        }
 
         const rawConvsMap = new Map<string, any>();
 
@@ -926,17 +932,19 @@ export const tradeService = {
 
         const unsubs = queries.map((q, index) => onSnapshot(q, 
             (snap) => {
-                snap.docs.forEach(doc => rawConvsMap.set(doc.ref.path, { id: doc.id, ...doc.data() }));
+                snap.docs.forEach(doc => {
+                    const data = doc.data();
+                    // Merge logic: ensure we don't have duplicates and preserve existing IDs
+                    rawConvsMap.set(doc.ref.path, { 
+                        id: data.id || doc.id, 
+                        ...data,
+                        _path: doc.ref.path 
+                    });
+                });
                 updateCallback();
             },
             (error) => {
                 console.error(`[tradeService] Firestore Snapshot Error (Index ${index}):`, error.code, error.message);
-                console.error("Query Context:", { cleanUsername, queryIndex: index });
-                
-                if (error.code === 'failed-precondition' || error.message.includes("indexes")) {
-                    console.error("CRITICAL: Missing global index for conversations. Follow this link to create it:", error.message);
-                }
-                
                 if (error.code === 'permission-denied') {
                     console.error("CRITICAL: Permission denied. Check Firestore Rules for collectionGroup('conversations').");
                 }

@@ -122,7 +122,9 @@ export default function MessageCenter() {
                                                 {formatDate(conv.timestamp)}
                                             </span>
                                         </div>
-                                        <p className="text-xs font-bold truncate">{otherPartyName}</p>
+                                        <p className="text-xs font-bold truncate">
+                                            {conv.sellerId === user.uid ? (conv.buyerUsername || conv.buyerName || "Cliente") : (conv.sellerUsername || conv.sellerName || "Vendedor")}
+                                        </p>
                                         <p className={`text-[10px] truncate ${isSelected ? 'text-black/70' : 'text-gray-500'}`}>
                                             {conv.lastMessage}
                                         </p>
@@ -156,7 +158,7 @@ export default function MessageCenter() {
                                     <h3 className="text-sm font-black text-white uppercase tracking-widest">{selectedConv.title}</h3>
                                     <div className="flex items-center gap-2">
                                         <p className="text-[10px] font-bold text-gray-500 uppercase">
-                                            Chat con {selectedConv.sellerId === user.uid ? selectedConv.buyerName : "Vendedor"}
+                                            Chat con {selectedConv.sellerId === user.uid ? (selectedConv.buyerUsername || selectedConv.buyerName || "Cliente") : (selectedConv.sellerUsername || selectedConv.sellerName || "Vendedor")}
                                         </p>
                                         <div className="flex items-center gap-1.5 px-2 py-0.5 bg-primary/10 border border-primary/20 rounded-full">
                                             <ShieldCheck className="w-2.5 h-2.5 text-primary" />
@@ -173,7 +175,7 @@ export default function MessageCenter() {
                                 tradeId={selectedConv.tradeId}
                                 currentUser={user}
                                 trade={{ status: selectedConv.status }} // Minimal mock trade for initial load
-                                otherParticipantName={selectedConv.sellerId === user.uid ? selectedConv.buyerName : "Vendedor"}
+                                otherParticipantName={selectedConv.sellerId === user.uid ? (selectedConv.buyerUsername || selectedConv.buyerName || "Cliente") : (selectedConv.sellerUsername || selectedConv.sellerName || "Vendedor")}
                                 buyerId={selectedConv.buyerUsername || selectedConv.buyerId}
                             />
                         </div>

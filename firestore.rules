@@ -20,8 +20,8 @@ service cloud.firestore {
     match /{path=**}/conversations/{conversationId} {
       allow read: if request.auth != null && (
         isAdmin() ||
-        resource.data.buyerId == request.auth.uid ||
-        resource.data.sellerId == request.auth.uid
+        (resource != null && (resource.data.buyerId == request.auth.uid || resource.data.sellerId == request.auth.uid)) ||
+        (resource == null && (request.resource.data.buyerId == request.auth.uid || request.resource.data.sellerId == request.auth.uid))
       );
     }
 
@@ -131,7 +131,7 @@ service cloud.firestore {
       }
     }
 
-    // Trades - Protocolo V31.0 P2P
+    // Trades - Protocolo V31.1 P2P Fix
     match /trades/{tradeId} {
       allow read: if request.auth != null && (
         isAdmin() || 
@@ -147,21 +147,22 @@ service cloud.firestore {
         isAdmin() ||
         request.auth.uid == resource.data.participants.senderId || 
         request.auth.uid == resource.data.participants.receiverId ||
-        request.auth.uid == resource.data.highest_bidder_uid
+        request.auth.uid == resource.data.highest_bidder_uid ||
+        // Permitir que un comprador se asocie a una orden pública
+        (resource.data.isPublicOrder == true && request.resource.data.highest_bidder_uid == request.auth.uid)
       );
 
       match /conversations/{conversationId} {
         allow read: if request.auth != null && (
           isAdmin() ||
-          resource.data.buyerId == request.auth.uid ||
-          resource.data.sellerId == request.auth.uid ||
-          get(/databases/$(database)/documents/usernames/$(getCleanUsername(resource.data.buyerUsername))).data.uid == request.auth.uid ||
-          get(/databases/$(database)/documents/usernames/$(getCleanUsername(resource.data.sellerUsername))).data.uid == request.auth.uid
+          (resource != null && (resource.data.buyerId == request.auth.uid || resource.data.sellerId == request.auth.uid)) ||
+          (resource == null && (request.resource.data.buyerId == request.auth.uid || request.resource.data.sellerId == request.auth.uid)) ||
+          get(/databases/$(database)/documents/usernames/$(getCleanUsername(conversationId))).data.uid == request.auth.uid 
         );
         allow write: if request.auth != null && (
           isAdmin() ||
-          resource.data.buyerId == request.auth.uid ||
-          resource.data.sellerId == request.auth.uid
+          (resource != null && (resource.data.buyerId == request.auth.uid || resource.data.sellerId == request.auth.uid)) ||
+          (resource == null && (request.resource.data.buyerId == request.auth.uid || request.resource.data.sellerId == request.auth.uid))
         );
         
         match /messages/{messageId} {
