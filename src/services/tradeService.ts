@@ -750,7 +750,7 @@ export const tradeService = {
             if (sellerId && sellerId !== buyerUid) {
                 const notifRef = doc(collection(db, "notifications"));
                 batch.set(notifRef, {
-                    user_id: sellerId,
+                    uid: sellerId,
                     title: "Nueva consulta 📬",
                     message: `${buyerUsername} te escribió por "${title}".`,
                     read: false,
@@ -887,7 +887,7 @@ export const tradeService = {
             // 4. Notification for winner
             const notificationRef = doc(collection(db, "notifications"));
             transaction.set(notificationRef, {
-                user_id: buyerId,
+                uid: buyerId,
                 title: "¡Trato Adjudicado! 🏆",
                 message: `El vendedor aceptó tu oferta por "${tradeData.details?.album || 'el disco'}". ¡Ya es tuyo!`,
                 read: false,
