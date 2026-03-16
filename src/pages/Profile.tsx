@@ -605,7 +605,7 @@ export default function Profile() {
                                         currentUser={user} 
                                         trade={selectedOrder} 
                                         otherParticipantName={selectedOrder.sellerUsername || selectedOrder.user_name || "Vendedor"}
-                                        buyerId={selectedOrder.participants?.senderId || user?.uid}
+                                        buyerId={selectedOrder.highest_bidder_name || selectedOrder.buyerUsername || selectedOrder.participants?.senderId || user?.uid}
                                     />
                                 </div>
                             )}
