@@ -722,10 +722,10 @@ export const tradeService = {
         
         if (!snap.exists()) {
             await setDoc(conversationRef, {
-                buyerId: buyerUid,
+                buyerId: buyerUid, // UID
                 buyerName: buyerUsername,
                 buyerUsername: buyerUsername,
-                sellerId: sellerId,
+                sellerId: sellerId, // UID
                 sellerUsername: sellerUsername,
                 tradeId: tradeId,
                 title: title,

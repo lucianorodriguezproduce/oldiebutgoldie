@@ -31,7 +31,10 @@ export default function MessageCenter() {
         if (!user) return;
 
         setLoading(true);
+        console.log("[MessageCenter] Initializing conversation snapshot for:", user.uid, dbUser?.username);
+        
         const unsub = tradeService.onSnapshotUserConversations(user.uid, dbUser?.username || null, (convs) => {
+            console.log("[MessageCenter] Snapshot received:", convs.length, "conversations");
             setConversations(convs);
             
             // Auto-select chat from URL if present

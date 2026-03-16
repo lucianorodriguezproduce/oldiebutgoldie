@@ -14,6 +14,15 @@ service cloud.firestore {
       );
     }
 
+    // Collection Group Query para el Inbox (Debe estar en la raíz)
+    match /{path=**}/conversations/{conversationId} {
+      allow read: if request.auth != null && (
+        isAdmin() ||
+        request.auth.uid == resource.data.buyerId ||
+        request.auth.uid == resource.data.sellerId
+      );
+    }
+
     function isOwner(userId) {
       return request.auth != null && request.auth.uid == userId;
     }
@@ -174,17 +183,7 @@ service cloud.firestore {
       }
 
       // Infrastructure: Global access to conversations for MessageCenter.tsx
-      match /{path=**}/conversations/{buyerUid} {
-        allow read: if request.auth != null && (
-          isAdmin() ||
-          request.auth.uid == buyerUid ||
-          request.auth.uid == resource.data.sellerId ||
-          (resource != null && (
-            resource.data.buyerUsername == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.username ||
-            resource.data.sellerUsername == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.username
-          ))
-        );
-      }
+      // Deprecated here by Protocol V28.1 (Moved to root)
 
       // Proposals Subcollection - Pujas del Coliseo
       match /proposals/{proposalId} {
