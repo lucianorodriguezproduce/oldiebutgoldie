@@ -65,10 +65,12 @@ import type { Trade, InventoryItem, TradeManifest } from "@/types/inventory";
 import ManifestEditor from "@/components/Trade/ManifestEditor";
 import TradeChat from "@/components/Trade/TradeChat";
 import UserCollection from "@/components/Profile/UserCollection";
+import UsernameClaimModal from "@/components/Profile/UsernameClaimModal";
 
 export default function Profile() {
-    const { user, isAdmin } = useAuth();
+    const { user, dbUser, isAdmin } = useAuth();
     const { showLoading, hideLoading, isLoading } = useLoading();
+    const [isClaimModalOpen, setIsClaimModalOpen] = useState(false);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [trades, setTrades] = useState<Trade[]>([]);
     const [ordersLoading, setOrdersLoading] = useState(true);
@@ -467,7 +469,13 @@ export default function Profile() {
                     </div>
 
                     <div className="flex gap-3">
-                        <button className="p-4 bg-white/5 border border-white/10 rounded-2xl text-white hover:bg-white/10 transition-all">
+                        <button 
+                            onClick={() => setIsClaimModalOpen(true)}
+                            className="p-4 bg-white/5 border border-white/10 rounded-2xl text-white hover:bg-white/10 transition-all font-bold flex items-center gap-3"
+                        >
+                            {dbUser?.username ? (
+                                <span className="text-[10px] font-black uppercase tracking-widest text-primary">@{dbUser.username}</span>
+                            ) : null}
                             <Settings className="h-5 w-5" />
                         </button>
                     </div>
@@ -1237,6 +1245,15 @@ export default function Profile() {
                     </div>
                 )}
             </AnimatePresence>
+            {/* Claim Identity Modal */}
+            <UsernameClaimModal 
+                isOpen={isClaimModalOpen} 
+                onClose={() => setIsClaimModalOpen(false)}
+                onSuccess={() => {
+                    setIsClaimModalOpen(false);
+                    fetchTrades();
+                }}
+            />
         </div >
     );
 }

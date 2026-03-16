@@ -16,7 +16,7 @@ service cloud.firestore {
 
     // Helper for Identity Bridge: Strips '@' if present
     function getCleanUsername(uname) {
-      return uname.replace("^@", "");
+      return uname.replace('@', '');
     }
 
     // Collection Group Query para el Inbox (Protocol V28.3 -> Fixed V30.0)
