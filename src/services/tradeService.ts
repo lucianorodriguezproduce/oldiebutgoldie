@@ -659,7 +659,7 @@ export const tradeService = {
         
         if (tradeSnap.exists()) {
             const tradeData = tradeSnap.data() as any;
-            const isStoreTrade = tradeData.type === 'direct_sale' && (tradeData.participants?.receiverId === ADMIN_UID || tradeData.is_admin_offer);
+            const isStoreTrade = tradeData.is_admin_offer || tradeData.participants?.senderId === ADMIN_UID;
             sellerId = isStoreTrade ? ADMIN_UID : (tradeData.participants?.senderId || tradeData.user_id || ADMIN_UID);
             title = tradeData.manifest?.items?.[0]?.title || tradeData.details?.album || title;
             cover = tradeData.manifest?.items?.[0]?.cover_image || tradeData.media?.thumbnail || "";
@@ -1058,7 +1058,8 @@ export const tradeService = {
         const tradeSnap = await getDoc(tradeRef);
         if (!tradeSnap.exists()) throw new Error("TRADE_NOT_FOUND");
         const tradeData = tradeSnap.data() as any;
-        const sellerId = tradeData.participants?.senderId || ADMIN_UID;
+        const isStoreTrade = tradeData.is_admin_offer || tradeData.participants?.senderId === ADMIN_UID;
+        const sellerId = isStoreTrade ? ADMIN_UID : (tradeData.participants?.senderId || tradeData.user_id || ADMIN_UID);
 
         // Fetch seller details for metadata
         let sellerUsername = "Vendedor";
