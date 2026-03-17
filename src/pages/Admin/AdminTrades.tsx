@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     Handshake,
@@ -17,7 +17,9 @@ import {
     Plus,
     PlusCircle,
     Search,
-    Trash2
+    Trash2,
+    ChevronDown,
+    Loader2
 } from "lucide-react";
 
 import { tradeService } from "@/services/tradeService";
@@ -31,11 +33,16 @@ import { doc, getDoc } from "firebase/firestore";
 import ManifestEditor from "@/components/Trade/ManifestEditor";
 import TradeConsole from "@/components/Trade/TradeConsole";
 
+const PAGE_SIZE = 15;
+
 export default function AdminTrades() {
     const { showLoading, hideLoading } = useLoading();
     const { user } = useAuth();
     const [trades, setTrades] = useState<Trade[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [lastDoc, setLastDoc] = useState<any>(null);
+    const [hasMore, setHasMore] = useState(true);
     const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
     const [itemDetails, setItemDetails] = useState<Record<string, InventoryItem>>({});
     const [activeView, setActiveView] = useState<'exchange' | 'direct_sale'>('exchange');
@@ -52,71 +59,96 @@ export default function AdminTrades() {
     });
 
     useEffect(() => {
-        fetchTrades();
+        initialLoad();
     }, []);
 
-    const fetchTrades = async () => {
+    const initialLoad = async () => {
         setLoading(true);
         showLoading("Sincronizando Dashboard de Trading...");
         try {
-            const fetchedTrades = await tradeService.getTrades();
-            setTrades(fetchedTrades);
+            const pagedRes = await tradeService.getTradesPaged(PAGE_SIZE);
+            setTrades(pagedRes.items);
+            setLastDoc(pagedRes.lastDoc);
+            setHasMore(pagedRes.items.length === PAGE_SIZE);
 
-            // Resolve item details for all trades
-            const allItemIds = new Set<string>();
-            fetchedTrades.forEach(t => {
-                if (t.manifest) {
-                    t.manifest.offeredItems.forEach((id: string) => allItemIds.add(id));
-                    t.manifest.requestedItems.forEach((id: string) => allItemIds.add(id));
-                }
-            });
-
-            const details: Record<string, any> = { ...itemDetails };
-
-            // First, seed details from manifest.items embedded data
-            fetchedTrades.forEach(t => {
-                if (t.manifest?.items && Array.isArray(t.manifest.items)) {
-                    t.manifest.items.forEach((item: any) => {
-                        const itemId = item.userAssetId || item.id;
-                        if (itemId && !details[itemId]) {
-                            details[itemId] = {
-                                id: itemId,
-                                metadata: { title: item.title || 'Sin Título', artist: item.artist || 'Sin Artista' },
-                                media: { thumbnail: item.cover_image || '' },
-                                logistics: { price: item.price || 0 }
-                            };
-                        }
-                    });
-                }
-            });
-
-            // Then resolve remaining IDs from inventory or user_assets
-            await Promise.all(Array.from(allItemIds).map(async (id: string) => {
-                if (!details[id]) {
-                    const item = await inventoryService.getItemById(id);
-                    if (item) {
-                        details[id] = item;
-                    } else {
-                        const asset = await userAssetService.getAssetById(id);
-                        if (asset) {
-                            details[id] = {
-                                id: asset.id,
-                                metadata: asset.metadata,
-                                media: asset.media,
-                                logistics: { price: asset.valuation || 0 }
-                            };
-                        }
-                    }
-                }
-            }));
-            setItemDetails(details);
+            // Defer details resolution to avoid blocking UI
+            resolveItemDetails(pagedRes.items);
         } catch (error) {
-            console.error("Error fetching trades:", error);
+            console.error("Error in initial load trades:", error);
         } finally {
             setLoading(false);
             hideLoading();
         }
     };
+
+    const fetchNextPage = async () => {
+        if (!hasMore || loadingMore) return;
+        setLoadingMore(true);
+        try {
+            const pagedRes = await tradeService.getTradesPaged(PAGE_SIZE, lastDoc);
+            setTrades(prev => [...prev, ...pagedRes.items]);
+            setLastDoc(pagedRes.lastDoc);
+            setHasMore(pagedRes.items.length === PAGE_SIZE);
+            resolveItemDetails(pagedRes.items);
+        } catch (error) {
+            console.error("Error fetching next page trades:", error);
+        } finally {
+            setLoadingMore(false);
+        }
+    };
+
+    const resolveItemDetails = async (newTrades: Trade[]) => {
+        const allItemIds = new Set<string>();
+        newTrades.forEach(t => {
+            if (t.manifest) {
+                t.manifest.offeredItems.forEach((id: string) => allItemIds.add(id));
+                t.manifest.requestedItems.forEach((id: string) => allItemIds.add(id));
+            }
+        });
+
+        const details: Record<string, any> = { ...itemDetails };
+
+        // Seed from manifest if possible
+        newTrades.forEach(t => {
+            if (t.manifest?.items && Array.isArray(t.manifest.items)) {
+                t.manifest.items.forEach((item: any) => {
+                    const itemId = item.userAssetId || item.id;
+                    if (itemId && !details[itemId]) {
+                        details[itemId] = {
+                            id: itemId,
+                            metadata: { title: item.title || 'Sin Título', artist: item.artist || 'Sin Artista' },
+                            media: { thumbnail: item.cover_image || '' },
+                            logistics: { price: item.price || 0 }
+                        };
+                    }
+                });
+            }
+        });
+
+        // Resolve missing IDs
+        const missingIds = Array.from(allItemIds).filter(id => !details[id]);
+        if (missingIds.length > 0) {
+            await Promise.all(missingIds.map(async (id: string) => {
+                const item = await inventoryService.getItemById(id);
+                if (item) {
+                    details[id] = item;
+                } else {
+                    const asset = await userAssetService.getAssetById(id);
+                    if (asset) {
+                        details[id] = {
+                            id: asset.id,
+                            metadata: asset.metadata,
+                            media: asset.media,
+                            logistics: { price: asset.valuation || 0 }
+                        };
+                    }
+                }
+            }));
+            setItemDetails(prev => ({ ...prev, ...details }));
+        }
+    };
+
+    const fetchTrades = initialLoad;
 
 
     const handleCreateTrade = async () => {
@@ -366,6 +398,28 @@ export default function AdminTrades() {
                             </motion.div>
                         );
                     })}
+                    </div>
+                )}
+
+                {hasMore && (
+                    <div className="p-8 flex justify-center">
+                        <button
+                            onClick={fetchNextPage}
+                            disabled={loadingMore}
+                            className="flex items-center gap-2 px-8 py-4 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-primary hover:border-primary/50 hover:bg-primary/5 transition-all disabled:opacity-50"
+                        >
+                            {loadingMore ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                                    Cargando...
+                                </>
+                            ) : (
+                                <>
+                                    <ChevronDown className="h-4 w-4" />
+                                    Cargar más registros
+                                </>
+                            )}
+                        </button>
                     </div>
                 )}
             </div>

@@ -66,9 +66,28 @@ export default function AdminStats() {
 
         const load = async () => {
             try {
+                // 1. Try Cache first
+                const cacheStr = sessionStorage.getItem("obg_comm_stats_v2");
+                if (cacheStr) {
+                    const { data, timestamp } = JSON.parse(cacheStr);
+                    const isStale = Date.now() - timestamp > 5 * 60 * 1000; // 5 min TTL
+                    if (!isStale) {
+                        console.log("[AdminStats] Loading from Session Cache...");
+                        setComStats(data);
+                        setLoading(false);
+                        return;
+                    }
+                }
+
+                // 2. Fetch if no cache or stale
                 const data = await analyticsService.getCommercialStats();
                 if (isMounted) {
                     setComStats(data);
+                    // Update Cache
+                    sessionStorage.setItem("obg_comm_stats_v2", JSON.stringify({
+                        data,
+                        timestamp: Date.now()
+                    }));
                     setLoading(false);
                 }
             } catch (e) {
@@ -76,7 +95,6 @@ export default function AdminStats() {
                 if (isMounted) setLoading(false);
             }
         };
-
 
         load();
 

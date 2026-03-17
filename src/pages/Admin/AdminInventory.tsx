@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     Search,
@@ -21,20 +21,27 @@ import {
     Copy,
     Share2,
     Megaphone,
-    Settings
+    Settings,
+    ChevronDown,
+    Loader2
 } from "lucide-react";
 import { SocialCardGenerator } from "@/components/Social/SocialCardGenerator";
-import { inventoryService } from "@/services/inventoryService";
+import { inventoryService, getInventoryPaged } from "@/services/inventoryService";
 import { categoryService, type InternalCategory } from "@/services/categoryService";
 import { discogsService } from "@/lib/discogs";
 import type { InventoryItem } from "@/types/inventory";
 import { useLoading } from "@/context/LoadingContext";
 import { LazyImage } from "@/components/ui/LazyImage";
 
+const PAGE_SIZE = 25;
+
 export default function AdminInventory() {
     const { showLoading, hideLoading } = useLoading();
     const [items, setItems] = useState<InventoryItem[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [lastDoc, setLastDoc] = useState<any>(null);
+    const [hasMore, setHasMore] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editData, setEditData] = useState<{ price?: number, stock?: number, condition?: string, internal_category?: string }>({});
@@ -66,7 +73,7 @@ export default function AdminInventory() {
     });
 
     useEffect(() => {
-        fetchInventory();
+        initialLoad();
         fetchCategories();
     }, []);
 
@@ -78,6 +85,44 @@ export default function AdminInventory() {
             console.error("Error fetching categories:", error);
         }
     };
+
+    const initialLoad = async () => {
+        setLoading(true);
+        showLoading("Sincronizando Inventario Soberano...");
+        try {
+            const [pagedRes, stats] = await Promise.all([
+                getInventoryPaged(PAGE_SIZE),
+                inventoryService.auditInventory()
+            ]);
+            setItems(pagedRes.items);
+            setLastDoc(pagedRes.lastDoc);
+            setHasMore(pagedRes.items.length === PAGE_SIZE);
+            setAuditStats(stats);
+        } catch (error) {
+            console.error("Error in initial load:", error);
+            alert("Error al sincronizar el inventario.");
+        } finally {
+            setLoading(false);
+            hideLoading();
+        }
+    };
+
+    const fetchNextPage = async () => {
+        if (!hasMore || loadingMore) return;
+        setLoadingMore(true);
+        try {
+            const pagedRes = await getInventoryPaged(PAGE_SIZE, lastDoc);
+            setItems(prev => [...prev, ...pagedRes.items]);
+            setLastDoc(pagedRes.lastDoc);
+            setHasMore(pagedRes.items.length === PAGE_SIZE);
+        } catch (error) {
+            console.error("Error fetching next page:", error);
+        } finally {
+            setLoadingMore(false);
+        }
+    };
+
+    const fetchInventory = initialLoad; // Legacy alias used in some handlers
 
     const handleAddCategory = async () => {
         if (!newCategoryName.trim()) return;
@@ -99,25 +144,6 @@ export default function AdminInventory() {
         } catch (error) {
             console.error("Error deleting category:", error);
             alert("Error al eliminar categoría.");
-        }
-    };
-
-    const fetchInventory = async () => {
-        setLoading(true);
-        showLoading("Sincronizando Inventario Soberano...");
-        try {
-            const [fetchedItems, stats] = await Promise.all([
-                inventoryService.getItems(),
-                inventoryService.auditInventory()
-            ]);
-            setItems(fetchedItems);
-            setAuditStats(stats);
-        } catch (error) {
-            console.error("Error fetching inventory (Items or Stats):", error);
-            alert("Error al sincronizar el inventario. Verifica los permisos de Firebase.");
-        } finally {
-            setLoading(false);
-            hideLoading();
         }
     };
 
@@ -360,10 +386,10 @@ export default function AdminInventory() {
     }, [items, filter, searchTerm]);
 
     const kpiCards = [
-        { label: "Total Items", value: items.length, icon: Package, color: "text-blue-400", bg: "bg-blue-400/10" },
+        { label: "Total Items", value: auditStats ? auditStats.total : items.length, icon: Package, color: "text-blue-400", bg: "bg-blue-400/10" },
         { label: "Valor Total", value: auditStats ? `$${auditStats.totalValue.toLocaleString()}` : "$0", icon: DollarSign, color: "text-green-400", bg: "bg-green-400/10" },
-        { label: "Stock Bajo", value: auditStats?.lowStock.length || 0, icon: AlertTriangle, color: "text-amber-400", bg: "bg-amber-400/10" },
-        { label: "Agotados", value: auditStats?.soldOut.length || 0, icon: Archive, color: "text-red-400", bg: "bg-red-400/10" },
+        { label: "Stock Bajo", value: auditStats?.lowStockCount || 0, icon: AlertTriangle, color: "text-amber-400", bg: "bg-amber-400/10" },
+        { label: "Agotados", value: auditStats?.soldOutCount || 0, icon: Archive, color: "text-red-400", bg: "bg-red-400/10" },
     ];
 
     return (
@@ -651,6 +677,28 @@ export default function AdminInventory() {
                         </tbody>
                     </table>
                 </div>
+
+                {hasMore && (
+                    <div className="p-8 border-t border-white/5 flex justify-center">
+                        <button
+                            onClick={fetchNextPage}
+                            disabled={loadingMore}
+                            className="flex items-center gap-2 px-8 py-4 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-primary hover:border-primary/50 hover:bg-primary/5 transition-all disabled:opacity-50"
+                        >
+                            {loadingMore ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                                    Cargando...
+                                </>
+                            ) : (
+                                <>
+                                    <ChevronDown className="h-4 w-4" />
+                                    Cargar más registros
+                                </>
+                            )}
+                        </button>
+                    </div>
+                )}
             </div>
             {/* Ingestion Modal */}
             <AnimatePresence>

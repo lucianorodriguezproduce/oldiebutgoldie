@@ -289,6 +289,24 @@ export const tradeService = {
         return await Promise.all(rawTrades.map(t => bateaToLegacy(t)));
     },
 
+    async getTradesPaged(pageSize: number, lastDoc: any = null) {
+        const { limit, startAfter } = await import("firebase/firestore");
+        let q = query(
+            collection(db, COLLECTION_NAME),
+            orderBy("timestamp", "desc"),
+            limit(pageSize)
+        );
+        if (lastDoc) {
+            q = query(q, startAfter(lastDoc));
+        }
+        const snapshot = await getDocs(q);
+        const items = await Promise.all(snapshot.docs.map(doc => bateaToLegacy({ id: doc.id, ...doc.data() })));
+        return {
+            items,
+            lastDoc: snapshot.docs[snapshot.docs.length - 1]
+        };
+    },
+
     async updateTradeStatus(tradeId: string, status: Trade['status']) {
         const docRef = doc(db, COLLECTION_NAME, tradeId);
         await updateDoc(docRef, { status });
