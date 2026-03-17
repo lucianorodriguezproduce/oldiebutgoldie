@@ -115,7 +115,7 @@ export default function RevisarLote() {
 
                     for (const [sellerId, items] of Object.entries(itemsBySeller)) {
                         const totalCash = items.reduce((acc, i) => acc + (i.price || 0), 0);
-                        const isStoreOrder = sellerId === ADMIN_UID || sellerId === "oldiebutgoldie";
+                        const isStoreOrder = sellerId === ADMIN_UID; // Corrección: Solo si es estrictamente ADMIN_UID
 
                         const tradeId = await tradeService.createTrade({
                             participants: { senderId: uid, receiverId: sellerId },

@@ -111,7 +111,7 @@ export function LoteProvider({ children }: { children: ReactNode }) {
             condition: orderData.logistics?.condition || orderData.details?.condition || orderData.condition || "Usado",
             price: orderData.logistics?.price || orderData.adminPrice || orderData.totalPrice || 0,
             currency: orderData.adminCurrency || orderData.currency || "ARS",
-            source: 'INVENTORY',
+            source: orderData.source === 'user_assets' || orderData.source === 'user_asset' ? 'DISCOGS' : 'INVENTORY',
             sellerId: resolvedSellerId
         };
 

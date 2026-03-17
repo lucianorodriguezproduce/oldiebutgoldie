@@ -144,14 +144,22 @@ export const tradeService = {
         const p2pItem = trade.manifest?.items?.find((i: any) => i.source === 'user_asset');
         const userAssetId = p2pItem?.userAssetId || p2pItem?.id;
 
-        if (userAssetId && receiverId) {
-            console.log(`[V48-ZERO-TRUST] Re-validando dueño para asset: ${userAssetId}`);
-            const assetSnap = await getDoc(doc(db, "user_assets", userAssetId));
-            if (assetSnap.exists()) {
-                const realOwnerId = assetSnap.data().ownerId || assetSnap.data().uid;
-                if (realOwnerId && realOwnerId !== receiverId) {
-                    console.warn(`[V48-ZERO-TRUST] ¡ATAQUE O FALLO DE IDENTIDAD DETECTADO! UI envió: ${receiverId}, Firestore exige: ${realOwnerId}. Sobreescribiendo.`);
-                    receiverId = realOwnerId;
+        if (userAssetId) {
+            // V53.1 FINAL GUARD: Prohibir Admin como receptor de assets P2P
+            if (receiverId === ADMIN_UID) {
+                console.warn("[V53.1-GUARD] Intento de asignar ADMIN_UID como receptor de un User Asset. Corrigiendo a NULL para listing.");
+                receiverId = null;
+            }
+
+            if (receiverId) {
+                console.log(`[V48-ZERO-TRUST] Re-validando dueño para asset: ${userAssetId}`);
+                const assetSnap = await getDoc(doc(db, "user_assets", userAssetId));
+                if (assetSnap.exists()) {
+                    const realOwnerId = assetSnap.data().ownerId || assetSnap.data().uid;
+                    if (realOwnerId && realOwnerId !== receiverId) {
+                        console.warn(`[V48-ZERO-TRUST] ¡ATAQUE O FALLO DE IDENTIDAD DETECTADO! UI envió: ${receiverId}, Firestore exige: ${realOwnerId}. Sobreescribiendo.`);
+                        receiverId = realOwnerId;
+                    }
                 }
             }
         }
@@ -733,7 +741,8 @@ export const tradeService = {
         } 
         else if (inventorySnap.exists()) {
             const itemData = inventorySnap.data() as any;
-            sellerId = ADMIN_UID;
+            // V53.1: Permitir que ítems en la colección inventory tengan dueño P2P
+            sellerId = itemData.sellerId || itemData.ownerId || ADMIN_UID;
             title = itemData.metadata?.title || title;
             cover = itemData.media?.thumbnail || "";
             sourceCollection = "inventory";

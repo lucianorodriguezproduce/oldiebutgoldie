@@ -258,7 +258,7 @@ export default function TradeConstructor() {
                         currency: cashCurrency
                     },
                     type: modalidad,
-                    tradeOrigin: 'DISCOGS',
+                    tradeOrigin: requestedDetails.length > 0 ? 'INVENTORY' : 'DISCOGS',
                     isPublicOrder: isP2PPublicListing || siteConfig?.allow_p2p_public_offers === true,
                     status: 'pending_publish_fee' // V24.2 requirement
                 };
