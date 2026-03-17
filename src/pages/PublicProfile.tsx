@@ -11,6 +11,8 @@ import { siteConfigService } from "@/services/siteConfigService";
 import type { SiteConfig } from "@/services/siteConfigService";
 import type { Connection, ConnectionStatus } from "@/types/connection";
 import UserCollection from "@/components/Profile/UserCollection";
+import { reviewService } from "@/services/reviewService";
+import ReviewCard from "@/components/Profile/ReviewCard";
 
 export default function PublicProfile() {
     const { username } = useParams<{ username: string }>();
@@ -25,6 +27,8 @@ export default function PublicProfile() {
     const [connection, setConnection] = useState<Connection | null>(null);
     const [isActionLoading, setIsActionLoading] = useState(false);
     const [config, setConfig] = useState<SiteConfig | null>(null);
+    const [reviews, setReviews] = useState<any[]>([]);
+    const [reviewsLoading, setReviewsLoading] = useState(true);
 
     useEffect(() => {
         if (!username) {
@@ -64,6 +68,25 @@ export default function PublicProfile() {
 
         fetchProfile();
     }, [username, navigate, showLoading, hideLoading]);
+
+    // Fetch Reviews
+    useEffect(() => {
+        if (!profileUser?.uid) return;
+
+        const fetchReviews = async () => {
+            setReviewsLoading(true);
+            try {
+                const data = await reviewService.getPublicReviews(profileUser.uid);
+                setReviews(data);
+            } catch (error) {
+                console.error("[PublicProfile] Error fetching reviews:", error);
+            } finally {
+                setReviewsLoading(false);
+            }
+        };
+
+        fetchReviews();
+    }, [profileUser?.uid]);
 
     // Check connection status after profile loads
     useEffect(() => {
@@ -232,21 +255,55 @@ export default function PublicProfile() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* 1. PUBLIC SECTOR (Always visible) */}
-                <div className="space-y-6">
-                    <div className="flex items-center justify-between border-b border-white/10 pb-4">
-                        <h2 className="text-xl font-display font-black text-white uppercase tracking-tighter">
-                            Mercado Abierto
-                        </h2>
-                        <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest bg-emerald-400/10 px-2 py-1 rounded-md">
-                            Público
-                        </span>
+                <div className="space-y-10">
+                    <div className="space-y-6">
+                        <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                            <h2 className="text-xl font-display font-black text-white uppercase tracking-tighter">
+                                Mercado Abierto
+                            </h2>
+                            <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest bg-emerald-400/10 px-2 py-1 rounded-md">
+                                Público
+                            </span>
+                        </div>
+
+                        <div className="text-center py-12 border border-dashed border-white/10 rounded-2xl bg-[#0a0a0a]">
+                            <p className="text-gray-500 text-xs font-bold uppercase tracking-widest flex flex-col items-center gap-2">
+                                <Lock className="w-5 h-5 opacity-50" />
+                                Aún no ha expuesto órdenes públicas
+                            </p>
+                        </div>
                     </div>
 
-                    <div className="text-center py-12 border border-dashed border-white/10 rounded-2xl bg-[#0a0a0a]">
-                        <p className="text-gray-500 text-xs font-bold uppercase tracking-widest flex flex-col items-center gap-2">
-                            <Lock className="w-5 h-5 opacity-50" />
-                            Aún no ha expuesto órdenes públicas
-                        </p>
+                    {/* Reseñas Recientes (Protocolo V64.0) */}
+                    <div className="space-y-6">
+                        <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                            <h2 className="text-xl font-display font-black text-white uppercase tracking-tighter">
+                                Reseñas Recientes
+                            </h2>
+                            <Trophy className="w-4 h-4 text-primary opacity-50" />
+                        </div>
+
+                        {reviewsLoading ? (
+                            <div className="space-y-4">
+                                {[1, 2].map(i => (
+                                    <div key={i} className="h-24 bg-white/5 border border-white/5 rounded-2xl animate-pulse" />
+                                ))}
+                            </div>
+                        ) : reviews.length > 0 ? (
+                            <div className="max-h-[400px] overflow-y-auto pr-2 custom-scrollbar space-y-4">
+                                {reviews.map((review) => (
+                                    <ReviewCard key={review.id} review={review as any} />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-10 border border-dashed border-white/10 rounded-2xl bg-black/20">
+                                <Star className="w-6 h-6 text-gray-700 mx-auto mb-3" />
+                                <p className="text-[10px] font-black text-gray-600 uppercase tracking-[0.2em] max-w-[200px] mx-auto leading-relaxed">
+                                    Este usuario aún no tiene calificaciones. <br />
+                                    <span className="text-primary/50">¡Sé el primero en hacer un intercambio!</span>
+                                </p>
+                            </div>
+                        )}
                     </div>
                 </div>
 
