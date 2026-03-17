@@ -183,22 +183,23 @@ export default function MessageCenter() {
 
                         {/* Integrated TradeChat */}
                         <div className="flex-1 p-6">
-                            <TradeChat 
-                                tradeId={selectedConv.tradeId}
-                                currentUser={user}
-                                trade={{ 
-                                    status: selectedConv.status,
-                                    buyerId: selectedConv.buyerId,
-                                    sellerId: selectedConv.sellerId,
-                                    owner_uid: selectedConv.sellerId, // Needed for reviews
-                                    participants: {
-                                        senderId: selectedConv.buyerId,
-                                        receiverId: selectedConv.sellerId
-                                    }
-                                }}
-                                otherParticipantName={selectedConv.sellerId === user.uid ? (selectedConv.buyerUsername || selectedConv.buyerName || "Cliente") : (selectedConv.sellerUsername || selectedConv.sellerName || "Vendedor")}
-                                chatId={selectedConv.id}
-                            />
+                             <TradeChat 
+                                 tradeId={selectedConv.tradeId}
+                                 currentUser={user}
+                                 trade={{ 
+                                     id: selectedConv.tradeId,
+                                     status: selectedConv.status,
+                                     buyerId: selectedConv.buyerId,
+                                     sellerId: selectedConv.sellerId,
+                                     owner_uid: selectedConv.sellerId,
+                                     participants: {
+                                         senderId: selectedConv.buyerId,
+                                         receiverId: selectedConv.sellerId
+                                     }
+                                 }}
+                                 otherParticipantName={selectedConv.sellerId === user.uid ? (selectedConv.buyerUsername || selectedConv.buyerName || "Cliente") : (selectedConv.sellerUsername || selectedConv.sellerName || "Vendedor")}
+                                 chatId={selectedConv.id}
+                             />
                         </div>
                     </div>
                 ) : (

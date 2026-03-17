@@ -957,46 +957,46 @@ export const tradeService = {
             const tradeData = tradeSnap.data() as any;
             if (tradeData.status !== "pending") throw new Error("TRADE_NOT_AVAILABLE");
 
-            // 1. Atomic status update (V2 Native)
+            const chatId = `${tradeId}_${buyerId}`;
+
+            // 1. Atomic status update (Protocol V58.2: P2P Adjudication)
             transaction.update(tradeRef, {
-                status: "accepted",
-                isPaid: false,
+                status: "pending_payment",
                 payment_status: 'pending',
                 buyer_uid: buyerId,
                 buyer_name: buyerName,
+                "participants.receiverId": buyerId, // Now the buyer is the official participant
                 acceptedAt: serverTimestamp(),
-                currentTurn: tradeData.participants?.senderId // Open coordination for the seller
+                updatedAt: serverTimestamp()
             });
 
-            // 2. Update P2P Chat Status (V2 Native)
-            const chatId = `${tradeId}_${buyerId}`;
+            // 2. Update P2P Chat Status (Native V2)
+            const p2pChatRef = doc(db, "p2p_chats", chatId);
+            transaction.update(p2pChatRef, {
+                status: "pending_payment",
+                lastMessage: "¡Oferta aceptada! Procediendo al pago.",
+                updatedAt: serverTimestamp()
+            });
 
-            // 3. Notification for Buyer (V43.0 Standard)
+            // 3. Notification for Buyer (V43.1 Dual-Write)
             const notifRef = doc(collection(db, "notifications"));
             transaction.set(notifRef, {
                 uid: buyerId,
-                user_id: buyerId, // Legacy Dual-Write
+                user_id: buyerId,
                 title: "¡Oferta aceptada! 🎉",
-                message: `El vendedor aceptó tu oferta por "${tradeData.details?.album || 'el disco'}". ¡Ya es tuyo!`,
+                message: `El vendedor aceptó tu oferta por "${tradeData.details?.album || 'el disco'}". Por favor, coordina el pago.`,
                 read: false,
                 timestamp: serverTimestamp(),
                 order_id: tradeId,
                 type: "order",
-                link: `/mensajes?chat=${chatId}` // Correct V2 Native Link
+                link: `/mensajes?chat=${chatId}`
             });
 
-            const p2pChatRef = doc(db, "p2p_chats", chatId);
-            transaction.update(p2pChatRef, {
-                status: "accepted",
-                lastMessage: "¡Trato cerrado!",
-                updatedAt: serverTimestamp()
-            });
-
-            // 4. Generate automated message in P2P Chat
+            // 4. Automated System Message
             const p2pMessageRef = doc(collection(db, "p2p_chats", chatId, "messages"));
             transaction.set(p2pMessageRef, {
                 sender_uid: "system",
-                text: `¡Trato cerrado! ${buyerName} es el comprador adjudicado. Coordinen aquí el envío.`,
+                text: "🎉 El vendedor ha aceptado tu solicitud. La orden está reservada y en estado 'Pendiente de Pago'. Por favor, coordinen el método de pago por este medio.",
                 timestamp: serverTimestamp(),
                 read_status: false
             });

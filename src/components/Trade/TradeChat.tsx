@@ -132,6 +132,36 @@ export default function TradeChat({ tradeId, currentUser, trade, otherParticipan
                         Finalizar y Calificar
                     </button>
                 )}
+
+                {/* Protocol V58.2: Adjudication Engine (Sellers only) */}
+                {isVendedor && trade?.status === 'pending' && (
+                    <button 
+                        onClick={async () => {
+                            if (window.confirm("¿Estás seguro de reservar este ítem para este usuario? Pasará a estado 'Pendiente de Pago'.")) {
+                                try {
+                                    await tradeService.adjudicateTrade(tradeId, trade.buyerId || trade.participants?.senderId, otherParticipantName);
+                                    // El cambio de estado en Firestore disparará la actualización de la UI
+                                } catch (error) {
+                                    console.error("Adjudication error:", error);
+                                    alert("Error al adjudicar la orden.");
+                                }
+                            }
+                        }}
+                        className="px-4 py-2 bg-orange-500 hover:bg-white text-black rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-orange-500/20"
+                    >
+                        Adjudicar a este comprador
+                    </button>
+                )}
+
+                {/* Protocol V58.2: Adjudication Feedback */}
+                {trade?.status === 'pending_payment' && (
+                    <div className="flex items-center gap-2 px-4 py-2 bg-orange-500/10 border border-orange-500/20 rounded-xl">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-orange-500" />
+                        <span className="text-[10px] font-black text-orange-500 uppercase tracking-widest italic">
+                            Orden adjudicada. Esperando pago.
+                        </span>
+                    </div>
+                )}
             </div>
 
             {/* Messages Area */}
