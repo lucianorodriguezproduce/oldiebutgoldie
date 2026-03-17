@@ -1017,6 +1017,8 @@ export const tradeService = {
     },
 
     async confirmPaymentAndTransfer(tradeId: string, chatId: string) {
+        if (!chatId) throw new Error("CHART_ID_REQUIRED");
+        
         const tradeRef = doc(db, COLLECTION_NAME, tradeId);
         
         await runTransaction(db, async (transaction) => {
@@ -1028,7 +1030,8 @@ export const tradeService = {
                 throw new Error("TRADE_NOT_IN_PAYMENT_STATE");
             }
 
-            const buyerId = tradeData.participants?.receiverId || tradeData.buyer_uid;
+            // V62.3: El comprador es el SENDER (quien inicia el chat/oferta).
+            const buyerId = tradeData.participants?.senderId || tradeData.buyer_uid;
             
             // 1. Transfer Assets (User Asset Ownership)
             const p2pItems = (tradeData.manifest?.items || []).filter((i: any) => i.source === 'user_asset');
@@ -1043,12 +1046,17 @@ export const tradeService = {
                 });
 
                 // Mark original inventory item as sold if it exists
+                // V62.3: Alinear con reglas de Firestore (stock - 1)
                 if (item.originalInventoryId) {
                     const invRef = doc(db, "inventory", item.originalInventoryId);
-                    transaction.update(invRef, {
-                        "logistics.status": "sold",
-                        "logistics.stock": 0
-                    });
+                    const invSnap = await transaction.get(invRef);
+                    if (invSnap.exists()) {
+                        const currentStock = invSnap.data()?.logistics?.stock || 1;
+                        transaction.update(invRef, {
+                            "logistics.status": currentStock - 1 <= 0 ? "sold" : "active",
+                            "logistics.stock": Math.max(0, currentStock - 1)
+                        });
+                    }
                 }
             }
 
@@ -1056,7 +1064,7 @@ export const tradeService = {
             transaction.update(tradeRef, {
                 status: 'completed',
                 payment_status: 'paid',
-                pending_reviews: [tradeData.participants?.senderId || tradeData.user_id, buyerId].filter(Boolean),
+                pending_reviews: [tradeData.participants?.senderId || tradeData.user_id, tradeData.participants?.receiverId].filter(Boolean),
                 completedAt: serverTimestamp(),
                 updatedAt: serverTimestamp()
             });
