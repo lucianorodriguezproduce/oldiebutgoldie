@@ -456,10 +456,9 @@ export default function AdminStats() {
                             onClick={async () => {
                                 setIsPurging(prev => ({ ...prev, audit: true }));
                                 try {
-                                    const result = await maintenanceService.diagnoseAllConversations();
-                                    alert(result);
-                                } catch (error: any) {
-                                    alert(`Error: ${error.message}`);
+                                    await maintenanceService.diagnoseAllConversations(user?.uid || "anon");
+                                } catch (e: any) {
+                                    alert(e.message);
                                 } finally {
                                     setIsPurging(prev => ({ ...prev, audit: false }));
                                 }

@@ -242,30 +242,32 @@ export const maintenanceService = {
         }
     },
 
-    /**
-     * Protocol V36.3 (Audit): Diagnóstico profundo visible en UI.
-     */
-    async diagnoseAllConversations() {
-        console.log("[Audit] Iniciando Diagnóstico de Red V36.3...");
-        const q = query(collectionGroup(db, "conversations"));
-        const snap = await getDocs(q);
-        
-        let report = [];
-        let previewItems = [];
-        
-        for (const docSnap of snap.docs) {
-            const data = docSnap.data() as any;
-            const path = docSnap.ref.path;
-            const meta = `[${path.split('/').pop()}] S:${data.sellerId || 'MISSING'} B:${data.buyerId || 'MISSING'} T:${data.tradeId || 'MISSING'}`;
-            console.log(meta);
-            report.push(meta);
-            if (previewItems.length < 5) previewItems.push(meta);
+    async diagnoseAllConversations(currentUid: string) {
+        console.log("[Audit] Iniciando Diagnóstico de Red V39...");
+        try {
+            const q = query(collectionGroup(db, "conversations"));
+            const snap = await getDocs(q);
+            
+            if (snap.empty) return "AUDITORÍA V39\nNo se encontraron conversaciones.";
+
+            const total = snap.docs.length;
+            const previewItems = snap.docs.slice(0, 5).map(d => {
+                const data = d.data();
+                return `ID: ${d.id.slice(0,8)}... | S: ${data.sellerId?.slice(0,8)}... | B: ${data.buyerId?.slice(0,8)}...`;
+            });
+
+            const report = `AUDITORÍA V39\n` +
+                         `TU UID ACTUAL: ${currentUid}\n` +
+                         `ADMIN_UID CONST: ${ADMIN_UID}\n` +
+                         `--------------------------\n` +
+                         `Total Chats: ${total}\n` +
+                         `Muestra de IDs:\n${previewItems.join('\n')}\n` +
+                         `--------------------------\n` +
+                         `¿Hay Mismatch? ${previewItems.some(i => i.includes(currentUid.slice(0,8))) ? 'NO' : 'SÍ (REVISAR)'}`;
+
+            return report;
+        } catch (error: any) {
+            return "Error en auditoría: " + error.message;
         }
-
-        const previewText = previewItems.length > 0 
-            ? "\n\nDATOS (Primeros 5):\n" + previewItems.join('\n') 
-            : "\n\n(No hay datos de previsualización)";
-
-        return `Scaneados ${report.length} chats.${previewText}\n\nRevisa la consola para el volcado completo de IDs.`;
     }
 };
