@@ -126,7 +126,7 @@ export const tradeService = {
         const { tradeOrigin, ...tradeWithoutOrigin } = trade;
         
         // V46 Hard-Link: receiverId is mandatory for P2P. No more Admin fallback.
-        const receiverId = trade.participants.receiverId;
+        let receiverId = trade.participants.receiverId;
         if (!receiverId) {
             console.error("[V46] createTrade failed: receiverId is mandatory for identity linkage.");
             throw new Error("SISTEMA_IDENTIDAD_PARTICIPANTE_REQUERIDO");
@@ -134,6 +134,22 @@ export const tradeService = {
 
         const currentUserId = auth.currentUser?.uid;
         const finalSenderId = currentUserId || trade.participants.senderId;
+
+        // V48.0 Zero Trust: Re-validate receiverId against source of truth if it's P2P
+        const p2pItem = trade.manifest?.items?.find((i: any) => i.source === 'user_asset');
+        const userAssetId = p2pItem?.userAssetId || p2pItem?.id;
+
+        if (userAssetId) {
+            console.log(`[V48-ZERO-TRUST] Re-validando dueño para asset: ${userAssetId}`);
+            const assetSnap = await getDoc(doc(db, "user_assets", userAssetId));
+            if (assetSnap.exists()) {
+                const realOwnerId = assetSnap.data().ownerId || assetSnap.data().uid;
+                if (realOwnerId && realOwnerId !== receiverId) {
+                    console.warn(`[V48-ZERO-TRUST] ¡ATAQUE O FALLO DE IDENTIDAD DETECTADO! UI envió: ${receiverId}, Firestore exige: ${realOwnerId}. Sobreescribiendo.`);
+                    receiverId = realOwnerId;
+                }
+            }
+        }
 
         const tradeData = {
             ...tradeWithoutOrigin,
@@ -721,7 +737,14 @@ export const tradeService = {
         // PRIORITY 3: Legacy/Orphan Fallback (from current trade if exists)
         else if (tradeSnap.exists()) {
             const tradeData = tradeSnap.data() as any;
-            sellerId = tradeData.participants?.receiverId || tradeData.participants?.senderId;
+            // V48.1: Si es una orden pública, el receiverId suele ser el Admin y el senderId el dueño real.
+            // Si el receiverId es el Admin, priorizamos el senderId como vendedor.
+            if (tradeData.participants?.receiverId === ADMIN_UID && tradeData.isPublicOrder) {
+                sellerId = tradeData.participants?.senderId;
+                console.log(`[V48.1-FALLBACK] Detectada orden pública con Admin. Usando senderId como vendedor: ${sellerId}`);
+            } else {
+                sellerId = tradeData.participants?.receiverId || tradeData.participants?.senderId;
+            }
             title = tradeData.manifest?.items?.[0]?.title || tradeData.details?.album || title;
             cover = tradeData.manifest?.items?.[0]?.cover_image || tradeData.media?.thumbnail || "";
             sourceCollection = "existing_trade";

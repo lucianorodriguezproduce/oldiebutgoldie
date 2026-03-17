@@ -44,16 +44,27 @@ export default function DirectPurchaseModal({ isOpen, onClose, order }: DirectPu
         showLoading("Iniciando contacto...");
 
         try {
-            // V46.1 HARDLINK: Robust extraction of sellerId
-            // If it's a trade object, the owner is participants.senderId (the publisher)
-            // If it's a raw asset/item, it might be ownerId or uid
-            const sellerId = order.participants?.senderId || order.ownerId || order.uid;
+            // V48.1 HARDLINK: Robust extraction of sellerId
+            // If it's a trade object with participants, the owner is participants.senderId (the publisher/seller)
+            // if it's a public order where receiverId is Admin.
+            let sellerId = order.uid; // Default for raw items
+
+            if (order.participants) {
+                // If receiver is Admin, then sender is the Seller
+                if (order.participants.receiverId === 'O5bs8eTZQdwMMQ9P6eDbJyVEZV2' || order.participants.receiverId === 'ADMIN_UID') {
+                     sellerId = order.participants.senderId;
+                } else {
+                     sellerId = order.participants.receiverId || order.participants.senderId;
+                }
+            } else if (order.ownerId) {
+                sellerId = order.ownerId;
+            }
             
             console.log("[P2P-PAYLOAD] Enviando a startInquiry - SellerID:", sellerId);
 
-            if (!sellerId) {
-                console.error("[P2P-ERROR] No se pudo determinar el dueño del activo en el modal.");
-                throw new Error("SISTEMA_IDENTIDAD_VENDEDOR_REQUERIDA");
+            if (!sellerId || sellerId === 'O5bs8eTZQdwMMQ9P6eDbJyVEZV2') {
+                console.error("[P2P-ERROR] Identidad del vendedor inválida o Admin detectado en flujo P2P.", { order });
+                throw new Error("ERROR_SISTEMA_IDENTIDAD_VENDEDOR_INVALIDA");
             }
 
             // Usamos el nuevo método de consulta en lugar de compra directa
