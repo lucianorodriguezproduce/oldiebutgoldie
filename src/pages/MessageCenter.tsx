@@ -91,11 +91,11 @@ export default function MessageCenter() {
                         filteredConversations.map((conv) => {
                             const isMeSeller = conv.sellerId === user.uid;
                             const otherPartyName = isMeSeller ? conv.buyerName : (conv.sellerName || "Vendedor");
-                            const isSelected = selectedConv?.id === conv.id;
+                            const isSelected = selectedConv?._path === conv._path;
 
                             return (
                                 <button
-                                    key={conv.id}
+                                    key={conv._path}
                                     onClick={() => setSelectedConv(conv)}
                                     className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all group ${
                                         isSelected 

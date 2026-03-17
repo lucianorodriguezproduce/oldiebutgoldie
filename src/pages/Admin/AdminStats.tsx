@@ -422,10 +422,10 @@ export default function AdminStats() {
                             <ShieldAlert className="w-4 h-4" />
                             <span className="text-xs font-black uppercase tracking-widest">Chat Healing</span>
                         </div>
-                        <p className="text-[11px] text-zinc-500 font-medium">Verdad Absoluta (Omni-Inventory V37).</p>
+                        <p className="text-[11px] text-zinc-500 font-medium">Sincronización Total de Metadatos (Protocolo V38).</p>
                         <button
                             onClick={async () => {
-                                if (!confirm("¿Iniciar curación Verdad Absoluta V37? Esto cruzará Inventario + User Assets.")) return;
+                                if (!confirm("¿Iniciar Sincronización Total V38? Esto reparará rutas y nombres de usuario.")) return;
                                 setIsPurging(prev => ({ ...prev, heal: true }));
                                 try {
                                     const result = await maintenanceService.healConversationIdentities();

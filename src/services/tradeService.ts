@@ -965,25 +965,16 @@ export const tradeService = {
         }
 
         const cleanUsername = username ? (username.startsWith('@') ? username : `@${username}`) : null;
-
-        // BATEA AUDITOR: El Admin ve todo el ecosistema
         const isMasterAdmin = userId === ADMIN_UID || userId === 'oldiebutgoldie';
 
-        // Build base queries using UID (Primary) and Username (Fallback/Legacy)
         let queries = [];
-        
         if (isMasterAdmin) {
-            console.log("[tradeService] MASTER ADMIN session detected. Loading all active conversations.");
-            queries = [
-                query(collectionGroup(db, "conversations"))
-            ];
+            queries = [query(collectionGroup(db, "conversations"))];
         } else {
             queries = [
                 query(collectionGroup(db, "conversations"), where("buyerId", "==", userId)),
                 query(collectionGroup(db, "conversations"), where("sellerId", "==", userId))
             ];
-
-            // Add username fallbacks if available (Protocol V31.2)
             if (cleanUsername) {
                 queries.push(query(collectionGroup(db, "conversations"), where("buyerUsername", "==", cleanUsername)));
                 queries.push(query(collectionGroup(db, "conversations"), where("sellerUsername", "==", cleanUsername)));
@@ -1001,28 +992,27 @@ export const tradeService = {
 
         const unsubs = queries.map((q, index) => onSnapshot(q, 
             (snap) => {
-                snap.docs.forEach(doc => {
-                    const data = doc.data();
-                    // Merge logic: ensure we don't have duplicates and preserve existing IDs
-                    rawConvsMap.set(doc.ref.path, { 
-                        id: data.id || doc.id, 
-                        ...data,
-                        _path: doc.ref.path 
-                    });
+                snap.docChanges().forEach(change => {
+                    const doc = change.doc;
+                    const docPath = doc.ref.path;
+                    if (change.type === "removed") {
+                        rawConvsMap.delete(docPath);
+                    } else {
+                        rawConvsMap.set(docPath, { 
+                            id: doc.id, 
+                            ...doc.data(),
+                            _path: docPath 
+                        });
+                    }
                 });
                 updateCallback();
             },
             (error) => {
                 console.error(`[tradeService] Firestore Snapshot Error (Index ${index}):`, error.code, error.message);
-                if (error.code === 'permission-denied') {
-                    console.error("CRITICAL: Permission denied. Check Firestore Rules for collectionGroup('conversations').");
-                }
             }
         ));
 
-        return () => {
-            unsubs.forEach(unsub => unsub());
-        };
+        return () => unsubs.forEach(unsub => unsub());
     },
 
     onSnapshotMessages(tradeId: string, callback: (messages: any[]) => void) {
