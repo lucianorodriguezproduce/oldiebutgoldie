@@ -975,7 +975,7 @@ export const tradeService = {
         if (isMasterAdmin) {
             console.log("[tradeService] MASTER ADMIN session detected. Loading all active conversations.");
             queries = [
-                query(collectionGroup(db, "conversations"), orderBy("timestamp", "desc"))
+                query(collectionGroup(db, "conversations"))
             ];
         } else {
             queries = [

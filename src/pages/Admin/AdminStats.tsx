@@ -422,10 +422,10 @@ export default function AdminStats() {
                             <ShieldAlert className="w-4 h-4" />
                             <span className="text-xs font-black uppercase tracking-widest">Chat Healing</span>
                         </div>
-                        <p className="text-[11px] text-zinc-500 font-medium">Repara identidades de chat corruptas (Protocolo V36.0).</p>
+                        <p className="text-[11px] text-zinc-500 font-medium">Verdad Absoluta (Omni-Inventory V37).</p>
                         <button
                             onClick={async () => {
-                                if (!confirm("¿Iniciar curación profunda V36.2?")) return;
+                                if (!confirm("¿Iniciar curación Verdad Absoluta V37? Esto cruzará Inventario + User Assets.")) return;
                                 setIsPurging(prev => ({ ...prev, heal: true }));
                                 try {
                                     const result = await maintenanceService.healConversationIdentities();

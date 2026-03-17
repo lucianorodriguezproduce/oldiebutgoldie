@@ -163,11 +163,11 @@ export const maintenanceService = {
     },
 
     /**
-     * Protocol V36.2 (Hyper-Diagnostic): Sanador Omnisciente.
-     * Soporta UIDs dinámicos y genera feedback detallado para el administrador.
+     * Protocol V37 (Omni-Inventory): Sanador de Verdad Absoluta.
+     * Cruza datos con 'user_assets' (P2P) e 'inventory' (Bunker/Admin).
      */
     async healConversationIdentities() {
-        console.log("[Maintenance] Iniciando Protocolo de Curación V36.2...");
+        console.log("[Maintenance] Iniciando Protocolo de Curación V37...");
         try {
             const q = query(collectionGroup(db, "conversations"));
             const snap = await getDocs(q);
@@ -192,68 +192,99 @@ export const maintenanceService = {
                     needsHealing = true;
                     reason = "collision";
                 } 
-                // CASO 2: Atribución Admin (MKPl... o oldiebutgoldie)
-                else if (data.sellerId === ADMIN_UID || data.sellerId === "oldiebutgoldie") {
-                    needsHealing = true;
-                    reason = "admin_check";
+                // CASO 2: Atribución Admin sospechosa o ID antiguo
+                else if (data.sellerId === ADMIN_UID || data.sellerId === "oldiebutgoldie" || !data.sellerId) {
+                    needsHealing = true; // Forzamos verificación omnisciente
+                    reason = "omni_check";
                 }
 
                 if (needsHealing) {
                     try {
-                        // Buscamos la verdad en Trades y User Assets
+                        // 1. Buscamos en el Bunker (Inventory) - La verdad absoluta del Admin
+                        const invRef = doc(db, "inventory", tradeId);
                         const assetRef = doc(db, "user_assets", tradeId);
                         const tradeRef = doc(db, "trades", tradeId);
                         
-                        const [assetSnap, tradeSnap] = await Promise.all([
+                        const [invSnap, assetSnap, tradeSnap] = await Promise.all([
+                            getDoc(invRef),
                             getDoc(assetRef),
                             getDoc(tradeRef)
                         ]);
 
                         let realSellerId = null;
 
-                        if (assetSnap.exists()) {
+                        if (invSnap.exists()) {
+                            // Si está en el inventario global, el dueño es el ADMIN
+                            realSellerId = ADMIN_UID;
+                        } else if (assetSnap.exists()) {
+                            // Si está en activos de usuario, el dueño es el ownerId
                             realSellerId = assetSnap.data().ownerId;
                         } else if (tradeSnap.exists()) {
                             const tData = tradeSnap.data();
-                            // Estrategia de recuperación de Trade (V36.2)
-                            realSellerId = (tData.participants?.receiverId && tData.participants.receiverId !== ADMIN_UID && tData.participants.receiverId !== "oldiebutgoldie") 
+                            realSellerId = (tData.participants?.receiverId && tData.participants.receiverId !== "oldiebutgoldie") 
                                 ? tData.participants.receiverId 
-                                : (tData.user_id && tData.user_id !== ADMIN_UID && tData.user_id !== "oldiebutgoldie" ? tData.user_id : null);
+                                : (tData.user_id && tData.user_id !== "oldiebutgoldie" ? tData.user_id : null);
+                            
+                            // Si el trade dice que es del admin pero no está en inventory, 
+                            // verificamos si el receiverId es válido
+                            if (realSellerId === ADMIN_UID && !invSnap.exists() && assetSnap.exists()) {
+                                realSellerId = assetSnap.data().ownerId;
+                            }
                         }
 
-                        // Si hay un dueño legítimo y es distinto al actual
-                        if (realSellerId && realSellerId !== data.sellerId && realSellerId !== "system") {
-                            let realSellerUsername = "Vendedor";
+                        // Curación de Identidad Personal (Usernames)
+                        if (realSellerId && realSellerId !== "system") {
+                            let realSellerUsername = data.sellerUsername || "Vendedor";
+                            let realBuyerUsername = data.buyerUsername;
+
+                            // Verificar Vendedor
                             const sellerDoc = await getDoc(doc(db, "users", realSellerId));
-                            
                             if (sellerDoc.exists()) {
                                 const sData = sellerDoc.data();
                                 realSellerUsername = sData.username ? (sData.username.startsWith('@') ? sData.username : `@${sData.username}`) : sData.display_name || "Vendedor";
                             }
 
-                            await updateDoc(docSnap.ref, {
-                                sellerId: realSellerId,
-                                sellerUsername: realSellerUsername,
-                                healedAt: serverTimestamp(),
-                                healing_v: "36.2",
-                                healingReason: reason
-                            });
+                            // Verificar Comprador (Si falta username)
+                            if (!realBuyerUsername && data.buyerId) {
+                                const buyerDoc = await getDoc(doc(db, "users", data.buyerId));
+                                if (buyerDoc.exists()) {
+                                    const bData = buyerDoc.data();
+                                    realBuyerUsername = bData.username ? (bData.username.startsWith('@') ? bData.username : `@${bData.username}`) : bData.display_name || "Comprador";
+                                }
+                            }
 
-                            healedCount++;
-                            if (reason === "collision") collisionsCount++;
-                            else adminMisattributions++;
+                            // Solo actualizamos si hay cambios reales detectados
+                            const changes: any = {};
+                            if (realSellerId !== data.sellerId) {
+                                changes.sellerId = realSellerId;
+                                changes.sellerUsername = realSellerUsername;
+                                changes.healing_v = "37.0";
+                                changes.healedAt = serverTimestamp();
+                                changes.healingReason = reason;
+                                
+                                healedCount++;
+                                if (reason === "collision") collisionsCount++;
+                                else adminMisattributions++;
+                                console.log(`[Heal-V37] HEALED: ${tradeId} -> ${realSellerUsername} (${reason})`);
+                            }
                             
-                            console.log(`[Heal-V36.2] HEALED: ${tradeId} -> ${realSellerUsername} (${reason})`);
+                            if (realBuyerUsername && realBuyerUsername !== data.buyerUsername) {
+                                changes.buyerUsername = realBuyerUsername;
+                            }
+
+                            if (Object.keys(changes).length > 0) {
+                                await updateDoc(docSnap.ref, changes);
+                            }
                         }
                     } catch (e: any) {
-                        console.error(`[Heal-V36.2] Error en item ${tradeId}:`, e.message);
+                        console.error(`[Heal-V37] Error en item ${tradeId}:`, e.message);
                     }
                 }
             }
 
-            return `${healedCount} (Corregidos: ${adminMisattributions}, Colisiones: ${collisionsCount}) de ${totalScanned} analizados.`;
+            return `${healedCount} (Sellers fixed: ${adminMisattributions}, Collisions: ${collisionsCount}) de ${totalScanned} analizados.`;
         } catch (error: any) {
-            console.error("[Heal-V36.2] FATAL ERROR:", error);
+            console.error("[Heal-V37] FATAL ERROR:", error);
             return `ERROR: ${error.message}`;
         }
     },
