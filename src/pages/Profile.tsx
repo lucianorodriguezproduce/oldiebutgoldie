@@ -251,8 +251,8 @@ export default function Profile() {
 
             // Determinamos el destinatario (si soy el comprador, notifico al vendedor y viceversa)
             const recipientId = (user.uid === (order.user_id || order.participants?.senderId))
-                ? (order.participants?.receiverId || ADMIN_UID)
-                : (order.user_id || order.participants?.senderId || ADMIN_UID);
+                ? (order.participants?.receiverId || ADMIN_UIDS[0])
+                : (order.user_id || order.participants?.senderId || ADMIN_UIDS[0]);
 
             console.log(`[NotifV2] Profile Success Response: sender=${user.uid} | recipient=${recipientId}`);
 
@@ -301,8 +301,8 @@ export default function Profile() {
 
             // Determinamos el destinatario
             const recipientId = (user.uid === (order.user_id || order.participants?.senderId))
-                ? (order.participants?.receiverId || ADMIN_UID)
-                : (order.user_id || order.participants?.senderId || ADMIN_UID);
+                ? (order.participants?.receiverId || ADMIN_UIDS[0])
+                : (order.user_id || order.participants?.senderId || ADMIN_UIDS[0]);
 
             console.log(`[NotifV2] Profile Counter Response: sender=${user.uid} | recipient=${recipientId}`);
 

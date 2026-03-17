@@ -95,7 +95,7 @@ export function LoteProvider({ children }: { children: ReactNode }) {
         if (loteItems.length > 0) {
             const activeSellerId = loteItems[0].sellerId;
             if (resolvedSellerId !== activeSellerId) {
-                const sellerName = ADMIN_UIDS.includes(activeSellerId) ? "la Tienda Oficial" : "otro usuario";
+                const sellerName = ADMIN_UIDS.includes(activeSellerId as string) ? "la Tienda Oficial" : "otro usuario";
                 alert(`Tu lote actual pertenece a ${sellerName}. No podés mezclar discos de distintos vendedores en un mismo lote.`);
                 return;
             }

@@ -26,7 +26,7 @@ export default function AdminCollection() {
     useEffect(() => {
         const q = query(
             collection(db, "user_assets"),
-            where("ownerId", "==", ADMIN_UID),
+            where("ownerId", "==", ADMIN_UIDS[0]),
             where("status", "==", "active"),
             orderBy("acquiredAt", "desc")
         );
