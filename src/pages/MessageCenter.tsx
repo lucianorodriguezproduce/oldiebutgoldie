@@ -37,20 +37,20 @@ export default function MessageCenter() {
             console.log("[InboxV2] Chats received:", chats.length);
             setConversations(chats);
             
-            // Auto-Apertura (Protocolo V56.0)
+            // Auto-Apertura (Protocolo V56.2: Búsqueda Híbrida Inteligente)
             if (chatIdFromUrl) {
-                const found = chats.find(c => 
+                const targetChat = chats.find(c => 
                     c.id === chatIdFromUrl || 
                     c.tradeId === chatIdFromUrl || 
-                    c.id?.includes(chatIdFromUrl) ||
-                    (c.tradeId && chatIdFromUrl.includes(c.tradeId))
+                    c.id?.includes(chatIdFromUrl)
                 );
                 
-                if (found) {
-                    console.log("[InboxV2] Auto-selecting chat found:", found.id);
-                    setSelectedConv(found);
+                if (targetChat) {
+                    console.log("[InboxV2] Auto-selecting target chat:", targetChat.id);
+                    setSelectedConv(targetChat);
                 } else {
-                    console.log("[InboxV2] No matching chat found for URL ID:", chatIdFromUrl);
+                    console.warn("[InboxV2] No matching chat found for URL ID:", chatIdFromUrl);
+                    // Prohibición V56.2: No redireccionar a /perfil. Simplemente renderizar bandeja general.
                 }
             }
             setLoading(false);
