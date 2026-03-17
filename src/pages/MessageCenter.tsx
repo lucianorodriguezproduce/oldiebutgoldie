@@ -50,11 +50,13 @@ export default function MessageCenter() {
                     setSelectedConv(targetChat);
                 } else {
                     console.warn("[InboxV2] No matching chat found for URL ID:", chatIdFromUrl);
-                    // Prohibición V56.2: No redireccionar a /perfil. Simplemente renderizar bandeja general.
                 }
             }
             setLoading(false);
         });
+
+        return () => unsub();
+    }, [user, chatIdFromUrl]);
 
     useEffect(() => {
         if (selectedConv && conversations.length > 0) {
@@ -65,9 +67,6 @@ export default function MessageCenter() {
             }
         }
     }, [conversations, selectedConv]);
-
-    return () => unsub();
-}, [user, chatIdFromUrl, searchParams]);
 
     const filteredConversations = conversations.filter(c => 
         c.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
