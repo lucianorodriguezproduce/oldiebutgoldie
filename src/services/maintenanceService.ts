@@ -259,8 +259,7 @@ export const maintenanceService = {
     },
 
     /**
-     * Protocol V36.3 (Audit): Diagnóstico profundo.
-     * Lista todos los IDs en consola para inspección manual.
+     * Protocol V36.3 (Audit): Diagnóstico profundo visible en UI.
      */
     async diagnoseAllConversations() {
         console.log("[Audit] Iniciando Diagnóstico de Red V36.3...");
@@ -268,14 +267,21 @@ export const maintenanceService = {
         const snap = await getDocs(q);
         
         let report = [];
+        let previewItems = [];
+        
         for (const docSnap of snap.docs) {
             const data = docSnap.data() as any;
             const path = docSnap.ref.path;
-            const meta = `[${path}] S:${data.sellerId} B:${data.buyerId} T:${data.tradeId}`;
+            const meta = `[${path.split('/').pop()}] S:${data.sellerId || 'MISSING'} B:${data.buyerId || 'MISSING'} T:${data.tradeId || 'MISSING'}`;
             console.log(meta);
             report.push(meta);
+            if (previewItems.length < 5) previewItems.push(meta);
         }
 
-        return `Scaneados ${report.length} chats. Revisa la consola para el volcado de IDs.`;
+        const previewText = previewItems.length > 0 
+            ? "\n\nDATOS (Primeros 5):\n" + previewItems.join('\n') 
+            : "\n\n(No hay datos de previsualización)";
+
+        return `Scaneados ${report.length} chats.${previewText}\n\nRevisa la consola para el volcado completo de IDs.`;
     }
 };
