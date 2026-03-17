@@ -848,14 +848,15 @@ export const tradeService = {
             if (sellerId && sellerId !== buyerUid) {
                 const notifRef = doc(collection(db, "notifications"));
                 batch.set(notifRef, {
-                    uid: sellerId,
+                    uid: sellerId,        // V43 Primary
+                    user_id: sellerId,    // Legacy Dual-Write
                     title: "Nueva consulta 📬",
                     message: `${buyerUsername} te escribió por "${title}".`,
                     read: false,
                     timestamp: serverTimestamp(),
                     order_id: tradeId,
                     type: "chat",
-                    link: `/mensajes?chat=${tradeId}`
+                    link: `/mensajes?chat=${newChatId}` // Correct V2 Native Link
                 });
             }
 
@@ -906,11 +907,12 @@ export const tradeService = {
 
             if (recipientId) {
                 await addDoc(collection(db, "notifications"), {
-                    uid: recipientId,
+                    uid: recipientId,     // V43 Primary
+                    user_id: recipientId, // Legacy Dual-Write
                     type: 'chat',
                     title: `Nuevo mensaje de ${senderName}`,
                     message: text.substring(0, 100) + (text.length > 100 ? '...' : ''),
-                    link: `/mensajes?chat=${tradeId}`,
+                    link: `/mensajes?chat=${chatId}`, // Correct V2 Native Link
                     read: false,
                     timestamp: serverTimestamp(),
                     order_id: tradeId
@@ -942,21 +944,23 @@ export const tradeService = {
                 currentTurn: tradeData.participants?.senderId // Open coordination for the seller
             });
 
-            // 2. Notification for Buyer (V43.0 Standard)
+            // 2. Update P2P Chat Status (V2 Native)
+            const chatId = `${tradeId}_${buyerId}`;
+
+            // 3. Notification for Buyer (V43.0 Standard)
             const notifRef = doc(collection(db, "notifications"));
             transaction.set(notifRef, {
                 uid: buyerId,
+                user_id: buyerId, // Legacy Dual-Write
                 title: "¡Oferta aceptada! 🎉",
                 message: `El vendedor aceptó tu oferta por "${tradeData.details?.album || 'el disco'}". ¡Ya es tuyo!`,
                 read: false,
                 timestamp: serverTimestamp(),
                 order_id: tradeId,
                 type: "order",
-                link: `/mensajes?chat=${tradeId}`
+                link: `/mensajes?chat=${chatId}` // Correct V2 Native Link
             });
 
-            // 3. Update P2P Chat Status (V2 Native)
-            const chatId = `${tradeId}_${buyerId}`;
             const p2pChatRef = doc(db, "p2p_chats", chatId);
             transaction.update(p2pChatRef, {
                 status: "accepted",
