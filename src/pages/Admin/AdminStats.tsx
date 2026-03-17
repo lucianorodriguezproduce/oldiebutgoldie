@@ -422,17 +422,16 @@ export default function AdminStats() {
                             <ShieldAlert className="w-4 h-4" />
                             <span className="text-xs font-black uppercase tracking-widest">Chat Healing</span>
                         </div>
-                        <p className="text-[11px] text-zinc-500 font-medium">Reconciliación de Identidad (Protocolo V40).</p>
+                        <p className="text-[11px] text-zinc-500 font-medium">Reconciliación de Identidad (Protocolo V41).</p>
                         <button
                             onClick={async () => {
-                                if (!confirm("¿Iniciar Reconciliación de Identidad V40? Esto migrará tus chats a tu sesión actual.")) return;
+                                if (!confirm("¿Iniciar Reconciliación V41? Esto migrará los 25 chats a tu UID actual.")) return;
                                 setIsPurging(prev => ({ ...prev, heal: true }));
                                 try {
-                                    const result = await maintenanceService.healConversationIdentities();
-                                    alert(`Reporte de Curación: ${result}`);
-                                } catch (error: any) {
-                                    console.error("[Heal-UI] Fatal error during healing:", error);
-                                    alert(`ERROR FATAL: ${error.message}`);
+                                    const result = await maintenanceService.healConversationIdentities(user?.uid || "");
+                                    alert(result);
+                                } catch (e: any) {
+                                    alert(e.message);
                                 } finally {
                                     setIsPurging(prev => ({ ...prev, heal: false }));
                                 }
@@ -441,7 +440,36 @@ export default function AdminStats() {
                             className="mt-auto px-4 py-2.5 bg-primary/10 hover:bg-primary/20 disabled:opacity-50 text-[10px] font-black uppercase tracking-widest text-primary rounded-xl flex items-center justify-center gap-2 transition-all"
                         >
                             {isPurging.heal ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-                            Curar Identidades
+                            Curar Identidades V41
+                        </button>
+                    </div>
+
+                    {/* Total Purge (fallback) */}
+                    <div className="flex flex-col gap-4 p-5 bg-red-500/5 border border-red-500/20 rounded-2xl hover:border-red-500/40 transition-colors">
+                        <div className="flex items-center gap-3 text-red-500">
+                            <Trash2 className="w-4 h-4" />
+                            <span className="text-xs font-black uppercase tracking-widest">Purga Total</span>
+                        </div>
+                        <p className="text-[11px] text-zinc-500 font-medium">Borrado de emergencia (Comenzar de 0).</p>
+                        <button
+                            onClick={async () => {
+                                if (!confirm("¿ESTÁS SEGURO? Esto borrará permanentemente toda la visibilidad de los chats actuales.")) return;
+                                if (!confirm("¿CONFIRMAS? Esta acción es irreversible.")) return;
+                                setIsPurging(prev => ({ ...prev, purge: true }));
+                                try {
+                                    const result = await maintenanceService.purgeAllChats();
+                                    alert(result);
+                                } catch (e: any) {
+                                    alert(e.message);
+                                } finally {
+                                    setIsPurging(prev => ({ ...prev, purge: false }));
+                                }
+                            }}
+                            disabled={isPurging.purge}
+                            className="mt-auto px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 disabled:opacity-50 text-[10px] font-black uppercase tracking-widest text-red-500 rounded-xl flex items-center justify-center gap-2 transition-all"
+                        >
+                            {isPurging.purge ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                            Purgar Todo
                         </button>
                     </div>
 
