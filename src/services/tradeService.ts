@@ -848,7 +848,7 @@ export const tradeService = {
             if (sellerId && sellerId !== buyerUid) {
                 const notifRef = doc(collection(db, "notifications"));
                 batch.set(notifRef, {
-                    uid: sellerId,        // V43 Primary
+                    uid: sellerId,        // V43 Primary (FIRST)
                     user_id: sellerId,    // Legacy Dual-Write
                     title: "Nueva consulta 📬",
                     message: `${buyerUsername} te escribió por "${title}".`,
@@ -856,7 +856,7 @@ export const tradeService = {
                     timestamp: serverTimestamp(),
                     order_id: tradeId,
                     type: "chat",
-                    link: `/mensajes?chat=${newChatId}` // Correct V2 Native Link
+                    link: `/mensajes?chat=${newChatId}` 
                 });
             }
 

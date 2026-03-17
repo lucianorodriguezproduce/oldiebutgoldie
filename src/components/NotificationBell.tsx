@@ -17,7 +17,8 @@ import { TEXTS } from "@/constants/texts";
 
 interface Notification {
     id: string;
-    user_id: string;
+    uid?: string;      // V43 Primary
+    user_id?: string;  // Legacy
     title: string;
     message: string;
     read: boolean;
@@ -43,20 +44,51 @@ export default function NotificationBell() {
 
     // Real-time listener for user's notifications
     useEffect(() => {
-        if (!user) return;
+        if (!user) {
+            console.log("[NotifV2] Esperando usuario...");
+            return;
+        }
 
+        console.log(`[NotifV2] Iniciando listener Maestro. Mi UID es: ${user.uid}`);
+        
+        // Diagnóstico: Probamos con 'uid' pero dejamos listo el fallback
         const q = query(
             collection(db, "notifications"),
-            where("uid", "==", user.uid),
-            orderBy("timestamp", "desc")
+            where("uid", "==", user.uid)
+            // orderBy("timestamp", "desc") // Desactivado para evitar errores de índice
         );
 
         const unsub = onSnapshot(q, (snap) => {
-            setNotifications(
-                snap.docs.map(d => ({ id: d.id, ...d.data() } as Notification))
-            );
+            console.log(`[NotifV2] Snapshot recibido. Size: ${snap.size}`);
+            
+            if (snap.size === 0) {
+                console.warn(`[NotifV2] No se encontraron documentos para UID: ${user.uid}. Verificando base de datos...`);
+            }
+
+            const data = snap.docs.map(d => ({ 
+                id: d.id, 
+                ...d.data() 
+            } as Notification));
+
+            // Ordenamiento manual robusto
+            const sortedData = data.sort((a, b) => {
+                const getTime = (notif: Notification) => {
+                    const ts = notif.timestamp;
+                    if (!ts) return Date.now();
+                    if (ts.toMillis) return ts.toMillis();
+                    if (ts.seconds) return ts.seconds * 1000;
+                    return new Date(ts).getTime();
+                };
+                return getTime(b) - getTime(a);
+            });
+
+            console.log("[NotifV2] Notificaciones cargadas satisfactoriamente:", sortedData.length);
+            setNotifications(sortedData);
         }, (error) => {
-            console.error("Notification listener error:", error);
+            console.error("[NotifV2] ERROR CRÍTICO FIRESTORE:", error.code, error.message);
+            if (error.code === "permission-denied") {
+                console.error("[NotifV2] Error de permisos. Revisa firestore.rules para la colección 'notifications'");
+            }
         });
 
         return () => unsub();
