@@ -133,37 +133,33 @@ service cloud.firestore {
       }
     }
 
-    // Trades - Protocolo V31.1 P2P Fix + V43.0 Visibility Fix
+    // Trades - Protocolo V43.2 (Anti-Lock & Discovery Fix)
     match /trades/{tradeId} {
       allow read: if request.auth != null && (
         isAdmin() || 
-        request.auth.uid == resource.data.participants.senderId || 
-        request.auth.uid == resource.data.participants.receiverId ||
-        request.auth.uid == resource.data.highest_bidder_uid ||
-        resource.data.isPublicOrder == true
+        resource == null || 
+        (resource != null && resource.data.isPublicOrder == true) ||
+        (resource != null && request.auth.uid == resource.data.participants.senderId) || 
+        (resource != null && request.auth.uid == resource.data.participants.receiverId)
       );
       
       allow create: if request.auth != null;
       
       allow update: if request.auth != null && (
         isAdmin() ||
-        request.auth.uid == resource.data.participants.senderId || 
-        request.auth.uid == resource.data.participants.receiverId ||
-        request.auth.uid == resource.data.highest_bidder_uid ||
-        (resource.data.isPublicOrder == true && request.resource.data.highest_bidder_uid == request.auth.uid)
+        (resource != null && request.auth.uid == resource.data.participants.senderId) || 
+        (resource != null && request.auth.uid == resource.data.participants.receiverId) ||
+        (resource != null && resource.data.isPublicOrder == true && request.resource.data.highest_bidder_uid == request.auth.uid)
       );
 
       match /conversations/{conversationId} {
-        // V43.0: Eliminada la dependencia de /usernames/ para evitar bloqueos a usuarios nuevos
-        allow read: if request.auth != null && (
+        // V43.2: Anti-Lock Privacy. Solo el comprador y el vendedor leen.
+        allow read, write: if request.auth != null && (
           isAdmin() ||
-          (resource != null && (resource.data.buyerId == request.auth.uid || resource.data.sellerId == request.auth.uid)) ||
-          (resource == null && (request.resource.data.buyerId == request.auth.uid || request.resource.data.sellerId == request.auth.uid))
-        );
-        allow write: if request.auth != null && (
-          isAdmin() ||
-          (resource != null && (resource.data.buyerId == request.auth.uid || resource.data.sellerId == request.auth.uid)) ||
-          (resource == null && (request.resource.data.buyerId == request.auth.uid || request.resource.data.sellerId == request.auth.uid))
+          resource == null || 
+          resource.data.buyerId == request.auth.uid || 
+          resource.data.sellerId == request.auth.uid ||
+          (resource == null && request.resource.data.buyerId == request.auth.uid)
         );
         
         match /messages/{messageId} {

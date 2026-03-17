@@ -665,6 +665,7 @@ export const tradeService = {
         const buyerUsername = buyerName.startsWith('@') ? buyerName : `@${buyerName}`;
         
         console.log(`[V43.0] ANALISIS DE CRUCE MAESTRO -> tradeId: ${tradeId}`);
+        console.log(`[P2P-CHECK] Buscando dueño del ítem: ${tradeId}`);
         
         let sellerId: string | null = null;
         let title = "Disco Desconocido";
@@ -709,7 +710,7 @@ export const tradeService = {
         // --- MASTER CROSS-REFERENCE GUARD ---
         if (!sellerId) {
             console.error(`[V43.0] CRITICAL FAILURE: Master Cross-reference found 0 owners for item ${tradeId}`);
-            throw new Error("ARTICULO_NO_ENCONTRADO_EN_FLUJO_V43");
+            throw new Error("PROPIEDAD_NO_ENCONTRADA_EN_P2P");
         }
 
         // HEALING: Ensure Trade record exists and is synced with master source
@@ -722,6 +723,7 @@ export const tradeService = {
                 },
                 type: 'direct_sale',
                 status: 'pending',
+                isPublicOrder: true, // V43.2: Permite visibilidad para múltiples compradores
                 is_admin_offer: (sellerId === ADMIN_UID),
                 manifest: {
                     requestedItems: [tradeId],
