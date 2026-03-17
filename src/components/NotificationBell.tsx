@@ -44,51 +44,23 @@ export default function NotificationBell() {
 
     // Real-time listener for user's notifications
     useEffect(() => {
-        if (!user) {
-            console.log("[NotifV2] Esperando usuario...");
-            return;
-        }
+        if (!user) return;
 
-        console.log(`[NotifV2] Iniciando listener Maestro. Mi UID es: ${user.uid}`);
-        
-        // Diagnóstico: Probamos con 'uid' pero dejamos listo el fallback
+        // Protocol V56.11: Use 'user_id' because it has a composite index with 'timestamp'
         const q = query(
             collection(db, "notifications"),
-            where("uid", "==", user.uid)
-            // orderBy("timestamp", "desc") // Desactivado para evitar errores de índice
+            where("user_id", "==", user.uid),
+            orderBy("timestamp", "desc")
         );
 
         const unsub = onSnapshot(q, (snap) => {
-            console.log(`[NotifV2] Snapshot recibido. Size: ${snap.size}`);
-            
-            if (snap.size === 0) {
-                console.warn(`[NotifV2] No se encontraron documentos para UID: ${user.uid}. Verificando base de datos...`);
-            }
-
             const data = snap.docs.map(d => ({ 
                 id: d.id, 
                 ...d.data() 
             } as Notification));
-
-            // Ordenamiento manual robusto
-            const sortedData = data.sort((a, b) => {
-                const getTime = (notif: Notification) => {
-                    const ts = notif.timestamp;
-                    if (!ts) return Date.now();
-                    if (ts.toMillis) return ts.toMillis();
-                    if (ts.seconds) return ts.seconds * 1000;
-                    return new Date(ts).getTime();
-                };
-                return getTime(b) - getTime(a);
-            });
-
-            console.log("[NotifV2] Notificaciones cargadas satisfactoriamente:", sortedData.length);
-            setNotifications(sortedData);
+            setNotifications(data);
         }, (error) => {
-            console.error("[NotifV2] ERROR CRÍTICO FIRESTORE:", error.code, error.message);
-            if (error.code === "permission-denied") {
-                console.error("[NotifV2] Error de permisos. Revisa firestore.rules para la colección 'notifications'");
-            }
+            console.error("[NotifV2] Error en listener:", error.code, error.message);
         });
 
         return () => unsub();
