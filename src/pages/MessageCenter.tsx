@@ -31,26 +31,38 @@ export default function MessageCenter() {
         if (!user) return;
 
         setLoading(true);
-        console.log("[MessageCenter] Initializing conversation snapshot for:", user.uid, dbUser?.username);
+        console.log("[InboxV2] Initializing modern snapshot for:", user.uid);
         
-        const unsub = tradeService.onSnapshotUserConversations(user.uid, dbUser?.username || null, (convs) => {
-            console.log("[MessageCenter] Snapshot received:", convs.length, "conversations");
-            setConversations(convs);
+        const unsub = tradeService.onSnapshotP2PChats(user.uid, (chats) => {
+            console.log("[InboxV2] Chats received:", chats.length);
+            setConversations(chats);
             
-            // Auto-select chat from URL if present
+            // Auto-Apertura (Protocolo V56.0)
             if (chatIdFromUrl) {
-                const found = convs.find(c => c.id === chatIdFromUrl || c.tradeId === chatIdFromUrl);
-                if (found) setSelectedConv(found);
+                const found = chats.find(c => 
+                    c.id === chatIdFromUrl || 
+                    c.tradeId === chatIdFromUrl || 
+                    c.id?.includes(chatIdFromUrl) ||
+                    (c.tradeId && chatIdFromUrl.includes(c.tradeId))
+                );
+                
+                if (found) {
+                    console.log("[InboxV2] Auto-selecting chat found:", found.id);
+                    setSelectedConv(found);
+                } else {
+                    console.log("[InboxV2] No matching chat found for URL ID:", chatIdFromUrl);
+                }
             }
             setLoading(false);
         });
 
         return () => unsub();
-    }, [user, dbUser, chatIdFromUrl]);
+    }, [user, chatIdFromUrl]);
 
     const filteredConversations = conversations.filter(c => 
         c.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.buyerName?.toLowerCase().includes(searchTerm.toLowerCase())
+        c.buyerUsername?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        c.sellerUsername?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     if (!user) return null;
@@ -90,12 +102,12 @@ export default function MessageCenter() {
                     ) : (
                         filteredConversations.map((conv) => {
                             const isMeSeller = conv.sellerId === user.uid;
-                            const otherPartyName = isMeSeller ? conv.buyerName : (conv.sellerName || "Vendedor");
-                            const isSelected = selectedConv?._path === conv._path;
+                            const otherPartyName = isMeSeller ? conv.buyerUsername : (conv.sellerUsername || "Vendedor");
+                            const isSelected = selectedConv?.id === conv.id;
 
                             return (
                                 <button
-                                    key={conv._path}
+                                    key={conv.id}
                                     onClick={() => setSelectedConv(conv)}
                                     className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all group ${
                                         isSelected 

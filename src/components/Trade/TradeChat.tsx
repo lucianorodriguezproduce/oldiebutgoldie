@@ -59,14 +59,31 @@ export default function TradeChat({ tradeId, currentUser, trade, otherParticipan
             return;
         }
 
-        const unsub = conversationId 
-            ? tradeService.onSnapshotPrivateMessages(tradeId, conversationId, callback)
-            : tradeService.onSnapshotMessages(tradeId, callback);
+        // Protocolo V56.0: Priorizamos Inbox V2 si el id parece un chatId o si tenemos un id de chat directo
+        // En MessageCenter p2p_chats el id ya es `${tradeId}_${buyerId}`
+        
+        console.log("[InboxV2] Initializing TradeChat listener for:", tradeId);
+        
+        // Si el tradeId ya contiene el guión bajo, es un chatId de p2p_chats
+        const isV2ChatId = tradeId.includes('_');
+        const finalChatId = isV2ChatId ? tradeId : (trade?.buyerId ? `${tradeId}_${trade.buyerId}` : null);
+
+        let unsub: any;
+        
+        if (finalChatId) {
+            console.log("[InboxV2] Subscribing to flat collection:", finalChatId);
+            unsub = tradeService.onSnapshotP2PMessages(finalChatId, callback);
+        } else {
+            console.log("[InboxV2] Fallback to legacy messages for trade:", tradeId);
+            unsub = conversationId 
+                ? tradeService.onSnapshotPrivateMessages(tradeId, conversationId, callback)
+                : tradeService.onSnapshotMessages(tradeId, callback);
+        }
             
         return () => {
             if (unsub) unsub();
         };
-    }, [tradeId, conversationId]);
+    }, [tradeId, conversationId, trade?.buyerId]);
 
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -74,6 +91,8 @@ export default function TradeChat({ tradeId, currentUser, trade, otherParticipan
 
         setIsSending(true);
         try {
+            // Protocolo V55.0 / V56.0: sendPrivateMessage ya maneja el Dual-Write
+            // Si no tenemos conversationId (legacy), seguimos usando sendMessage (que es para admin trades)
             if (conversationId) {
                 await tradeService.sendPrivateMessage(tradeId, conversationId, currentUser.uid, newMessage.trim());
             } else {

@@ -1297,5 +1297,48 @@ export const tradeService = {
             const p2pMessageRef = doc(collection(db, "p2p_chats", chatId, "messages"));
             transaction.set(p2pMessageRef, systemMessage);
         });
+    },
+
+    /**
+     * Listen for P2P chats where user is a participant (Inbox V2)
+     */
+    onSnapshotP2PChats(userId: string, callback: (chats: any[]) => void) {
+        console.log(`[InboxV2] Listening for chats for user: ${userId}`);
+        const q = query(
+            collection(db, "p2p_chats"),
+            where("participants", "array-contains", userId),
+            orderBy("updatedAt", "desc")
+        );
+
+        return onSnapshot(q, (snapshot) => {
+            const chats = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            callback(chats);
+        }, (error) => {
+            console.error("[InboxV2] Snapshot error:", error);
+        });
+    },
+
+    /**
+     * Listen for messages in a specific P2P chat (Inbox V2)
+     */
+    onSnapshotP2PMessages(chatId: string, callback: (messages: any[]) => void) {
+        console.log(`[InboxV2] New listener for chat messages: ${chatId}`);
+        const q = query(
+            collection(db, "p2p_chats", chatId, "messages"),
+            orderBy("timestamp", "asc")
+        );
+
+        return onSnapshot(q, (snapshot) => {
+            const messages = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            callback(messages);
+        }, (error) => {
+            console.error("[InboxV2] Messages snapshot error:", error);
+        });
     }
 };
