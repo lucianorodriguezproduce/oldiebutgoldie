@@ -7,7 +7,6 @@ import { useState, useEffect } from "react";
 import NotificationBell from "@/components/NotificationBell";
 import { db } from "@/lib/firebase";
 import { doc, onSnapshot } from "firebase/firestore";
-import { useOrderNotifications } from "@/hooks/useOrderNotifications";
 import { siteConfigService } from "@/services/siteConfigService";
 import type { SiteConfig } from "@/services/siteConfigService";
 
@@ -15,7 +14,6 @@ export const Navbar = () => {
     const location = useLocation();
     const { user, isAdmin, logout } = useAuth();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const { hasActiveOffer } = useOrderNotifications();
     const [config, setConfig] = useState<SiteConfig | null>(null);
 
     // Phase III: Real-time Config Sync y Favicon Dinámico (V11.0)
@@ -118,29 +116,6 @@ export const Navbar = () => {
                                         <span className="text-[10px] font-black text-gray-400 truncate max-w-[100px] uppercase tracking-widest group-hover:text-white transition-colors">
                                             {user.displayName || user.email?.split("@")[0]}
                                         </span>
-
-                                        {/* Notification Indicator Dot */}
-                                        {hasActiveOffer && (
-                                            <div className="absolute -top-1 -right-1 z-10">
-                                                <motion.span
-                                                    animate={{
-                                                        scale: [1, 1.5, 1],
-                                                        opacity: [0.8, 0, 0.8]
-                                                    }}
-                                                    transition={{
-                                                        duration: 2,
-                                                        repeat: Infinity,
-                                                        ease: "easeInOut"
-                                                    }}
-                                                    className="absolute inset-0 w-3 h-3 bg-secondary rounded-full blur-[2px]"
-                                                />
-                                                <motion.span
-                                                    initial={{ scale: 0 }}
-                                                    animate={{ scale: 1 }}
-                                                    className="relative block w-3 h-3 bg-secondary rounded-full border-2 border-black shadow-[0_0_10px_rgba(255,77,0,0.8)]"
-                                                />
-                                            </div>
-                                        )}
                                     </Link>
                                     <button
                                         onClick={() => logout()}
@@ -203,29 +178,6 @@ export const Navbar = () => {
                                             <span className="uppercase tracking-[0.2em] font-black text-xs">{user.displayName || user.email?.split("@")[0]}</span>
                                             <span className="text-[9px] text-gray-500 font-bold tracking-widest uppercase">{TEXTS.global.navigation.profile}</span>
                                         </div>
-
-                                        {/* Mobile Notification Indicator Dot */}
-                                        {hasActiveOffer && (
-                                            <div className="absolute top-4 right-6 z-10">
-                                                <motion.span
-                                                    animate={{
-                                                        scale: [1, 2, 1],
-                                                        opacity: [0.6, 0, 0.6]
-                                                    }}
-                                                    transition={{
-                                                        duration: 2,
-                                                        repeat: Infinity,
-                                                        ease: "easeInOut"
-                                                    }}
-                                                    className="absolute inset-0 w-4 h-4 bg-secondary rounded-full blur-[4px]"
-                                                />
-                                                <motion.span
-                                                    initial={{ scale: 0 }}
-                                                    animate={{ scale: 1 }}
-                                                    className="relative block w-4 h-4 bg-secondary rounded-full border-2 border-[#0A0A0A] shadow-[0_0_15px_rgba(255,77,0,0.8)]"
-                                                />
-                                            </div>
-                                        )}
                                     </Link>
                                     <button
                                         onClick={() => logout()}

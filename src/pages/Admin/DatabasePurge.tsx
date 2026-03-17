@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { Trash2, AlertTriangle, ShieldCheck, Database, RefreshCw } from "lucide-react";
 import { useLote } from "@/context/LoteContext";
 
-const TARGET_COLLECTIONS = ["orders", "trades", "purchase_requests", "user_assets", "leads", "interactions", "missed_searches", "inventory"];
+const TARGET_COLLECTIONS = ["orders", "trades", "purchase_requests", "user_assets", "leads", "interactions", "missed_searches", "inventory", "p2p_chats"];
 
 export default function DatabasePurge() {
     const [isPurging, setIsPurging] = useState(false);
@@ -23,7 +23,7 @@ export default function DatabasePurge() {
             const collectionsToDelete = [
                 "orders", "trades", "purchase_requests", "leads",
                 "interactions", "missed_searches", "user_assets", "notifications",
-                "inventory", "lotes", "articles", "analytics_intents", "p2p_market"
+                "inventory", "lotes", "articles", "analytics_intents", "p2p_market", "p2p_chats"
             ];
 
             for (const coll of collectionsToDelete) {

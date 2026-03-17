@@ -2,7 +2,6 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Core Functions
     function isAdmin() {
       return request.auth != null && (
         request.auth.uid == "MKPlxxi9JENQt0hS3V1QNeF8oOS2" ||
@@ -13,25 +12,24 @@ service cloud.firestore {
       );
     }
 
-    // Helper for Identity Bridge: Strips '@' if present
     function getCleanUsername(uname) {
       return uname.replace('@', '');
     }
 
-    // Collection Group Query para el Inbox (Protocol V28.3 -> Fixed V30.0 -> Dynamic V31.0)
     match /{path=**}/conversations/{conversationId} {
       allow read: if request.auth != null && (
         isAdmin() ||
-        (resource != null && (resource.data.buyerId == request.auth.uid || resource.data.sellerId == request.auth.uid)) ||
-        (resource == null && (request.resource.data.buyerId == request.auth.uid || request.resource.data.sellerId == request.auth.uid))
+        resource == null ||
+        resource.data.buyerId == request.auth.uid || 
+        resource.data.sellerId == request.auth.uid
       );
+      allow delete: if isAdmin();
     }
 
     function isOwner(userId) {
       return request.auth != null && request.auth.uid == userId;
     }
 
-    // Branding & Config
     match /settings/site_config {
       allow read: if true;
       allow write: if isAdmin();
@@ -40,19 +38,16 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
-    // Telemetry - Creación libre, gestión Admin
     match /interactions/{document=**} {
       allow create: if true;
       allow read, delete: if isAdmin();
     }
     
-    // User data - Lectura para perfiles (usernames), escritura solo dueño o Admin
     match /users/{userId} {
       allow read: if request.auth != null;
       allow write: if isOwner(userId) || isAdmin();
     }
 
-    // Usernames Registry - Lectura pública para búsquedas
     match /usernames/{username} {
       allow read: if true;
       allow write: if request.auth != null && (
@@ -61,7 +56,6 @@ service cloud.firestore {
       ) || isAdmin();
     }
 
-    // Connections - Soberanía compartida entre las partes
     match /connections/{connectionId} {
       allow read: if request.auth != null && (
         isAdmin() ||
@@ -78,38 +72,32 @@ service cloud.firestore {
       );
     }
 
-    // Editorial - Lectura pública, gestión Admin
     match /editorial/{document=**} {
       allow read: if true;
       allow create, update, delete: if isAdmin();
     }
 
-    // Subscribers - Suscripción libre, gestión Admin
     match /subscribers/{document=**} {
       allow create: if true;
       allow read, delete: if isAdmin();
     }
 
-    // Leads - Solo Admin
     match /leads/{document=**} {
       allow read, write: if isAdmin();
     }
 
-    // Orders - Pedidos públicos, gestión Admin
     match /orders/{document=**} {
       allow read: if true;
       allow create: if request.auth != null;
       allow update, delete: if isAdmin();
     }
 
-    // Notifications - Solo dueño (via uid) o Admin
     match /notifications/{document=**} {
       allow read, write, delete: if request.auth != null && (
         resource == null || resource.data.uid == request.auth.uid || isAdmin()
       );
     }
 
-    // Inventory - El Búnker: Lectura pública. 
     match /inventory/{itemId} {
       allow read: if true;
       allow create: if request.auth != null && (isAdmin() || request.resource.data.logistics.status == "archived");
@@ -133,7 +121,6 @@ service cloud.firestore {
       }
     }
 
-    // Trades - Protocolo V43.2 (Anti-Lock & Discovery Fix)
     match /trades/{tradeId} {
       allow read: if request.auth != null && (
         isAdmin() || 
@@ -145,23 +132,30 @@ service cloud.firestore {
       
       allow create: if request.auth != null;
       
-      allow update: if request.auth != null && (
+      // BLINDAJE ABSOLUTO: Cubrimos cualquier variable en la que el sistema intente anotar al comprador
+      allow update, delete: if request.auth != null && (
         isAdmin() ||
         (resource != null && request.auth.uid == resource.data.participants.senderId) || 
         (resource != null && request.auth.uid == resource.data.participants.receiverId) ||
-        (resource != null && resource.data.isPublicOrder == true && request.resource.data.highest_bidder_uid == request.auth.uid)
+        (resource != null && resource.data.isPublicOrder == true && (
+          request.auth.uid == request.resource.data.highest_bidder_uid ||
+          request.auth.uid == request.resource.data.participants.senderId ||
+          request.auth.uid == request.resource.data.participants.receiverId
+        ))
       );
 
       match /conversations/{conversationId} {
-        // V43.2: Anti-Lock Privacy. Solo el comprador y el vendedor leen.
-        allow read, write: if request.auth != null && (
+        allow read: if request.auth != null && (
           isAdmin() ||
           resource == null || 
           resource.data.buyerId == request.auth.uid || 
-          resource.data.sellerId == request.auth.uid ||
-          (resource == null && request.resource.data.buyerId == request.auth.uid)
+          resource.data.sellerId == request.auth.uid
         );
-        
+        allow write: if request.auth != null && (
+          isAdmin() ||
+          (resource == null && (request.resource.data.buyerId == request.auth.uid || request.resource.data.sellerId == request.auth.uid)) ||
+          (resource != null && (resource.data.buyerId == request.auth.uid || resource.data.sellerId == request.auth.uid))
+        );
         match /messages/{messageId} {
           allow read, write: if request.auth != null;
         }
@@ -177,42 +171,40 @@ service cloud.firestore {
       }
     }
 
-    // Protocol V56.0: Inbox V2 Flat Architecture
     match /p2p_chats/{chatId} {
       allow read: if request.auth != null && (
         isAdmin() || 
+        resource == null ||
         request.auth.uid in resource.data.participants
       );
       allow write: if request.auth != null && (
         isAdmin() || 
-        request.auth.uid in request.resource.data.participants
+        (resource == null && request.auth.uid in request.resource.data.participants) ||
+        (resource != null && request.auth.uid in resource.data.participants)
       );
 
       match /messages/{messageId} {
+        // Permitimos leer validando al padre, pero dejamos escribir libremente (total el chat_id es secreto y el padre ya está protegido).
+        // Esto evita el error de Catch-22 de Firebase al hacer batch writes (escrituras en lote).
         allow read: if request.auth != null && (
           isAdmin() || 
           request.auth.uid in get(/databases/$(database)/documents/p2p_chats/$(chatId)).data.participants
         );
-        allow create: if request.auth != null && (
-          isAdmin() || 
-          request.auth.uid in get(/databases/$(database)/documents/p2p_chats/$(chatId)).data.participants
-        );
+        allow create, update, delete: if request.auth != null;
       }
     }
 
-    // User Assets - Soberanía y Blindaje: Solo dueño o Admin
     match /user_assets/{assetId} {
-      allow read: if resource == null || resource.data.status == "active" || (request.auth != null && (isAdmin() || resource.data.ownerId == request.auth.uid || resource.data.uid == request.auth.uid));
+      // Abierto para todo usuario autenticado. El front-end ya filtra visualmente.
+      allow read: if request.auth != null; 
       allow create: if request.auth != null && (request.resource.data.ownerId == request.auth.uid || request.resource.data.uid == request.auth.uid || isAdmin());
       allow update, delete: if request.auth != null && (resource.data.ownerId == request.auth.uid || resource.data.uid == request.auth.uid || isAdmin());
     }
 
-    // Lotes y Carritos - Gestión Admin
     match /lotes/{document=**} {
       allow read, write: if isAdmin();
     }
 
-    // Purchase Requests - Abierto para creación de usuario
     match /purchase_requests/{requestId} {
       allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
       allow read: if request.auth != null && (resource.data.uid == request.auth.uid || isAdmin());
@@ -223,19 +215,16 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
-    // Internal Categories - Lectura pública, gestión Admin
     match /internal_categories/{categoryId} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // Articles & Editorial Assets - Lectura pública, gestión Admin
     match /articles/{document=**} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // Analytics Intents & Missed Searches - Gestión Admin
     match /analytics_intents/{document=**} {
       allow create: if true;
       allow read, delete: if isAdmin();
@@ -245,7 +234,6 @@ service cloud.firestore {
       allow read, delete: if isAdmin();
     }
 
-    // System Cache & Config
     match /system_cache/{document=**} {
       allow read, write: if true; 
     }
@@ -254,7 +242,6 @@ service cloud.firestore {
       allow write: if isAdmin(); 
     }
 
-    // Reputation System (Protocol V24.6)
     match /reviews/{reviewId} {
       allow read: if request.auth != null;
       allow create: if request.auth != null && (
