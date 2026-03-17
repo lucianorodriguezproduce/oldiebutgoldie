@@ -256,5 +256,26 @@ export const maintenanceService = {
             console.error("[Heal-V36.2] FATAL ERROR:", error);
             return `ERROR: ${error.message}`;
         }
+    },
+
+    /**
+     * Protocol V36.3 (Audit): Diagnóstico profundo.
+     * Lista todos los IDs en consola para inspección manual.
+     */
+    async diagnoseAllConversations() {
+        console.log("[Audit] Iniciando Diagnóstico de Red V36.3...");
+        const q = query(collectionGroup(db, "conversations"));
+        const snap = await getDocs(q);
+        
+        let report = [];
+        for (const docSnap of snap.docs) {
+            const data = docSnap.data() as any;
+            const path = docSnap.ref.path;
+            const meta = `[${path}] S:${data.sellerId} B:${data.buyerId} T:${data.tradeId}`;
+            console.log(meta);
+            report.push(meta);
+        }
+
+        return `Scaneados ${report.length} chats. Revisa la consola para el volcado de IDs.`;
     }
 };
