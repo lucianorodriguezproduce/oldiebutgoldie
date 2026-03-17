@@ -249,8 +249,16 @@ export default function Profile() {
                 cashAdjustment: finalPrice
             });
 
+            // Determinamos el destinatario (si soy el comprador, notifico al vendedor y viceversa)
+            const recipientId = (user.uid === (order.user_id || order.participants?.senderId))
+                ? (order.participants?.receiverId || ADMIN_UID)
+                : (order.user_id || order.participants?.senderId || ADMIN_UID);
+
+            console.log(`[NotifV2] Profile Success Response: sender=${user.uid} | recipient=${recipientId}`);
+
             await addDoc(collection(db, "notifications"), {
-                uid: order.user_id || order.participants?.receiverId || ADMIN_UID, // V43 STANDARD
+                uid: recipientId,
+                user_id: recipientId,
                 title: "Venta Finalizada 🎉",
                 message: `${user.displayName || 'Un cliente'} ha ACEPTADO el trato por la operación #${order.id?.slice(-6).toUpperCase()}.`,
                 read: false,
@@ -272,6 +280,7 @@ export default function Profile() {
     };
 
     const handleCounterOffer = async (order: any) => {
+        if (!user) return;
         const priceVal = parseFloat(counterOfferPrice);
         if (isNaN(priceVal) || priceVal <= 0) return;
 
@@ -290,8 +299,16 @@ export default function Profile() {
                 })
             });
 
+            // Determinamos el destinatario
+            const recipientId = (user.uid === (order.user_id || order.participants?.senderId))
+                ? (order.participants?.receiverId || ADMIN_UID)
+                : (order.user_id || order.participants?.senderId || ADMIN_UID);
+
+            console.log(`[NotifV2] Profile Counter Response: sender=${user.uid} | recipient=${recipientId}`);
+
             await addDoc(collection(db, "notifications"), {
-                uid: order.user_id || order.participants?.receiverId || ADMIN_UID, // V43 STANDARD
+                uid: recipientId,
+                user_id: recipientId,
                 title: "Nueva Contraoferta del Usuario",
                 message: `${user?.displayName || 'Cliente'} propone ${order.currency || '$'} ${priceVal.toLocaleString()} por el pedido ${order.order_number || order.id}.`,
                 read: false,
@@ -325,6 +342,26 @@ export default function Profile() {
             showLoading("Finalizando negociación...");
             try {
                 await tradeService.resolveTrade(trade.id, trade.manifest);
+
+                // Notificamos al otro participante (V43.1 Dual-Write)
+                const recipientId = (user.uid === trade.participants?.senderId)
+                    ? trade.participants?.receiverId
+                    : trade.participants?.senderId;
+
+                if (recipientId) {
+                    await addDoc(collection(db, "notifications"), {
+                        uid: recipientId,
+                        user_id: recipientId,
+                        title: "¡Trato Aceptado! 🤝",
+                        message: `${user.displayName || 'Tu contraparte'} ha aceptado los términos del intercambio.`,
+                        read: false,
+                        timestamp: serverTimestamp(),
+                        order_id: trade.id,
+                        type: "order",
+                        link: `/mensajes?chat=${trade.id}`
+                    });
+                }
+
                 alert("¡Trato hecho! El intercambio ha sido aceptado.");
                 fetchTrades();
                 setSelectedOrder((prev: any) => prev ? { ...prev, status: "completed" } : null);
@@ -346,6 +383,26 @@ export default function Profile() {
         showLoading("Enviando contraoferta...");
         try {
             await tradeService.counterTrade(selectedTrade.id, editedManifest, user.uid);
+
+            // Notificamos a la contraparte (V43.1 Dual-Write)
+            const recipientId = (user.uid === selectedTrade.participants?.senderId)
+                ? selectedTrade.participants?.receiverId
+                : selectedTrade.participants?.senderId;
+
+            if (recipientId) {
+                await addDoc(collection(db, "notifications"), {
+                    uid: recipientId,
+                    user_id: recipientId,
+                    title: "Nueva Contraoferta Recibida 🔄",
+                    message: `${user.displayName || 'Tu contraparte'} ha modificado los términos del intercambio.`,
+                    read: false,
+                    timestamp: serverTimestamp(),
+                    order_id: selectedTrade.id,
+                    type: "negotiation",
+                    link: `/mensajes?chat=${selectedTrade.id}`
+                });
+            }
+
             alert("Contraoferta enviada con éxito.");
             setIsEditing(false);
             fetchTrades();
@@ -411,6 +468,8 @@ export default function Profile() {
             counter_offer: { label: "Contraoferta Recibida", color: "bg-violet-500/10 text-violet-400 border-violet-500/20" },
             counteroffered: { label: "Esperando tu ok", color: "bg-secondary/10 text-secondary border-secondary/20" },
             contraoferta_usuario: { label: "En Revisión", color: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
+            pending_payment: { label: "Pendiente de Pago", color: "bg-orange-500/10 text-orange-400 border-orange-500/20" },
+            payment_confirmed: { label: "Pago Confirmado / Preparando", color: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
             confirmed: { label: "Confirmado", color: "bg-primary/10 text-primary border-primary/20" },
             venta_finalizada: { label: "Trato Cerrado", color: "bg-primary/10 text-primary border-primary/20" },
             completed: { label: "Completado", color: "bg-green-500/10 text-green-500 border-green-500/20" },
@@ -1096,7 +1155,35 @@ export default function Profile() {
                                 </div>
                             ) : (
                                 <>
-                                    {shouldShowActions && (
+                                    {selectedOrder.status === 'pending_payment' && (
+                                        <div className="flex flex-col gap-4">
+                                            {user?.uid === (selectedOrder.participants?.receiverId) ? (
+                                                <div className="bg-orange-500/5 rounded-2xl p-6 border border-orange-500/20 space-y-4">
+                                                    <div className="flex items-center gap-2">
+                                                        <Clock className="h-5 w-5 text-orange-500 animate-pulse" />
+                                                        <span className="text-xs font-black uppercase tracking-widest text-orange-500">Acción Requerida (Vendedor)</span>
+                                                    </div>
+                                                    <p className="text-sm font-bold text-white">Has vendido este ítem. Verifica tu cuenta y marca como recibido cuando impacte el pago.</p>
+                                                    <button 
+                                                        onClick={() => console.log('Protocolo V58.1 - Fase 3: Marcar Pago Recibido')}
+                                                        className="w-full py-4 bg-orange-500 text-black rounded-xl font-black uppercase tracking-widest hover:bg-white transition-all shadow-lg shadow-orange-500/20"
+                                                    >
+                                                        Marcar Pago Recibido
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div className="bg-blue-500/5 rounded-2xl p-6 border border-blue-500/20 space-y-4">
+                                                    <div className="flex items-center gap-2">
+                                                        <Clock className="h-5 w-5 text-blue-400" />
+                                                        <span className="text-xs font-black uppercase tracking-widest text-blue-400">Estado del Pago (Comprador)</span>
+                                                    </div>
+                                                    <p className="text-sm font-bold text-white italic">Esperando que el vendedor confirme la recepción de tu pago.</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {shouldShowActions && selectedOrder.status !== 'pending_payment' && (
                                         <div className="flex flex-col gap-4">
                                             {/* Admin Counter-Offer */}
                                             {hasAdminOffer && (

@@ -238,6 +238,7 @@ export const tradeService = {
             ? ` (${newManifest.currency === 'USD' ? 'US$' : '$'} ${Math.abs(newManifest.cashAdjustment).toLocaleString()})`
             : '';
         await addDoc(collection(db, "notifications"), {
+            uid: nextTurn,
             user_id: nextTurn,
             title: "Contraoferta Recibida",
             message: `Se ha modificado la propuesta de intercambio #${tradeId.slice(-8).toUpperCase()}${cashLabel}. Revisá los nuevos términos.`,
@@ -625,6 +626,7 @@ export const tradeService = {
             const notifRef = doc(collection(db, "notifications"));
             transaction.set(notifRef, {
                 uid: tradeData.participants.senderId, // Dueño del disco (V43 standardized)
+                user_id: tradeData.participants.senderId, // Dual-Write V43.1
                 title: "Nueva oferta 💸",
                 message: `${username} ofertó $${amount.toLocaleString()} por tu disco.`,
                 read: false,
@@ -682,6 +684,7 @@ export const tradeService = {
             const notificationRef = doc(collection(db, "notifications"));
             transaction.set(notificationRef, {
                 uid: tradeData.highest_bidder_uid, // V43 STANDARD: Primary identity field
+                user_id: tradeData.highest_bidder_uid, // Dual-Write V43.1
                 title: "¡Ganaste la Subasta!",
                 message: `El vendedor aceptó tu oferta por "${tradeData.manifest.items?.[0]?.title || 'el disco'}". El chat de coordinación está abierto.`,
                 read: false,
@@ -1047,6 +1050,20 @@ export const tradeService = {
                 "stats.rating_count": newCount,
                 updatedAt: serverTimestamp()
             });
+
+            // 4. Notification for Reviewee - V43.1 Dual-Write
+            const notifRef = doc(collection(db, "notifications"));
+            transaction.set(notifRef, {
+                uid: review.reviewee_uid,
+                user_id: review.reviewee_uid,
+                title: "¡Nueva Reseña! ⭐",
+                message: `Has recibido una calificación de ${review.rating} estrellas por la operación #${tradeId.slice(-6).toUpperCase()}.`,
+                read: false,
+                timestamp: serverTimestamp(),
+                order_id: tradeId,
+                type: "order",
+                link: `/perfil?order=${tradeId}`
+            });
         });
     },
 
@@ -1088,6 +1105,23 @@ export const tradeService = {
                 winnerProposalId: proposalId,
                 resolvedAt: serverTimestamp()
             });
+
+            // 4. Notification for Winner - V43.1 Dual-Write
+            const winnerId = proposalSnap.data()?.senderId;
+            if (winnerId) {
+                const notifRef = doc(collection(db, "notifications"));
+                transaction.set(notifRef, {
+                    uid: winnerId,
+                    user_id: winnerId,
+                    title: "¡Oferta Ganadora! 🎉",
+                    message: `Tu propuesta para el intercambio #${tradeId.slice(-6).toUpperCase()} fue aceptada.`,
+                    read: false,
+                    timestamp: serverTimestamp(),
+                    order_id: tradeId,
+                    type: "order",
+                    link: `/perfil?order=${tradeId}`
+                });
+            }
 
             // INVARIANT: Transfer items (Phase IV Optimization)
             // Here we would ideally loop through proposal manifest items 
@@ -1185,6 +1219,20 @@ export const tradeService = {
             };
 
             transaction.set(p2pMessageRef, systemMessage);
+
+            // 5. Notification for Seller (Buy Now Success) - V43.1 Dual-Write
+            const notifRef = doc(collection(db, "notifications"));
+            transaction.set(notifRef, {
+                uid: sellerId,
+                user_id: sellerId,
+                title: "¡Venta Directa! 💰",
+                message: `${buyerUsername} compró "${currentTradeData.manifest?.items?.[0]?.title || 'tu disco'}". Coordinen el envío.`,
+                read: false,
+                timestamp: serverTimestamp(),
+                order_id: tradeId,
+                type: "chat",
+                link: `/mensajes?chat=${chatId}`
+            });
         });
     },
 

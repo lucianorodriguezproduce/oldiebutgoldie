@@ -194,6 +194,20 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                         <span className="text-[10px] uppercase tracking-widest font-black text-red-500">{statusLabel}</span>
                     </div>
                 );
+            case 'pending_payment':
+                return (
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20 backdrop-blur-md">
+                        <Clock className="w-3.5 h-3.5 text-orange-500 animate-pulse" />
+                        <span className="text-[10px] uppercase tracking-widest font-black text-orange-500">Pendiente de Pago</span>
+                    </div>
+                );
+            case 'payment_confirmed':
+                return (
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 backdrop-blur-md">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-blue-400" />
+                        <span className="text-[10px] uppercase tracking-widest font-black text-blue-400">Pago Confirmado / Preparando</span>
+                    </div>
+                );
             case 'pending':
             default:
                 return (
@@ -529,6 +543,27 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                                 </Link>
                             )
                         )
+                    )}
+
+                    {/* P2P PAYMENT FLOW (Protocol V58.1 Phase 1) */}
+                    {status === 'pending_payment' && (
+                        <div className="w-full mt-auto pt-4 border-t border-white/5 space-y-3">
+                            {user?.uid === (order.participants?.receiverId || order.ownerId) ? (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        console.log('Protocolo V58.1 - Fase 3: Marcar Pago Recibido (OrderCard)');
+                                    }}
+                                    className="w-full px-6 py-4 bg-orange-500 text-black font-black uppercase tracking-widest text-[11px] md:text-sm rounded-xl shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 transition-all text-center"
+                                >
+                                    Marcar Pago Recibido
+                                </button>
+                            ) : (
+                                <div className="w-full px-6 py-4 bg-blue-500/10 border border-blue-500/20 text-blue-400 font-black uppercase tracking-widest text-[10px] md:text-xs rounded-xl text-center italic">
+                                    Esperando confirmación del vendedor
+                                </div>
+                            )}
+                        </div>
                     )}
 
                     <DirectPurchaseModal 
