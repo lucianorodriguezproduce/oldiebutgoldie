@@ -17,10 +17,10 @@ interface TradeChatProps {
     currentUser: any;
     trade: any;
     otherParticipantName: string;
-    conversationId?: string; // Standardized: Always includes @username
+    chatId?: string; // Protocolo V56.6: Unified native V2 ID
 }
 
-export default function TradeChat({ tradeId, currentUser, trade, otherParticipantName, conversationId }: TradeChatProps) {
+export default function TradeChat({ tradeId, currentUser, trade, otherParticipantName, chatId }: TradeChatProps) {
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState("");
     const [isSending, setIsSending] = useState(false);
@@ -59,31 +59,18 @@ export default function TradeChat({ tradeId, currentUser, trade, otherParticipan
             return;
         }
 
-        // Protocolo V56.0: Priorizamos Inbox V2 si el id parece un chatId o si tenemos un id de chat directo
-        // En MessageCenter p2p_chats el id ya es `${tradeId}_${buyerId}`
+        // Protocolo V56.6: NATIVO V2
+        // El id proporcionado (chatId o tradeId derivado) debe ser un ID de p2p_chats
         
-        console.log("[InboxV2] Initializing TradeChat listener for:", tradeId);
+        const finalChatId = chatId || (trade?.buyerId ? `${tradeId}_${trade.buyerId}` : tradeId);
         
-        // Si el tradeId ya contiene el guión bajo, es un chatId de p2p_chats
-        const isV2ChatId = tradeId.includes('_');
-        const finalChatId = isV2ChatId ? tradeId : (trade?.buyerId ? `${tradeId}_${trade.buyerId}` : null);
-
-        let unsub: any;
-        
-        if (finalChatId) {
-            console.log("[InboxV2] Subscribing to flat collection:", finalChatId);
-            unsub = tradeService.onSnapshotP2PMessages(finalChatId, callback);
-        } else {
-            console.log("[InboxV2] Fallback to legacy messages for trade:", tradeId);
-            unsub = conversationId 
-                ? tradeService.onSnapshotPrivateMessages(tradeId, conversationId, callback)
-                : tradeService.onSnapshotMessages(tradeId, callback);
-        }
+        console.log("[InboxV2] Subscribing to native chat:", finalChatId);
+        const unsub = tradeService.onSnapshotP2PMessages(finalChatId, callback);
             
         return () => {
             if (unsub) unsub();
         };
-    }, [tradeId, conversationId, trade?.buyerId]);
+    }, [tradeId, chatId, trade?.buyerId]);
 
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -91,13 +78,9 @@ export default function TradeChat({ tradeId, currentUser, trade, otherParticipan
 
         setIsSending(true);
         try {
-            // Protocolo V55.0 / V56.0: sendPrivateMessage ya maneja el Dual-Write
-            // Si no tenemos conversationId (legacy), seguimos usando sendMessage (que es para admin trades)
-            if (conversationId) {
-                await tradeService.sendPrivateMessage(tradeId, conversationId, currentUser.uid, newMessage.trim());
-            } else {
-                await tradeService.sendMessage(tradeId, currentUser.uid, newMessage.trim());
-            }
+            // Protocolo V56.6: sendPrivateMessage ahora solo acepta chatId nativo
+            const finalChatId = chatId || (trade?.buyerId ? `${tradeId}_${trade.buyerId}` : tradeId);
+            await tradeService.sendPrivateMessage(tradeId, finalChatId, currentUser.uid, newMessage.trim());
             setNewMessage("");
         } catch (error) {
             console.error("Chat error:", error);

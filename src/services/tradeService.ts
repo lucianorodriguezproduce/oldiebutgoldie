@@ -804,14 +804,13 @@ export const tradeService = {
             sellerUsername = sData.username ? (sData.username.startsWith('@') ? sData.username : `@${sData.username}`) : sData.display_name || "Vendedor";
         }
 
-        const conversationRef = doc(db, COLLECTION_NAME, tradeId, "conversations", buyerUsername);
-        const snap = await getDoc(conversationRef);
+        const newChatId = `${tradeId}_${buyerUid}`;
+        const p2pChatRef = doc(db, "p2p_chats", newChatId);
+        const snap = await getDoc(p2pChatRef);
         
         if (!snap.exists()) {
-            console.log(`[P2P-FINAL] Creando conversación para Trade: ${tradeId}. Vendedor: ${sellerId} (${sellerUsername}) | Comprador: ${buyerUid}`);
+            console.log(`[InboxV2] Creando chat nativo para Trade: ${tradeId}. Vendedor: ${sellerId} (${sellerUsername}) | Comprador: ${buyerUid}`);
             const batch = writeBatch(db);
-            const newChatId = `${tradeId}_${buyerUid}`;
-            const p2pChatRef = doc(db, "p2p_chats", newChatId);
             
             const chatData = {
                 id: newChatId,
@@ -829,17 +828,11 @@ export const tradeService = {
                 status: "pending"
             };
 
-            // 1. Create Conversation (Legacy Source of Truth)
-            batch.set(conversationRef, {
-                ...chatData,
-                timestamp: serverTimestamp() // Legacy field
-            });
-
-            // 1.5 Dual-Write (Inbox V2 Prep)
+            // 1. Create Native P2PChat (V2)
             batch.set(p2pChatRef, chatData);
 
-            // 2. Initialization Message (Legacy)
-            const messageRef = doc(collection(db, COLLECTION_NAME, tradeId, "conversations", buyerUsername, "messages"));
+            // 2. Initialization Message (V2)
+            const p2pMessageRef = doc(collection(db, "p2p_chats", newChatId, "messages"));
             const orderLink = `https://www.oldiebutgoldie.com.ar/orden/${tradeId}`;
             
             const systemMessage = {
@@ -849,10 +842,6 @@ export const tradeService = {
                 read_status: false
             };
 
-            batch.set(messageRef, systemMessage);
-
-            // 2.5 Dual-Write Message (Inbox V2 Prep)
-            const p2pMessageRef = doc(collection(db, "p2p_chats", newChatId, "messages"));
             batch.set(p2pMessageRef, systemMessage);
 
             // 3. Notification for Seller (Unified V43 Field)
@@ -875,13 +864,15 @@ export const tradeService = {
         return tradeId;
     },
 
-    async sendPrivateMessage(tradeId: string, conversationId: string, senderId: string, text: string) {
-        if (!conversationId || !conversationId.startsWith('@')) {
-            console.error("[eye-of-hawk] sendPrivateMessage failed: INVALID_CONVERSATION_ID", { tradeId, conversationId });
-            throw new Error("SISTEMA_IDENTIDAD_USERNAME_REQUERIDO");
+    async sendPrivateMessage(tradeId: string, chatId: string, senderId: string, text: string) {
+        if (!chatId) {
+            console.error("[InboxV2] sendPrivateMessage failed: INVALID_CHAT_ID", { tradeId, chatId });
+            throw new Error("SISTEMA_IDENTIDAD_CHAT_REQUERIDO");
         }
 
-        const messagesRef = collection(db, COLLECTION_NAME, tradeId, "conversations", conversationId, "messages");
+        const p2pChatRef = doc(db, "p2p_chats", chatId);
+        const p2pMessagesRef = collection(db, "p2p_chats", chatId, "messages");
+        
         const messageData = {
             sender_uid: senderId,
             text,
@@ -889,30 +880,17 @@ export const tradeService = {
             read_status: false
         };
 
-        await addDoc(messagesRef, messageData);
+        // Fetch chat data to identify recipients
+        const chatSnap = await getDoc(p2pChatRef);
+        const chatData = chatSnap.data() as any;
 
-        // Update conversation metadata
-        const conversationRef = doc(db, COLLECTION_NAME, tradeId, "conversations", conversationId);
-        
-        // Fetch conversation data to identify recipients
-        const convSnap = await getDoc(conversationRef);
-        const convData = convSnap.data() as any;
-
-        if (!convData) {
-            console.error("[eye-of-hawk] sendPrivateMessage failed: CONVERSATION_DATA_NOT_FOUND");
+        if (!chatData) {
+            console.error("[InboxV2] sendPrivateMessage failed: CHAT_DATA_NOT_FOUND");
             return;
         }
 
-        const newChatId = `${tradeId}_${convData.buyerId}`;
-        const p2pChatRef = doc(db, "p2p_chats", newChatId);
-        const p2pMessagesRef = collection(db, "p2p_chats", newChatId, "messages");
-
-        // Dual-Write (V55.0)
+        // Write Native V2 Only
         await Promise.all([
-            setDoc(conversationRef, {
-                lastMessage: text,
-                timestamp: serverTimestamp()
-            }, { merge: true }),
             setDoc(p2pChatRef, {
                 lastMessage: text,
                 updatedAt: serverTimestamp()
@@ -922,9 +900,9 @@ export const tradeService = {
 
         // Notification for the other party (Protocol V28.2)
         if (senderId !== "system") {
-            const isBuyerSender = senderId === convData.buyerId;
-            const recipientId = isBuyerSender ? convData.sellerId : convData.buyerId;
-            const senderName = isBuyerSender ? (convData.buyerUsername || convData.buyerName) : (convData.sellerUsername || "Vendedor");
+            const isBuyerSender = senderId === chatData.buyerId;
+            const recipientId = isBuyerSender ? chatData.sellerId : chatData.buyerId;
+            const senderName = isBuyerSender ? (chatData.buyerUsername || chatData.buyerName) : (chatData.sellerUsername || "Vendedor");
 
             if (recipientId) {
                 await addDoc(collection(db, "notifications"), {
@@ -941,39 +919,11 @@ export const tradeService = {
         }
     },
 
-    onSnapshotPrivateMessages(tradeId: string, conversationId: string, callback: (messages: any[]) => void) {
-        if (!conversationId || !conversationId.startsWith('@')) {
-            console.warn("[eye-of-hawk] onSnapshotPrivateMessages: Identification mismatch avoided. Path requires @username.", { conversationId });
-            return () => {};
-        }
 
-        const q = query(
-            collection(db, COLLECTION_NAME, tradeId, "conversations", conversationId, "messages"),
-            orderBy("timestamp", "asc")
-        );
-        return onSnapshot(q, (snap) => {
-            const msgs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            callback(msgs);
-        });
-    },
-
-    onSnapshotConversations(tradeId: string, callback: (conversations: any[]) => void) {
-        const q = query(
-            collection(db, COLLECTION_NAME, tradeId, "conversations"),
-            orderBy("timestamp", "desc")
-        );
-        return onSnapshot(q, (snap) => {
-            const convs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            callback(convs);
-        });
-    },
 
     async adjudicateTrade(tradeId: string, buyerId: string, buyerName: string) {
         const tradeRef = doc(db, COLLECTION_NAME, tradeId);
-        const buyerUsername = buyerName.startsWith('@') ? buyerName : `@${buyerName}`;
-        const convRef = doc(db, COLLECTION_NAME, tradeId, "conversations", buyerUsername);
-        const convMessagesRef = collection(db, COLLECTION_NAME, tradeId, "conversations", buyerUsername, "messages");
-
+        
         await runTransaction(db, async (transaction) => {
             const tradeSnap = await transaction.get(tradeRef);
             if (!tradeSnap.exists()) throw new Error("TRADE_NOT_FOUND");
@@ -981,7 +931,7 @@ export const tradeService = {
             const tradeData = tradeSnap.data() as any;
             if (tradeData.status !== "pending") throw new Error("TRADE_NOT_AVAILABLE");
 
-            // 1. Atomic status update (Legacy compatibility)
+            // 1. Atomic status update (V2 Native)
             transaction.update(tradeRef, {
                 status: "accepted",
                 isPaid: false,
@@ -992,107 +942,40 @@ export const tradeService = {
                 currentTurn: tradeData.participants?.senderId // Open coordination for the seller
             });
 
-            // 2. Mark conversation as accepted (Use set with merge)
-            transaction.set(convRef, { 
-                status: "accepted",
-                lastMessage: "¡Trato cerrado!",
-                timestamp: serverTimestamp() 
-            }, { merge: true });
-
-            // 3. Notification for Buyer (V43.0 Standard)
+            // 2. Notification for Buyer (V43.0 Standard)
             const notifRef = doc(collection(db, "notifications"));
             transaction.set(notifRef, {
-                uid: buyerId, // El ganador (V43 standardized)
+                uid: buyerId,
                 title: "¡Oferta aceptada! 🎉",
                 message: `El vendedor aceptó tu oferta por "${tradeData.details?.album || 'el disco'}". ¡Ya es tuyo!`,
                 read: false,
                 timestamp: serverTimestamp(),
                 order_id: tradeId,
                 type: "order",
-                link: `/mensajes?chat=${tradeId}` // Modified link V55.0
+                link: `/mensajes?chat=${tradeId}`
             });
 
-            // 4. Generate automated message in the private chat
-            const newMessageRef = doc(convMessagesRef);
-            transaction.set(newMessageRef, {
+            // 3. Update P2P Chat Status (V2 Native)
+            const chatId = `${tradeId}_${buyerId}`;
+            const p2pChatRef = doc(db, "p2p_chats", chatId);
+            transaction.update(p2pChatRef, {
+                status: "accepted",
+                lastMessage: "¡Trato cerrado!",
+                updatedAt: serverTimestamp()
+            });
+
+            // 4. Generate automated message in P2P Chat
+            const p2pMessageRef = doc(collection(db, "p2p_chats", chatId, "messages"));
+            transaction.set(p2pMessageRef, {
                 sender_uid: "system",
-                text: `¡Trato cerrado! ${buyerUsername} es el comprador adjudicado. Coordinen aquí el envío.`,
+                text: `¡Trato cerrado! ${buyerName} es el comprador adjudicado. Coordinen aquí el envío.`,
                 timestamp: serverTimestamp(),
                 read_status: false
-            });
-
-            // 5. Notification for winner (This was already here, re-numbered)
-            const notificationRef = doc(collection(db, "notifications"));
-            transaction.set(notificationRef, {
-                uid: buyerId,
-                title: "¡Trato Adjudicado! 🏆",
-                message: `El vendedor aceptó tu oferta por "${tradeData.details?.album || 'el disco'}". ¡Ya es tuyo!`,
-                read: false,
-                timestamp: serverTimestamp(),
-                order_id: tradeId,
-                type: "order",
-                link: `/mensajes?chat=${tradeId}` // Modified link V55.0 // Added link
             });
         });
     },
 
-    onSnapshotUserConversations(userId: string, username: string | null, callback: (conversations: any[]) => void) {
-        if (!userId) {
-            console.warn("[tradeService] onSnapshotUserConversations missing userId");
-            callback([]);
-            return () => {};
-        }
 
-        const cleanUsername = username ? (username.startsWith('@') ? username : `@${username}`) : null;
-        const isMasterAdmin = userId === ADMIN_UID || userId === 'oldiebutgoldie';
-
-        let queries = [];
-        if (isMasterAdmin) {
-            queries = [query(collectionGroup(db, "conversations"))];
-        } else {
-            queries = [
-                query(collectionGroup(db, "conversations"), where("buyerId", "==", userId)),
-                query(collectionGroup(db, "conversations"), where("sellerId", "==", userId))
-            ];
-            if (cleanUsername) {
-                queries.push(query(collectionGroup(db, "conversations"), where("buyerUsername", "==", cleanUsername)));
-                queries.push(query(collectionGroup(db, "conversations"), where("sellerUsername", "==", cleanUsername)));
-            }
-        }
-
-        const rawConvsMap = new Map<string, any>();
-
-        const updateCallback = () => {
-            const sortedConvs = Array.from(rawConvsMap.values()).sort((a, b) => 
-                (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0)
-            );
-            callback(sortedConvs);
-        };
-
-        const unsubs = queries.map((q, index) => onSnapshot(q, 
-            (snap) => {
-                snap.docChanges().forEach(change => {
-                    const doc = change.doc;
-                    const docPath = doc.ref.path;
-                    if (change.type === "removed") {
-                        rawConvsMap.delete(docPath);
-                    } else {
-                        rawConvsMap.set(docPath, { 
-                            id: doc.id, 
-                            ...doc.data(),
-                            _path: docPath 
-                        });
-                    }
-                });
-                updateCallback();
-            },
-            (error) => {
-                console.error(`[tradeService] Firestore Snapshot Error (Index ${index}):`, error.code, error.message);
-            }
-        ));
-
-        return () => unsubs.forEach(unsub => unsub());
-    },
 
     onSnapshotMessages(tradeId: string, callback: (messages: any[]) => void) {
         const q = query(
@@ -1191,14 +1074,12 @@ export const tradeService = {
     async executeDirectPurchase(tradeId: string, buyerUid: string, buyerName: string) {
         const tradeRef = doc(db, COLLECTION_NAME, tradeId);
         
-        // 1. Armamos las rutas modernas para el Inbox (Protocolo V29.2)
         const buyerUsername = buyerName.startsWith('@') ? buyerName : `@${buyerName}`;
         const tradeSnap = await getDoc(tradeRef);
         if (!tradeSnap.exists()) throw new Error("TRADE_NOT_FOUND");
         
         const tradeData = tradeSnap.data() as any;
         
-        // 1.5 V45-FIX: Forzar resolución de sellerId desde el disco real
         let discoId = tradeId;
         if (tradeData.manifest?.requestedItems?.[0]) {
             discoId = tradeData.manifest.requestedItems[0];
@@ -1220,16 +1101,12 @@ export const tradeService = {
             throw new Error("SISTEMA_IDENTIDAD_PARTICIPANTE_REQUERIDO");
         }
 
-        // Fetch seller details for metadata
         let sellerUsername = "Vendedor";
         const sellerDoc = await getDoc(doc(db, "users", sellerId));
         if (sellerDoc.exists()) {
             const sData = sellerDoc.data();
             sellerUsername = sData.username ? (sData.username.startsWith('@') ? sData.username : `@${sData.username}`) : sData.display_name || "Vendedor";
         }
-
-        const convRef = doc(db, COLLECTION_NAME, tradeId, "conversations", buyerUsername);
-        const convMessagesRef = collection(db, COLLECTION_NAME, tradeId, "conversations", buyerUsername, "messages");
 
         await runTransaction(db, async (transaction) => {
             const currentTradeSnap = await transaction.get(tradeRef);
@@ -1238,7 +1115,7 @@ export const tradeService = {
             const currentTradeData = currentTradeSnap.data() as any;
             if (currentTradeData.status !== "pending") throw new Error("TRADE_NOT_AVAILABLE");
 
-            // 2. Actualizamos el estado del Trade padre
+            // 1. Update Parent Trade
             transaction.update(tradeRef, {
                 status: "accepted",
                 isPaid: false,
@@ -1246,10 +1123,10 @@ export const tradeService = {
                 highest_bidder_uid: buyerUid,
                 highest_bidder_name: buyerUsername,
                 acceptedAt: serverTimestamp(),
-                currentTurn: currentTradeData.participants?.senderId // Le toca al vendedor
+                currentTurn: currentTradeData.participants?.senderId
             });
 
-            // 3. Creamos/Actualizamos la Conversación para que aparezca en la Bandeja de Entrada (Legacy)
+            // 2. Native V2 Chat Logic
             const chatId = `${tradeId}_${buyerUid}`;
             const p2pChatRef = doc(db, "p2p_chats", chatId);
             
@@ -1270,16 +1147,11 @@ export const tradeService = {
                 participants: [buyerUid, sellerId]
             };
 
-            transaction.set(convRef, {
-                ...chatData,
-                timestamp: serverTimestamp() // Legacy
-            }, { merge: true });
-
-            // 3.5 Dual-Write (Inbox V2 Prep)
+            // 3. Set Native P2PChat
             transaction.set(p2pChatRef, chatData, { merge: true });
 
-            // 4. Escribimos el mensaje automático adentro del chat privado correcto
-            const newMessageRef = doc(convMessagesRef);
+            // 4. Automated V2 Message
+            const p2pMessageRef = doc(collection(db, "p2p_chats", chatId, "messages"));
             const systemMessage = {
                 sender_uid: "system",
                 text: `¡Hola! ${buyerUsername} ha comprado este disco mediante Venta Directa. Coordinen aquí el envío.`,
@@ -1287,10 +1159,6 @@ export const tradeService = {
                 read_status: false
             };
 
-            transaction.set(newMessageRef, systemMessage);
-
-            // 4.5 Dual-Write Message (Inbox V2 Prep)
-            const p2pMessageRef = doc(collection(db, "p2p_chats", chatId, "messages"));
             transaction.set(p2pMessageRef, systemMessage);
         });
     },

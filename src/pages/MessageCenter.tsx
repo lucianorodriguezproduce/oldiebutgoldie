@@ -131,7 +131,7 @@ export default function MessageCenter() {
                                                 {conv.title}
                                             </p>
                                             <span className={`text-[8px] font-bold shrink-0 ${isSelected ? 'text-black/60' : 'text-gray-600'}`}>
-                                                {formatDate(conv.timestamp)}
+                                                {formatDate(conv.updatedAt || conv.timestamp)}
                                             </span>
                                         </div>
                                         <p className="text-xs font-bold truncate">
@@ -197,7 +197,7 @@ export default function MessageCenter() {
                                     }
                                 }}
                                 otherParticipantName={selectedConv.sellerId === user.uid ? (selectedConv.buyerUsername || selectedConv.buyerName || "Cliente") : (selectedConv.sellerUsername || selectedConv.sellerName || "Vendedor")}
-                                conversationId={selectedConv.buyerUsername}
+                                chatId={selectedConv.id}
                             />
                         </div>
                     </div>
