@@ -3,7 +3,9 @@ import {
     collection, 
     query, 
     where, 
+    getDoc,
     getDocs, 
+    updateDoc,
     writeBatch, 
     Timestamp, 
     doc,
@@ -161,63 +163,81 @@ export const maintenanceService = {
     },
 
     /**
-     * Protocol V36.0: Corregir identidades corruptas en conversaciones.
-     * Detecta chats donde el sellerId fue sobrescrito por el buyerId y los repara 
-     * consultando el Trade madre.
+     * Protocol V36.0 (Enhanced): Corregir identidades corruptas en conversaciones.
+     * Escanea todas las conversaciones buscando:
+     * 1. Colisiones de ID (Seller === Buyer)
+     * 2. Atribución errónea al Admin (Seller === Admin pero el ítem es de un Usuario)
      */
     async healConversationIdentities() {
+        console.log("[Maintenance] Iniciando Protocolo de Curación Omnisciente V36.1...");
         const q = query(collectionGroup(db, "conversations"));
         const snap = await getDocs(q);
-        if (snap.empty) return 0;
+        if (snap.empty) return "0 (No se encontraron conversaciones)";
 
         let healedCount = 0;
-        const batch = writeBatch(db);
-
+        let adminMisattributions = 0;
+        let collisionsCount = 0;
+        
         for (const docSnap of snap.docs) {
             const data = docSnap.data() as any;
+            const pathParts = docSnap.ref.path.split('/');
+            const tradeId = pathParts[1]; 
             
-            // Si el sellerId es igual al buyerId, hay corrupción segura inducida por el bug previo
-            if (data.sellerId && data.buyerId && data.sellerId === data.buyerId) {
-                const pathParts = docSnap.ref.path.split('/');
-                const tradeId = pathParts[1];
-                
-                try {
-                    const tradeRef = doc(db, "trades", tradeId);
-                    const tradeSnap = await getDocs(query(collection(db, "trades"), where("__name__", "==", tradeId)));
-                    
-                    if (!tradeSnap.empty) {
-                        const tradeData = tradeSnap.docs[0].data();
-                        // El vendedor real es siempre el receiverId original en una compra
-                        const realSellerId = tradeData.participants?.receiverId || tradeData.user_id || ADMIN_UID;
-                        
-                        if (realSellerId && realSellerId !== data.sellerId) {
-                            // Buscar username real
-                            let realSellerUsername = "Vendedor";
-                            const sellerDoc = await getDocs(query(collection(db, "users"), where("__name__", "==", realSellerId)));
-                            if (!sellerDoc.empty) {
-                                const sData = sellerDoc.docs[0].data();
-                                realSellerUsername = sData.username ? (sData.username.startsWith('@') ? sData.username : `@${sData.username}`) : "Vendedor";
-                            }
+            let needsHealing = false;
+            let reason = "";
 
-                            batch.update(docSnap.ref, {
-                                sellerId: realSellerId,
-                                sellerUsername: realSellerUsername,
-                                healedAt: serverTimestamp()
-                            });
-                            healedCount++;
+            if (data.sellerId && data.buyerId && data.sellerId === data.buyerId) {
+                needsHealing = true;
+                reason = "collision";
+            } else if (data.sellerId === ADMIN_UID) {
+                needsHealing = true;
+                reason = "admin_check";
+            }
+
+            if (needsHealing) {
+                try {
+                    const [tradeSnap, assetSnap] = await Promise.all([
+                        getDoc(doc(db, "trades", tradeId)),
+                        getDoc(doc(db, "user_assets", tradeId))
+                    ]);
+
+                    let realSellerId = null;
+
+                    if (assetSnap.exists()) {
+                        realSellerId = assetSnap.data().ownerId;
+                    } else if (tradeSnap.exists()) {
+                        const tData = tradeSnap.data();
+                        realSellerId = tData.participants?.receiverId !== ADMIN_UID ? tData.participants?.receiverId : (tData.user_id !== ADMIN_UID ? tData.user_id : null);
+                    }
+
+                    if (realSellerId && realSellerId !== data.sellerId && realSellerId !== "system") {
+                        let realSellerUsername = "Vendedor";
+                        const sellerDoc = await getDoc(doc(db, "users", realSellerId));
+                        
+                        if (sellerDoc.exists()) {
+                            const sData = sellerDoc.data();
+                            realSellerUsername = sData.username ? (sData.username.startsWith('@') ? sData.username : `@${sData.username}`) : sData.display_name || "Vendedor";
                         }
+
+                        await updateDoc(docSnap.ref, {
+                            sellerId: realSellerId,
+                            sellerUsername: realSellerUsername,
+                            healedAt: serverTimestamp(),
+                            healingReason: reason
+                        });
+
+                        healedCount++;
+                        if (reason === "collision") collisionsCount++;
+                        else adminMisattributions++;
                     }
                 } catch (e) {
-                    console.error(`[Maintenance] Error healing conversation ${docSnap.ref.path}:`, e);
+                    console.error(`[Maintenance] Error healing ${docSnap.ref.path}:`, e);
                 }
             }
         }
 
-        if (healedCount > 0) {
-            await batch.commit();
-        }
-
-        console.log(`[Maintenance] Healed ${healedCount} conversation identities.`);
-        return healedCount;
+        const report = `${healedCount} (Colisiones: ${collisionsCount}, Errores Admin: ${adminMisattributions})`;
+        console.log(`[Maintenance] Curación completada: ${report}`);
+        return report;
     }
 };
