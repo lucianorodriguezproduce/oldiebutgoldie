@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Send, User as UserIcon, Star, X, CheckCircle2, AlertTriangle, ShieldAlert } from "lucide-react";
 import { tradeService } from "@/services/tradeService";
 import { formatDate } from "@/utils/date";
+import { useAuth } from "@/context/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface Message {
@@ -25,6 +26,10 @@ export default function TradeChat({ tradeId, currentUser, trade, otherParticipan
     const [newMessage, setNewMessage] = useState("");
     const [isSending, setIsSending] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const { isAdmin } = useAuth();
+
+    // Resolution State
+    const [isResolving, setIsResolving] = useState(false);
 
     // Rating Modal State
     const [showRatingModal, setShowRatingModal] = useState(false);
@@ -136,6 +141,27 @@ export default function TradeChat({ tradeId, currentUser, trade, otherParticipan
             alert("Error al abrir el reclamo.");
         } finally {
             setIsSubmittingDispute(false);
+        }
+    };
+    // Protocolo V67.0: Handle Admin Resolution
+    const handleAdminResolution = async (type: 'cancel' | 'complete') => {
+        if (isResolving || !isAdmin) return;
+        
+        const confirmMsg = type === 'cancel' 
+            ? "¿Estás seguro de ANULAR esta operación? El disco volverá al vendedor y se cancelará la reserva." 
+            : "¿Estás seguro de FORZAR la transferencia? El disco pasará al comprador y la operación se marcará como completada.";
+            
+        if (!window.confirm(confirmMsg)) return;
+
+        setIsResolving(true);
+        try {
+            const finalChatId = chatId || (trade?.buyerId ? `${tradeId}_${trade.buyerId}` : tradeId);
+            await tradeService.resolveDispute(tradeId, finalChatId, type, currentUser.uid);
+        } catch (error) {
+            console.error("Resolution error:", error);
+            alert("Error al resolver la disputa.");
+        } finally {
+            setIsResolving(false);
         }
     };
 
@@ -266,6 +292,42 @@ export default function TradeChat({ tradeId, currentUser, trade, otherParticipan
                     </button>
                 )}
             </div>
+
+            {/* Admin Resolution Panel (Protocol V67.0) */}
+            {isAdmin && isDisputed && (
+                <div className="mx-6 mt-4 p-4 bg-primary/5 border border-primary/20 rounded-2xl space-y-3">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <ShieldAlert className="w-4 h-4 text-primary" />
+                            <h5 className="text-[10px] font-black text-white uppercase tracking-widest">Panel del Juez (Admin)</h5>
+                        </div>
+                        <span className="text-[9px] font-bold text-gray-500 uppercase tracking-tighter">
+                            Motivo: {trade.dispute_data?.reason || 'No especificado'}
+                        </span>
+                    </div>
+                    
+                    <p className="text-[10px] text-gray-400 italic px-1">
+                        "{trade.dispute_data?.details || 'Sin detalles adicionales'}"
+                    </p>
+
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => handleAdminResolution('cancel')}
+                            disabled={isResolving}
+                            className="flex-1 py-2 bg-red-500/20 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/30 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all"
+                        >
+                            {isResolving ? 'Procesando...' : 'Anular Operación'}
+                        </button>
+                        <button
+                            onClick={() => handleAdminResolution('complete')}
+                            disabled={isResolving}
+                            className="flex-1 py-2 bg-emerald-500/20 hover:bg-emerald-500 text-emerald-500 hover:text-white border border-emerald-500/30 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all"
+                        >
+                            {isResolving ? 'Procesando...' : 'Forzar Transferencia'}
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* Messages Area */}
             <div 

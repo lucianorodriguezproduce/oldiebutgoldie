@@ -24,7 +24,7 @@ import { pushLeadGenerated } from "@/utils/analytics";
 
 import type { Trade, InventoryItem, UserAsset } from "@/types/inventory";
 
-import { ADMIN_UID } from "@/constants/admin";
+import { ADMIN_UIDS } from "@/constants/admin";
 import { scrubData } from "@/utils/firestore";
 
 const COLLECTION_NAME = "trades";
@@ -147,7 +147,7 @@ export const tradeService = {
 
         if (userAssetId) {
             // V53.1 FINAL GUARD: Prohibir Admin como receptor de assets P2P
-            if (receiverId === ADMIN_UID) {
+            if (ADMIN_UIDS.includes(receiverId || "")) {
                 console.warn("[V53.1-GUARD] Intento de asignar ADMIN_UID como receptor de un User Asset. Corrigiendo a NULL para listing.");
                 receiverId = null;
             }
@@ -190,7 +190,7 @@ export const tradeService = {
 
         // --- AUTO-RESOLUTION: Only for store direct sales (OBG Shop) ---
         // P2P Direct sales should stay pending/accepted so the seller can resolve (due to security permissions)
-        const isStoreDirectSale = isDirectSale && (receiverId === ADMIN_UID || receiverId === 'oldiebutgoldie');
+        const isStoreDirectSale = isDirectSale && (ADMIN_UIDS.includes(receiverId || "") || receiverId === 'oldiebutgoldie');
 
         if (isStoreDirectSale) {
             console.log(`[batea] Store direct sale detected. Auto-resolving trade: ${docRef.id}`);
@@ -215,10 +215,10 @@ export const tradeService = {
         if (!tradeSnap.exists()) throw new Error("Trade not found");
 
         const trade = tradeSnap.data() as Trade;
-        const isAdmin = isAdminForce || (myUid === ADMIN_UID);
+        const isAdmin = isAdminForce || (ADMIN_UIDS.includes(myUid));
         
         // Turn validation (standardized)
-        const isMyTurn = trade.currentTurn === myUid || (isAdmin && (trade.currentTurn === 'admin' || trade.currentTurn === ADMIN_UID));
+        const isMyTurn = trade.currentTurn === myUid || (isAdmin && (trade.currentTurn === 'admin' || ADMIN_UIDS.includes(trade.currentTurn as string)));
         if (!isMyTurn) throw new Error("Not your turn");
 
         // Determine next turn
@@ -360,7 +360,7 @@ export const tradeService = {
             // --- Read all requested items ---
             const requestedReads: { ref: any; snap: any; itemId: string; isAdmin: boolean }[] = [];
             for (const itemId of manifest.requestedItems) {
-                if (receiverId === ADMIN_UID) {
+                if (ADMIN_UIDS.includes(receiverId)) {
                     const itemRef = doc(db, "inventory", String(itemId));
                     const itemSnap = await transaction.get(itemRef);
                     requestedReads.push({ ref: itemRef, snap: itemSnap, itemId, isAdmin: true });
@@ -374,7 +374,7 @@ export const tradeService = {
             // --- Read all offered items ---
             const offeredReads: { ref: any; snap: any; itemId: string; isAdmin: boolean; isExternal?: boolean }[] = [];
             for (const itemId of manifest.offeredItems) {
-                if (senderId === ADMIN_UID) {
+                if (ADMIN_UIDS.includes(senderId)) {
                     const itemRef = doc(db, "inventory", String(itemId));
                     const itemSnap = await transaction.get(itemRef);
                     offeredReads.push({ ref: itemRef, snap: itemSnap, itemId, isAdmin: true });
@@ -760,7 +760,7 @@ export const tradeService = {
         else if (inventorySnap.exists()) {
             const itemData = inventorySnap.data() as any;
             // V53.1: Permitir que ítems en la colección inventory tengan dueño P2P
-            sellerId = itemData.sellerId || itemData.ownerId || ADMIN_UID;
+            sellerId = itemData.sellerId || itemData.ownerId || ADMIN_UIDS[0];
             title = itemData.metadata?.title || title;
             cover = itemData.media?.thumbnail || "";
             sourceCollection = "inventory";
@@ -778,7 +778,7 @@ export const tradeService = {
         }
 
         // BLOQUEO DE ADMIN EN P2P (V49.0)
-        if (sourceCollection === 'user_assets' && sellerId === ADMIN_UID) {
+        if (sourceCollection === 'user_assets' && ADMIN_UIDS.includes(sellerId)) {
             console.error("[V49-FATAL] Inconsistencia: User Asset asignado al Admin.");
             throw new Error("ERROR_SISTEMA_IDENTIDAD_INVERTIDA");
         }
@@ -797,7 +797,7 @@ export const tradeService = {
                 status: 'pending',
                 currentTurn: sellerId, // V47.1: El vendedor debe aceptar
                 isPublicOrder: true, 
-                is_admin_offer: (sellerId === ADMIN_UID),
+                is_admin_offer: ADMIN_UIDS.includes(sellerId),
                 manifest: {
                     requestedItems: [tradeId],
                     offeredItems: [],
@@ -1244,7 +1244,7 @@ export const tradeService = {
             sellerId = assetData.ownerId || assetData.uid;
             console.log(`[V45-FIX] Buscando disco con ID: ${discoId} | Propietario real: ${sellerId} (Purchase Flow)`);
         } else if (tradeData.is_admin_offer) {
-            sellerId = ADMIN_UID;
+            sellerId = ADMIN_UIDS[0];
         }
 
         if (!sellerId) {
@@ -1471,6 +1471,110 @@ export const tradeService = {
                 read_status: false,
                 is_alert: true
             });
+        });
+    },
+
+    /**
+     * Protocolo V67.0: Resolve a formal dispute (Admin Only)
+     * Fallback options: 'cancel' (Favor Buyer) or 'complete' (Favor Seller)
+     */
+    async resolveDispute(tradeId: string, chatId: string, resolutionType: 'cancel' | 'complete', adminUid: string) {
+        const tradeRef = doc(db, COLLECTION_NAME, tradeId);
+        const p2pChatRef = doc(db, "p2p_chats", chatId);
+        const systemMessageRef = doc(collection(db, "p2p_chats", chatId, "messages"));
+
+        return runTransaction(db, async (transaction) => {
+            const tradeSnap = await transaction.get(tradeRef);
+            if (!tradeSnap.exists()) throw new Error("TRADE_NOT_FOUND");
+            const tradeData = tradeSnap.data() as any;
+
+            if (resolutionType === 'cancel') {
+                // 🔴 RESOLUCIÓN: ANULAR (Falla a favor del Comprador/Vendedor arrepentido)
+                transaction.update(tradeRef, {
+                    status: "pending",
+                    buyer_uid: deleteField(),
+                    buyer_name: deleteField(),
+                    "participants.receiverId": deleteField(),
+                    acceptedAt: deleteField(),
+                    payment_status: deleteField(),
+                    dispute_data: {
+                        ...tradeData.dispute_data,
+                        resolvedAt: serverTimestamp(),
+                        resolution: 'cancelled_by_admin',
+                        resolvedBy: adminUid
+                    },
+                    updatedAt: serverTimestamp()
+                });
+
+                transaction.update(p2pChatRef, {
+                    status: "cancelled",
+                    lastMessage: "⚖️ Operación anulada por Administración.",
+                    updatedAt: serverTimestamp()
+                });
+
+                transaction.set(systemMessageRef, {
+                    sender_uid: "system",
+                    text: "⚖️ RESOLUCIÓN OFICIAL: Administración ha fallado a favor de anular la operación. La reserva ha sido cancelada y el ítem vuelve a estar disponible.",
+                    timestamp: serverTimestamp(),
+                    is_alert: true
+                });
+
+            } else {
+                // 🟢 RESOLUCIÓN: FORZAR TRANSFERENCIA (Falla a favor del Vendedor)
+                // Usamos la lógica de confirmPaymentAndTransfer
+                const buyerId = tradeData.participants?.senderId || tradeData.buyer_uid;
+                
+                const p2pItems = (tradeData.manifest?.items || []).filter((i: any) => i.source === 'user_asset');
+                for (const item of p2pItems) {
+                    const assetId = item.userAssetId || item.id;
+                    const assetRef = doc(db, "user_assets", assetId);
+                    transaction.update(assetRef, {
+                        ownerId: buyerId,
+                        isTradeable: false,
+                        status: 'active',
+                        transferredAt: serverTimestamp()
+                    });
+
+                    if (item.originalInventoryId) {
+                        const invRef = doc(db, "inventory", item.originalInventoryId);
+                        const invSnap = await transaction.get(invRef);
+                        if (invSnap.exists()) {
+                            const currentStock = invSnap.data()?.logistics?.stock || 1;
+                            transaction.update(invRef, {
+                                "logistics.status": currentStock - 1 <= 0 ? "sold" : "active",
+                                "logistics.stock": Math.max(0, currentStock - 1)
+                            });
+                        }
+                    }
+                }
+
+                transaction.update(tradeRef, {
+                    status: 'completed',
+                    payment_status: 'paid',
+                    pending_reviews: [tradeData.participants?.senderId || tradeData.user_id, tradeData.participants?.receiverId].filter(Boolean),
+                    completedAt: serverTimestamp(),
+                    dispute_data: {
+                        ...tradeData.dispute_data,
+                        resolvedAt: serverTimestamp(),
+                        resolution: 'completed_by_admin',
+                        resolvedBy: adminUid
+                    },
+                    updatedAt: serverTimestamp()
+                });
+
+                transaction.update(p2pChatRef, {
+                    status: 'completed',
+                    lastMessage: "⚖️ Operación completada por Administración.",
+                    updatedAt: serverTimestamp()
+                });
+
+                transaction.set(systemMessageRef, {
+                    sender_uid: "system",
+                    text: "⚖️ RESOLUCIÓN OFICIAL: Administración ha desestimado el reclamo y forzado la transferencia. La operación se marca como completada.",
+                    timestamp: serverTimestamp(),
+                    is_alert: true
+                });
+            }
         });
     }
 };

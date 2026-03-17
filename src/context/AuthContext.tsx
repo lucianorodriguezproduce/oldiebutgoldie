@@ -5,7 +5,7 @@ import type { User } from "firebase/auth";
 import { doc, onSnapshot } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import type { DbUser } from "@/types/user";
-import { isAdminEmail } from "@/constants/admin";
+import { isAdminEmail, ADMIN_UIDS } from "@/constants/admin";
 
 interface AuthContextType {
     user: User | null;
@@ -71,7 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await firebaseSignOut(auth);
     }, []);
 
-    const isAdmin = !!user && (isMasterAdmin || isAdminEmail(user.email));
+    const isAdmin = !!user && (isMasterAdmin || isAdminEmail(user.email) || ADMIN_UIDS.includes(user.uid));
 
     const isEmailVerified = !!user && user.emailVerified;
 
