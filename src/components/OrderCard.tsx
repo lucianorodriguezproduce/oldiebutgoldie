@@ -449,10 +449,14 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                         </span>
                         {!isBatch && (
                             <>
-                                <span className="flex items-center gap-1 text-gray-500 text-[9px] md:text-[10px] font-black uppercase">
-                                    <Tag className="h-3 w-3" /> {format}
-                                </span>
-                                <span className="text-gray-600 text-[9px] md:text-[10px] font-bold uppercase">{condition}</span>
+                                {(format && format !== 'N/A') && (
+                                    <span className="flex items-center gap-1 text-gray-500 text-[9px] md:text-[10px] font-black uppercase">
+                                        <Tag className="h-3 w-3" /> {format}
+                                    </span>
+                                )}
+                                {(condition && condition !== 'N/A') && (
+                                    <span className="text-gray-600 text-[9px] md:text-[10px] font-bold uppercase">{condition}</span>
+                                )}
                             </>
                         )}
 
