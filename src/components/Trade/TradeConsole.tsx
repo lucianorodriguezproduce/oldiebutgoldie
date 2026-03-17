@@ -41,14 +41,14 @@ export default function TradeConsole({ trade, onUpdate, onClose }: TradeConsoleP
     const [selectedBuyerId, setSelectedBuyerId] = useState<string | null>(null);
 
     const isAdmin = isAdminEmail(user?.email) || user?.uid === ADMIN_UID;
-    const isOwner = user?.uid === trade.participants.senderId;
+    const isOwner = user?.uid === trade.participants.senderId || user?.uid === trade.participants.receiverId;
     const isDirectSale = trade.type === 'direct_sale';
     
     // isMyTurn logic
     const isMyTurn = trade.currentTurn === user?.uid || (trade.currentTurn === 'admin' && isAdmin) || (trade.currentTurn === ADMIN_UID && isAdmin);
 
     useEffect(() => {
-        if (isDirectSale && isOwner && trade.id) {
+        if (isDirectSale && (isOwner || isAdmin) && trade.id) {
             const unsub = tradeService.onSnapshotConversations(trade.id, (convs) => {
                 setConversations(convs);
                 if (convs.length > 0 && !selectedBuyerId) {
@@ -57,7 +57,7 @@ export default function TradeConsole({ trade, onUpdate, onClose }: TradeConsoleP
             });
             return () => unsub();
         }
-    }, [trade.id, isDirectSale, isOwner]);
+    }, [trade.id, isDirectSale, isOwner, isAdmin]);
 
     const selectedConv = conversations.find(c => c.buyerId === selectedBuyerId);
 
@@ -214,7 +214,7 @@ export default function TradeConsole({ trade, onUpdate, onClose }: TradeConsoleP
                 )}
             </div>
 
-            {isDirectSale && isOwner && trade.status === 'pending' ? (
+            {isDirectSale && (isOwner || isAdmin) && (trade.status === 'pending' || trade.status === 'accepted') ? (
                 /* Multi-Conversation Interface */
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Inquiry List Sidebar */}

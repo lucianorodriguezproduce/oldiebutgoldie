@@ -349,6 +349,47 @@ export default function AdminStats() {
                     </div>
                 </div>
 
+                {/* User Scout: Identidad P2P (New V43.2 Tool) */}
+                <div className="mb-8 p-6 bg-primary/5 border border-primary/20 rounded-2xl">
+                    <div className="flex flex-col md:flex-row items-center gap-4">
+                        <div className="flex-1 min-w-0 w-full">
+                            <label className="text-[10px] font-black text-primary uppercase tracking-widest mb-2 block ml-1">Buscador de Identidad (Username o UID)</label>
+                            <div className="relative">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary opacity-50" />
+                                <input 
+                                    type="text" 
+                                    placeholder="Ej: @nuevousuario45 o UID..."
+                                    id="userScoutInput"
+                                    className="w-full bg-black/40 border border-primary/20 rounded-xl py-4 pl-12 pr-4 text-sm text-white focus:border-primary outline-none transition-all font-mono"
+                                    onKeyDown={async (e) => {
+                                        if (e.key === 'Enter') {
+                                            const val = (e.target as HTMLInputElement).value;
+                                            if (!val) return;
+                                            const res = await maintenanceService.lookupUser(val);
+                                            console.log("[UserScout] Result:", res);
+                                            alert(JSON.stringify(res, null, 2));
+                                        }
+                                    }}
+                                />
+                            </div>
+                        </div>
+                        <button 
+                            onClick={async () => {
+                                const input = document.getElementById('userScoutInput') as HTMLInputElement;
+                                if (!input.value) return;
+                                const res = await maintenanceService.lookupUser(input.value);
+                                alert(JSON.stringify(res, null, 2));
+                            }}
+                            className="w-full md:w-auto px-8 py-4 bg-primary text-black font-black uppercase text-xs tracking-widest rounded-xl hover:scale-105 transition-all shadow-xl shadow-primary/20"
+                        >
+                            Scout User
+                        </button>
+                    </div>
+                    <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mt-3 ml-1 italic">
+                        * Úsalo para identificar el UID real de un usuario que reporta problemas de recepción.
+                    </p>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {/* Analytics Purge */}
                     <div className="flex flex-col gap-4 p-5 bg-black/40 border border-white/5 rounded-2xl hover:border-white/10 transition-colors">

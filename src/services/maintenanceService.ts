@@ -282,5 +282,36 @@ export const maintenanceService = {
         } catch (error: any) {
             return "Error en auditoría: " + error.message;
         }
+    },
+
+    /**
+     * Protocolo de Búsqueda de Identidad (V43.2)
+     * Resuelve un usuario por su username o UID para diagnóstico.
+     */
+    async lookupUser(identifier: string) {
+        console.log(`[Maintenance] Buscando identidad para: ${identifier}`);
+        try {
+            const cleanId = identifier.startsWith('@') ? identifier.toLowerCase() : identifier;
+            
+            // 1. Si es un username, buscamos en la colección 'usernames'
+            if (cleanId.startsWith('@')) {
+                const usernameRef = doc(db, "usernames", cleanId.replace('@', ''));
+                const usernameSnap = await getDoc(usernameRef);
+                
+                if (!usernameSnap.exists()) return { error: "Username no reclamado." };
+                
+                const uid = usernameSnap.data().uid;
+                const userSnap = await getDoc(doc(db, "users", uid));
+                return { uid, ...(userSnap.exists() ? userSnap.data() : { warning: "Doc en /users/ no existe" }) };
+            } 
+            
+            // 2. Si es un UID, buscamos directo
+            const userSnap = await getDoc(doc(db, "users", cleanId));
+            if (!userSnap.exists()) return { error: "UID no encontrado en /users/" };
+            
+            return { uid: cleanId, ...userSnap.data() };
+        } catch (error: any) {
+            return { error: error.message };
+        }
     }
 };
