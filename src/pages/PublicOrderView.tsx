@@ -201,10 +201,10 @@ export default function PublicOrderView() {
             <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 italic mb-4">Chat de Coordinación</h3>
             <TradeChat 
                 tradeId={id!} 
+                chatId={id!} 
                 currentUser={user} 
                 trade={order} 
                 otherParticipantName={user?.uid === order.user_id ? order.highest_bidder_name : order.user_name} 
-                conversationId={order.highest_bidder_name}
             />
         </div>
     );

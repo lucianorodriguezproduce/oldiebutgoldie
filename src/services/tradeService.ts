@@ -1204,5 +1204,28 @@ export const tradeService = {
         }, (error) => {
             console.error("[InboxV2] Messages snapshot error:", error);
         });
+    },
+
+    /**
+     * Listen for all P2P chats associated with a specific trade (V2)
+     * Used by sellers to see inquiries from multiple buyers for one publication.
+     */
+    onSnapshotTradeChats(tradeId: string, callback: (chats: any[]) => void) {
+        console.log(`[InboxV2] Listening for all chats of trade: ${tradeId}`);
+        const q = query(
+            collection(db, "p2p_chats"),
+            where("tradeId", "==", tradeId),
+            orderBy("updatedAt", "desc")
+        );
+
+        return onSnapshot(q, (snapshot) => {
+            const chats = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            callback(chats);
+        }, (error) => {
+            console.error("[InboxV2] TradeChats snapshot error:", error);
+        });
     }
 };

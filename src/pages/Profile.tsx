@@ -604,10 +604,10 @@ export default function Profile() {
                                     </div>
                                     <TradeChat 
                                         tradeId={selectedOrder.id} 
+                                        chatId={selectedOrder.id} 
                                         currentUser={user} 
                                         trade={selectedOrder} 
                                         otherParticipantName={selectedOrder.sellerUsername || selectedOrder.user_name || "Vendedor"}
-                                        conversationId={selectedOrder.buyerUsername || (selectedOrder.participants?.senderId === user?.uid ? `@${dbUser?.username}` : null)}
                                     />
                                 </div>
                             )}

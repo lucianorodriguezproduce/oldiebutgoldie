@@ -49,7 +49,7 @@ export default function TradeConsole({ trade, onUpdate, onClose }: TradeConsoleP
 
     useEffect(() => {
         if (isDirectSale && (isOwner || isAdmin) && trade.id) {
-            const unsub = tradeService.onSnapshotConversations(trade.id, (convs) => {
+            const unsub = tradeService.onSnapshotTradeChats(trade.id, (convs) => {
                 setConversations(convs);
                 if (convs.length > 0 && !selectedBuyerId) {
                     setSelectedBuyerId(convs[0].buyerId);
@@ -241,7 +241,7 @@ export default function TradeConsole({ trade, onUpdate, onClose }: TradeConsoleP
                                         }`}
                                     >
                                         <div className="flex items-center justify-between mb-1">
-                                            <span className="font-black text-white text-sm">@{conv.buyerName}</span>
+                                            <span className="font-black text-white text-sm">@{conv.buyerName || conv.buyerUsername}</span>
                                             {conv.status === 'accepted' && <CheckCircle2 className="w-3 h-3 text-emerald-500" />}
                                         </div>
                                         <p className="text-[10px] text-gray-500 truncate font-bold uppercase tracking-tight">{conv.lastMessage}</p>
@@ -259,7 +259,7 @@ export default function TradeConsole({ trade, onUpdate, onClose }: TradeConsoleP
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-3">
                                             <MessageSquare className="w-5 h-5 text-primary" />
-                                            <h4 className="text-sm font-black text-white uppercase tracking-tight">Chat con @{selectedConv?.buyerName}</h4>
+                                            <h4 className="text-sm font-black text-white uppercase tracking-tight">Chat con @{selectedConv?.buyerName || selectedConv?.buyerUsername}</h4>
                                         </div>
                                         <button
                                             onClick={handleAdjudicate}
@@ -269,11 +269,11 @@ export default function TradeConsole({ trade, onUpdate, onClose }: TradeConsoleP
                                         </button>
                                     </div>
                                     <TradeChat 
-                                        tradeId={trade.id!} 
+                                        tradeId={trade.id!}
+                                        chatId={selectedConv?.id}
                                         currentUser={user} 
                                         trade={trade} 
-                                        otherParticipantName={`@${selectedConv?.buyerName}`} 
-                                        conversationId={selectedConv?.buyerUsername}
+                                        otherParticipantName={`@${selectedConv?.buyerName || selectedConv?.buyerUsername}`} 
                                     />
                                 </div>
                             </>
