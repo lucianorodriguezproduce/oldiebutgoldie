@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Send, User as UserIcon, Star, X, CheckCircle2 } from "lucide-react";
+import { Send, User as UserIcon, Star, X, CheckCircle2, AlertTriangle, ShieldAlert } from "lucide-react";
 import { tradeService } from "@/services/tradeService";
 import { formatDate } from "@/utils/date";
 import { motion, AnimatePresence } from "framer-motion";
@@ -31,6 +31,12 @@ export default function TradeChat({ tradeId, currentUser, trade, otherParticipan
     const [rating, setRating] = useState(0);
     const [comment, setComment] = useState("");
     const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+    
+    // Dispute Modal State (Protocol V66.0)
+    const [showDisputeModal, setShowDisputeModal] = useState(false);
+    const [disputeReason, setDisputeReason] = useState("");
+    const [disputeDetails, setDisputeDetails] = useState("");
+    const [isSubmittingDispute, setIsSubmittingDispute] = useState(false);
 
     const isComprador = currentUser?.uid === trade?.buyerId || 
                        currentUser?.uid === trade?.buyer_uid ||
@@ -43,6 +49,15 @@ export default function TradeChat({ tradeId, currentUser, trade, otherParticipan
                       currentUser?.uid === trade?.user_id;
     
     const isCompleted = trade?.status === 'completed' || trade?.status === 'venta_finalizada';
+    const isDisputed = trade?.status === 'disputed';
+
+    // Protocol V66.0: Can open dispute?
+    const canOpenDispute = !isDisputed && (
+        trade?.status === 'pending_payment' || 
+        (isCompleted && trade?.completedAt && (
+            new Date().getTime() - (trade.completedAt?.toDate ? trade.completedAt.toDate().getTime() : new Date(trade.completedAt).getTime())
+        ) < 3 * 24 * 60 * 60 * 1000)
+    );
 
     useEffect(() => {
         const callback = (msgs: Message[]) => {
@@ -74,7 +89,7 @@ export default function TradeChat({ tradeId, currentUser, trade, otherParticipan
 
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newMessage.trim() || isSending || isCompleted) return;
+        if (!newMessage.trim() || isSending || isCompleted || isDisputed) return;
 
         setIsSending(true);
         try {
@@ -108,6 +123,22 @@ export default function TradeChat({ tradeId, currentUser, trade, otherParticipan
         }
     };
 
+    // Protocolo V66.0: Handle Dispute Submission
+    const handleSubmitDispute = async () => {
+        if (!disputeReason || isSubmittingDispute) return;
+        setIsSubmittingDispute(true);
+        try {
+            const finalChatId = chatId || (trade?.buyerId ? `${tradeId}_${trade.buyerId}` : tradeId);
+            await tradeService.openDispute(tradeId, finalChatId, disputeReason, disputeDetails, currentUser.uid);
+            setShowDisputeModal(false);
+        } catch (error) {
+            console.error("Dispute error:", error);
+            alert("Error al abrir el reclamo.");
+        } finally {
+            setIsSubmittingDispute(false);
+        }
+    };
+
     return (
         <div className="flex flex-col h-[500px] bg-neutral-900/50 border border-white/10 rounded-3xl overflow-hidden backdrop-blur-md shadow-2xl relative">
             {/* Header */}
@@ -127,7 +158,8 @@ export default function TradeChat({ tradeId, currentUser, trade, otherParticipan
                 {isComprador && trade?.status === 'accepted' && (
                     <button 
                         onClick={() => setShowRatingModal(true)}
-                        className="px-4 py-2 bg-primary/10 hover:bg-primary/20 border border-primary/30 rounded-xl text-primary text-[10px] font-black uppercase tracking-widest transition-all"
+                        disabled={isDisputed}
+                        className="px-4 py-2 bg-primary/10 hover:bg-primary/20 border border-primary/30 rounded-xl text-primary text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         Finalizar y Calificar
                     </button>
@@ -147,7 +179,8 @@ export default function TradeChat({ tradeId, currentUser, trade, otherParticipan
                                 }
                             }
                         }}
-                        className="px-4 py-2 bg-orange-500 hover:bg-white text-black rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-orange-500/20"
+                        disabled={isDisputed}
+                        className="px-4 py-2 bg-orange-500 hover:bg-white text-black rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-orange-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         Adjudicar a este comprador
                     </button>
@@ -167,7 +200,8 @@ export default function TradeChat({ tradeId, currentUser, trade, otherParticipan
                                     }
                                 }
                             }}
-                            className="px-4 py-2 bg-emerald-500 hover:bg-white text-black rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-emerald-500/20"
+                            disabled={isDisputed}
+                            className="px-4 py-2 bg-emerald-500 hover:bg-white text-black rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             Confirmar Pago y Entregar
                         </button>
@@ -183,7 +217,8 @@ export default function TradeChat({ tradeId, currentUser, trade, otherParticipan
                                     }
                                 }
                             }}
-                            className="text-[9px] font-black text-red-500/60 hover:text-red-500 uppercase tracking-widest transition-colors"
+                            disabled={isDisputed}
+                            className="text-[9px] font-black text-red-500/60 hover:text-red-500 uppercase tracking-widest transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                         >
                             Cancelar Reserva / Liberar Disco
                         </button>
@@ -208,6 +243,27 @@ export default function TradeChat({ tradeId, currentUser, trade, otherParticipan
                             Esperando confirmación del vendedor...
                         </span>
                     </div>
+                )}
+
+                {/* Dispute Status Alert */}
+                {isDisputed && (
+                    <div className="flex items-center gap-2 px-4 py-2 bg-red-500/20 border border-red-500/30 rounded-xl">
+                        <ShieldAlert className="w-3.5 h-3.5 text-red-500 animate-pulse" />
+                        <span className="text-[10px] font-black text-red-500 uppercase tracking-widest">
+                            Operación en Disputa
+                        </span>
+                    </div>
+                )}
+
+                {/* Panic Button (Protocol V66.0) */}
+                {canOpenDispute && (
+                    <button 
+                        onClick={() => setShowDisputeModal(true)}
+                        className="p-2.5 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 rounded-xl transition-all active:scale-95 group"
+                        title="Abrir Reclamo"
+                    >
+                        <AlertTriangle className="w-4 h-4 group-hover:animate-bounce" />
+                    </button>
                 )}
             </div>
 
@@ -234,7 +290,9 @@ export default function TradeChat({ tradeId, currentUser, trade, otherParticipan
                                 <div className={`max-w-[85%] px-4 py-3 rounded-2xl text-sm ${
                                     isMe 
                                     ? 'bg-primary text-black font-bold rounded-tr-none' 
-                                    : 'bg-white/10 text-white font-medium rounded-tl-none border border-white/5'
+                                    : (msg as any).is_alert 
+                                        ? 'bg-red-500/20 text-red-100 border border-red-500/30 rounded-tl-none font-bold'
+                                        : 'bg-white/10 text-white font-medium rounded-tl-none border border-white/5'
                                 } shadow-lg`}>
                                     {msg.text}
                                 </div>
@@ -254,13 +312,13 @@ export default function TradeChat({ tradeId, currentUser, trade, otherParticipan
                         type="text"
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
-                        placeholder={isCompleted ? "Esta conversación está cerrada" : "Escribe un mensaje..."}
-                        disabled={isCompleted}
+                        placeholder={isDisputed ? "OPERACIÓN CONGELADA" : isCompleted ? "Esta conversación está cerrada" : "Escribe un mensaje..."}
+                        disabled={isCompleted || isDisputed}
                         className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 pl-5 pr-14 text-sm text-white focus:border-primary/50 outline-none transition-all placeholder:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
                     />
                     <button
                         type="submit"
-                        disabled={!newMessage.trim() || isSending || isCompleted}
+                        disabled={!newMessage.trim() || isSending || isCompleted || isDisputed}
                         className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-black hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale disabled:scale-100"
                     >
                         {isSending ? (
@@ -330,6 +388,74 @@ export default function TradeChat({ tradeId, currentUser, trade, otherParticipan
                                         className="flex-1 py-4 bg-primary text-black rounded-xl font-black uppercase text-[10px] tracking-widest hover:scale-105 transition-all shadow-xl shadow-primary/20 disabled:opacity-50"
                                     >
                                         {isSubmittingReview ? "Enviando..." : "Finalizar Trato"}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Dispute Modal (Protocol V66.0) */}
+            <AnimatePresence>
+                {showDisputeModal && (
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute inset-0 z-30 bg-black/95 backdrop-blur-xl flex items-center justify-center p-6"
+                    >
+                        <div className="w-full max-w-sm space-y-8">
+                            <div className="text-center space-y-2">
+                                <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center border border-red-500/30 mx-auto mb-4">
+                                    <AlertTriangle className="w-8 h-8 text-red-500" />
+                                </div>
+                                <h3 className="text-2xl font-display font-black text-white uppercase tracking-tighter">Abrir Reclamo</h3>
+                                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest px-4">
+                                    La operación será congelada de inmediato para mediación administrativa.
+                                </p>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest px-1">Motivo del Problema</p>
+                                    <select 
+                                        value={disputeReason}
+                                        onChange={(e) => setDisputeReason(e.target.value)}
+                                        className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm text-white outline-none focus:border-red-500/50 appearance-none cursor-pointer"
+                                    >
+                                        <option value="" disabled className="bg-[#0a0a0a]">Selecciona un motivo...</option>
+                                        <option value="item_not_arrived" className="bg-[#0a0a0a]">El ítem no llegó / No coordinaron</option>
+                                        <option value="item_damaged" className="bg-[#0a0a0a]">El ítem está dañado / Mal estado</option>
+                                        <option value="fraud" className="bg-[#0a0a0a]">Sospecha de Fraude / Estafa</option>
+                                        <option value="no_response" className="bg-[#0a0a0a]">Falta de respuesta persistente</option>
+                                        <option value="other" className="bg-[#0a0a0a]">Otros problemas</option>
+                                    </select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest px-1">Detalles Adicionales</p>
+                                    <textarea
+                                        value={disputeDetails}
+                                        onChange={(e) => setDisputeDetails(e.target.value)}
+                                        placeholder="Describe brevemente lo ocurrido para el Administrador..."
+                                        className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm text-white focus:border-red-500/50 outline-none transition-all h-24 resize-none"
+                                    />
+                                </div>
+
+                                <div className="flex gap-3 pt-4">
+                                    <button
+                                        onClick={() => setShowDisputeModal(false)}
+                                        className="flex-1 py-4 bg-white/5 text-gray-400 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-white/10"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        onClick={handleSubmitDispute}
+                                        disabled={!disputeReason || isSubmittingDispute}
+                                        className="flex-1 py-4 bg-red-600 text-white rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-red-500 transition-all shadow-xl shadow-red-500/20 disabled:opacity-50"
+                                    >
+                                        {isSubmittingDispute ? "Enviando..." : "Abrir Reclamo"}
                                     </button>
                                 </div>
                             </div>

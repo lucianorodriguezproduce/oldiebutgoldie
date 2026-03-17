@@ -1429,5 +1429,48 @@ export const tradeService = {
         }, (error) => {
             console.error("[InboxV2] TradeChats snapshot error:", error);
         });
+    },
+
+    /**
+     * Protocolo V66.0: Open a formal dispute for a trade
+     * Freezes the operation and notifies admins.
+     */
+    async openDispute(tradeId: string, chatId: string, reason: string, details: string, openerUid: string) {
+        const tradeRef = doc(db, COLLECTION_NAME, tradeId);
+        const p2pChatRef = doc(db, "p2p_chats", chatId);
+        const systemMessageRef = doc(collection(db, "p2p_chats", chatId, "messages"));
+
+        return runTransaction(db, async (transaction) => {
+            const tradeSnap = await transaction.get(tradeRef);
+            if (!tradeSnap.exists()) throw new Error("TRADE_NOT_FOUND");
+
+            // 1. Update Trade Status to 'disputed'
+            transaction.update(tradeRef, {
+                status: 'disputed',
+                dispute_data: {
+                    openedBy: openerUid,
+                    reason,
+                    details,
+                    createdAt: serverTimestamp()
+                },
+                updatedAt: serverTimestamp()
+            });
+
+            // 2. Update Chat Status
+            transaction.update(p2pChatRef, {
+                status: 'disputed',
+                lastMessage: "🚨 Reclamo abierto. Operación congelada.",
+                updatedAt: serverTimestamp()
+            });
+
+            // 3. System Message for both parties
+            transaction.set(systemMessageRef, {
+                sender_uid: "system",
+                text: `🚨 Se ha abierto un reclamo oficial por "${reason}". La operación ha sido congelada. Un administrador de Oldie but Goldie revisará el caso y se comunicará por este medio.`,
+                timestamp: serverTimestamp(),
+                read_status: false,
+                is_alert: true
+            });
+        });
     }
 };
