@@ -163,18 +163,21 @@ export const maintenanceService = {
     },
 
     /**
-     * Protocol V38 (Full Metadata Sync): Sanador de Verdad y Estructura.
-     * Repara identidades, tradeId faltantes y usernames huérfanos para restaurar visibilidad.
+     * Protocol V40 (Identity Reconciliation): El Sanador de Identidad Final.
+     * Detecta y migra registros del UID legacy (MKPl...) al nuevo UID de sesión (O5bs...).
      */
     async healConversationIdentities() {
-        console.log("[Maintenance] Iniciando Protocolo de Sincronización V38...");
+        // UID antiguo que está atrapado en la base de datos
+        const LEGACY_ADMIN_UID = 'MKPlxxi9JENQt0hS3V1QNeF8oOS2';
+        console.log(`[Maintenance] Iniciando Reconciliación V40: ${LEGACY_ADMIN_UID} -> ${ADMIN_UID}`);
+        
         try {
             const q = query(collectionGroup(db, "conversations"));
             const snap = await getDocs(q);
             
             if (snap.empty) return "0 (No se encontraron conversaciones)";
 
-            let healedCount = 0;
+            let migratedCount = 0;
             let metadataFixed = 0;
             let totalScanned = snap.docs.length;
             
@@ -185,33 +188,43 @@ export const maintenanceService = {
                 
                 const changes: any = {};
                 
-                // 1. Verificación de Estructura (tradeId)
-                if (!data.tradeId || data.tradeId !== tradeIdFromPath) {
-                    changes.tradeId = tradeIdFromPath;
+                // 1. MIGRACIÓN CRÍTICA DE UID (Legacy -> Actual)
+                if (data.sellerId === LEGACY_ADMIN_UID) {
+                    changes.sellerId = ADMIN_UID;
+                    migratedCount++;
+                }
+                if (data.buyerId === LEGACY_ADMIN_UID) {
+                    changes.buyerId = ADMIN_UID;
+                    migratedCount++;
                 }
 
-                // 2. Verificación de Identidad (Propiedad)
+                // 2. Verificación de Estructura y Propiedad (Bunker vs User Assets)
                 const invRef = doc(db, "inventory", tradeIdFromPath);
                 const assetRef = doc(db, "user_assets", tradeIdFromPath);
                 const [invSnap, assetSnap] = await Promise.all([getDoc(invRef), getDoc(assetRef)]);
 
-                let realSellerId = data.sellerId;
+                let targetOwnerId = changes.sellerId || data.sellerId;
+
                 if (invSnap.exists()) {
-                    realSellerId = ADMIN_UID;
+                    targetOwnerId = ADMIN_UID;
                 } else if (assetSnap.exists()) {
-                    realSellerId = assetSnap.data().ownerId;
+                    const assetOwner = assetSnap.data().ownerId;
+                    if (assetOwner && assetOwner !== targetOwnerId) {
+                        targetOwnerId = assetOwner;
+                    }
                 }
 
-                // Si el seller detectado es distinto al guardado
-                if (realSellerId && realSellerId !== data.sellerId) {
-                    changes.sellerId = realSellerId;
-                    healedCount++;
+                if (targetOwnerId && targetOwnerId !== data.sellerId) {
+                    changes.sellerId = targetOwnerId;
                 }
 
-                // 3. Sincronización de Nombres de Usuario (Fallback Crítico)
-                // Si faltan nombres, la UI no sabe qué mostrar
-                if (realSellerId && (!data.sellerUsername || changes.sellerId)) {
-                    const sellerDoc = await getDoc(doc(db, "users", realSellerId));
+                // 3. Sincronización de Metadatos y IDs de Trade
+                if (!data.tradeId || data.tradeId !== tradeIdFromPath) {
+                    changes.tradeId = tradeIdFromPath;
+                }
+
+                if (targetOwnerId && (!data.sellerUsername || changes.sellerId)) {
+                    const sellerDoc = await getDoc(doc(db, "users", targetOwnerId));
                     if (sellerDoc.exists()) {
                         const sData = sellerDoc.data();
                         changes.sellerUsername = sData.username ? (sData.username.startsWith('@') ? sData.username : `@${sData.username}`) : sData.display_name || "Vendedor";
@@ -227,18 +240,18 @@ export const maintenanceService = {
                 }
 
                 if (Object.keys(changes).length > 0) {
-                    changes.healing_v = "38.0";
+                    changes.healing_v = "40.0";
                     changes.healedAt = serverTimestamp();
                     await updateDoc(docSnap.ref, changes);
                     metadataFixed++;
-                    console.log(`[Heal-V38] SYNC: ${tradeIdFromPath} -> Fixes: ${Object.keys(changes).join(', ')}`);
+                    console.log(`[Heal-V40] MIGRADO/SYNC: ${tradeIdFromPath} -> Fixes: ${Object.keys(changes).join(', ')}`);
                 }
             }
 
-            return `V38 OK: ${healedCount} identidades, ${metadataFixed} metadatos sincronizados de ${totalScanned}.`;
+            return `V40 RECONCILIATION: ${migratedCount} UIDs migrados, ${metadataFixed} registros sincronizados de ${totalScanned}.`;
         } catch (error: any) {
-            console.error("[Heal-V38] FATAL ERROR:", error);
-            return `ERROR V38: ${error.message}`;
+            console.error("[Heal-V40] FATAL ERROR:", error);
+            return `ERROR V40: ${error.message}`;
         }
     },
 

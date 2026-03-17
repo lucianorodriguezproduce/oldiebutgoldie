@@ -422,10 +422,10 @@ export default function AdminStats() {
                             <ShieldAlert className="w-4 h-4" />
                             <span className="text-xs font-black uppercase tracking-widest">Chat Healing</span>
                         </div>
-                        <p className="text-[11px] text-zinc-500 font-medium">Sincronización Total de Metadatos (Protocolo V38).</p>
+                        <p className="text-[11px] text-zinc-500 font-medium">Reconciliación de Identidad (Protocolo V40).</p>
                         <button
                             onClick={async () => {
-                                if (!confirm("¿Iniciar Sincronización Total V38? Esto reparará rutas y nombres de usuario.")) return;
+                                if (!confirm("¿Iniciar Reconciliación de Identidad V40? Esto migrará tus chats a tu sesión actual.")) return;
                                 setIsPurging(prev => ({ ...prev, heal: true }));
                                 try {
                                     const result = await maintenanceService.healConversationIdentities();
