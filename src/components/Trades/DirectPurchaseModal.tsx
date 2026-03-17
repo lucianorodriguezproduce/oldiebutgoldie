@@ -44,9 +44,17 @@ export default function DirectPurchaseModal({ isOpen, onClose, order }: DirectPu
         showLoading("Iniciando contacto...");
 
         try {
-            // V46 HARDLINK: Extract sellerId from order (real owner)
-            const sellerId = order.ownerId || order.uid;
-            console.log(`[contact] Starting inquiry for order: ${order.id} | Seller: ${sellerId}`);
+            // V46.1 HARDLINK: Robust extraction of sellerId
+            // If it's a trade object, the owner is participants.senderId (the publisher)
+            // If it's a raw asset/item, it might be ownerId or uid
+            const sellerId = order.participants?.senderId || order.ownerId || order.uid;
+            
+            console.log("[P2P-PAYLOAD] Enviando a startInquiry - SellerID:", sellerId);
+
+            if (!sellerId) {
+                console.error("[P2P-ERROR] No se pudo determinar el dueño del activo en el modal.");
+                throw new Error("SISTEMA_IDENTIDAD_VENDEDOR_REQUERIDA");
+            }
 
             // Usamos el nuevo método de consulta en lugar de compra directa
             const tradeId = await tradeService.startInquiry(order.id, user.uid, dbUser.username, sellerId);

@@ -147,6 +147,7 @@ export const tradeService = {
             timestamp: serverTimestamp()
         };
         const docRef = await addDoc(collection(db, COLLECTION_NAME), scrubData(tradeData));
+        console.log(`[P2P-FINAL] Orden creada con ID: ${docRef.id}. Vendedor asignado: ${receiverId}`);
 
         // Tracking DataLayer
         if (tradeData.type === 'admin_negotiation') {
@@ -686,12 +687,11 @@ export const tradeService = {
         let discoId = tradeId;
         if (tradeSnap.exists()) {
             const tradeData = tradeSnap.data() as any;
-            if (tradeData.manifest?.requestedItems?.[0]) {
-                discoId = tradeData.manifest.requestedItems[0];
-            }
+            // El disco puede estar en cualquiera de las dos listas dependiendo del sentido de la operación
+            discoId = tradeData.manifest?.requestedItems?.[0] || tradeData.manifest?.offeredItems?.[0] || tradeId;
         }
 
-        console.log(`[V45-FIX] Iniciando búsqueda para DiscoId: ${discoId} (TradeId: ${tradeId})`);
+        console.log(`[V45-FIX] DiscoId resuelto: ${discoId} (desde TradeId: ${tradeId})`);
 
         const [assetSnap, inventorySnap] = await Promise.all([
             getDoc(doc(db, "user_assets", discoId)),
@@ -769,6 +769,7 @@ export const tradeService = {
         const snap = await getDoc(conversationRef);
         
         if (!snap.exists()) {
+            console.log(`[P2P-FINAL] Creando conversación para Trade: ${tradeId}. Vendedor: ${sellerId} (${sellerUsername}) | Comprador: ${buyerUid}`);
             const batch = writeBatch(db);
             
             // 1. Create Conversation (Source of Truth for Inbox)
