@@ -15,6 +15,7 @@ import {
     runTransaction,
     onSnapshot,
     deleteDoc,
+    deleteField,
     collectionGroup,
     writeBatch
 } from "firebase/firestore";
@@ -1303,6 +1304,43 @@ export const tradeService = {
                 order_id: tradeId,
                 type: "chat",
                 link: `/mensajes?chat=${chatId}`
+            });
+        });
+    },
+
+    async cancelAdjudication(tradeId: string, chatId: string) {
+        const tradeRef = doc(db, COLLECTION_NAME, tradeId);
+        const p2pChatRef = doc(db, "p2p_chats", chatId);
+        const systemMessageRef = doc(collection(db, "p2p_chats", chatId, "messages"));
+
+        await runTransaction(db, async (transaction) => {
+            const tradeSnap = await transaction.get(tradeRef);
+            if (!tradeSnap.exists()) throw new Error("TRADE_NOT_FOUND");
+
+            // 1. Revert Trade Status
+            transaction.update(tradeRef, {
+                status: "pending",
+                buyer_uid: deleteField(),
+                buyer_name: deleteField(),
+                "participants.receiverId": deleteField(),
+                acceptedAt: deleteField(),
+                payment_status: deleteField(),
+                updatedAt: serverTimestamp()
+            });
+
+            // 2. Update Chat Status
+            transaction.update(p2pChatRef, {
+                status: "cancelled",
+                lastMessage: "⚠️ Reserva cancelada por el vendedor.",
+                updatedAt: serverTimestamp()
+            });
+
+            // 3. System Message
+            transaction.set(systemMessageRef, {
+                sender_uid: "system",
+                text: "⚠️ El vendedor ha cancelado la reserva de este disco. La operación ha sido anulada y el ítem vuelve a estar disponible para otros interesados.",
+                timestamp: serverTimestamp(),
+                read_status: false
             });
         });
     },

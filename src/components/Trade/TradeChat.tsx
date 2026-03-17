@@ -155,21 +155,39 @@ export default function TradeChat({ tradeId, currentUser, trade, otherParticipan
 
                 {/* Protocol V58.3: Cierre de Venta (Sellers only) */}
                 {isVendedor && trade?.status === 'pending_payment' && (
-                    <button 
-                        onClick={async () => {
-                            if (window.confirm("¿Confirmas que has recibido el pago? El disco será transferido a la colección del comprador.")) {
-                                try {
-                                    await tradeService.confirmPaymentAndTransfer(tradeId, chatId || tradeId);
-                                } catch (error) {
-                                    console.error("Transfer error:", error);
-                                    alert("Error al procesar el traspaso.");
+                    <div className="flex flex-col gap-2">
+                        <button 
+                            onClick={async () => {
+                                if (window.confirm("¿Confirmas que has recibido el pago? El disco será transferido a la colección del comprador.")) {
+                                    try {
+                                        await tradeService.confirmPaymentAndTransfer(tradeId, chatId || tradeId);
+                                    } catch (error) {
+                                        console.error("Transfer error:", error);
+                                        alert("Error al procesar el traspaso.");
+                                    }
                                 }
-                            }
-                        }}
-                        className="px-4 py-2 bg-emerald-500 hover:bg-white text-black rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-emerald-500/20"
-                    >
-                        Confirmar Pago y Entregar
-                    </button>
+                            }}
+                            className="px-4 py-2 bg-emerald-500 hover:bg-white text-black rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-emerald-500/20"
+                        >
+                            Confirmar Pago y Entregar
+                        </button>
+                        {/* Protocol V61.0: Bailout mechanism */}
+                        <button 
+                            onClick={async () => {
+                                if (window.confirm("¿Estás seguro de cancelar esta reserva? El disco volverá a estar disponible para que otros usuarios te contacten.")) {
+                                    try {
+                                        await tradeService.cancelAdjudication(tradeId, chatId || tradeId);
+                                    } catch (error) {
+                                        console.error("Cancelation error:", error);
+                                        alert("Error al cancelar la reserva.");
+                                    }
+                                }
+                            }}
+                            className="text-[9px] font-black text-red-500/60 hover:text-red-500 uppercase tracking-widest transition-colors"
+                        >
+                            Cancelar Reserva / Liberar Disco
+                        </button>
+                    </div>
                 )}
 
                 {/* Protocol V58.3: Success Feedback & Delivery coordination */}
