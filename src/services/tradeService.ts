@@ -1,4 +1,4 @@
-import { db } from "@/lib/firebase";
+import { db, auth } from "@/lib/firebase";
 import {
     collection,
     addDoc,
@@ -132,22 +132,26 @@ export const tradeService = {
             throw new Error("SISTEMA_IDENTIDAD_PARTICIPANTE_REQUERIDO");
         }
 
+        const currentUserId = auth.currentUser?.uid;
+        const finalSenderId = currentUserId || trade.participants.senderId;
+
         const tradeData = {
             ...tradeWithoutOrigin,
             participants: {
                 ...trade.participants,
+                senderId: finalSenderId, // V47.1: Forzado al usuario actual
                 receiverId
             },
             type: tradeType,
             isPublicOrder: trade.isPublicOrder || false,
             status: initialStatus as any,
-            currentTurn: receiverId,
+            currentTurn: receiverId, // V47.1: El vendedor debe aceptar
             negotiationHistory: [],
             createdAt: serverTimestamp(),
             timestamp: serverTimestamp()
         };
         const docRef = await addDoc(collection(db, COLLECTION_NAME), scrubData(tradeData));
-        console.log(`[P2P-FINAL] Orden creada con ID: ${docRef.id}. Vendedor asignado: ${receiverId}`);
+        console.log(`[P2P-FINAL] Orden creada con ID: ${docRef.id}. Vendedor asignado: ${receiverId} | Comprador: ${finalSenderId}`);
 
         // Tracking DataLayer
         if (tradeData.type === 'admin_negotiation') {
@@ -723,7 +727,7 @@ export const tradeService = {
             sourceCollection = "existing_trade";
         }
 
-        console.log(`[V45-FIX] Buscando disco con ID: ${discoId} | Propietario real: ${sellerId}`);
+        console.log(`[V45-FIX] Buscando disco con ID: ${discoId} | Propietario real: ${sellerId} | Source: ${sourceCollection}`);
 
         // --- MASTER CROSS-REFERENCE GUARD ---
         if (!sellerId) {
@@ -731,17 +735,24 @@ export const tradeService = {
             throw new Error("PROPIEDAD_NO_ENCONTRADA_EN_P2P");
         }
 
+        // V47.1: Bloqueo de Admin en Participación P2P
+        if (sourceCollection === 'user_assets' && sellerId === ADMIN_UID) {
+            console.error("[V47.1] ERROR: Se intentó asignar al Admin como vendedor de un User Asset.");
+            throw new Error("ERROR_SISTEMA_IDENTIDAD_INVERTIDA");
+        }
+
         // HEALING: Ensure Trade record exists and is synced with master source
         if (!tradeSnap.exists() || (tradeSnap.data() as any).participants?.receiverId !== sellerId) {
             console.log(`[V43.0] Healing/Creating root trade...`);
             await setDoc(tradeRef, scrubData({
                 participants: {
-                    senderId: buyerUid,
-                    receiverId: sellerId
+                    senderId: buyerUid, // Comprador
+                    receiverId: sellerId // Vendedor
                 },
                 type: 'direct_sale',
                 status: 'pending',
-                isPublicOrder: true, // V43.2: Permite visibilidad para múltiples compradores
+                currentTurn: sellerId, // V47.1: El vendedor debe aceptar
+                isPublicOrder: true, 
                 is_admin_offer: (sellerId === ADMIN_UID),
                 manifest: {
                     requestedItems: [tradeId],
