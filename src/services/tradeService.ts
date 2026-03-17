@@ -124,7 +124,14 @@ export const tradeService = {
         const initialStatus = (trade as any).status || "pending";
 
         const { tradeOrigin, ...tradeWithoutOrigin } = trade;
-        const receiverId = trade.participants.receiverId || ADMIN_UID;
+        
+        // V46 Hard-Link: receiverId is mandatory for P2P. No more Admin fallback.
+        const receiverId = trade.participants.receiverId;
+        if (!receiverId) {
+            console.error("[V46] createTrade failed: receiverId is mandatory for identity linkage.");
+            throw new Error("SISTEMA_IDENTIDAD_PARTICIPANTE_REQUERIDO");
+        }
+
         const tradeData = {
             ...tradeWithoutOrigin,
             participants: {
@@ -660,14 +667,13 @@ export const tradeService = {
         });
     },
 
-    async startInquiry(tradeId: string, buyerUid: string, buyerName: string) {
+    async startInquiry(tradeId: string, buyerUid: string, buyerName: string, forcedSellerId?: string) {
         if (!buyerName) throw new Error("USERNAME_REQUIRED");
         const buyerUsername = buyerName.startsWith('@') ? buyerName : `@${buyerName}`;
         
-        console.log(`[V43.0] ANALISIS DE CRUCE MAESTRO -> tradeId: ${tradeId}`);
-        console.log(`[P2P-CHECK] Buscando dueño del ítem: ${tradeId}`);
+        console.log(`[V46-HARDLINK] Iniciando búsqueda -> TradeId: ${tradeId} | forcedSellerId: ${forcedSellerId}`);
         
-        let sellerId: string | null = null;
+        let sellerId: string | null = forcedSellerId || null;
         let title = "Disco Desconocido";
         let cover = "";
         let sourceCollection = "none";
@@ -1141,7 +1147,10 @@ export const tradeService = {
             sellerId = ADMIN_UID;
         }
 
-        if (!sellerId) sellerId = ADMIN_UID; // Fallback final de seguridad
+        if (!sellerId) {
+            console.error(`[V46-HARDLINK] executeDirectPurchase failed: No owner found for item ${discoId}`);
+            throw new Error("SISTEMA_IDENTIDAD_PARTICIPANTE_REQUERIDO");
+        }
 
         // Fetch seller details for metadata
         let sellerUsername = "Vendedor";

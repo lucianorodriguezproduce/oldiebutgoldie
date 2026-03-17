@@ -44,9 +44,12 @@ export default function DirectPurchaseModal({ isOpen, onClose, order }: DirectPu
         showLoading("Iniciando contacto...");
 
         try {
-            console.log(`[contact] Starting inquiry for order: ${order.id} by user: ${user.uid}`);
+            // V46 HARDLINK: Extract sellerId from order (real owner)
+            const sellerId = order.ownerId || order.uid;
+            console.log(`[contact] Starting inquiry for order: ${order.id} | Seller: ${sellerId}`);
+
             // Usamos el nuevo método de consulta en lugar de compra directa
-            const tradeId = await tradeService.startInquiry(order.id, user.uid, dbUser.username);
+            const tradeId = await tradeService.startInquiry(order.id, user.uid, dbUser.username, sellerId);
             onClose();
             // Redirect to messages instead of profile
             navigate(`/mensajes?chat=${tradeId}`);
