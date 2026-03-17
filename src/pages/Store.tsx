@@ -44,8 +44,10 @@ export default function Store() {
             setHasMore(false); // In real-time mode, we load the full active set for now
         });
 
-        const unsubscribeTrades = tradeService.onSnapshotBlockedAssets((ids: string[]) => {
-            setBlockedAssetIds(ids);
+        const unsubscribeTrades = tradeService.onSnapshotBlockedAssets((data) => {
+            // En la tienda, solo ocultamos los RESERVADOS (con pago pendiente)
+            // Los que están en negociación siguen visibles para otros interesados.
+            setBlockedAssetIds(data.reserved);
         });
 
         return () => {

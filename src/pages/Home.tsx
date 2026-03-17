@@ -92,8 +92,9 @@ export default function Home() {
 
     // Listener para Asset Locking Visual
     useEffect(() => {
-        const unsubscribe = tradeService.onSnapshotBlockedAssets((ids: string[]) => {
-            setBlockedAssetIds(ids);
+        const unsubscribe = tradeService.onSnapshotBlockedAssets((data) => {
+            // En Home, bloqueamos visualmente tanto negociados como reservados
+            setBlockedAssetIds([...data.negotiating, ...data.reserved]);
         });
         return () => unsubscribe();
     }, []);

@@ -1421,5 +1421,40 @@ export const tradeService = {
         }, (error) => {
             console.error("[InboxV2] TradeChats snapshot error:", error);
         });
+    },
+    
+    /**
+     * Listener para detectar qué activos están bloqueados (en negociación o reservados)
+     * V63.0: Devuelve un objeto con dos arrays de IDs.
+     */
+    onSnapshotBlockedAssets(callback: (data: { negotiating: string[], reserved: string[] }) => void) {
+        console.log("[tradeService] Escuchando bloqueos de activos...");
+        const q = query(
+            collection(db, "trades"),
+            where("status", "in", ["pending", "pending_payment", "accepted"])
+        );
+
+        return onSnapshot(q, (snapshot) => {
+            const negotiating: string[] = [];
+            const reserved: string[] = [];
+
+            snapshot.docs.forEach(docSnap => {
+                const data = docSnap.data() as any;
+                const items = data.manifest?.requestedItems || [];
+                
+                if (data.status === "pending_payment" || data.status === "accepted") {
+                    reserved.push(...items.map(String));
+                } else if (data.status === "pending") {
+                    negotiating.push(...items.map(String));
+                }
+            });
+
+            callback({
+                negotiating: Array.from(new Set(negotiating)),
+                reserved: Array.from(new Set(reserved))
+            });
+        }, (error) => {
+            console.error("[tradeService] Error en snapshot de bloqueos:", error);
+        });
     }
 };
