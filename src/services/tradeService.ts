@@ -928,16 +928,12 @@ export const tradeService = {
 
             if (recipientId) {
                 await addDoc(collection(db, "notifications"), {
-                    userId: recipientId,
-                    type: 'new_message',
+                    uid: recipientId,
+                    type: 'chat',
                     title: `Nuevo mensaje de ${senderName}`,
                     message: text.substring(0, 100) + (text.length > 100 ? '...' : ''),
                     link: `/mensajes?chat=${tradeId}`,
                     read: false,
-                    createdAt: serverTimestamp(),
-                    // Legacy compatibility
-                    uid: recipientId,
-                    user_id: recipientId,
                     timestamp: serverTimestamp(),
                     order_id: tradeId
                 });

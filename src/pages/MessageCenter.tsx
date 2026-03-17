@@ -57,7 +57,7 @@ export default function MessageCenter() {
         });
 
         return () => unsub();
-    }, [user, chatIdFromUrl]);
+    }, [user, chatIdFromUrl, searchParams]);
 
     const filteredConversations = conversations.filter(c => 
         c.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||

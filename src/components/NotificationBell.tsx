@@ -23,7 +23,8 @@ interface Notification {
     read: boolean;
     timestamp: any;
     order_id?: string;
-    type?: "connection_request" | "connection_accepted" | "order";
+    link?: string;
+    type?: "connection_request" | "connection_accepted" | "order" | "chat";
     requester_username?: string;
 }
 
@@ -167,7 +168,9 @@ export default function NotificationBell() {
                                         onClick={() => {
                                             if (!notif.read) markAsRead(notif.id);
                                             setIsOpen(false);
-                                            if (notif.type === "connection_request" && notif.requester_username) {
+                                            if (notif.link) {
+                                                navigate(notif.link);
+                                            } else if (notif.type === "connection_request" && notif.requester_username) {
                                                 navigate(`/u/${notif.requester_username}`);
                                             } else if (notif.order_id) {
                                                 openOrderDrawer(notif.order_id);
