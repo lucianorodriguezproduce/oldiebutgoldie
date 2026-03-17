@@ -44,27 +44,20 @@ export default function DirectPurchaseModal({ isOpen, onClose, order }: DirectPu
         showLoading("Iniciando contacto...");
 
         try {
-            // V48.1 HARDLINK: Robust extraction of sellerId
-            // If it's a trade object with participants, the owner is participants.senderId (the publisher/seller)
-            // if it's a public order where receiverId is Admin.
-            let sellerId = order.uid; // Default for raw items
+            // V49.0 ATOMIC IDENTITY: Ignore participant data from previous orders.
+            // The source of truth is always the asset owner.
+            let sellerId = order.ownerId || order.userAssetId || order.id;
 
-            if (order.participants) {
-                // If receiver is Admin, then sender is the Seller
-                if (order.participants.receiverId === 'O5bs8eTZQdwMMQ9P6eDbJyVEZV2' || order.participants.receiverId === 'ADMIN_UID') {
-                     sellerId = order.participants.senderId;
-                } else {
-                     sellerId = order.participants.receiverId || order.participants.senderId;
-                }
-            } else if (order.ownerId) {
-                sellerId = order.ownerId;
+            // Extra precaution: if it's a trade object, we seek the item owner inside the manifest/items
+            if (order.manifest?.items?.[0]?.userAssetId) {
+                sellerId = order.manifest.items[0].userAssetId;
             }
-            
-            console.log("[P2P-PAYLOAD] Enviando a startInquiry - SellerID:", sellerId);
+
+            console.log("[V49-PAYLOAD] Identificando Vendedor Real ->", sellerId);
 
             if (!sellerId || sellerId === 'O5bs8eTZQdwMMQ9P6eDbJyVEZV2') {
-                console.error("[P2P-ERROR] Identidad del vendedor inválida o Admin detectado en flujo P2P.", { order });
-                throw new Error("ERROR_SISTEMA_IDENTIDAD_VENDEDOR_INVALIDA");
+                console.error("[V49-FATAL] No se puede iniciar comercio P2P con identidad Admin o nula.");
+                throw new Error("ERROR_PROPIEDAD_NO_VERIFICADA");
             }
 
             // Usamos el nuevo método de consulta en lugar de compra directa

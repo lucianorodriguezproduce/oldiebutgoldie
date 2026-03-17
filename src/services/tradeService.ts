@@ -694,7 +694,7 @@ export const tradeService = {
         
         console.log(`[V46-HARDLINK] Iniciando búsqueda -> TradeId: ${tradeId} | forcedSellerId: ${forcedSellerId}`);
         
-        let sellerId: string | null = forcedSellerId || null;
+        let sellerId: string = "";
         let title = "Disco Desconocido";
         let cover = "";
         let sourceCollection = "none";
@@ -707,26 +707,25 @@ export const tradeService = {
         let discoId = tradeId;
         if (tradeSnap.exists()) {
             const tradeData = tradeSnap.data() as any;
-            // El disco puede estar en cualquiera de las dos listas dependiendo del sentido de la operación
-            discoId = tradeData.manifest?.requestedItems?.[0] || tradeData.manifest?.offeredItems?.[0] || tradeId;
+            discoId = tradeData.manifest?.requestedItems?.[0] || tradeData.manifest?.offeredItems?.[0] || 
+                     tradeData.userAssetId || tradeData.id || tradeId;
         }
 
-        console.log(`[V45-FIX] DiscoId resuelto: ${discoId} (desde TradeId: ${tradeId})`);
+        console.log(`[V49-ATOMIC] Resolviendo Propiedad -> DiscoId: ${discoId}`);
 
         const [assetSnap, inventorySnap] = await Promise.all([
             getDoc(doc(db, "user_assets", discoId)),
             getDoc(doc(db, "inventory", discoId))
         ]);
 
-        // PRIORITY 1: User Assets (P2P Marketplace) - V43.0: Unified ownerId/uid
+        // ATOMIC RESOLUTION (V49.0): No fallbacks, no guessing.
         if (assetSnap.exists()) {
             const assetData = assetSnap.data() as any;
-            sellerId = assetData.ownerId || assetData.uid; // BRIDGE: Support both schemas
+            sellerId = assetData.ownerId || assetData.uid;
             title = assetData.metadata?.title || title;
             cover = assetData.media?.thumbnail || "";
             sourceCollection = "user_assets";
         } 
-        // PRIORITY 2: Inventory (Official Shop / Admin)
         else if (inventorySnap.exists()) {
             const itemData = inventorySnap.data() as any;
             sellerId = ADMIN_UID;
@@ -734,35 +733,25 @@ export const tradeService = {
             cover = itemData.media?.thumbnail || "";
             sourceCollection = "inventory";
         }
-        // PRIORITY 3: Legacy/Orphan Fallback (from current trade if exists)
-        else if (tradeSnap.exists()) {
-            const tradeData = tradeSnap.data() as any;
-            // V48.1: Si es una orden pública, el receiverId suele ser el Admin y el senderId el dueño real.
-            // Si el receiverId es el Admin, priorizamos el senderId como vendedor.
-            if (tradeData.participants?.receiverId === ADMIN_UID && tradeData.isPublicOrder) {
-                sellerId = tradeData.participants?.senderId;
-                console.log(`[V48.1-FALLBACK] Detectada orden pública con Admin. Usando senderId como vendedor: ${sellerId}`);
-            } else {
-                sellerId = tradeData.participants?.receiverId || tradeData.participants?.senderId;
-            }
-            title = tradeData.manifest?.items?.[0]?.title || tradeData.details?.album || title;
-            cover = tradeData.manifest?.items?.[0]?.cover_image || tradeData.media?.thumbnail || "";
-            sourceCollection = "existing_trade";
+        else {
+            // Si no está en user_assets ni en inventory, es un activo huérfano. ABORTAR.
+            console.error(`[V49-FATAL] No se pudo verificar la propiedad del activo ${discoId}. Abortando.`);
+            throw new Error("ERROR_PROPIEDAD_NO_VERIFICADA");
         }
 
-        console.log(`[V45-FIX] Buscando disco con ID: ${discoId} | Propietario real: ${sellerId} | Source: ${sourceCollection}`);
-
-        // --- MASTER CROSS-REFERENCE GUARD ---
-        if (!sellerId) {
-            console.error(`[V43.0] CRITICAL FAILURE: Master Cross-reference found 0 owners for item ${tradeId}`);
-            throw new Error("PROPIEDAD_NO_ENCONTRADA_EN_P2P");
+        // BLOQUEO DE AUTO-COMPRA (V49.0)
+        if (buyerUid === sellerId) {
+            console.warn(`[V49-BLOCK] Intento de auto-compra detectado para el usuario ${buyerUid}`);
+            throw new Error("ERROR_AUTO_COMPRA_RESTRINGIDA");
         }
 
-        // V47.1: Bloqueo de Admin en Participación P2P
+        // BLOQUEO DE ADMIN EN P2P (V49.0)
         if (sourceCollection === 'user_assets' && sellerId === ADMIN_UID) {
-            console.error("[V47.1] ERROR: Se intentó asignar al Admin como vendedor de un User Asset.");
+            console.error("[V49-FATAL] Inconsistencia: User Asset asignado al Admin.");
             throw new Error("ERROR_SISTEMA_IDENTIDAD_INVERTIDA");
         }
+
+        console.log(`[V49-SUCCESS] Identidad validada: Vendedor=${sellerId} | Source=${sourceCollection}`);
 
         // HEALING: Ensure Trade record exists and is synced with master source
         if (!tradeSnap.exists() || (tradeSnap.data() as any).participants?.receiverId !== sellerId) {
