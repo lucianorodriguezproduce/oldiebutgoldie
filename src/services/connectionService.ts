@@ -43,11 +43,10 @@ export const requestConnection = async (requester: DbUser, receiverId: string) =
 
         transaction.set(docRef, newConnection);
 
-        // Add notification for receiver
+        // Add notification for receiver (V43.0 Standard)
         const notifRef = doc(collection(db, "notifications"));
         transaction.set(notifRef, {
-            uid: receiverId,
-            user_id: receiverId, // Legacy
+            uid: receiverId,        // V43 Primary
             title: "Nueva Solicitud de Conexión",
             message: `@${requester.username} quiere conectar con vos.`,
             read: false,

@@ -10,6 +10,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { runReport } from '@/services/analyticsService';
 import type { AnalyticsDataPoint } from '@/services/analyticsService';
 import { maintenanceService } from '@/services/maintenanceService';
+import { useAuth } from '@/context/AuthContext';
 
 export interface SearchConsoleData {
     query: string;
@@ -27,6 +28,7 @@ export interface AnalyticsSummary {
 }
 
 export default function AdminDashboard() {
+    const { user } = useAuth();
     const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
     const [keywords, setKeywords] = useState<SearchConsoleData[]>([]);
     const [chartData, setChartData] = useState<AnalyticsDataPoint[]>([]);
@@ -377,8 +379,9 @@ export default function AdminDashboard() {
                         <button
                             onClick={async () => {
                                 if (!confirm("¿Iniciar curación histórica de chats? Esto reparará la visibilidad para los vendedores.")) return;
+                                const { user } = useAuth();
                                 setIsPurging(prev => ({ ...prev, heal: true }));
-                                const count = await maintenanceService.healConversationIdentities();
+                                const count = await maintenanceService.healConversationIdentities(user?.uid || "");
                                 alert(`Curación completada: ${count} chats recuperados.`);
                                 setIsPurging(prev => ({ ...prev, heal: false }));
                             }}

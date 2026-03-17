@@ -133,7 +133,7 @@ service cloud.firestore {
       }
     }
 
-    // Trades - Protocolo V31.1 P2P Fix
+    // Trades - Protocolo V31.1 P2P Fix + V43.0 Visibility Fix
     match /trades/{tradeId} {
       allow read: if request.auth != null && (
         isAdmin() || 
@@ -150,16 +150,15 @@ service cloud.firestore {
         request.auth.uid == resource.data.participants.senderId || 
         request.auth.uid == resource.data.participants.receiverId ||
         request.auth.uid == resource.data.highest_bidder_uid ||
-        // Permitir que un comprador se asocie a una orden pública
         (resource.data.isPublicOrder == true && request.resource.data.highest_bidder_uid == request.auth.uid)
       );
 
       match /conversations/{conversationId} {
+        // V43.0: Eliminada la dependencia de /usernames/ para evitar bloqueos a usuarios nuevos
         allow read: if request.auth != null && (
           isAdmin() ||
           (resource != null && (resource.data.buyerId == request.auth.uid || resource.data.sellerId == request.auth.uid)) ||
-          (resource == null && (request.resource.data.buyerId == request.auth.uid || request.resource.data.sellerId == request.auth.uid)) ||
-          get(/databases/$(database)/documents/usernames/$(getCleanUsername(conversationId))).data.uid == request.auth.uid 
+          (resource == null && (request.resource.data.buyerId == request.auth.uid || request.resource.data.sellerId == request.auth.uid))
         );
         allow write: if request.auth != null && (
           isAdmin() ||

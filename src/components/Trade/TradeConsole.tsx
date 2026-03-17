@@ -273,7 +273,7 @@ export default function TradeConsole({ trade, onUpdate, onClose }: TradeConsoleP
                                         currentUser={user} 
                                         trade={trade} 
                                         otherParticipantName={`@${selectedConv?.buyerName}`} 
-                                        conversationId={selectedBuyerId}
+                                        conversationId={selectedConv?.buyerUsername}
                                     />
                                 </div>
                             </>

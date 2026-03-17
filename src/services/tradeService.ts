@@ -578,6 +578,19 @@ export const tradeService = {
                 status: "pending",
                 timestamp: serverTimestamp()
             });
+
+            // 5. Notification for Seller (V43.0 Standard)
+            const notifRef = doc(collection(db, "notifications"));
+            transaction.set(notifRef, {
+                uid: tradeData.participants.senderId, // Dueño del disco (V43 standardized)
+                title: "Nueva oferta 💸",
+                message: `${username} ofertó $${amount.toLocaleString()} por tu disco.`,
+                read: false,
+                timestamp: serverTimestamp(),
+                order_id: tradeId,
+                type: "bid",
+                link: `/orden/${tradeId}`
+            });
             
             return { tradeId, amount };
         });
@@ -626,12 +639,13 @@ export const tradeService = {
             // 3. Add notification for winner
             const notificationRef = doc(collection(db, "notifications"));
             transaction.set(notificationRef, {
-                user_id: tradeData.highest_bidder_uid,
+                uid: tradeData.highest_bidder_uid, // V43 STANDARD: Primary identity field
                 title: "¡Ganaste la Subasta!",
                 message: `El vendedor aceptó tu oferta por "${tradeData.manifest.items?.[0]?.title || 'el disco'}". El chat de coordinación está abierto.`,
                 read: false,
                 timestamp: serverTimestamp(),
-                order_id: tradeId
+                order_id: tradeId,
+                type: "order"
             });
         });
     },
@@ -650,12 +664,12 @@ export const tradeService = {
         if (!buyerName) throw new Error("USERNAME_REQUIRED");
         const buyerUsername = buyerName.startsWith('@') ? buyerName : `@${buyerName}`;
         
-        console.log(`[eye-of-hawk] Starting Protocol V34.0 for tradeId: ${tradeId}`);
+        console.log(`[V43.0] ANALISIS DE CRUCE MAESTRO -> tradeId: ${tradeId}`);
         
-        let sellerId = ADMIN_UID;
+        let sellerId: string | null = null;
         let title = "Disco Desconocido";
         let cover = "";
-        let foundInCollection = "none";
+        let sourceCollection = "none";
 
         const tradeRef = doc(db, COLLECTION_NAME, tradeId);
         const [tradeSnap, assetSnap, inventorySnap] = await Promise.all([
@@ -664,44 +678,14 @@ export const tradeService = {
             getDoc(doc(db, "inventory", tradeId))
         ]);
 
-        // PRIORITY 1: User Assets (P2P Marketplace)
+        // PRIORITY 1: User Assets (P2P Marketplace) - V43.0: Unified ownerId/uid
         if (assetSnap.exists()) {
             const assetData = assetSnap.data() as any;
-            sellerId = assetData.ownerId;
+            sellerId = assetData.ownerId || assetData.uid; // BRIDGE: Support both schemas
             title = assetData.metadata?.title || title;
             cover = assetData.media?.thumbnail || "";
-            foundInCollection = "user_assets";
-            console.log(`[eye-of-hawk] P2P Item detected. Owner Sovereign: ${sellerId}`);
-
-            // HEALING: If trade exists but has wrong seller, update it. If not exists, create it.
-            if (!tradeSnap.exists() || (tradeSnap.data() as any).participants?.receiverId !== sellerId) {
-                console.log(`[eye-of-hawk] HEALING/CREATING trade for P2P asset: ${tradeId}`);
-                await setDoc(tradeRef, scrubData({
-                    participants: {
-                        senderId: buyerUid,
-                        receiverId: sellerId
-                    },
-                    type: 'direct_sale',
-                    status: 'pending',
-                    is_admin_offer: false,
-                    manifest: {
-                        requestedItems: [tradeId],
-                        offeredItems: [],
-                        cashAdjustment: assetData.valuation || 0,
-                        currency: 'ARS',
-                        items: [{
-                            id: tradeId,
-                            title: title,
-                            artist: assetData.metadata?.artist || "Varios",
-                            cover_image: cover,
-                            price: assetData.valuation || 0
-                        }]
-                    },
-                    // Preserve createdAt if exists
-                    createdAt: (tradeSnap.exists() ? (tradeSnap.data() as any).createdAt : serverTimestamp()),
-                    timestamp: serverTimestamp()
-                }), { merge: true });
-            }
+            sourceCollection = "user_assets";
+            console.log(`[V43.0] P2P Item Detected. Sovereign ID: ${sellerId}`);
         } 
         // PRIORITY 2: Inventory (Official Shop / Admin)
         else if (inventorySnap.exists()) {
@@ -709,59 +693,56 @@ export const tradeService = {
             sellerId = ADMIN_UID;
             title = itemData.metadata?.title || title;
             cover = itemData.media?.thumbnail || "";
-            foundInCollection = "inventory";
-            console.log(`[eye-of-hawk] Shop item detected. Seller Sovereign: ADMIN_UID`);
-
-            if (!tradeSnap.exists()) {
-                await setDoc(tradeRef, scrubData({
-                    participants: {
-                        senderId: buyerUid,
-                        receiverId: ADMIN_UID
-                    },
-                    type: 'direct_sale',
-                    status: 'pending',
-                    is_admin_offer: true,
-                    manifest: {
-                        requestedItems: [tradeId],
-                        offeredItems: [],
-                        cashAdjustment: itemData.logistics?.price || 0,
-                        currency: itemData.logistics?.currency || 'ARS',
-                        items: [{
-                            id: tradeId,
-                            title: title,
-                            artist: itemData.metadata?.artist || "Varios",
-                            cover_image: cover,
-                            price: itemData.logistics?.price || 0
-                        }]
-                    },
-                    createdAt: serverTimestamp(),
-                    timestamp: serverTimestamp()
-                }));
-            }
+            sourceCollection = "inventory";
+            console.log(`[V43.0] Official Store Item Detected. Seller: ADMIN`);
         }
-        // PRIORITY 3: Existing Trade (for items moved/archived but active in chat)
+        // PRIORITY 3: Existing Trade (Inherit security)
         else if (tradeSnap.exists()) {
             const tradeData = tradeSnap.data() as any;
-            sellerId = tradeData.participants?.receiverId || tradeData.participants?.senderId || ADMIN_UID;
+            sellerId = tradeData.participants?.receiverId || tradeData.participants?.senderId;
             title = tradeData.manifest?.items?.[0]?.title || tradeData.details?.album || title;
             cover = tradeData.manifest?.items?.[0]?.cover_image || tradeData.media?.thumbnail || "";
-            foundInCollection = "existing_trade_only";
-            console.log(`[eye-of-hawk] Orphan trade detected (no asset/inv). Trusting current sellerId: ${sellerId}`);
-        } else {
-            console.warn(`[eye-of-hawk] Item ${tradeId} not found in any collection. Abandoning inquiry.`);
-            throw new Error("ARTICULO_NO_ENCONTRADO");
+            sourceCollection = "existing_trade";
+            console.log(`[V43.0] Orphan Trade Detected. Inheriting Seller: ${sellerId}`);
         }
 
-        // --- Fetch Seller Username ---
+        // --- MASTER CROSS-REFERENCE GUARD ---
+        if (!sellerId) {
+            console.error(`[V43.0] CRITICAL FAILURE: Master Cross-reference found 0 owners for item ${tradeId}`);
+            throw new Error("ARTICULO_NO_ENCONTRADO_EN_FLUJO_V43");
+        }
+
+        // HEALING: Ensure Trade record exists and is synced with master source
+        if (!tradeSnap.exists() || (tradeSnap.data() as any).participants?.receiverId !== sellerId) {
+            console.log(`[V43.0] Healing/Creating root trade...`);
+            await setDoc(tradeRef, scrubData({
+                participants: {
+                    senderId: buyerUid,
+                    receiverId: sellerId
+                },
+                type: 'direct_sale',
+                status: 'pending',
+                is_admin_offer: (sellerId === ADMIN_UID),
+                manifest: {
+                    requestedItems: [tradeId],
+                    offeredItems: [],
+                    items: [{
+                        id: tradeId,
+                        title: title,
+                        cover_image: cover
+                    }]
+                },
+                createdAt: (tradeSnap.exists() ? (tradeSnap.data() as any).createdAt : serverTimestamp()),
+                timestamp: serverTimestamp()
+            }), { merge: true });
+        }
+
+        // --- Fetch Seller Username (Identity Sync) ---
         let sellerUsername = "Vendedor";
-        try {
-            const sellerDoc = await getDoc(doc(db, "users", sellerId));
-            if (sellerDoc.exists()) {
-                const sData = sellerDoc.data();
-                sellerUsername = sData.username ? (sData.username.startsWith('@') ? sData.username : `@${sData.username}`) : "Vendedor";
-            }
-        } catch (e) {
-            console.error("Error fetching seller username:", e);
+        const sellerDoc = await getDoc(doc(db, "users", sellerId));
+        if (sellerDoc.exists()) {
+            const sData = sellerDoc.data();
+            sellerUsername = sData.username ? (sData.username.startsWith('@') ? sData.username : `@${sData.username}`) : sData.display_name || "Vendedor";
         }
 
         const conversationRef = doc(db, COLLECTION_NAME, tradeId, "conversations", buyerUsername);
@@ -770,7 +751,7 @@ export const tradeService = {
         if (!snap.exists()) {
             const batch = writeBatch(db);
             
-            // 1. Create Conversation Document
+            // 1. Create Conversation (Source of Truth for Inbox)
             batch.set(conversationRef, {
                 buyerId: buyerUid,
                 buyerUsername: buyerUsername,
@@ -786,24 +767,21 @@ export const tradeService = {
             });
 
             // 2. Initialization Message
-            const messageId = doc(collection(db, "temp")).id;
-            const messageRef = doc(db, COLLECTION_NAME, tradeId, "conversations", buyerUsername, "messages", messageId);
+            const messageRef = doc(collection(db, COLLECTION_NAME, tradeId, "conversations", buyerUsername, "messages"));
             const orderLink = `https://www.oldiebutgoldie.com.ar/orden/${tradeId}`;
             
             batch.set(messageRef, {
                 sender_uid: "system",
-                text: `¡Hola! ${buyerUsername} está interesado en este disco: ${orderLink}. Usen este chat para coordinar.`,
+                text: `¡Hola! ${buyerUsername} te escribió por "${title}". Link al pedido: ${orderLink}`,
                 timestamp: serverTimestamp(),
                 read_status: false
             });
 
-            // 3. Notification for Seller (Protocol V34.0 Alignment)
+            // 3. Notification for Seller (Unified V43 Field)
             if (sellerId && sellerId !== buyerUid) {
                 const notifRef = doc(collection(db, "notifications"));
                 batch.set(notifRef, {
-                    uid: sellerId,          // Interaction Standard
-                    userId: sellerId,       // V29 Legacy
-                    user_id: sellerId,      // CORE System Standard
+                    uid: sellerId, // V43 STANDARD: Primary identity field for bell listener
                     title: "Nueva consulta 📬",
                     message: `${buyerUsername} te escribió por "${title}".`,
                     read: false,
@@ -933,7 +911,20 @@ export const tradeService = {
                 timestamp: serverTimestamp() 
             }, { merge: true });
 
-            // 3. Generate automated message in the private chat
+            // 3. Notification for Buyer (V43.0 Standard)
+            const notifRef = doc(collection(db, "notifications"));
+            transaction.set(notifRef, {
+                uid: buyerId, // El ganador (V43 standardized)
+                title: "¡Oferta aceptada! 🎉",
+                message: `El vendedor aceptó tu oferta por "${tradeData.details?.album || 'el disco'}". ¡Ya es tuyo!`,
+                read: false,
+                timestamp: serverTimestamp(),
+                order_id: tradeId,
+                type: "order",
+                link: `/orden/${tradeId}`
+            });
+
+            // 4. Generate automated message in the private chat
             const newMessageRef = doc(convMessagesRef);
             transaction.set(newMessageRef, {
                 sender_uid: "system",
@@ -942,7 +933,7 @@ export const tradeService = {
                 read_status: false
             });
 
-            // 4. Notification for winner
+            // 5. Notification for winner (This was already here, re-numbered)
             const notificationRef = doc(collection(db, "notifications"));
             transaction.set(notificationRef, {
                 uid: buyerId,

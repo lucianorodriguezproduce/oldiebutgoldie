@@ -250,13 +250,13 @@ export default function Profile() {
             });
 
             await addDoc(collection(db, "notifications"), {
-                uid: order.user_id || order.participants?.receiverId || ADMIN_UID,
-                user_id: order.user_id || "counterpart",
+                uid: order.user_id || order.participants?.receiverId || ADMIN_UID, // V43 STANDARD
                 title: "Venta Finalizada 🎉",
                 message: `${user.displayName || 'Un cliente'} ha ACEPTADO el trato por la operación #${order.id?.slice(-6).toUpperCase()}.`,
                 read: false,
                 timestamp: serverTimestamp(),
-                order_id: order.id
+                order_id: order.id,
+                type: "order"
             });
 
             setSelectedOrder((prev: any) => prev ? { ...prev, status: "venta_finalizada" } : null);
@@ -290,13 +290,13 @@ export default function Profile() {
             });
 
             await addDoc(collection(db, "notifications"), {
-                uid: order.user_id || order.participants?.receiverId || ADMIN_UID,
-                user_id: order.user_id || "counterpart",
+                uid: order.user_id || order.participants?.receiverId || ADMIN_UID, // V43 STANDARD
                 title: "Nueva Contraoferta del Usuario",
                 message: `${user?.displayName || 'Cliente'} propone ${order.currency || '$'} ${priceVal.toLocaleString()} por el pedido ${order.order_number || order.id}.`,
                 read: false,
                 timestamp: serverTimestamp(),
-                order_id: order.id
+                order_id: order.id,
+                type: "negotiation"
             });
 
             setSelectedOrder((prev: any) => prev ? { ...prev, totalPrice: priceVal, status: "contraoferta_usuario" } : null);
