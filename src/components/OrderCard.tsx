@@ -147,15 +147,30 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
         }
     };
 
-    // Ownership check for privacy
-    const isOwner = user?.uid === order.user_id;
-    // Price is visible if:
-    // 1. Admin
-    // 2. Owner
-    // 3. Admin offers (store items)
-    // 4. Public orders (P2P Auctions/Sales)
-    const canSeePrice = isAdmin || isOwner || order.is_admin_offer || order.isPublicOrder === true;
+    // Ownership & Role detection for P2P routing
+    const senderId = order.participants?.senderId || order.user_id;
+    const receiverId = order.participants?.receiverId;
+    const isSender = user?.uid === senderId;
+    const isReceiver = user?.uid === receiverId;
 
+    const getChatUrl = () => {
+        if (!user) return '/mensajes';
+        
+        // Caso A: El usuario actual no es el vendedor (es el comprador o interesado)
+        if (!isSender) {
+            return `/mensajes?chat=${order.id}_${user.uid}`;
+        }
+
+        // Caso B: El usuario actual es el VENDEDOR y la orden tiene destinatario (adjudicada)
+        if (isSender && (orderStatus === 'pending_payment' || orderStatus === 'payment_confirmed' || orderStatus === 'completed' || orderStatus === 'venta_finalizada')) {
+            if (receiverId) {
+                return `/mensajes?chat=${order.id}_${receiverId}`;
+            }
+        }
+
+        // Caso C: Vendedor con orden pendiente (muchas conversaciones posibles)
+        return '/mensajes';
+    };
 
     const getStatusBadge = (status: string) => {
         const statusLabel = TEXTS.admin.admin.statusOptions[status as keyof typeof TEXTS.admin.admin.statusOptions] || status;
@@ -219,6 +234,12 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
         }
     };
 
+    // Refined P2P Intent detection
+    const isP2P = isDirectSaleP2P || isExchange || isAuction;
+    const refinedIntent = isP2P 
+        ? (isSender ? 'VENDER' : isReceiver ? 'COMPRAR' : orderIntent)
+        : orderIntent;
+
     // [STRICT-EXTRACT] Uso del helper centralizado para integridad de datos
     const meta = getCleanOrderMetadata(order);
     const { artist, album, image, isBatch, itemsCount: itemsFromHelper } = meta;
@@ -232,11 +253,8 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
 
     // Fallback intent for legacy admin orders
     const isSellerOfferLegacy = order.admin_offer_price || order.adminPrice;
-    
-    // Explicitly handle P2P direct sales as 'VENDER' (Sell)
-    const normalizedIntent = isDirectSaleP2P ? 'VENDER' : orderIntent;
-    
-    const intent = isExchange ? 'INTERCAMBIO' : (isBatch ? (orderType === 'buy' ? TEXTS.global.badges.buying : TEXTS.global.badges.forSale) : (normalizedIntent || (isSellerOfferLegacy ? 'VENDER' : 'COMPRAR')));
+
+    const intent = isExchange ? 'INTERCAMBIO' : (isBatch ? (orderType === 'buy' ? TEXTS.global.badges.buying : TEXTS.global.badges.forSale) : (refinedIntent || (isSellerOfferLegacy ? 'VENDER' : 'COMPRAR')));
     const format = isBatch ? 'Varios Formatos' : (order.details?.format || 'N/A');
     const condition = isBatch ? 'Varias Condiciones' : (order.details?.condition || 'N/A');
     const status = orderStatus;
@@ -257,6 +275,8 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
         const historyUserOffer = order.negotiationHistory?.filter((h: any) => h.sender === 'user').pop();
         const latestUserPrice = historyUserOffer?.price || userPrice;
         const latestUserCurrency = historyUserOffer?.currency || userCurrency;
+
+        const canSeePrice = isAdmin || (user?.uid === order.user_id) || (user?.uid === senderId) || order.is_admin_offer || order.isPublicOrder === true;
 
         if (!canSeePrice) return null;
 
@@ -422,10 +442,10 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 md:gap-3 mt-1">
-                        <span className={`px-2 md:px-3 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest border ${isExchange ? "bg-violet-500/10 text-violet-400 border-violet-500/20" : orderIntent.includes("COMPRAR") ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-secondary/10 text-secondary border-secondary/20"
+                        <span className={`px-2 md:px-3 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest border ${isExchange ? "bg-violet-500/10 text-violet-400 border-violet-500/20" : refinedIntent.includes("COMPRAR") ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-secondary/10 text-secondary border-secondary/20"
                             }`}>
                             {isExchange && <Handshake className="w-3 h-3 inline mr-1" />}
-                            {orderIntent}
+                            {refinedIntent}
                         </span>
                         {!isBatch && (
                             <>
@@ -442,7 +462,7 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                                 isAuction ? 'bg-orange-500/10 border border-orange-500/20 text-orange-400' : 'bg-primary/10 border border-primary/20 text-primary'
                             }`}>
                                 {isAuction ? <Flame className="h-4 w-4" /> : <DollarSign className="h-4 w-4" />}
-                                {canSeePrice || isDirectSaleP2P ? (
+                                {(isAdmin || user?.uid === order.user_id || user?.uid === senderId || order.is_admin_offer || order.isPublicOrder === true) ? (
                                     <>
                                         <span className="text-[10px] opacity-50 mr-1">{isAuction ? (order.current_highest_bid ? 'PUJA ACTUAL:' : 'INICIO:') : ''}</span>
                                         {`${(order.details?.currency || order.currency || 'ARS') === "USD" ? "US$" : "$"} ${(order.current_highest_bid || order.totalPrice || order.details?.price || order.starting_price || 0).toLocaleString()}`}
@@ -462,15 +482,28 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                         >
                             <Clock className="w-3.5 h-3.5" /> {getReadableDate(order.createdAt || order.timestamp)}
                         </time>
-                        <Link
-                            to={isInventoryItem ? `/album/${order.id}` : `/orden/${order.id}`}
-                            onClick={(e) => e.stopPropagation()}
-                            className={`px-3 py-1.5 border rounded-lg text-[9px] font-black uppercase tracking-widest transition-colors flex items-center gap-2
-                                ${context === 'public' ? 'bg-white/5 hover:bg-white/10 text-white border-white/10' : 'bg-transparent hover:bg-white/5 text-gray-400 border-transparent hover:border-white/10'}
-                            `}
-                        >
-                            <Search className="w-3 h-3" /> Ver Detalle {isInventoryItem ? "Automático" : "Público"}
-                        </Link>
+                        
+                        <div className="flex items-center gap-2">
+                            {/* Intelligent Routing Button - Protocol V59.1 */}
+                            {context === 'profile' && status !== 'cancelled' && (
+                                <Link
+                                    to={getChatUrl()}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="px-3 py-1.5 bg-primary/20 hover:bg-primary text-primary hover:text-black border border-primary/30 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-2"
+                                >
+                                    <MessageCircle className="w-3.5 h-3.5" /> Ir al Chat
+                                </Link>
+                            )}
+                            <Link
+                                to={isInventoryItem ? `/album/${order.id}` : `/orden/${order.id}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className={`px-3 py-1.5 border rounded-lg text-[9px] font-black uppercase tracking-widest transition-colors flex items-center gap-2
+                                    ${context === 'public' ? 'bg-white/5 hover:bg-white/10 text-white border-white/10' : 'bg-transparent hover:bg-white/5 text-gray-400 border-transparent hover:border-white/10'}
+                                `}
+                            >
+                                <Search className="w-3 h-3" /> Ver Detalle {isInventoryItem ? "Automático" : "Público"}
+                            </Link>
+                        </div>
                     </div>
                 </div>
 

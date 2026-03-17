@@ -657,9 +657,31 @@ export default function Profile() {
                             {/* Chat Integration */}
                             {(searchParams.get("chat") === "true" || selectedOrder.type === 'direct_sale') && (
                                 <div className="mt-4 pb-4">
-                                    <div className="flex items-center gap-2 mb-4 px-1">
-                                        <MessageCircle className="w-4 h-4 text-primary" />
-                                        <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Chat de Coordinación</h4>
+                                    <div className="flex items-center justify-between gap-2 mb-4 px-1">
+                                        <div className="flex items-center gap-2">
+                                            <MessageCircle className="w-4 h-4 text-primary" />
+                                            <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Chat de Coordinación</h4>
+                                        </div>
+                                        {/* Ir al Chat Button (Protocol V59.1) */}
+                                        <button
+                                            onClick={() => {
+                                                const tradeId = selectedOrder.id;
+                                                const senderId = selectedOrder.participants?.senderId || selectedOrder.user_id;
+                                                const receiverId = selectedOrder.participants?.receiverId;
+                                                const status = selectedOrder.status;
+                                                let url = '/mensajes';
+                                                
+                                                if (user?.uid !== senderId) {
+                                                    url = `/mensajes?chat=${tradeId}_${user?.uid}`;
+                                                } else if (status === 'pending_payment' || status === 'payment_confirmed' || status === 'completed' || status === 'venta_finalizada') {
+                                                    if (receiverId) url = `/mensajes?chat=${tradeId}_${receiverId}`;
+                                                }
+                                                window.location.href = url;
+                                            }}
+                                            className="text-[9px] font-black text-primary uppercase tracking-widest hover:text-white transition-colors"
+                                        >
+                                            Ver en Inbox V2 →
+                                        </button>
                                     </div>
                                     <TradeChat 
                                         tradeId={selectedOrder.id} 
@@ -868,8 +890,8 @@ export default function Profile() {
                                 </div>
 
                                 <span className="text-[10px] text-gray-600 uppercase tracking-widest font-bold mt-2">
-                                    Operación: <span className={selectedOrder.type === 'exchange' ? 'text-violet-400' : selectedOrder.type === 'buy' ? 'text-emerald-400' : 'text-orange-400'}>
-                                        {selectedOrder.type === 'exchange' ? 'Intercambio' : selectedOrder.type === 'buy' ? 'Compra' : 'Venta'}
+                                    Operación: <span className={selectedOrder.type === 'exchange' ? 'text-violet-400' : selectedOrder.participants?.senderId === user?.uid ? 'text-orange-400' : 'text-emerald-400'}>
+                                        {selectedOrder.type === 'exchange' ? 'Intercambio' : selectedOrder.participants?.senderId === user?.uid ? 'Venta' : 'Compra'}
                                     </span>
                                 </span>
                             </div>
