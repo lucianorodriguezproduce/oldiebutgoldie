@@ -43,10 +43,11 @@ export const requestConnection = async (requester: DbUser, receiverId: string) =
 
         transaction.set(docRef, newConnection);
 
-        // Add notification for receiver (V43.0 Standard)
+        // Add notification for receiver (V43.1 Standard)
         const notifRef = doc(collection(db, "notifications"));
         transaction.set(notifRef, {
             uid: receiverId,        // V43 Primary
+            user_id: receiverId,    // Legacy Dual-Write
             title: "Nueva Solicitud de Conexión",
             message: `@${requester.username} quiere conectar con vos.`,
             read: false,
@@ -70,10 +71,10 @@ export const acceptConnection = async (userId: string, targetId: string) => {
         updatedAt: serverTimestamp()
     });
 
-    // Add notification for requester
+    // Add notification for requester (V43.1 Standard)
     await addDoc(collection(db, "notifications"), {
-        uid: targetId,
-        user_id: targetId, // Legacy
+        uid: targetId,        // V43 Primary
+        user_id: targetId,    // Legacy Dual-Write
         title: "Conexión Aceptada",
         message: "Tu solicitud de conexión ha sido aceptada. Ahora podés ver su colección completa.",
         read: false,

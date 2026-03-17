@@ -54,13 +54,17 @@ export default function NotificationBell() {
         );
 
         const unsub = onSnapshot(q, (snap) => {
+            console.log(`[NotifV2] Snapshot para ${user.uid}: Size=${snap.size}`);
+            if (snap.size > 0) {
+                console.log("[NotifV2] Primera notificación RAW:", snap.docs[0].data());
+            }
             const data = snap.docs.map(d => ({ 
                 id: d.id, 
                 ...d.data() 
             } as Notification));
             setNotifications(data);
         }, (error) => {
-            console.error("[NotifV2] Error en listener:", error.code, error.message);
+            console.error("[NotifV2] Error crítico en listener:", error.code, error.message);
         });
 
         return () => unsub();

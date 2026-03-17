@@ -899,24 +899,45 @@ export const tradeService = {
             addDoc(p2pMessagesRef, messageData)
         ]);
 
-        // Notification for the other party (Protocol V28.2)
+        // Hyper-robust recipient resolution (Protocol V43.3)
         if (senderId !== "system") {
+            let recipientId = null;
+            const participants = chatData.participants || [];
+            
+            // Try all historical naming conventions
+            const bId = chatData.buyerId || chatData.buyer_uid || chatData.buyerId;
+            const sId = chatData.sellerId || chatData.seller_uid || chatData.seller_uid;
+
+            if (senderId === bId) {
+                recipientId = sId;
+            } else if (senderId === sId) {
+                recipientId = bId;
+            } else if (participants.length >= 2) {
+                recipientId = participants.find((p: string) => p !== senderId);
+            } else {
+                recipientId = chatId.split('_').pop();
+            }
+
+            console.log(`[NotifV2] Robust Resolve: sender=${senderId} | buyer=${bId} | seller=${sId} | finalRecipient=${recipientId}`);
+
             const isBuyerSender = senderId === chatData.buyerId;
-            const recipientId = isBuyerSender ? chatData.sellerId : chatData.buyerId;
             const senderName = isBuyerSender ? (chatData.buyerUsername || chatData.buyerName) : (chatData.sellerUsername || "Vendedor");
 
-            if (recipientId) {
+            if (recipientId && recipientId !== senderId) {
+                console.log(`[NotifV2] Despachando notificación para ${recipientId} de parte de ${senderName}`);
                 await addDoc(collection(db, "notifications"), {
-                    uid: recipientId,     // V43 Primary
-                    user_id: recipientId, // Legacy Dual-Write
+                    uid: recipientId,
+                    user_id: recipientId,
                     type: 'chat',
                     title: `Nuevo mensaje de ${senderName}`,
                     message: text.substring(0, 100) + (text.length > 100 ? '...' : ''),
-                    link: `/mensajes?chat=${chatId}`, // Correct V2 Native Link
+                    link: `/mensajes?chat=${chatId}`,
                     read: false,
                     timestamp: serverTimestamp(),
                     order_id: tradeId
                 });
+            } else {
+                console.warn("[NotifV2] No se despachó notificación: recipientId inválido o igual al emisor", { recipientId, senderId });
             }
         }
     },
