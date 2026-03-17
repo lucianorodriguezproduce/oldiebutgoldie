@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, Link, useSearchParams } from "react-router-dom";
+import { useNavigate, Link, useSearchParams, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, ArrowRight, CheckCircle2, Disc, ShoppingBag, DollarSign, Search, X, Plus, Minus, MessageCircle, AlertCircle, User, Users, Star } from "lucide-react";
 import { serverTimestamp, doc, onSnapshot } from "firebase/firestore";
@@ -25,6 +25,7 @@ export default function TradeConstructor() {
     const navigate = useNavigate();
     const { showLoading, hideLoading } = useLoading();
     const [searchParams] = useSearchParams();
+    const location = useLocation();
 
     const [siteConfig, setSiteConfig] = useState<any>(null);
     const [viewMode, setViewMode] = useState<"official" | "community">("official");
@@ -107,6 +108,26 @@ export default function TradeConstructor() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
     const [createdTradeId, setCreatedTradeId] = useState<string | null>(null);
+
+    // Handle initial requested item from location state (V51.0)
+    useEffect(() => {
+        const state = location.state as { requestedItem?: any };
+        if (state?.requestedItem) {
+            const item = state.requestedItem;
+            // Add to requested set
+            setSelectedRequested(new Set([item.id]));
+            // Set modality based on item source
+            if (item.source === 'user_assets' || item.ownerId) {
+                setModalidad("direct_sale");
+                setViewMode("community");
+                setReceiverUid(item.sellerId || item.ownerId);
+            } else {
+                setReceiverUid(ADMIN_UID);
+            }
+            // Advance to step 1 (Offer) since request is already set
+            setStep(1);
+        }
+    }, [location.state]);
 
     // Load user's collection
     useEffect(() => {
@@ -224,7 +245,7 @@ export default function TradeConstructor() {
                 const tradeData: any = {
                     participants: {
                         senderId: user.uid,
-                        receiverId: receiverUid || ADMIN_UID
+                        receiverId: receiverUid // Removed || ADMIN_UID fallback (V51.0)
                     },
                     manifest: {
                         items: [...offeredDetails, ...requestedDetails],

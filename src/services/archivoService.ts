@@ -30,6 +30,7 @@ export interface UnifiedItem {
     status_warning?: string;
     isBatch?: boolean;
     items?: any[];
+    sellerId?: string;
 }
 
 import { emitHealthEvent } from "@/context/HealthContext";
@@ -115,7 +116,8 @@ export const archivoService = {
                         notes: data.metadata.notes,
                         status_warning: data.metadata.status_warning,
                         isBatch: data.metadata.isBatch,
-                        items: data.items
+                        items: data.items,
+                        sellerId: data.ownerId
                     };
                     localStorage.setItem(cacheKey, JSON.stringify(result));
                     return result;
@@ -218,7 +220,8 @@ export const archivoService = {
                 status_warning: data.metadata.status_warning,
                 isBatch: data.metadata.isBatch,
                 items: data.items,
-                preview_url: data.metadata.preview_url
+                preview_url: data.metadata.preview_url,
+                sellerId: data.ownerId
             };
         }) : [];
 

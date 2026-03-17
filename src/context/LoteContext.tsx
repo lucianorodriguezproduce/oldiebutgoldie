@@ -89,6 +89,18 @@ export function LoteProvider({ children }: { children: ReactNode }) {
             return;
         }
 
+        const resolvedSellerId = orderData.sellerId || orderData.ownerId || orderData.user_id || ADMIN_UID;
+
+        // V51.0 CART GUARD: Bloquear mezcla de vendedores
+        if (loteItems.length > 0) {
+            const activeSellerId = loteItems[0].sellerId;
+            if (resolvedSellerId !== activeSellerId) {
+                const sellerName = activeSellerId === ADMIN_UID ? "la Tienda Oficial" : "otro usuario";
+                alert(`Tu lote actual pertenece a ${sellerName}. No podés mezclar discos de distintos vendedores en un mismo lote.`);
+                return;
+            }
+        }
+
         const newItem: BatchItem = {
             id: orderData.id,
             title: orderData.metadata?.title || orderData.album || orderData.title || "Sin Título",
@@ -100,7 +112,7 @@ export function LoteProvider({ children }: { children: ReactNode }) {
             price: orderData.logistics?.price || orderData.adminPrice || orderData.totalPrice || 0,
             currency: orderData.adminCurrency || orderData.currency || "ARS",
             source: 'INVENTORY',
-            sellerId: orderData.user_id || ADMIN_UID
+            sellerId: resolvedSellerId
         };
 
         addItemToBatch(newItem);

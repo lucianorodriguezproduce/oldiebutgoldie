@@ -7,7 +7,7 @@ export const fastCheckoutService = {
      * Executes a direct purchase for a local inventory item.
      * Bypasses the TradeConstructor and resolves immediately.
      */
-    async processPurchase(userId: string, itemId: string, price: number) {
+    async processPurchase(userId: string, itemId: string, price: number, sellerId: string = ADMIN_UID) {
         // 1. Create a Direct Sale Trade
         // createTrade already handles the resolveTrade() internally if isDirectSale is true.
         // And isDirectSale is true if origin is INVENTORY and there are no offeredItems.
@@ -16,7 +16,7 @@ export const fastCheckoutService = {
             const tradeId = await tradeService.createTrade({
                 participants: {
                     senderId: userId,
-                    receiverId: ADMIN_UID
+                    receiverId: sellerId
                 },
                 manifest: {
                     requestedItems: [itemId],
