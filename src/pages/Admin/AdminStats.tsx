@@ -25,6 +25,7 @@ import {
     Clock,
     LayoutDashboard
 } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { analyticsService, type CommercialStats } from "@/services/analyticsService";
 import { quotaService, type QuotaStats } from "@/services/quotaService";
@@ -46,6 +47,7 @@ import {
 } from "recharts";
 
 export default function AdminStats() {
+    const { user } = useAuth();
     const [comStats, setComStats] = useState<CommercialStats | null>(null);
     const [quotaStats, setQuotaStats] = useState<QuotaStats>(quotaService.getStats());
     const [loading, setLoading] = useState(true);
@@ -138,9 +140,15 @@ export default function AdminStats() {
                         <p className="text-zinc-500 font-bold uppercase tracking-tighter text-sm">Control de Mando y Analítica Predictiva</p>
                     </div>
                 </div>
-                <div className="flex items-center gap-2 text-emerald-500 bg-emerald-500/10 px-4 py-2 rounded-2xl border border-emerald-500/20">
-                    <Activity className="h-4 w-4 animate-pulse" />
-                    <span className="text-[10px] font-black uppercase tracking-widest">Live Feed Activo</span>
+                <div className="flex flex-col md:flex-row items-center gap-2">
+                    <div className="flex items-center gap-2 text-zinc-500 bg-white/5 px-3 py-1 rounded-full border border-white/5">
+                        <span className="text-[9px] font-mono opacity-50">{user?.uid}</span>
+                        <span className="text-[9px] font-black uppercase text-zinc-400">{user?.email}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-emerald-500 bg-emerald-500/10 px-4 py-2 rounded-2xl border border-emerald-500/20">
+                        <Activity className="h-4 w-4 animate-pulse" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Live Feed Activo</span>
+                    </div>
                 </div>
             </header>
 
@@ -417,11 +425,17 @@ export default function AdminStats() {
                         <p className="text-[11px] text-zinc-500 font-medium">Repara identidades de chat corruptas (Protocolo V36.0).</p>
                         <button
                             onClick={async () => {
-                                if (!confirm("¿Iniciar curación de identidades?")) return;
+                                if (!confirm("¿Iniciar curación profunda V36.2?")) return;
                                 setIsPurging(prev => ({ ...prev, heal: true }));
-                                const count = await maintenanceService.healConversationIdentities();
-                                alert(`Cura completada: ${count} identidades reparadas.`);
-                                setIsPurging(prev => ({ ...prev, heal: false }));
+                                try {
+                                    const result = await maintenanceService.healConversationIdentities();
+                                    alert(`Reporte de Curación: ${result}`);
+                                } catch (error: any) {
+                                    console.error("[Heal-UI] Fatal error during healing:", error);
+                                    alert(`ERROR FATAL: ${error.message}`);
+                                } finally {
+                                    setIsPurging(prev => ({ ...prev, heal: false }));
+                                }
                             }}
                             disabled={isPurging.heal}
                             className="mt-auto px-4 py-2.5 bg-primary/10 hover:bg-primary/20 disabled:opacity-50 text-[10px] font-black uppercase tracking-widest text-primary rounded-xl flex items-center justify-center gap-2 transition-all"

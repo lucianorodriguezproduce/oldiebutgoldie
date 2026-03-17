@@ -163,81 +163,98 @@ export const maintenanceService = {
     },
 
     /**
-     * Protocol V36.0 (Enhanced): Corregir identidades corruptas en conversaciones.
-     * Escanea todas las conversaciones buscando:
-     * 1. Colisiones de ID (Seller === Buyer)
-     * 2. Atribución errónea al Admin (Seller === Admin pero el ítem es de un Usuario)
+     * Protocol V36.2 (Hyper-Diagnostic): Sanador Omnisciente.
+     * Soporta UIDs dinámicos y genera feedback detallado para el administrador.
      */
     async healConversationIdentities() {
-        console.log("[Maintenance] Iniciando Protocolo de Curación Omnisciente V36.1...");
-        const q = query(collectionGroup(db, "conversations"));
-        const snap = await getDocs(q);
-        if (snap.empty) return "0 (No se encontraron conversaciones)";
-
-        let healedCount = 0;
-        let adminMisattributions = 0;
-        let collisionsCount = 0;
-        
-        for (const docSnap of snap.docs) {
-            const data = docSnap.data() as any;
-            const pathParts = docSnap.ref.path.split('/');
-            const tradeId = pathParts[1]; 
+        console.log("[Maintenance] Iniciando Protocolo de Curación V36.2...");
+        try {
+            const q = query(collectionGroup(db, "conversations"));
+            const snap = await getDocs(q);
             
-            let needsHealing = false;
-            let reason = "";
+            if (snap.empty) return "0 (No se encontraron conversaciones)";
 
-            if (data.sellerId && data.buyerId && data.sellerId === data.buyerId) {
-                needsHealing = true;
-                reason = "collision";
-            } else if (data.sellerId === ADMIN_UID) {
-                needsHealing = true;
-                reason = "admin_check";
-            }
+            let healedCount = 0;
+            let adminMisattributions = 0;
+            let collisionsCount = 0;
+            let totalScanned = snap.docs.length;
+            
+            for (const docSnap of snap.docs) {
+                const data = docSnap.data() as any;
+                const pathParts = docSnap.ref.path.split('/');
+                const tradeId = pathParts[1]; 
+                
+                let needsHealing = false;
+                let reason = "";
 
-            if (needsHealing) {
-                try {
-                    const [tradeSnap, assetSnap] = await Promise.all([
-                        getDoc(doc(db, "trades", tradeId)),
-                        getDoc(doc(db, "user_assets", tradeId))
-                    ]);
+                // CASO 1: Colisión (Seller === Buyer)
+                if (data.sellerId && data.buyerId && data.sellerId === data.buyerId) {
+                    needsHealing = true;
+                    reason = "collision";
+                } 
+                // CASO 2: Atribución Admin (MKPl... o oldiebutgoldie)
+                else if (data.sellerId === ADMIN_UID || data.sellerId === "oldiebutgoldie") {
+                    needsHealing = true;
+                    reason = "admin_check";
+                }
 
-                    let realSellerId = null;
-
-                    if (assetSnap.exists()) {
-                        realSellerId = assetSnap.data().ownerId;
-                    } else if (tradeSnap.exists()) {
-                        const tData = tradeSnap.data();
-                        realSellerId = tData.participants?.receiverId !== ADMIN_UID ? tData.participants?.receiverId : (tData.user_id !== ADMIN_UID ? tData.user_id : null);
-                    }
-
-                    if (realSellerId && realSellerId !== data.sellerId && realSellerId !== "system") {
-                        let realSellerUsername = "Vendedor";
-                        const sellerDoc = await getDoc(doc(db, "users", realSellerId));
+                if (needsHealing) {
+                    try {
+                        // Buscamos la verdad en Trades y User Assets
+                        const assetRef = doc(db, "user_assets", tradeId);
+                        const tradeRef = doc(db, "trades", tradeId);
                         
-                        if (sellerDoc.exists()) {
-                            const sData = sellerDoc.data();
-                            realSellerUsername = sData.username ? (sData.username.startsWith('@') ? sData.username : `@${sData.username}`) : sData.display_name || "Vendedor";
+                        const [assetSnap, tradeSnap] = await Promise.all([
+                            getDoc(assetRef),
+                            getDoc(tradeRef)
+                        ]);
+
+                        let realSellerId = null;
+
+                        if (assetSnap.exists()) {
+                            realSellerId = assetSnap.data().ownerId;
+                        } else if (tradeSnap.exists()) {
+                            const tData = tradeSnap.data();
+                            // Estrategia de recuperación de Trade (V36.2)
+                            realSellerId = (tData.participants?.receiverId && tData.participants.receiverId !== ADMIN_UID && tData.participants.receiverId !== "oldiebutgoldie") 
+                                ? tData.participants.receiverId 
+                                : (tData.user_id && tData.user_id !== ADMIN_UID && tData.user_id !== "oldiebutgoldie" ? tData.user_id : null);
                         }
 
-                        await updateDoc(docSnap.ref, {
-                            sellerId: realSellerId,
-                            sellerUsername: realSellerUsername,
-                            healedAt: serverTimestamp(),
-                            healingReason: reason
-                        });
+                        // Si hay un dueño legítimo y es distinto al actual
+                        if (realSellerId && realSellerId !== data.sellerId && realSellerId !== "system") {
+                            let realSellerUsername = "Vendedor";
+                            const sellerDoc = await getDoc(doc(db, "users", realSellerId));
+                            
+                            if (sellerDoc.exists()) {
+                                const sData = sellerDoc.data();
+                                realSellerUsername = sData.username ? (sData.username.startsWith('@') ? sData.username : `@${sData.username}`) : sData.display_name || "Vendedor";
+                            }
 
-                        healedCount++;
-                        if (reason === "collision") collisionsCount++;
-                        else adminMisattributions++;
+                            await updateDoc(docSnap.ref, {
+                                sellerId: realSellerId,
+                                sellerUsername: realSellerUsername,
+                                healedAt: serverTimestamp(),
+                                healing_v: "36.2",
+                                healingReason: reason
+                            });
+
+                            healedCount++;
+                            if (reason === "collision") collisionsCount++;
+                            else adminMisattributions++;
+                            
+                            console.log(`[Heal-V36.2] HEALED: ${tradeId} -> ${realSellerUsername} (${reason})`);
+                        }
+                    } catch (e: any) {
+                        console.error(`[Heal-V36.2] Error en item ${tradeId}:`, e.message);
                     }
-                } catch (e) {
-                    console.error(`[Maintenance] Error healing ${docSnap.ref.path}:`, e);
                 }
             }
-        }
 
-        const report = `${healedCount} (Colisiones: ${collisionsCount}, Errores Admin: ${adminMisattributions})`;
-        console.log(`[Maintenance] Curación completada: ${report}`);
-        return report;
+            return `${healedCount} (Corregidos: ${adminMisattributions}, Colisiones: ${collisionsCount}) de ${totalScanned} analizados.`;
+        } catch (error: any) {
+            console.error("[Heal-V36.2] FATAL ERROR:", error);
+            return `ERROR: ${error.message}`;
+        }
     }
 };
