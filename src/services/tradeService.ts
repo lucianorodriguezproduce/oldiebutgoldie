@@ -673,10 +673,23 @@ export const tradeService = {
         let sourceCollection = "none";
 
         const tradeRef = doc(db, COLLECTION_NAME, tradeId);
-        const [tradeSnap, assetSnap, inventorySnap] = await Promise.all([
-            getDoc(tradeRef),
-            getDoc(doc(db, "user_assets", tradeId)),
-            getDoc(doc(db, "inventory", tradeId))
+        let tradeSnap = await getDoc(tradeRef);
+        
+        // 1. DETERMINAR EL ID REAL DEL DISCO (discoId)
+        // Cascada V45: Si el tradeId no es el disco, buscamos dentro del manifiesto
+        let discoId = tradeId;
+        if (tradeSnap.exists()) {
+            const tradeData = tradeSnap.data() as any;
+            if (tradeData.manifest?.requestedItems?.[0]) {
+                discoId = tradeData.manifest.requestedItems[0];
+            }
+        }
+
+        console.log(`[V45-FIX] Iniciando búsqueda para DiscoId: ${discoId} (TradeId: ${tradeId})`);
+
+        const [assetSnap, inventorySnap] = await Promise.all([
+            getDoc(doc(db, "user_assets", discoId)),
+            getDoc(doc(db, "inventory", discoId))
         ]);
 
         // PRIORITY 1: User Assets (P2P Marketplace) - V43.0: Unified ownerId/uid
@@ -686,7 +699,6 @@ export const tradeService = {
             title = assetData.metadata?.title || title;
             cover = assetData.media?.thumbnail || "";
             sourceCollection = "user_assets";
-            console.log(`[V43.0] P2P Item Detected. Sovereign ID: ${sellerId}`);
         } 
         // PRIORITY 2: Inventory (Official Shop / Admin)
         else if (inventorySnap.exists()) {
@@ -695,17 +707,17 @@ export const tradeService = {
             title = itemData.metadata?.title || title;
             cover = itemData.media?.thumbnail || "";
             sourceCollection = "inventory";
-            console.log(`[V43.0] Official Store Item Detected. Seller: ADMIN`);
         }
-        // PRIORITY 3: Existing Trade (Inherit security)
+        // PRIORITY 3: Legacy/Orphan Fallback (from current trade if exists)
         else if (tradeSnap.exists()) {
             const tradeData = tradeSnap.data() as any;
             sellerId = tradeData.participants?.receiverId || tradeData.participants?.senderId;
             title = tradeData.manifest?.items?.[0]?.title || tradeData.details?.album || title;
             cover = tradeData.manifest?.items?.[0]?.cover_image || tradeData.media?.thumbnail || "";
             sourceCollection = "existing_trade";
-            console.log(`[V43.0] Orphan Trade Detected. Inheriting Seller: ${sellerId}`);
         }
+
+        console.log(`[V45-FIX] Buscando disco con ID: ${discoId} | Propietario real: ${sellerId}`);
 
         // --- MASTER CROSS-REFERENCE GUARD ---
         if (!sellerId) {
@@ -1112,9 +1124,24 @@ export const tradeService = {
         
         const tradeData = tradeSnap.data() as any;
         
-        // IDENTITY RECOVERY: Priority to original receiver (the Seller)
-        const isStoreTrade = tradeData.is_admin_offer || tradeData.participants?.receiverId === ADMIN_UID;
-        const sellerId = isStoreTrade ? ADMIN_UID : (tradeData.participants?.receiverId || tradeData.user_id || ADMIN_UID);
+        // 1.5 V45-FIX: Forzar resolución de sellerId desde el disco real
+        let discoId = tradeId;
+        if (tradeData.manifest?.requestedItems?.[0]) {
+            discoId = tradeData.manifest.requestedItems[0];
+        }
+
+        let sellerId = tradeData.participants?.receiverId;
+        const assetSnap = await getDoc(doc(db, "user_assets", discoId));
+        
+        if (assetSnap.exists()) {
+            const assetData = assetSnap.data() as any;
+            sellerId = assetData.ownerId || assetData.uid;
+            console.log(`[V45-FIX] Buscando disco con ID: ${discoId} | Propietario real: ${sellerId} (Purchase Flow)`);
+        } else if (tradeData.is_admin_offer) {
+            sellerId = ADMIN_UID;
+        }
+
+        if (!sellerId) sellerId = ADMIN_UID; // Fallback final de seguridad
 
         // Fetch seller details for metadata
         let sellerUsername = "Vendedor";
