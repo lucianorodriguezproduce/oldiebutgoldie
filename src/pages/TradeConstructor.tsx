@@ -226,6 +226,9 @@ export default function TradeConstructor() {
                 })
                 : [];
 
+            const isP2PPublicListing = modalidad !== "exchange";
+            const finalReceiverId = isP2PPublicListing ? null : (receiverUid || ADMIN_UID);
+
             if (targetTradeId) {
                 // PHASE III: PROPOSAL SYSTEM
                 await tradeService.createProposal(targetTradeId, {
@@ -245,7 +248,7 @@ export default function TradeConstructor() {
                 const tradeData: any = {
                     participants: {
                         senderId: user.uid,
-                        receiverId: receiverUid // Removed || ADMIN_UID fallback (V51.0)
+                        receiverId: finalReceiverId
                     },
                     manifest: {
                         items: [...offeredDetails, ...requestedDetails],
@@ -256,7 +259,7 @@ export default function TradeConstructor() {
                     },
                     type: modalidad,
                     tradeOrigin: 'DISCOGS',
-                    isPublicOrder: siteConfig?.allow_p2p_public_offers === true || modalidad !== "exchange", // Public if toggle is ON or if it's a market proposal (sale/auction)
+                    isPublicOrder: isP2PPublicListing || siteConfig?.allow_p2p_public_offers === true,
                     status: 'pending_publish_fee' // V24.2 requirement
                 };
 

@@ -69,7 +69,7 @@ export interface Trade {
     participants: {
         senderId: string;
         senderName?: string;
-        receiverId: string; // Default to Admin
+        receiverId: string | null; // Null for public listings
         receiverName?: string;
     };
     manifest: TradeManifest;

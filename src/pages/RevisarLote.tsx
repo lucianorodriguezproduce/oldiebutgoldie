@@ -254,16 +254,16 @@ export default function RevisarLote() {
                 }));
 
                 const tradeId = await tradeService.createTrade({
-                    participants: { senderId: uid, receiverId: ADMIN_UID },
+                    participants: { senderId: uid, receiverId: null }, // V53: Permitir listing público o resolución atómica
                     manifest: {
-                        requestedItems: [],
+                        requestedItems: [], 
                         offeredItems: [...allInventoryIds, ...importedDiscogsIds],
                         cashAdjustment: Number(totalPrice) || calculatedTotal,
                         currency: currency || 'ARS',
-                        items: hydratedItems // Ensure items are visible to admin
+                        items: hydratedItems 
                     },
-                    type: 'admin_negotiation',
-                    isPublicOrder: false,
+                    type: action === 'OFRECER' ? 'p2p_market' : 'admin_negotiation', // V53 classification
+                    isPublicOrder: true,
                     tradeOrigin: discogsItems.length > 0 ? 'DISCOGS' : 'INVENTORY',
                     transactionId
                 } as any);

@@ -126,8 +126,11 @@ export const tradeService = {
         const { tradeOrigin, ...tradeWithoutOrigin } = trade;
         
         // V46 Hard-Link: receiverId is mandatory for P2P. No more Admin fallback.
+        // V53 Saneamiento: receiverId puede ser opcional SOLO si es una publicación pública (Listing).
         let receiverId = trade.participants.receiverId;
-        if (!receiverId) {
+        const isListing = trade.isPublicOrder === true && !receiverId;
+
+        if (!receiverId && !isListing) {
             console.error("[V46] createTrade failed: receiverId is mandatory for identity linkage.");
             throw new Error("SISTEMA_IDENTIDAD_PARTICIPANTE_REQUERIDO");
         }
@@ -136,10 +139,12 @@ export const tradeService = {
         const finalSenderId = currentUserId || trade.participants.senderId;
 
         // V48.0 Zero Trust: Re-validate receiverId against source of truth if it's P2P
+        // V53: Si es un Listing (receiverId null), no sobreescribimos con el owner del item, 
+        // ya que el seller es el sender y el receiver queda libre.
         const p2pItem = trade.manifest?.items?.find((i: any) => i.source === 'user_asset');
         const userAssetId = p2pItem?.userAssetId || p2pItem?.id;
 
-        if (userAssetId) {
+        if (userAssetId && receiverId) {
             console.log(`[V48-ZERO-TRUST] Re-validando dueño para asset: ${userAssetId}`);
             const assetSnap = await getDoc(doc(db, "user_assets", userAssetId));
             if (assetSnap.exists()) {
