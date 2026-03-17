@@ -1003,6 +1003,69 @@ export const tradeService = {
         });
     },
 
+    async confirmPaymentAndTransfer(tradeId: string, chatId: string) {
+        const tradeRef = doc(db, COLLECTION_NAME, tradeId);
+        
+        await runTransaction(db, async (transaction) => {
+            const tradeSnap = await transaction.get(tradeRef);
+            if (!tradeSnap.exists()) throw new Error("TRADE_NOT_FOUND");
+            const tradeData = tradeSnap.data() as any;
+
+            if (tradeData.status !== 'pending_payment') {
+                throw new Error("TRADE_NOT_IN_PAYMENT_STATE");
+            }
+
+            const buyerId = tradeData.participants?.receiverId || tradeData.buyer_uid;
+            
+            // 1. Transfer Assets (User Asset Ownership)
+            const p2pItems = (tradeData.manifest?.items || []).filter((i: any) => i.source === 'user_asset');
+            for (const item of p2pItems) {
+                const assetId = item.userAssetId || item.id;
+                const assetRef = doc(db, "user_assets", assetId);
+                transaction.update(assetRef, {
+                    ownerId: buyerId,
+                    isTradeable: false, // Freeze during transfer
+                    status: 'active',
+                    transferredAt: serverTimestamp()
+                });
+
+                // Mark original inventory item as sold if it exists
+                if (item.originalInventoryId) {
+                    const invRef = doc(db, "inventory", item.originalInventoryId);
+                    transaction.update(invRef, {
+                        "logistics.status": "sold",
+                        "logistics.stock": 0
+                    });
+                }
+            }
+
+            // 2. Finalize Trade Status
+            transaction.update(tradeRef, {
+                status: 'completed',
+                payment_status: 'paid',
+                completedAt: serverTimestamp(),
+                updatedAt: serverTimestamp()
+            });
+
+            // 3. Close Chat
+            const p2pChatRef = doc(db, "p2p_chats", chatId);
+            transaction.update(p2pChatRef, {
+                status: 'completed',
+                lastMessage: "✅ Venta finalizada. ¡Disfruta el disco!",
+                updatedAt: serverTimestamp()
+            });
+
+            // 4. Final System Message
+            const p2pMessageRef = doc(collection(db, "p2p_chats", chatId, "messages"));
+            transaction.set(p2pMessageRef, {
+                sender_uid: "system",
+                text: "✅ El vendedor ha confirmado la recepción del pago. ¡Transacción completada! La propiedad del disco ha sido transferida a tu colección. ¡A disfrutar la música!",
+                timestamp: serverTimestamp(),
+                read_status: false
+            });
+        });
+    },
+
 
 
     onSnapshotMessages(tradeId: string, callback: (messages: any[]) => void) {

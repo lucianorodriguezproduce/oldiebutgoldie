@@ -56,8 +56,18 @@ export default function MessageCenter() {
             setLoading(false);
         });
 
-        return () => unsub();
-    }, [user, chatIdFromUrl, searchParams]);
+    useEffect(() => {
+        if (selectedConv && conversations.length > 0) {
+            const updated = conversations.find(c => c.id === selectedConv.id);
+            if (updated && updated.status !== selectedConv.status) {
+                console.log("[InboxV2] Syncing selectedConv status:", updated.status);
+                setSelectedConv(updated);
+            }
+        }
+    }, [conversations, selectedConv]);
+
+    return () => unsub();
+}, [user, chatIdFromUrl, searchParams]);
 
     const filteredConversations = conversations.filter(c => 
         c.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||

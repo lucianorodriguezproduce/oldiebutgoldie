@@ -153,12 +153,41 @@ export default function TradeChat({ tradeId, currentUser, trade, otherParticipan
                     </button>
                 )}
 
-                {/* Protocol V58.2: Adjudication Feedback */}
-                {trade?.status === 'pending_payment' && (
+                {/* Protocol V58.3: Cierre de Venta (Sellers only) */}
+                {isVendedor && trade?.status === 'pending_payment' && (
+                    <button 
+                        onClick={async () => {
+                            if (window.confirm("¿Confirmas que has recibido el pago? El disco será transferido a la colección del comprador.")) {
+                                try {
+                                    await tradeService.confirmPaymentAndTransfer(tradeId, chatId || tradeId);
+                                } catch (error) {
+                                    console.error("Transfer error:", error);
+                                    alert("Error al procesar el traspaso.");
+                                }
+                            }
+                        }}
+                        className="px-4 py-2 bg-emerald-500 hover:bg-white text-black rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-emerald-500/20"
+                    >
+                        Confirmar Pago y Entregar
+                    </button>
+                )}
+
+                {/* Protocol V58.3: Success Feedback & Delivery coordination */}
+                {trade?.status === 'completed' && (
+                    <div className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                        <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest italic">
+                            Venta Finalizada ✅
+                        </span>
+                    </div>
+                )}
+
+                {/* Status-specific hints for buyers */}
+                {isComprador && trade?.status === 'pending_payment' && (
                     <div className="flex items-center gap-2 px-4 py-2 bg-orange-500/10 border border-orange-500/20 rounded-xl">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-orange-500" />
+                        <CheckCircle2 className="w-3.5 h-3.5 text-orange-500 animate-pulse" />
                         <span className="text-[10px] font-black text-orange-500 uppercase tracking-widest italic">
-                            Orden adjudicada. Esperando pago.
+                            Esperando confirmación del vendedor...
                         </span>
                     </div>
                 )}
