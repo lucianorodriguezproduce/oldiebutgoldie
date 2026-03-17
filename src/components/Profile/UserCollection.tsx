@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Disc, Search, SlidersHorizontal } from "lucide-react";
 import { userAssetService } from "@/services/userAssetService";
+import { tradeService } from "@/services/tradeService";
 import type { UserAsset } from "@/types/inventory";
 import UserAssetCard from "./UserAssetCard";
 import { CardSkeleton } from "@/components/ui/Skeleton";
@@ -15,9 +16,18 @@ export default function UserCollection({ userId, readonly = false }: UserCollect
     const [assets, setAssets] = useState<UserAsset[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
+    const [blockedAssets, setBlockedAssets] = useState<{ negotiating: string[], reserved: string[] }>({ negotiating: [], reserved: [] });
 
     useEffect(() => {
         loadAssets();
+
+        // Protocolo V63.0: Listener de bloqueo en tiempo real
+        const unsub = tradeService.onSnapshotBlockedAssets((data) => {
+            console.log("[UserCollection] Blocked assets sync:", data);
+            setBlockedAssets(data);
+        });
+
+        return () => unsub();
     }, [userId]);
 
     const loadAssets = async () => {
@@ -74,6 +84,8 @@ export default function UserCollection({ userId, readonly = false }: UserCollect
                                 asset={asset}
                                 onUpdate={loadAssets}
                                 readonly={readonly}
+                                isNegotiating={blockedAssets.negotiating.includes(asset.id)}
+                                isReserved={blockedAssets.reserved.includes(asset.id)}
                             />
                         ))}
                     </AnimatePresence>

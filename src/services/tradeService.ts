@@ -300,29 +300,41 @@ export const tradeService = {
     },
 
     /**
-     * Escucha en tiempo real los activos bloqueados por negociaciones activas.
+     * Escucha en tiempo real los activos bloqueados por negociaciones activas o reservas.
+     * Protocolo V63.0: Soporte para estados de reserva (pending_payment).
      */
-    onSnapshotBlockedAssets(callback: (assetIds: string[]) => void) {
+    onSnapshotBlockedAssets(callback: (data: { negotiating: string[], reserved: string[] }) => void) {
         const q = query(
             collection(db, COLLECTION_NAME),
-            where("status", "in", ["pending", "counter_offer", "accepted"])
+            where("status", "in", ["pending", "counter_offer", "accepted", "pending_payment"])
         );
 
         return onSnapshot(q, (snapshot) => {
-            const blockedIds = new Set<string>();
+            const negotiating = new Set<string>();
+            const reserved = new Set<string>();
+
             snapshot.docs.forEach(doc => {
                 const data = doc.data() as Trade;
-                if (data.manifest?.requestedItems) {
-                    data.manifest.requestedItems.forEach(id => blockedIds.add(String(id)));
-                }
-                if (data.manifest?.offeredItems) {
-                    data.manifest.offeredItems.forEach(id => blockedIds.add(String(id)));
+                const status = data.status;
+                const items = [
+                    ...(data.manifest?.requestedItems || []),
+                    ...(data.manifest?.offeredItems || [])
+                ].map(id => String(id));
+
+                if (status === "pending_payment" || status === "accepted") {
+                    items.forEach(id => reserved.add(id));
+                } else {
+                    items.forEach(id => negotiating.add(id));
                 }
             });
-            callback(Array.from(blockedIds));
+
+            callback({
+                negotiating: Array.from(negotiating),
+                reserved: Array.from(reserved)
+            });
         }, (error) => {
             console.error("Error in onSnapshotBlockedAssets:", error);
-            callback([]); // Retornar vacío en caso de error para no romper la UI
+            callback({ negotiating: [], reserved: [] });
         });
     },
 

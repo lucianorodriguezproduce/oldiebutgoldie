@@ -9,9 +9,17 @@ interface UserAssetCardProps {
     asset: UserAsset;
     onUpdate: () => void;
     readonly?: boolean;
+    isNegotiating?: boolean;
+    isReserved?: boolean;
 }
 
-export default function UserAssetCard({ asset, onUpdate, readonly = false }: UserAssetCardProps) {
+export default function UserAssetCard({ 
+    asset, 
+    onUpdate, 
+    readonly = false,
+    isNegotiating = false,
+    isReserved = false
+}: UserAssetCardProps) {
     const [isUpdating, setIsUpdating] = useState(false);
     const [showPricing, setShowPricing] = useState(false);
     const [price, setPrice] = useState(asset.valuation?.toString() || "");
@@ -98,7 +106,13 @@ export default function UserAssetCard({ asset, onUpdate, readonly = false }: Use
                     setIsPlaying(false);
                 }
             }}
-            className="group relative bg-white/[0.03] border border-white/5 rounded-[2rem] overflow-hidden hover:border-primary/30 transition-all duration-500"
+            className={`group relative bg-white/[0.03] border rounded-[2rem] overflow-hidden transition-all duration-500 backdrop-blur-sm ${
+                isReserved 
+                    ? 'border-orange-500/50 ring-2 ring-orange-500/20 animate-pulse-subtle' 
+                    : isNegotiating 
+                        ? 'border-primary/50' 
+                        : 'border-white/5 hover:border-primary/30'
+            }`}
         >
             {/* Image Container */}
             <div className="aspect-square relative overflow-hidden">
@@ -133,11 +147,20 @@ export default function UserAssetCard({ asset, onUpdate, readonly = false }: Use
 
                 {/* Status Badges */}
                 <div className="absolute top-4 left-4 flex flex-col gap-2 z-20">
-                    {asset.isTradeable && (
+                    {isReserved ? (
+                        <div className="bg-orange-500 text-black px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-xl animate-pulse">
+                            <ArrowRightLeft className="w-3 h-3" /> RESERVADO (Esq. Pago)
+                        </div>
+                    ) : isNegotiating ? (
+                        <div className="bg-primary/80 backdrop-blur-md text-black px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-xl">
+                            <ArrowRightLeft className="w-3 h-3" /> En Negociación
+                        </div>
+                    ) : asset.isTradeable ? (
                         <div className="bg-primary text-black px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-xl">
                             <ArrowRightLeft className="w-3 h-3" /> Disponible
                         </div>
-                    )}
+                    ) : null}
+                    
                     <div className="bg-black/60 backdrop-blur-md text-white/70 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border border-white/10 flex items-center gap-1.5">
                         <ShieldCheck className="w-3 h-3 text-primary" /> Propiedad Verificada
                     </div>
@@ -199,10 +222,11 @@ export default function UserAssetCard({ asset, onUpdate, readonly = false }: Use
                     </div>
                     {!readonly && (
                         <button
-                            onClick={() => setShowPricing(!showPricing)}
-                            className="p-2 hover:bg-white/5 rounded-xl transition-colors"
+                            onClick={() => !isReserved && setShowPricing(!showPricing)}
+                            disabled={isReserved}
+                            className={`p-2 rounded-xl transition-colors ${isReserved ? 'opacity-20 cursor-not-allowed' : 'hover:bg-white/5 text-gray-400'}`}
                         >
-                            <Tag className="w-4 h-4 text-gray-400" />
+                            <Tag className="w-4 h-4" />
                         </button>
                     )}
                     {isPlaying && (
@@ -219,11 +243,11 @@ export default function UserAssetCard({ asset, onUpdate, readonly = false }: Use
                         <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Stock</span>
                     </div>
                     <div className="flex items-center gap-1">
-                        {!readonly ? (
+                        {!readonly && !isReserved ? (
                             <>
                                 <button
                                     onClick={() => handleStockChange(-1)}
-                                    disabled={localStock <= 0}
+                                    disabled={localStock <= 0 || isUpdating}
                                     className="w-6 h-6 flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-md text-gray-400 hover:text-white transition-all disabled:opacity-20 disabled:cursor-not-allowed"
                                 >
                                     <Minus className="w-3 h-3" />
@@ -231,13 +255,14 @@ export default function UserAssetCard({ asset, onUpdate, readonly = false }: Use
                                 <span className="w-7 text-center text-xs font-black text-white tabular-nums">{localStock}</span>
                                 <button
                                     onClick={() => handleStockChange(1)}
-                                    className="w-6 h-6 flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-md text-gray-400 hover:text-white transition-all"
+                                    disabled={isUpdating}
+                                    className="w-6 h-6 flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-md text-gray-400 hover:text-white transition-all disabled:opacity-20"
                                 >
                                     <Plus className="w-3 h-3" />
                                 </button>
                             </>
                         ) : (
-                            <span className="text-xs font-black text-white px-2">{localStock}</span>
+                            <span className="text-xs font-black text-white px-2 opacity-50">{localStock}</span>
                         )}
                     </div>
                 </div>
@@ -247,13 +272,16 @@ export default function UserAssetCard({ asset, onUpdate, readonly = false }: Use
                     <div className="grid grid-cols-1 gap-2 pt-2">
                         <button
                             onClick={handleToggleTradeable}
-                            disabled={isUpdating}
-                            className={`w-full py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${asset.isTradeable
-                                ? "bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20"
-                                : "bg-primary text-black hover:bg-white"
+                            disabled={isUpdating || isReserved}
+                            className={`w-full py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
+                                isReserved
+                                    ? "bg-white/5 text-gray-500 border border-white/10 cursor-not-allowed"
+                                    : asset.isTradeable
+                                        ? "bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20"
+                                        : "bg-primary text-black hover:bg-white"
                                 }`}
                         >
-                            {isUpdating ? "Procesando..." : asset.isTradeable ? "Retirar de Comercio" : "Poner en Comercio"}
+                            {isUpdating ? "Procesando..." : isReserved ? "ITEM CONGELADO / RESERVADO" : asset.isTradeable ? "Retirar de Comercio" : "Poner en Comercio"}
                         </button>
                     </div>
                 )}

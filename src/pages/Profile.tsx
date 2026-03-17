@@ -637,6 +637,7 @@ export default function Profile() {
             <OrderDetailsDrawer
                 isOpen={!!selectedOrder}
                 onClose={() => setSelectedOrder(null)}
+                status={selectedOrder?.status}
                 title={selectedOrder ? (() => {
                     const items = selectedOrder.items || [];
                     const isBatch = (items.length > 1);
