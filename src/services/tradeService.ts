@@ -1039,10 +1039,11 @@ export const tradeService = {
                 }
             }
 
-            // 2. Finalize Trade Status
+            // 2. Finalize Trade Status (Protocol V60.2: Uber-style review tracking)
             transaction.update(tradeRef, {
                 status: 'completed',
                 payment_status: 'paid',
+                pending_reviews: [tradeData.participants?.senderId || tradeData.user_id, buyerId].filter(Boolean),
                 completedAt: serverTimestamp(),
                 updatedAt: serverTimestamp()
             });
@@ -1097,8 +1098,15 @@ export const tradeService = {
             const newCount = (currentStats.rating_count || 0) + 1;
             const newAverage = ((currentStats.rating_average || 0) * (currentStats.rating_count || 0) + review.rating) / newCount;
 
-            // 1. Update Trade status
-            transaction.update(tradeRef, { status: 'completed' });
+            // 1. Update Trade pending reviews (Protocol V60.2)
+            const tradeData = tradeSnap.data() as any;
+            const currentPending = tradeData.pending_reviews || [];
+            const updatedPending = currentPending.filter((uid: string) => uid !== review.reviewer_uid);
+
+            transaction.update(tradeRef, { 
+                status: 'completed',
+                pending_reviews: updatedPending
+            });
 
             // 2. Create Review
             transaction.set(reviewRef, {

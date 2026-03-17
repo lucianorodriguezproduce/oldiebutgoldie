@@ -116,10 +116,16 @@ const AnalyticsWrapper = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+import { usePendingReviews } from "@/hooks/usePendingReviews";
+import GlobalReviewModal from "@/components/Trade/GlobalReviewModal";
+
 function AppContent() {
   const { isAdmin, user } = useAuth();
   const { health } = useHealth();
   const [siteConfig, setSiteConfig] = useState<any>(null);
+  
+  // Protocol V60.2: Uber-style review guard
+  const pendingReviews = usePendingReviews();
 
   // Sync User context with Sentry
   useEffect(() => {
@@ -163,6 +169,12 @@ function AppContent() {
       <URLParameterHandler />
       <LoadingOverlay />
       <FloatingCartCounter />
+      
+      {/* Protocol V60.2 Global Protection */}
+      {pendingReviews.length > 0 && (
+          <GlobalReviewModal pendingTrades={pendingReviews} />
+      )}
+
       <Suspense fallback={<LoadingOverlay />}>
         <AnalyticsWrapper>
           <Routes>
