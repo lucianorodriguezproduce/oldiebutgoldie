@@ -134,7 +134,8 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                 message: `Oldie but Goldie propone ${currSymbol} ${priceVal.toLocaleString()} para tu operación.`,
                 read: false,
                 timestamp: serverTimestamp(),
-                order_id: order.id
+                order_id: order.id,
+                link: `/mensajes?chat=${order.id}`
             });
 
             setQuickOffer("");

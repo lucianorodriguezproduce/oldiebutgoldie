@@ -243,7 +243,8 @@ export const tradeService = {
             message: `Se ha modificado la propuesta de intercambio #${tradeId.slice(-8).toUpperCase()}${cashLabel}. Revisá los nuevos términos.`,
             read: false,
             timestamp: serverTimestamp(),
-            order_id: tradeId
+            order_id: tradeId,
+            link: `/mensajes?chat=${tradeId}`
         });
     },
 
@@ -686,7 +687,8 @@ export const tradeService = {
                 read: false,
                 timestamp: serverTimestamp(),
                 order_id: tradeId,
-                type: "order"
+                type: "order",
+                link: `/mensajes?chat=${tradeId}`
             });
         });
     },
@@ -808,38 +810,56 @@ export const tradeService = {
         if (!snap.exists()) {
             console.log(`[P2P-FINAL] Creando conversación para Trade: ${tradeId}. Vendedor: ${sellerId} (${sellerUsername}) | Comprador: ${buyerUid}`);
             const batch = writeBatch(db);
+            const newChatId = `${tradeId}_${buyerUid}`;
+            const p2pChatRef = doc(db, "p2p_chats", newChatId);
             
-            // 1. Create Conversation (Source of Truth for Inbox)
-            batch.set(conversationRef, {
-                buyerId: buyerUid,
-                buyerUsername: buyerUsername,
-                buyerName: buyerUsername,
-                sellerId: sellerId,
-                sellerUsername: sellerUsername,
+            const chatData = {
+                id: newChatId,
                 tradeId: tradeId,
+                buyerId: buyerUid,
+                sellerId: sellerId,
+                participants: [buyerUid, sellerId],
+                buyerUsername: buyerUsername,
+                sellerUsername: sellerUsername,
                 title: title,
                 cover: cover,
                 lastMessage: "Consulta iniciada",
-                timestamp: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+                createdAt: serverTimestamp(),
                 status: "pending"
+            };
+
+            // 1. Create Conversation (Legacy Source of Truth)
+            batch.set(conversationRef, {
+                ...chatData,
+                timestamp: serverTimestamp() // Legacy field
             });
 
-            // 2. Initialization Message
+            // 1.5 Dual-Write (Inbox V2 Prep)
+            batch.set(p2pChatRef, chatData);
+
+            // 2. Initialization Message (Legacy)
             const messageRef = doc(collection(db, COLLECTION_NAME, tradeId, "conversations", buyerUsername, "messages"));
             const orderLink = `https://www.oldiebutgoldie.com.ar/orden/${tradeId}`;
             
-            batch.set(messageRef, {
+            const systemMessage = {
                 sender_uid: "system",
                 text: `¡Hola! ${buyerUsername} te escribió por "${title}". Link al pedido: ${orderLink}`,
                 timestamp: serverTimestamp(),
                 read_status: false
-            });
+            };
+
+            batch.set(messageRef, systemMessage);
+
+            // 2.5 Dual-Write Message (Inbox V2 Prep)
+            const p2pMessageRef = doc(collection(db, "p2p_chats", newChatId, "messages"));
+            batch.set(p2pMessageRef, systemMessage);
 
             // 3. Notification for Seller (Unified V43 Field)
             if (sellerId && sellerId !== buyerUid) {
                 const notifRef = doc(collection(db, "notifications"));
                 batch.set(notifRef, {
-                    uid: sellerId, // V43 STANDARD: Primary identity field for bell listener
+                    uid: sellerId,
                     title: "Nueva consulta 📬",
                     message: `${buyerUsername} te escribió por "${title}".`,
                     read: false,
@@ -862,12 +882,14 @@ export const tradeService = {
         }
 
         const messagesRef = collection(db, COLLECTION_NAME, tradeId, "conversations", conversationId, "messages");
-        await addDoc(messagesRef, {
+        const messageData = {
             sender_uid: senderId,
             text,
             timestamp: serverTimestamp(),
             read_status: false
-        });
+        };
+
+        await addDoc(messagesRef, messageData);
 
         // Update conversation metadata
         const conversationRef = doc(db, COLLECTION_NAME, tradeId, "conversations", conversationId);
@@ -881,10 +903,22 @@ export const tradeService = {
             return;
         }
 
-        await setDoc(conversationRef, {
-            lastMessage: text,
-            timestamp: serverTimestamp()
-        }, { merge: true });
+        const newChatId = `${tradeId}_${convData.buyerId}`;
+        const p2pChatRef = doc(db, "p2p_chats", newChatId);
+        const p2pMessagesRef = collection(db, "p2p_chats", newChatId, "messages");
+
+        // Dual-Write (V55.0)
+        await Promise.all([
+            setDoc(conversationRef, {
+                lastMessage: text,
+                timestamp: serverTimestamp()
+            }, { merge: true }),
+            setDoc(p2pChatRef, {
+                lastMessage: text,
+                updatedAt: serverTimestamp()
+            }, { merge: true }),
+            addDoc(p2pMessagesRef, messageData)
+        ]);
 
         // Notification for the other party (Protocol V28.2)
         if (senderId !== "system") {
@@ -979,7 +1013,7 @@ export const tradeService = {
                 timestamp: serverTimestamp(),
                 order_id: tradeId,
                 type: "order",
-                link: `/orden/${tradeId}`
+                link: `/mensajes?chat=${tradeId}` // Modified link V55.0
             });
 
             // 4. Generate automated message in the private chat
@@ -1001,7 +1035,7 @@ export const tradeService = {
                 timestamp: serverTimestamp(),
                 order_id: tradeId,
                 type: "order",
-                link: `/orden/${tradeId}` // Added link
+                link: `/mensajes?chat=${tradeId}` // Modified link V55.0 // Added link
             });
         });
     },
@@ -1219,8 +1253,12 @@ export const tradeService = {
                 currentTurn: currentTradeData.participants?.senderId // Le toca al vendedor
             });
 
-            // 3. Creamos/Actualizamos la Conversación para que aparezca en la Bandeja de Entrada
-            transaction.set(convRef, {
+            // 3. Creamos/Actualizamos la Conversación para que aparezca en la Bandeja de Entrada (Legacy)
+            const chatId = `${tradeId}_${buyerUid}`;
+            const p2pChatRef = doc(db, "p2p_chats", chatId);
+            
+            const chatData = {
+                id: chatId,
                 buyerId: buyerUid,
                 buyerUsername: buyerUsername,
                 buyerName: buyerUsername,
@@ -1231,17 +1269,33 @@ export const tradeService = {
                 cover: currentTradeData.manifest?.items?.[0]?.cover_image || currentTradeData.media?.thumbnail || "",
                 status: "accepted",
                 lastMessage: "¡Venta Directa confirmada!",
-                timestamp: serverTimestamp()
+                updatedAt: serverTimestamp(),
+                createdAt: serverTimestamp(),
+                participants: [buyerUid, sellerId]
+            };
+
+            transaction.set(convRef, {
+                ...chatData,
+                timestamp: serverTimestamp() // Legacy
             }, { merge: true });
+
+            // 3.5 Dual-Write (Inbox V2 Prep)
+            transaction.set(p2pChatRef, chatData, { merge: true });
 
             // 4. Escribimos el mensaje automático adentro del chat privado correcto
             const newMessageRef = doc(convMessagesRef);
-            transaction.set(newMessageRef, {
+            const systemMessage = {
                 sender_uid: "system",
                 text: `¡Hola! ${buyerUsername} ha comprado este disco mediante Venta Directa. Coordinen aquí el envío.`,
                 timestamp: serverTimestamp(),
                 read_status: false
-            });
+            };
+
+            transaction.set(newMessageRef, systemMessage);
+
+            // 4.5 Dual-Write Message (Inbox V2 Prep)
+            const p2pMessageRef = doc(collection(db, "p2p_chats", chatId, "messages"));
+            transaction.set(p2pMessageRef, systemMessage);
         });
     }
 };

@@ -256,7 +256,8 @@ export default function Profile() {
                 read: false,
                 timestamp: serverTimestamp(),
                 order_id: order.id,
-                type: "order"
+                type: "order",
+                link: `/mensajes?chat=${order.id}`
             });
 
             setSelectedOrder((prev: any) => prev ? { ...prev, status: "venta_finalizada" } : null);
@@ -296,7 +297,8 @@ export default function Profile() {
                 read: false,
                 timestamp: serverTimestamp(),
                 order_id: order.id,
-                type: "negotiation"
+                type: "negotiation",
+                link: `/mensajes?chat=${order.id}`
             });
 
             setSelectedOrder((prev: any) => prev ? { ...prev, totalPrice: priceVal, status: "contraoferta_usuario" } : null);
