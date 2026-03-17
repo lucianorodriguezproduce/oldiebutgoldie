@@ -88,6 +88,13 @@ export interface Trade {
     highest_bidder_name?: string;
     bid_count?: number;
     acceptedAt?: any;
+    payment_method?: 'efectivo' | 'transferencia' | 'debito' | 'credito' | 'otro';
+    logistics?: {
+        delivery_type?: 'in_person' | 'shipping';
+        courier?: string;
+        tracking_code?: string;
+        lastUpdated?: any;
+    };
 }
 
 export interface UserAsset {

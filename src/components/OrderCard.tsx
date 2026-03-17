@@ -20,7 +20,8 @@ import {
     MessageCircle,
     Eye,
     Flame,
-    Share2
+    Share2,
+    Truck
 } from 'lucide-react';
 import { TEXTS } from '@/constants/texts';
 import { useAuth } from '@/context/AuthContext';
@@ -35,6 +36,7 @@ import { tradeService } from '@/services/tradeService';
 import { isAdminEmail } from '@/constants/admin';
 import { CountdownTimer } from './Auction/CountdownTimer';
 import DirectPurchaseModal from './Trades/DirectPurchaseModal';
+import PaymentMethodModal from './Trades/PaymentMethodModal';
 
 interface OrderCardProps {
     order: any; // Using any or an extended OrderData to catch legacy fields without crashing
@@ -70,6 +72,7 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [auctionFinished, setAuctionFinished] = useState(false);
     const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
+    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
     const handleBid = async (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -423,6 +426,11 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                                 </span>
                             )
                         )}
+                        {order.logistics?.tracking_code && (
+                            <span className="px-2 py-0.5 rounded-full bg-blue-500/20 border border-blue-500/50 text-blue-400 text-[9px] font-black uppercase tracking-widest animate-pulse flex items-center gap-1">
+                                <Truck size={10} /> EN CAMINO
+                            </span>
+                        )}
                     </div>
 
                     <div className="flex flex-col">
@@ -582,18 +590,17 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                         )
                     )}
 
-                    {/* P2P PAYMENT FLOW (Protocol V58.1 Phase 1) */}
                     {status === 'pending_payment' && (
                         <div className="w-full mt-auto pt-4 border-t border-white/5 space-y-3">
                             {user?.uid === (order.participants?.receiverId || order.ownerId) ? (
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        console.log('Protocolo V58.1 - Fase 3: Marcar Pago Recibido (OrderCard)');
+                                        setIsPaymentModalOpen(true);
                                     }}
                                     className="w-full px-6 py-4 bg-orange-500 text-black font-black uppercase tracking-widest text-[11px] md:text-sm rounded-xl shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 transition-all text-center"
                                 >
-                                    Marcar Pago Recibido
+                                    Confirmar Pago Recibido
                                 </button>
                             ) : (
                                 <div className="w-full px-6 py-4 bg-blue-500/10 border border-blue-500/20 text-blue-400 font-black uppercase tracking-widest text-[10px] md:text-xs rounded-xl text-center italic">
@@ -607,6 +614,12 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                         isOpen={isPurchaseModalOpen}
                         onClose={() => setIsPurchaseModalOpen(false)}
                         order={order}
+                    />
+
+                    <PaymentMethodModal
+                        isOpen={isPaymentModalOpen}
+                        onClose={() => setIsPaymentModalOpen(false)}
+                        tradeId={order.id}
                     />
 
                     {/* QuickOffer Component for Admins - Minimalist & Validated */}

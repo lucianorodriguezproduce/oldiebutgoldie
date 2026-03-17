@@ -1576,5 +1576,69 @@ export const tradeService = {
                 });
             }
         });
+    },
+
+    /**
+     * Protocolo V68.0: Confirma la recepción del pago y cierra la orden.
+     */
+    async confirmPayment(tradeId: string, paymentMethod: Trade['payment_method']) {
+        const docRef = doc(db, COLLECTION_NAME, tradeId);
+        await updateDoc(docRef, {
+            status: "completed",
+            payment_method: paymentMethod,
+            payment_status: 'paid',
+            completedAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+        });
+
+        // Crear notificación para el comprador
+        const tradeSnap = await getDoc(docRef);
+        if (tradeSnap.exists()) {
+            const tradeData = tradeSnap.data() as Trade;
+            const buyerId = tradeData.participants.senderId;
+            await addDoc(collection(db, "notifications"), {
+                uid: buyerId,
+                user_id: buyerId,
+                title: "¡Pago Confirmado! ✅",
+                message: `El vendedor confirmó la recepción del pago (${paymentMethod?.toUpperCase()}). Tu disco está listo para el envío.`,
+                read: false,
+                timestamp: serverTimestamp(),
+                order_id: tradeId,
+                link: `/mensajes?chat=${tradeId}`
+            });
+        }
+    },
+
+    /**
+     * Protocolo V68.0: Actualiza los datos de logística de un trade.
+     */
+    async updateLogistics(tradeId: string, logisticsData: Trade['logistics']) {
+        const docRef = doc(db, COLLECTION_NAME, tradeId);
+        await updateDoc(docRef, {
+            logistics: {
+                ...logisticsData,
+                lastUpdated: serverTimestamp()
+            },
+            updatedAt: serverTimestamp()
+        });
+
+        // Notificar al comprador si se añadió tracking
+        if (logisticsData?.tracking_code) {
+            const tradeSnap = await getDoc(docRef);
+            if (tradeSnap.exists()) {
+                const tradeData = tradeSnap.data() as Trade;
+                const buyerId = tradeData.participants.senderId;
+                await addDoc(collection(db, "notifications"), {
+                    uid: buyerId,
+                    user_id: buyerId,
+                    title: "¡Pedido en Camino! 🚚",
+                    message: `Tu pedido ha sido despachado por ${logisticsData.courier}. Tracking: ${logisticsData.tracking_code}`,
+                    read: false,
+                    timestamp: serverTimestamp(),
+                    order_id: tradeId,
+                    link: `/mensajes?chat=${tradeId}`
+                });
+            }
+        }
     }
 };

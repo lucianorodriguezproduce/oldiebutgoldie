@@ -29,11 +29,14 @@ import {
     X,
     FileText,
     Download,
-    ChevronDown
+    ChevronDown,
+    Truck,
+    Copy,
+    ExternalLink
 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { formatDate, getReadableDate } from "@/utils/date";
-import { collection, onSnapshot, query, orderBy, where, doc, deleteDoc, updateDoc, addDoc, serverTimestamp, arrayUnion } from "firebase/firestore";
+import { collection, onSnapshot, query, orderBy, where, doc, deleteDoc, updateDoc, addDoc, serverTimestamp, arrayUnion, getDocs } from "firebase/firestore";
 import { useState, useEffect } from "react";
 import { TEXTS } from "@/constants/texts";
 import { CardSkeleton } from "@/components/ui/Skeleton";
@@ -66,6 +69,7 @@ import ManifestEditor from "@/components/Trade/ManifestEditor";
 import TradeChat from "@/components/Trade/TradeChat";
 import UserCollection from "@/components/Profile/UserCollection";
 import UsernameClaimModal from "@/components/Profile/UsernameClaimModal";
+import PaymentMethodModal from "@/components/Trades/PaymentMethodModal";
 
 export default function Profile() {
     const { user, dbUser, isAdmin } = useAuth();
@@ -89,6 +93,7 @@ export default function Profile() {
     const [counterOfferPrice, setCounterOfferPrice] = useState("");
     const [isNegotiating, setIsNegotiating] = useState(false);
     const [showCounterInput, setShowCounterInput] = useState(false);
+    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
 
     const handleAcceptOffer = async () => {
@@ -162,37 +167,39 @@ export default function Profile() {
         if (!user) return;
 
         showLoading("Sincronizando La Batea Personal...");
+        setOrdersLoading(true);
 
-        // Unificado: Cargar todos los trades (Compras, Ventas e Intercambios)
-        const loadEverything = async () => {
-            await fetchTrades();
+        // REAL-TIME SYNC (Protocol V68.0)
+        const qSender = query(collection(db, "trades"), where("participants.senderId", "==", user.uid));
+        const qReceiver = query(collection(db, "trades"), where("participants.receiverId", "==", user.uid));
+
+        const updateTrades = async (snaps: any[]) => {
+            const rawTradesMap = new Map<string, Trade>();
+            snaps.forEach(snap => {
+                snap.docs.forEach((doc: any) => {
+                    rawTradesMap.set(doc.id, { id: doc.id, ...doc.data() } as Trade);
+                });
+            });
+
+            const uniqueTrades = Array.from(rawTradesMap.values());
+            const legacyTrades = await Promise.all(uniqueTrades.map(t => tradeService.bateaToLegacy(t)));
+            const sorted = legacyTrades.sort((a: any, b: any) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+            
+            setTrades(sorted);
             setOrdersLoading(false);
             hideLoading();
-        };
 
-        loadEverything();
-
-        // Optional: Implement matching trades listener if real-time is needed for Profile
-        // For now, we use the fetchTrades method which already has the legacy adapter
-    }, [user]);
-
-    const fetchTrades = async () => {
-        if (!user) return;
-        try {
-            const fetchedTrades = await tradeService.getUserTrades(user.uid);
-            setTrades(fetchedTrades);
-
-            // Resolve item details
+            // Resolve item details (cached)
             const allItemIds = new Set<string>();
-            fetchedTrades.forEach(t => {
+            sorted.forEach(t => {
                 t.manifest.offeredItems.forEach((id: string) => allItemIds.add(id));
                 t.manifest.requestedItems.forEach((id: string) => allItemIds.add(id));
             });
 
             const details: Record<string, any> = { ...itemDetails };
-
-            // Seed from manifest.items embedded data
-            fetchedTrades.forEach(t => {
+            
+            // Seed from manifestItems
+            sorted.forEach(t => {
                 if (t.manifest?.items && Array.isArray(t.manifest.items)) {
                     t.manifest.items.forEach((item: any) => {
                         const itemId = item.userAssetId || item.id;
@@ -208,29 +215,24 @@ export default function Profile() {
                 }
             });
 
-            // Resolve remaining from inventory or user_assets
-            await Promise.all(Array.from(allItemIds).map(async (id: string) => {
-                if (!details[id]) {
-                    const item = await inventoryService.getItemById(id);
-                    if (item) {
-                        details[id] = item;
-                    } else {
-                        const asset = await userAssetService.getAssetById(id);
-                        if (asset) {
-                            details[id] = {
-                                id: asset.id,
-                                metadata: asset.metadata,
-                                media: asset.media,
-                                logistics: { price: asset.valuation || 0 }
-                            };
-                        }
-                    }
-                }
-            }));
             setItemDetails(details);
-        } catch (error) {
-            console.error("Error fetching user trades:", error);
-        }
+        };
+
+        const unsubSender = onSnapshot(qSender, () => {
+            getDocs(qSender).then(s => getDocs(qReceiver).then(r => updateTrades([s, r])));
+        });
+        const unsubReceiver = onSnapshot(qReceiver, () => {
+            getDocs(qSender).then(s => getDocs(qReceiver).then(r => updateTrades([s, r])));
+        });
+
+        return () => {
+            unsubSender();
+            unsubReceiver();
+        };
+    }, [user]);
+
+    const fetchTrades = async () => {
+        // Obsolete but kept for compatibility if needed elsewhere
     };
 
     const handleAcceptProposal = async (order: any) => {
@@ -659,17 +661,15 @@ export default function Profile() {
                             </button>
 
                             {/* Verification / Logistic Actions */}
-                            {selectedOrder.status === 'pending_payment' && user?.uid === selectedOrder.participants?.receiverId && (
+                            {(selectedOrder.status === 'pending_payment' || selectedOrder.status === 'completed_unpaid') && user?.uid === (selectedOrder.participants?.receiverId || selectedOrder.ownerId) && (
                                 <button
                                     onClick={() => {
-                                        if (window.confirm("¿Confirmas que has recibido el pago por este disco?")) {
-                                            handleAcceptProposal(selectedOrder);
-                                        }
+                                        setIsPaymentModalOpen(true);
                                     }}
                                     className="w-full flex items-center justify-center gap-3 py-4 bg-orange-500 text-black rounded-2xl font-black uppercase text-xs tracking-[0.2em] hover:bg-white transition-all shadow-lg shadow-orange-500/20 active:scale-95"
                                 >
                                     <CheckCircle2 className="h-5 w-5" />
-                                    Marcar Pago Recibido
+                                    Confirmar Pago Recibido
                                 </button>
                             )}
 
@@ -775,9 +775,102 @@ export default function Profile() {
                                 ))}
                             </div>
                         </div>
+
+                        {/* Protocolo V68.0: Sección de Logística */}
+                        <div className="space-y-4 pt-4 border-t border-white/5">
+                            <div className="flex items-center justify-between">
+                                <h4 className="px-1 text-[10px] font-black uppercase tracking-widest text-gray-600">Logística y Entrega</h4>
+                                {selectedOrder.status === 'completed' && user?.uid === (selectedOrder.participants?.receiverId || selectedOrder.ownerId) && (
+                                    <button 
+                                        onClick={() => {
+                                            const courier = prompt("Empresa de Correo:", selectedOrder.logistics?.courier || "");
+                                            const tracking = prompt("Código de Seguimiento:", selectedOrder.logistics?.tracking_code || "");
+                                            if (courier && tracking) {
+                                                tradeService.updateLogistics(selectedOrder.id, {
+                                                    delivery_type: 'shipping',
+                                                    courier,
+                                                    tracking_code: tracking
+                                                });
+                                            }
+                                        }}
+                                        className="text-[9px] font-black text-primary uppercase tracking-widest hover:underline"
+                                    >
+                                        {selectedOrder.logistics?.tracking_code ? "Editar Seguimiento" : "Añadir Seguimiento"}
+                                    </button>
+                                )}
+                            </div>
+
+                            {selectedOrder.logistics?.tracking_code ? (
+                                <div className="relative overflow-hidden group">
+                                    <div className="absolute inset-0 bg-blue-500/5 blur-xl group-hover:bg-blue-500/10 transition-all" />
+                                    <div className="relative p-6 rounded-[2rem] bg-white/[0.03] border border-blue-500/20 backdrop-blur-md space-y-4">
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 rounded-2xl bg-blue-500 text-black flex items-center justify-center shadow-lg shadow-blue-500/20">
+                                                    <Truck size={24} />
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Enviado por</p>
+                                                    <p className="text-lg font-black text-white uppercase tracking-tight">{selectedOrder.logistics.courier}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="flex items-center justify-between p-4 bg-black/40 rounded-2xl border border-white/5">
+                                            <div className="min-w-0">
+                                                <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1">Código de Seguimiento</p>
+                                                <p className="text-xs font-mono font-bold text-blue-400 truncate">{selectedOrder.logistics.tracking_code}</p>
+                                            </div>
+                                            <button 
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(selectedOrder.logistics.tracking_code);
+                                                    alert("Código copiado");
+                                                }}
+                                                className="p-3 hover:bg-white/5 rounded-xl transition-colors text-gray-400 hover:text-white"
+                                            >
+                                                <Copy size={16} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="p-6 rounded-[2rem] bg-white/[0.02] border border-dashed border-white/10 flex flex-col items-center justify-center text-center space-y-2">
+                                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-gray-700">
+                                        <Truck size={18} />
+                                    </div>
+                                    <p className="text-[10px] font-black text-gray-600 uppercase tracking-widest">
+                                        {selectedOrder.status === 'completed' 
+                                            ? "Pendiente de despacho / Aviso de envío" 
+                                            : "El seguimiento estará disponible una vez confirmado el pago"}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Método de Pago Recibido */}
+                        {selectedOrder.payment_method && (
+                            <div className="p-4 bg-green-500/5 border border-green-500/10 rounded-2xl flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <CheckCircle2 size={16} className="text-green-500" />
+                                    <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Pago Recibido vía</span>
+                                </div>
+                                <span className="text-[10px] font-black text-green-500 uppercase tracking-widest">
+                                    {selectedOrder.payment_method}
+                                </span>
+                            </div>
+                        )}
                     </div>
                 )}
             </OrderDetailsDrawer>
+
+            <PaymentMethodModal 
+                isOpen={isPaymentModalOpen}
+                onClose={() => setIsPaymentModalOpen(false)}
+                tradeId={selectedOrder?.id}
+                onSuccess={() => {
+                    // Update the local state or let onSnapshot handle it
+                }}
+            />
             {/* Trade Details Modal */}
             <AnimatePresence>
                 {selectedTrade && (
