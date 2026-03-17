@@ -90,7 +90,7 @@ export default function AdminStats() {
         };
     }, []);
 
-    if (loading || !comStats) {
+    if (loading) {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
                 <div className="flex flex-col items-center gap-4">
@@ -101,6 +101,16 @@ export default function AdminStats() {
         );
     }
 
+    const stats = comStats || { 
+        revenue: 0, 
+        capital: 0, 
+        activeNegotiations: 0, 
+        totalViews: 0, 
+        tradeDistribution: [], 
+        revenueEvolution: [], 
+        topItems: [] 
+    };
+
     const { 
         revenue, 
         capital, 
@@ -109,7 +119,7 @@ export default function AdminStats() {
         tradeDistribution, 
         revenueEvolution, 
         topItems 
-    } = comStats;
+    } = stats;
 
     const ytPercent = Math.min((quotaStats.youtube / 10000) * 100, 100);
 

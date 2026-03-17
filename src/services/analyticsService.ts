@@ -14,8 +14,12 @@ export interface CommercialStats {
 
 export const analyticsService = {
     async getCommercialStats(): Promise<CommercialStats> {
-        // 1. Fetch Active Inventory for Capital calculation
-        const invQuery = query(collection(db, "inventory"), where("logistics.status", "==", "active"));
+        // 1. Fetch Active Inventory for Capital calculation (Limited to last 500 for performance)
+        const invQuery = query(
+            collection(db, "inventory"), 
+            where("logistics.status", "==", "active"),
+            limit(500)
+        );
         const invSnap = await getDocs(invQuery);
         let capital = 0;
         invSnap.forEach(doc => {
@@ -23,8 +27,12 @@ export const analyticsService = {
             capital += (data.logistics.price || 0) * (data.logistics.stock || 0);
         });
 
-        // 2. Fetch Trades for Revenue and Status Distribution
-        const tradesQuery = query(collection(db, "trades"), orderBy("timestamp", "desc"));
+        // 2. Fetch Trades for Revenue and Status Distribution (Limited to last 500)
+        const tradesQuery = query(
+            collection(db, "trades"), 
+            orderBy("timestamp", "desc"),
+            limit(500)
+        );
         const tradesSnap = await getDocs(tradesQuery);
         
         let revenue = 0;
@@ -45,10 +53,10 @@ export const analyticsService = {
 
             // Revenue calculation (completed/accepted trades)
             if (['completed', 'accepted', 'resolved'].includes(status)) {
-                revenue += data.manifest.cashAdjustment || 0;
+                revenue += data.manifest?.cashAdjustment || 0;
                 if (date !== 'N/A') {
                     if (!revenueMap[date]) revenueMap[date] = { revenue: 0, offers: 0 };
-                    revenueMap[date].revenue += data.manifest.cashAdjustment || 0;
+                    revenueMap[date].revenue += data.manifest?.cashAdjustment || 0;
                 }
             }
 
