@@ -10,7 +10,7 @@ import { userAssetService } from "@/services/userAssetService";
 import { inventoryService } from "@/services/inventoryService";
 import { tradeService } from "@/services/tradeService";
 import { whatsappService } from "@/services/whatsappService";
-import { ADMIN_UID } from "@/constants/admin";
+import { ADMIN_UIDS } from "@/constants/admin";
 import { LazyImage } from "@/components/ui/LazyImage";
 import UsernameClaimModal from "@/components/Profile/UsernameClaimModal";
 import type { UserAsset, InventoryItem } from "@/types/inventory";
@@ -122,7 +122,7 @@ export default function TradeConstructor() {
                 setViewMode("community");
                 setReceiverUid(item.sellerId || item.ownerId);
             } else {
-                setReceiverUid(ADMIN_UID);
+                setReceiverUid(ADMIN_UIDS[0]);
             }
             // Advance to step 1 (Offer) since request is already set
             setStep(1);
@@ -227,7 +227,7 @@ export default function TradeConstructor() {
                 : [];
 
             const isP2PPublicListing = modalidad !== "exchange";
-            const finalReceiverId = isP2PPublicListing ? null : (receiverUid || ADMIN_UID);
+            const finalReceiverId = isP2PPublicListing ? null : (receiverUid || ADMIN_UIDS[0]);
 
             if (targetTradeId) {
                 // PHASE III: PROPOSAL SYSTEM
@@ -729,12 +729,12 @@ export default function TradeConstructor() {
                                                         key={item.id}
                                                         onClick={() => {
                                                             // Logic overlap check: If there are P2P items, can't mix? Or just set receiverUid
-                                                            if (receiverUid && receiverUid !== ADMIN_UID && selectedRequested.size > 0) {
+                                                            if (receiverUid && !ADMIN_UIDS.includes(receiverUid) && selectedRequested.size > 0) {
                                                                 alert("No podés mezclar discos de distintos usuarios de la comunidad o de la tienda oficial en un mismo intercambio.");
                                                                 return;
                                                             }
                                                             toggleRequested(item.id);
-                                                            setReceiverUid(ADMIN_UID);
+                                                            setReceiverUid(ADMIN_UIDS[0]);
                                                         }}
                                                         className={`relative group text-left rounded-2xl border overflow-hidden transition-all ${isSelected
                                                             ? 'border-emerald-500 ring-2 ring-emerald-500/30 bg-emerald-500/5'

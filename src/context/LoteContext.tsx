@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { ADMIN_UID } from "@/constants/admin";
+import { ADMIN_UIDS } from "@/constants/admin";
 
 export interface BatchItem {
     id: number | string;
@@ -89,13 +89,13 @@ export function LoteProvider({ children }: { children: ReactNode }) {
             return;
         }
 
-        const resolvedSellerId = orderData.sellerId || orderData.ownerId || orderData.user_id || ADMIN_UID;
+        const resolvedSellerId = orderData.sellerId || orderData.ownerId || orderData.user_id || ADMIN_UIDS[0];
 
         // V51.0 CART GUARD: Bloquear mezcla de vendedores
         if (loteItems.length > 0) {
             const activeSellerId = loteItems[0].sellerId;
             if (resolvedSellerId !== activeSellerId) {
-                const sellerName = activeSellerId === ADMIN_UID ? "la Tienda Oficial" : "otro usuario";
+                const sellerName = ADMIN_UIDS.includes(activeSellerId) ? "la Tienda Oficial" : "otro usuario";
                 alert(`Tu lote actual pertenece a ${sellerName}. No podés mezclar discos de distintos vendedores en un mismo lote.`);
                 return;
             }

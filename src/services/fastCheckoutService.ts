@@ -1,5 +1,5 @@
 import { tradeService } from "./tradeService";
-import { ADMIN_UID } from "@/constants/admin";
+import { ADMIN_UIDS } from "@/constants/admin";
 import { pushPurchaseSuccess } from "@/utils/analytics";
 
 export const fastCheckoutService = {
@@ -7,7 +7,7 @@ export const fastCheckoutService = {
      * Executes a direct purchase for a local inventory item.
      * Bypasses the TradeConstructor and resolves immediately.
      */
-    async processPurchase(userId: string, itemId: string, price: number, sellerId: string = ADMIN_UID) {
+    async processPurchase(userId: string, itemId: string, price: number, sellerId: string = ADMIN_UIDS[0]) {
         // 1. Create a Direct Sale Trade
         // createTrade already handles the resolveTrade() internally if isDirectSale is true.
         // And isDirectSale is true if origin is INVENTORY and there are no offeredItems.

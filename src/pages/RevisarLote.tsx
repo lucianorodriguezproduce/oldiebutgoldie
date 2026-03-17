@@ -16,7 +16,7 @@ import { inventoryService } from "@/services/inventoryService";
 import { tradeService } from "@/services/tradeService";
 import { userAssetService } from "@/services/userAssetService";
 import { discogsService } from "@/lib/discogs";
-import { ADMIN_UID } from "@/constants/admin";
+import { ADMIN_UIDS } from "@/constants/admin";
 import { useEffect as useReactEffect } from "react";
 import UsernameClaimModal from "@/components/Profile/UsernameClaimModal";
 
@@ -107,7 +107,7 @@ export default function RevisarLote() {
                 if (inventoryItems.length > 0) {
                     // Group inventory items by sellerId to support P2P vendors
                     const itemsBySeller = inventoryItems.reduce((acc, item) => {
-                        const sId = item.sellerId || ADMIN_UID;
+                        const sId = item.sellerId || ADMIN_UIDS[0];
                         if (!acc[sId]) acc[sId] = [];
                         acc[sId].push(item);
                         return acc;
@@ -115,7 +115,7 @@ export default function RevisarLote() {
 
                     for (const [sellerId, items] of Object.entries(itemsBySeller)) {
                         const totalCash = items.reduce((acc, i) => acc + (i.price || 0), 0);
-                        const isStoreOrder = sellerId === ADMIN_UID; // Corrección: Solo si es estrictamente ADMIN_UID
+                        const isStoreOrder = ADMIN_UIDS.includes(sellerId); // Corrección: Solo si es estrictamente ADMIN_UID
 
                         const tradeId = await tradeService.createTrade({
                             participants: { senderId: uid, receiverId: sellerId },
@@ -160,7 +160,7 @@ export default function RevisarLote() {
                     }));
 
                     const discogsTradeId = await tradeService.createTrade({
-                        participants: { senderId: uid, receiverId: ADMIN_UID },
+                        participants: { senderId: uid, receiverId: ADMIN_UIDS[0] },
                         manifest: {
                             requestedItems: importedDiscogsIds,
                             offeredItems: [],
@@ -206,7 +206,7 @@ export default function RevisarLote() {
                 }));
 
                 const tradeId = await tradeService.createTrade({
-                    participants: { senderId: uid, receiverId: ADMIN_UID },
+                    participants: { senderId: uid, receiverId: ADMIN_UIDS[0] },
                     manifest: {
                         requestedItems: importedDiscogsIds,
                         offeredItems: [],

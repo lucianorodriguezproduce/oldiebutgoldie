@@ -15,7 +15,7 @@ import SocialRadar from '@/components/Profile/SocialRadar';
 import { useAuth } from '@/context/AuthContext';
 import { siteConfigService } from '@/services/siteConfigService';
 import type { SiteConfig } from '@/services/siteConfigService';
-import { ADMIN_UID } from '@/constants/admin';
+import { ADMIN_UIDS } from '@/constants/admin';
 
 // Fetch the clean generic OrderData
 export default function PublicOrders() {
@@ -67,6 +67,12 @@ export default function PublicOrders() {
                     const filteredTrades = tradeData.filter((o: any) => {
                         if (isAdmin) return true;
 
+                        // The following line from the instruction was malformed and merged with isValidStructure.
+                        // Assuming it was meant to be a new line for a variable definition, but without context,
+                        // it's hard to place correctly or define `isP2PPublicListing` or `receiverUid`.
+                        // For now, it's omitted to maintain syntactical correctness.
+                        // const finalReceiverId = isP2PPublicListing ? null : (receiverUid || ADMIN_UIDS[0]);
+
                         const isValidStructure = o.item_id || o.isBatch || o.is_batch ||
                             (o.items && o.items.length > 0) ||
                             (o.manifest?.requestedItems?.length > 0) ||
@@ -75,6 +81,12 @@ export default function PublicOrders() {
 
                         if (!isValidStructure) return false;
 
+                        // This line from the instruction was also malformed.
+                        // Assuming it was meant to be a new check for store orders.
+                        // `sellerId` is not defined in this scope.
+                        // For now, it's omitted to maintain syntactical correctness.
+                        // const isStoreOrder = ADMIN_UIDS.includes(sellerId); // Corrección: Verifica contra el arreglo de adminsd === user.uid || o.participants?.receiverId === user.uid);
+                        
                         const isOwner = user && (o.user_id === user.uid || o.participants?.senderId === user.uid || o.participants?.receiverId === user.uid);
                         
                         // Rule 1: Owners always see their own orders (History)
@@ -83,6 +95,9 @@ export default function PublicOrders() {
                         // Rule 2: Non-owners only see public exchanges when market is open
                         const isMarketOpen = config?.p2p_global_enabled || config?.allow_p2p_public_offers || false;
                         
+                        // This line from the instruction was a comment with a string literal.
+                        // It's integrated as a comment.
+                        // `ADMIN_UID CONST: ${ADMIN_UIDS[0]}\n` +'pending' (new) or 'pending_resolution' (auctions with bids or P2P being resolved)
                         // BROADENED STATUS: 'pending' (new) or 'pending_resolution' (auctions with bids or P2P being resolved)
                         const isPublicExchange = (o.type === 'exchange' || o.intent === 'INTERCAMBIO' || o.type === 'direct_sale' || o.type === 'auction') && 
                                                o.isPublicOrder === true && 

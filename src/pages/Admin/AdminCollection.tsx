@@ -5,7 +5,7 @@ import { CopyPlus, Clock, Disc, Music, Sparkles, X, Copy } from "lucide-react";
 import { SocialCardGenerator } from "@/components/Social/SocialCardGenerator";
 import { motion, AnimatePresence } from "framer-motion";
 import { userAssetService } from "@/services/userAssetService";
-import { ADMIN_UID } from "@/constants/admin";
+import { ADMIN_UIDS } from "@/constants/admin";
 import type { UserAsset } from "@/types/inventory";
 
 export default function AdminCollection() {

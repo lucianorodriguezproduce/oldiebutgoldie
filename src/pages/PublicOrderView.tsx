@@ -16,7 +16,7 @@ import UsernameClaimModal from "@/components/Profile/UsernameClaimModal";
 import { getCleanOrderMetadata } from "@/utils/orderMetadata";
 import { tradeService } from "@/services/tradeService";
 import { generateWhatsAppAcceptDealMsg } from "@/utils/whatsapp";
-import { ADMIN_UID, isAdminEmail } from "@/constants/admin";
+import { ADMIN_UIDS, isAdminEmail } from '@/constants/admin';
 import { siteConfigService } from "@/services/siteConfigService";
 import type { SiteConfig } from "@/services/siteConfigService";
 import TradeChat from "@/components/Trade/TradeChat";
@@ -88,7 +88,8 @@ export default function PublicOrderView() {
     if (loading || !order) return null;
 
     const isOwner = user?.uid === order?.user_id;
-    const isAdminOrder = order?.user_id === ADMIN_UID || order?.user_id === "oldiebutgoldie" || isAdminEmail(order?.user_email);
+    const storeAdminUid = ADMIN_UIDS[0];
+    const isAdminOrder = order?.user_id === storeAdminUid || order?.user_id === "oldiebutgoldie" || isAdminEmail(order?.user_email);
     const canSeePrice = isAdmin || isOwner || isAdminOrder || (order?.isPublicOrder && order?.type === 'direct_sale');
 
     const items = order.manifest?.items || [];

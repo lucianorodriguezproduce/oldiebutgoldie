@@ -60,7 +60,7 @@ interface ProfileItem {
 
 import { tradeService } from "@/services/tradeService";
 import { inventoryService } from "@/services/inventoryService";
-import { ADMIN_UID } from "@/constants/admin";
+import { ADMIN_UIDS } from "@/constants/admin";
 import type { Trade, InventoryItem, TradeManifest } from "@/types/inventory";
 import ManifestEditor from "@/components/Trade/ManifestEditor";
 import TradeChat from "@/components/Trade/TradeChat";
@@ -344,6 +344,8 @@ export default function Profile() {
                 await tradeService.resolveTrade(trade.id, trade.manifest);
 
                 // Notificamos al otro participante (V43.1 Dual-Write)
+                const isStoreTrade = ADMIN_UIDS.includes(trade.participants.senderId) || ADMIN_UIDS.includes(trade.participants.receiverId);
+                const role = ADMIN_UIDS.includes(trade.participants.senderId) ? 'seller' : 'buyer';
                 const recipientId = (user.uid === trade.participants?.senderId)
                     ? trade.participants?.receiverId
                     : trade.participants?.senderId;

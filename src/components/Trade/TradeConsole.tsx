@@ -20,7 +20,7 @@ import TradeChat from "./TradeChat";
 import type { Trade, TradeManifest } from "@/types/inventory";
 import { useLoading } from "@/context/LoadingContext";
 import { useAuth } from "@/context/AuthContext";
-import { ADMIN_UID, isAdminEmail } from "@/constants/admin";
+import { ADMIN_UIDS, isAdminEmail } from "@/constants/admin";
 import ManifestEditor from "./ManifestEditor";
 import { useEffect } from "react";
 
@@ -40,12 +40,12 @@ export default function TradeConsole({ trade, onUpdate, onClose }: TradeConsoleP
     const [conversations, setConversations] = useState<any[]>([]);
     const [selectedBuyerId, setSelectedBuyerId] = useState<string | null>(null);
 
-    const isAdmin = isAdminEmail(user?.email) || user?.uid === ADMIN_UID;
+    const isAdmin = isAdminEmail(user?.email) || ADMIN_UIDS.includes(user?.uid || '');
     const isOwner = user?.uid === trade.participants.senderId || user?.uid === trade.participants.receiverId;
     const isDirectSale = trade.type === 'direct_sale';
     
     // isMyTurn logic
-    const isMyTurn = trade.currentTurn === user?.uid || (trade.currentTurn === 'admin' && isAdmin) || (trade.currentTurn === ADMIN_UID && isAdmin);
+    const isMyTurn = trade.currentTurn === user?.uid || (trade.currentTurn === 'admin' && isAdmin) || (ADMIN_UIDS.includes(trade.currentTurn || '') && isAdmin);
 
     useEffect(() => {
         if (isDirectSale && (isOwner || isAdmin) && trade.id) {

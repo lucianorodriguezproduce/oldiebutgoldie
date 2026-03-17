@@ -14,7 +14,7 @@ import {
     Timestamp, 
     limit 
 } from "firebase/firestore";
-import { ADMIN_UID } from "@/constants/admin";
+import { ADMIN_UIDS } from "@/constants/admin";
 
 export const maintenanceService = {
     /**
@@ -271,7 +271,7 @@ export const maintenanceService = {
 
             const report = `AUDITORÍA V39\n` +
                          `TU UID ACTUAL: ${currentUid}\n` +
-                         `ADMIN_UID CONST: ${ADMIN_UID}\n` +
+                         `ADMIN_UID CONST: ${ADMIN_UIDS[0]}\n` +
                          `--------------------------\n` +
                          `Total Chats: ${total}\n` +
                          `Muestra de IDs:\n${previewItems.join('\n')}\n` +
