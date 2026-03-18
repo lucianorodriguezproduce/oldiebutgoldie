@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { ADMIN_UIDS } from "@/constants/admin";
+import { validateLoteAddition, mapToBatchItem } from "@/utils/loteHelpers";
 
 export interface BatchItem {
     id: number | string;
@@ -82,7 +82,6 @@ export function LoteProvider({ children }: { children: ReactNode }) {
     };
 
     const addItemFromInventory = (orderData: any) => {
-        const { validateLoteAddition, mapToBatchItem } = require("@/utils/loteHelpers");
         const { valid, error, resolvedSellerId } = validateLoteAddition(orderData, loteItems);
         
         if (!valid) {
