@@ -225,16 +225,30 @@ export default function AdminInventory() {
         showLoading("Importando desde Discogs al La Batea...");
         try {
             let releaseData: any;
-            try {
-                // Try as release first
-                releaseData = await discogsService.getReleaseDetails(discogsId);
-            } catch (e) {
-                // Try as master if release fails
-                const master = await discogsService.getMasterDetails(discogsId);
-                if (master.main_release) {
-                    releaseData = await discogsService.getReleaseDetails(master.main_release.toString());
+
+            if (selectedSearchItem) {
+                // Protocol V79.1: Use explicit type to avoid ID collisions between masters and releases
+                if (selectedSearchItem.type === "master") {
+                    const master = await discogsService.getMasterDetails(discogsId);
+                    if (master.main_release) {
+                        releaseData = await discogsService.getReleaseDetails(master.main_release.toString());
+                    } else {
+                        releaseData = { ...master, id: master.id };
+                    }
                 } else {
-                    releaseData = { ...master, id: master.id }; // Fallback to master data
+                    releaseData = await discogsService.getReleaseDetails(discogsId);
+                }
+            } else {
+                // Manual ID Fallback
+                try {
+                    releaseData = await discogsService.getReleaseDetails(discogsId);
+                } catch (e) {
+                    const master = await discogsService.getMasterDetails(discogsId);
+                    if (master.main_release) {
+                        releaseData = await discogsService.getReleaseDetails(master.main_release.toString());
+                    } else {
+                        releaseData = { ...master, id: master.id };
+                    }
                 }
             }
 
