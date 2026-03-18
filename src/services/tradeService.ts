@@ -51,11 +51,8 @@ export const tradeService = {
             : trade.tradeOrigin === 'INVENTORY'
                 ? hasNoOfferedItems  // Inventory + COMPRAR = venta directa
                 : hasNoOfferedItems; // Fallback: comportamiento legacy
-
         const tradeType = trade.type || (isDirectSale ? "direct_sale" : "exchange");
-        // FIX: Respect status override (V24.2)
-        const initialStatus = (trade as any).status || "pending";
-
+        
         const { tradeOrigin, ...tradeWithoutOrigin } = trade;
         
         // V46 Hard-Link: receiverId is mandatory for P2P. No more Admin fallback.
@@ -68,12 +65,21 @@ export const tradeService = {
             throw new Error("SISTEMA_IDENTIDAD_PARTICIPANTE_REQUERIDO");
         }
 
+        // V78.0: Determinar si es una venta directa al Store ANTES de fijar el estado inicial
+        const isStoreDirectSale = isDirectSale && (ADMIN_UIDS.includes(receiverId || "") || receiverId === 'oldie_but_goldie');
+
+        // FIX: Respect status override (V24.2)
+        let initialStatus = (trade as any).status || "pending";
+        if (isStoreDirectSale && initialStatus === 'pending') {
+            initialStatus = 'pending_payment'; // V78.0: Forzar flujo de pago
+        }
+
         const currentUserId = auth.currentUser?.uid;
         const finalSenderId = currentUserId || trade.participants.senderId;
 
         // V48.0 Zero Trust: Re-validate receiverId against source of truth if it's P2P
         // V53: Si es un Listing (receiverId null), no sobreescribimos con el owner del item, 
-        // ya que el seller es el sender y el receiver queda libre.
+        // ya que el seller is the sender y el receiver queda libre.
         const p2pItem = trade.manifest?.items?.find((i: any) => i.source === 'user_asset');
         const userAssetId = p2pItem?.userAssetId || p2pItem?.id;
 
@@ -120,18 +126,9 @@ export const tradeService = {
             pushLeadGenerated('c2b_offer', tradeData.manifest?.cashAdjustment || 0, tradeData.manifest?.items?.length || 1, docRef.id);
         }
 
-        // --- AUTO-RESOLUTION: Only for store direct sales (OBG Shop) ---
-        // P2P Direct sales should stay pending/accepted so the seller can resolve (due to security permissions)
-        const isStoreDirectSale = isDirectSale && (ADMIN_UIDS.includes(receiverId || "") || receiverId === 'oldiebutgoldie');
-
+        // V78.0: Se elimina la auto-resolución imperativa para forzar el flujo de chat/pago
         if (isStoreDirectSale) {
-            console.log(`[batea] Store direct sale detected. Auto-resolving trade: ${docRef.id}`);
-            try {
-                await this.resolveTrade(docRef.id, trade.manifest as any);
-            } catch (error) {
-                console.error("[batea] Error during auto-resolution of store direct sale:", error);
-                throw error;
-            }
+            console.log(`[V78.0] Tienda: Transacción registrada como ${initialStatus}. Esperando pago.`);
         } else if (isDirectSale) {
             console.log(`[batea] P2P Direct sale created: ${docRef.id}. Waiting for acceptance/resolution.`);
         } else {
@@ -861,7 +858,7 @@ export const tradeService = {
                     receiverId: sellerId // Vendedor
                 },
                 type: 'direct_sale',
-                status: 'pending',
+                status: ADMIN_UIDS.includes(sellerId) ? 'pending_payment' : 'pending',
                 currentTurn: sellerId, // V47.1: El vendedor debe aceptar
                 isPublicOrder: true, 
                 is_admin_offer: ADMIN_UIDS.includes(sellerId),

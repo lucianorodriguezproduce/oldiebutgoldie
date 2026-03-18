@@ -15,6 +15,8 @@ import {
     Disc,
     Edit2,
     ChevronRight,
+    Truck,
+    Package,
     Plus,
     PlusCircle,
     Search,
@@ -102,10 +104,10 @@ export default function AdminTrades() {
 
     // KPI Calculations
     const kpis = {
-        pendingShipment: trades.filter(t => t.status === 'completed' && t.logistics?.shipping_status !== 'delivered').length,
+        pendingShipment: trades.filter(t => (t.status === 'completed' || t.status === 'accepted') && t.logistics?.shipping_status !== 'delivered').length,
         openDisputes: trades.filter(t => t.status === 'disputed').length,
         monthlySales: trades
-            .filter(t => t.status === 'completed' && t.timestamp?.toDate().getMonth() === new Date().getMonth())
+            .filter(t => (t.status === 'completed' || t.status === 'resolved') && t.timestamp?.toDate().getMonth() === new Date().getMonth())
             .reduce((acc, t) => acc + (t.manifest?.cashAdjustment || 0), 0)
     };
 
@@ -250,23 +252,46 @@ export default function AdminTrades() {
         }
     };
 
-    const getStatusBadge = (status: Trade['status']) => {
+    const getStatusBadge = (status: Trade['status'], logistics?: Trade['logistics']) => {
+        const shippingStatus = logistics?.shipping_status;
+        
+        // Protocol V77.0: Combined Badge Logic
+        if (status === 'completed' && shippingStatus === 'delivered') {
+            return <span className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5"><CheckCircle2 className="h-3 w-3" /> ENTREGADO</span>;
+        }
+
         switch (status) {
             case 'pending':
                 return <span className="bg-amber-500/10 text-amber-500 border border-amber-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 animate-pulse"><Clock className="h-3 w-3" /> PENDING_INIT</span>;
             case 'completed_unpaid':
-                return <span className="bg-orange-500/10 text-orange-500 border border-orange-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 animate-pulse"><DollarSign className="h-3 w-3" /> POR PAGAR</span>;
+            case 'pending_payment':
+                return <span className="bg-orange-500/10 text-orange-500 border border-orange-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 animate-pulse"><DollarSign className="h-3 w-3" /> POR COBRAR</span>;
+            case 'payment_reported':
+                return <span className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 animate-pulse"><CheckCircle2 className="h-3 w-3" /> PAGO REPOR.</span>;
             case 'in_process':
                 return <span className="bg-blue-500/10 text-blue-500 border border-blue-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 animate-pulse"><Disc className="h-3 w-3" /> EN PROCESO</span>;
             case 'completed':
             case 'accepted':
-                return <span className="bg-green-500/10 text-green-500 border border-green-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5"><CheckCircle2 className="h-3 w-3" /> COMPLETED</span>;
+                return (
+                    <div className="flex flex-col items-end gap-1">
+                        <span className="bg-green-500/10 text-green-500 border border-green-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5"><CheckCircle2 className="h-3 w-3" /> PAGADO</span>
+                        {shippingStatus === 'shipped' ? (
+                            <span className="bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-sm text-[7px] font-black uppercase tracking-widest flex items-center gap-1"><Truck size={8} /> EN CAMINO</span>
+                        ) : shippingStatus === 'ready_for_pickup' ? (
+                            <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-sm text-[7px] font-black uppercase tracking-widest flex items-center gap-1"><Package size={8} /> LISTO DESPACHO</span>
+                        ) : (
+                            <span className="bg-gray-500/10 text-gray-500 border border-gray-500/20 px-2 py-0.5 rounded-sm text-[7px] font-black uppercase tracking-widest flex items-center gap-1"><Clock size={8} /> PEND. ENVÍO</span>
+                        )}
+                    </div>
+                );
             case 'cancelled':
-                return <span className="bg-red-500/10 text-red-500 border border-red-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5"><XCircle className="h-3 w-3" /> CANCELLED</span>;
+                return <span className="bg-red-500/10 text-red-500 border border-red-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5"><XCircle className="h-3 w-3" /> CANCELADO</span>;
             case 'counter_offer':
-                return <span className="bg-blue-500/10 text-blue-500 border border-blue-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5"><ArrowRightLeft className="h-3 w-3" /> NEGOTIATING</span>;
+                return <span className="bg-blue-500/10 text-blue-500 border border-blue-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5"><ArrowRightLeft className="h-3 w-3" /> NEGOCIANDO</span>;
+            case 'disputed':
+                return <span className="bg-red-600/20 text-red-500 border border-red-500/40 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 animate-bounce"><AlertCircle className="h-3 w-3" /> DISPUTA</span>;
             default:
-                return status;
+                return <span className="text-[9px] font-black uppercase">{status}</span>;
         }
     };
 
@@ -308,7 +333,7 @@ export default function AdminTrades() {
             >
                 <div className="flex items-center justify-between">
                     <span className="text-[10px] font-mono font-bold text-primary uppercase">#{trade.id?.slice(-6)}</span>
-                    {getStatusBadge(trade.status)}
+                    {getStatusBadge(trade.status, trade.logistics)}
                 </div>
                 
                 <div className="flex gap-4">
@@ -585,12 +610,7 @@ export default function AdminTrades() {
                                             </td>
                                             <td className="px-8 py-6 text-right">
                                                 <div className="flex flex-col items-end gap-1">
-                                                    {getStatusBadge(trade.status)}
-                                                    {trade.logistics?.shipping_status && (
-                                                        <span className="text-[7px] font-black text-primary uppercase tracking-widest bg-primary/10 px-2 py-0.5 rounded-sm">
-                                                            {trade.logistics.shipping_status}
-                                                        </span>
-                                                    )}
+                                                    {getStatusBadge(trade.status, trade.logistics)}
                                                 </div>
                                             </td>
                                         </tr>

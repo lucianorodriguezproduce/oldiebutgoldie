@@ -272,8 +272,14 @@ export default function RevisarLote() {
             setIsSuccess(true);
             clearLote();
 
-            // Automatic navigation removed to allow success screen + Chat button
-            // If the user wants to jump directly, we could add a small delay or a redirect on the success screen.
+            // V78.0: Redirección automática inmediata al Inbox V2
+            if (createdDocs[0]) {
+                const newChatId = createdDocs[0];
+                console.log(`[V78.0] Checkout exitoso. Redirigiendo a chat: ${newChatId}`);
+                setTimeout(() => {
+                    navigate(`/mensajes?chat=${newChatId}`);
+                }, 800);
+            }
 
         } catch (error) {
             console.error("FATAL: Error en performSubmission:", error);

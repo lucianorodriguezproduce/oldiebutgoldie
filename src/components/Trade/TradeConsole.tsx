@@ -202,28 +202,47 @@ export default function TradeConsole({ trade, onUpdate, onClose }: TradeConsoleP
         }
     };
 
-    const getStatusBadge = (status: Trade['status']) => {
+    const getStatusBadge = (status: Trade['status'], logistics?: Trade['logistics']) => {
+        const shippingStatus = logistics?.shipping_status;
+        
+        // Protocol V77.0: Combined Badge Logic
+        if (status === 'completed' && shippingStatus === 'delivered') {
+            return <span className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5"><CheckCircle2 className="h-3 w-3" /> ENTREGADO</span>;
+        }
+
         switch (status) {
             case 'pending':
                 return <span className="bg-amber-500/10 text-amber-500 border border-amber-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 animate-pulse"><Clock className="h-3 w-3" /> PENDING</span>;
-            case 'completed':
-                return <span className="bg-green-500/10 text-green-500 border border-green-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5"><CheckCircle2 className="h-3 w-3" /> COMPLETADO</span>;
             case 'completed_unpaid':
+            case 'pending_payment':
                 return <span className="bg-orange-500/10 text-orange-500 border border-orange-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 animate-pulse"><DollarSign className="h-3 w-3" /> PENDIENTE PAGO</span>;
+            case 'payment_reported':
+                return <span className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 animate-pulse"><CheckCircle2 className="h-3 w-3" /> PAGO REPORTADO</span>;
             case 'in_process':
                 return <span className="bg-blue-500/10 text-blue-500 border border-blue-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 animate-pulse"><Disc className="h-3 w-3" /> EN PROCESO (BÚSQUEDA)</span>;
             case 'accepted':
-                return <span className="bg-orange-500/10 text-orange-500 border border-orange-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 animate-pulse"><Handshake className="h-3 w-3" /> PENDIENTE PAGO / COORDINANDO</span>;
-            case 'pending_payment':
-                return <span className="bg-orange-500/10 text-orange-500 border border-orange-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 animate-pulse"><DollarSign className="h-3 w-3" /> PENDIENTE PAGO (OFICIAL)</span>;
-            case 'payment_reported':
-                return <span className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 animate-pulse"><CheckCircle2 className="h-3 w-3" /> PAGO REPORTADO</span>;
+            case 'completed':
+                if (isDirectSale) {
+                    return (
+                        <div className="flex flex-col items-end gap-1">
+                            <span className="bg-green-500/10 text-green-500 border border-green-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5"><CheckCircle2 className="h-3 w-3" /> PAGADO</span>
+                            {shippingStatus === 'shipped' ? (
+                                <span className="bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-sm text-[7px] font-black uppercase tracking-widest flex items-center gap-1"><Truck size={8} /> EN CAMINO</span>
+                            ) : shippingStatus === 'ready_for_pickup' ? (
+                                <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-sm text-[7px] font-black uppercase tracking-widest flex items-center gap-1"><Package size={8} /> LISTO DESPACHO</span>
+                            ) : (
+                                <span className="bg-gray-500/10 text-gray-500 border border-gray-500/20 px-2 py-0.5 rounded-sm text-[7px] font-black uppercase tracking-widest flex items-center gap-1"><Clock size={8} /> PEND. ENVÍO</span>
+                            )}
+                        </div>
+                    );
+                }
+                return <span className="bg-green-500/10 text-green-500 border border-green-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5"><CheckCircle2 className="h-3 w-3" /> COMPLETADO</span>;
             case 'cancelled':
                 return <span className="bg-red-500/10 text-red-500 border border-red-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5"><XCircle className="h-3 w-3" /> CANCELLED</span>;
             case 'counter_offer':
                 return <span className="bg-blue-500/10 text-blue-500 border border-blue-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5"><ArrowRightLeft className="h-3 w-3" /> NEGOTIATING</span>;
             default:
-                return status;
+                return <span className="text-[9px] font-black uppercase">{status}</span>;
         }
     };
 
@@ -242,7 +261,7 @@ export default function TradeConsole({ trade, onUpdate, onClose }: TradeConsoleP
                             "Detalle de Propuesta"
                         )}
                     </h3>
-                    {getStatusBadge(trade.status)}
+                    {getStatusBadge(trade.status, trade.logistics)}
                 </div>
                 {!isDirectSale && (
                     <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest bg-white/5 px-3 py-1.5 rounded-xl">
