@@ -65,31 +65,42 @@ export default function ArchivoItem() {
             console.warn("Analytics: Failed to track intent", e);
         }
     };
-
-    // V18.3 WATCHDOG: Si YouTube no responde, activamos el fallback
+    // V18.3 WATCHDOG: Si YouTube no responde, activamos el fallback
     useEffect(() => {
+        let timer: NodeJS.Timeout;
+
         const handleVideoError = (e: any) => {
             if (e.detail === id) {
                 console.warn("[Watchdog] Señal de error recibida para:", id);
                 setIsVideoAvailable(false);
+                if (timer) clearTimeout(timer);
             }
         };
+
+        const handleVideoPlaying = (e: any) => {
+            if (e.detail === id) {
+                console.log("[Watchdog] Señal de éxito recibida (PLAYING). Cancelando timer preventivo.");
+                if (timer) clearTimeout(timer);
+            }
+        };
+
         window.addEventListener('youtube-error', handleVideoError);
+        window.addEventListener('youtube-playing', handleVideoPlaying);
 
         if (item?.youtube_id && isVideoAvailable) {
-            const timer = setTimeout(() => {
-                if (isVideoAvailable) {
-                    console.warn("[Watchdog] Timeout de 4s: Video no inició. Activando Spotify...");
-                    setIsVideoAvailable(false);
-                }
-            }, 4000);
-            return () => {
-                window.removeEventListener('youtube-error', handleVideoError);
-                clearTimeout(timer);
-            };
+            timer = setTimeout(() => {
+                console.warn("[Watchdog] Timeout de 6s: Video no inició. Activando fallback...");
+                setIsVideoAvailable(false);
+            }, 6000);
         }
-        return () => window.removeEventListener('youtube-error', handleVideoError);
-    }, [id, item?.youtube_id, isVideoAvailable]);
+
+        return () => {
+            window.removeEventListener('youtube-error', handleVideoError);
+            window.removeEventListener('youtube-playing', handleVideoPlaying);
+            if (timer) clearTimeout(timer);
+        };
+    }, [id, item?.youtube_id]); // Borramos isVideoAvailable para evitar re-triggers infinitos
+;
 
     useEffect(() => {
         if (!id) return;
@@ -285,7 +296,10 @@ export default function ArchivoItem() {
                                                         new YT.Player('youtube-player', {
                                                             events: {
                                                                 'onStateChange': function(event) {
-                                                                    if (event.data === 1) isPlaying = true;
+                                                                    if (event.data === 1) {
+                                                                        isPlaying = true;
+                                                                        window.dispatchEvent(new CustomEvent('youtube-playing', { detail: '${item.id}' }));
+                                                                    }
                                                                 },
                                                                 'onReady': function(event) {
                                                                     event.target.playVideo();
@@ -293,7 +307,7 @@ export default function ArchivoItem() {
                                                                         if (!isPlaying && event.target.getPlayerState() !== 1) {
                                                                             window.dispatchEvent(new CustomEvent('youtube-error', { detail: '${item.id}' }));
                                                                         }
-                                                                    }, 3000);
+                                                                    }, 4000);
                                                                 },
                                                                 'onError': function() {
                                                                     window.dispatchEvent(new CustomEvent('youtube-error', { detail: '${item.id}' }));
