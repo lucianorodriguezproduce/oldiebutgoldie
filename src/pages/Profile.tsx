@@ -182,8 +182,7 @@ export default function Profile() {
             });
 
             const uniqueTrades = Array.from(rawTradesMap.values());
-            const legacyTrades = await Promise.all(uniqueTrades.map(t => tradeService.bateaToLegacy(t)));
-            const sorted = legacyTrades.sort((a: any, b: any) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+            const sorted = uniqueTrades.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
             
             setTrades(sorted);
             setOrdersLoading(false);
@@ -191,7 +190,7 @@ export default function Profile() {
 
             // Resolve item details (cached)
             const allItemIds = new Set<string>();
-            sorted.forEach(t => {
+            sorted.forEach((t: Trade) => {
                 t.manifest.offeredItems.forEach((id: string) => allItemIds.add(id));
                 t.manifest.requestedItems.forEach((id: string) => allItemIds.add(id));
             });

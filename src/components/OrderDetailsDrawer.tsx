@@ -20,8 +20,8 @@ export default function OrderDetailsDrawer({ isOpen, onClose, title, status, chi
     const getStep = (currentStatus: string) => {
         if (!currentStatus) return 0;
         if (["pending", "counter_offer"].includes(currentStatus)) return 1;
-        if (["accepted", "pending_payment"].includes(currentStatus)) return 2;
-        if (["completed", "venta_finalizada", "resolved"].includes(currentStatus)) return 3;
+        if (["accepted", "pending_payment", "confirmed"].includes(currentStatus)) return 2;
+        if (["completed", "venta_finalizada", "resolved", "completed_unpaid"].includes(currentStatus)) return 3;
         return 0;
     };
 

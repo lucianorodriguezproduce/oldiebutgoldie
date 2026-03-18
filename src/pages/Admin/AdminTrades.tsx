@@ -67,12 +67,12 @@ export default function AdminTrades() {
         showLoading("Sincronizando Dashboard de Trading...");
         try {
             const pagedRes = await tradeService.getTradesPaged(PAGE_SIZE);
-            setTrades(pagedRes.items);
+            setTrades(pagedRes.items as Trade[]);
             setLastDoc(pagedRes.lastDoc);
             setHasMore(pagedRes.items.length === PAGE_SIZE);
 
             // Defer details resolution to avoid blocking UI
-            resolveItemDetails(pagedRes.items);
+            resolveItemDetails(pagedRes.items as Trade[]);
         } catch (error) {
             console.error("Error in initial load trades:", error);
         } finally {
@@ -86,10 +86,10 @@ export default function AdminTrades() {
         setLoadingMore(true);
         try {
             const pagedRes = await tradeService.getTradesPaged(PAGE_SIZE, lastDoc);
-            setTrades(prev => [...prev, ...pagedRes.items]);
+            setTrades(prev => [...prev, ...pagedRes.items as Trade[]]);
             setLastDoc(pagedRes.lastDoc);
             setHasMore(pagedRes.items.length === PAGE_SIZE);
-            resolveItemDetails(pagedRes.items);
+            resolveItemDetails(pagedRes.items as Trade[]);
         } catch (error) {
             console.error("Error fetching next page trades:", error);
         } finally {

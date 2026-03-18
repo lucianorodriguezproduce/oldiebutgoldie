@@ -29,77 +29,9 @@ import { scrubData } from "@/utils/firestore";
 
 const COLLECTION_NAME = "trades";
 
-/**
- * ADAPTADOR: Transmuta un objeto Trade (batea) en un Order (Legacy V1)
- * para que la UI consuma datos soberanos sin notar el cambio de motor.
- */
-const bateaToLegacy = async (trade: any) => {
-    if (!trade) return null;
-
-    // Hidratación de ítems desde el La Batea (Colección inventory)
-    const items = await Promise.all((trade.manifest?.requestedItems || []).map(async (itemId: string) => {
-        const itemDoc = await getDoc(doc(db, "inventory", itemId));
-        if (itemDoc.exists()) {
-            const data = itemDoc.data() as InventoryItem;
-            return {
-                id: data.id,
-                artist: (data.metadata.artist || '').replace(/^UNKNOWN ARTIST\s*[-—–]*\s*/i, '').trim() || data.metadata.artist,
-                album: data.metadata.title,
-                title: data.metadata.title,
-                cover_image: data.media.full_res_image_url || data.media.thumbnail,
-                format: data.metadata.format_description,
-                condition: data.logistics.condition,
-                price: data.logistics.price,
-                is_batea_item: true
-            };
-        }
-        return null;
-    }));
-
-    const cleanItems = items.filter(Boolean);
-    const firstItem = cleanItems[0] || {};
-
-    // Mapeo de estados visuales
-    const statusMap: Record<string, string> = {
-        "pending": "pending",
-        "counter_offer": "counteroffered",
-        "accepted": "accepted",
-        "completed": "completed",
-        "cancelled": "cancelled",
-        "resolved": "completed",
-        "rejected": "cancelled"
-    };
-
-    return {
-        ...trade,
-        id: trade.id,
-        status: statusMap[trade.status] || trade.status,
-        createdAt: trade.timestamp,
-        user_id: trade.participants?.senderId,
-        is_batea_data: true,
-        // Campos de compatibilidad V1
-        items: cleanItems,
-        totalPrice: trade.manifest?.cashAdjustment || 0,
-        currency: "ARS", // Default para trades locales
-        details: {
-            artist: firstItem.artist || "Varios",
-            album: firstItem.album || (cleanItems.length > 1 ? `Lote de ${cleanItems.length}` : "Sin Título"),
-            cover_image: firstItem.cover_image,
-            price: trade.manifest?.cashAdjustment || 0,
-            currency: "ARS",
-            intent: trade.type === 'direct_sale' ? "VENDER" : "COMPRAR"
-        },
-        // Inyectar metadatos para OrderCard
-        artist: firstItem.artist,
-        album: firstItem.album,
-        thumbnailUrl: firstItem.cover_image,
-        isBatch: cleanItems.length > 1,
-        itemsCount: cleanItems.length
-    };
-};
 
 export const tradeService = {
-    bateaToLegacy,
+
     async createTrade(trade: Omit<Trade, 'id' | 'timestamp' | 'status' | 'currentTurn' | 'negotiationHistory'> & { tradeOrigin?: 'INVENTORY' | 'DISCOGS' }) {
         // --- ASSET LOCKING: Only lock items for direct sales ---
         // Exchange trades don't lock items — stock is checked atomically at resolution time.
@@ -268,9 +200,7 @@ export const tradeService = {
         const uniqueTrades = Array.from(rawTradesMap.values());
 
         // Transmutación Silenciosa
-        const legacyTrades = await Promise.all(uniqueTrades.map(t => bateaToLegacy(t)));
-
-        return legacyTrades.sort((a: any, b: any) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+        return uniqueTrades.sort((a: any, b: any) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
     },
 
 
@@ -279,14 +209,14 @@ export const tradeService = {
         if (snapshot.empty) return null;
         const doc = snapshot.docs[0];
         const trade = { id: doc.id, ...doc.data() } as Trade;
-        return await bateaToLegacy(trade);
+        return trade;
     },
 
     async getTrades() {
         const q = query(collection(db, COLLECTION_NAME), orderBy("timestamp", "desc"));
         const snapshot = await getDocs(q);
         const rawTrades = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Trade));
-        return await Promise.all(rawTrades.map(t => bateaToLegacy(t)));
+        return rawTrades;
     },
 
     async getTradesPaged(pageSize: number, lastDoc: any = null) {
@@ -300,7 +230,7 @@ export const tradeService = {
             q = query(q, startAfter(lastDoc));
         }
         const snapshot = await getDocs(q);
-        const items = await Promise.all(snapshot.docs.map(doc => bateaToLegacy({ id: doc.id, ...doc.data() })));
+        const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         return {
             items,
             lastDoc: snapshot.docs[snapshot.docs.length - 1]

@@ -53,14 +53,13 @@ export default function PublicOrderView() {
             return;
         }
         showLoading(TEXTS.global.common.locatingBatch);
-        const unsub = onSnapshot(doc(db, "trades", id), async (tradeSnap) => {
+        const unsub = onSnapshot(doc(db, "trades", id), (tradeSnap) => {
             if (tradeSnap.exists()) {
-                const data = { id: tradeSnap.id, ...tradeSnap.data() };
-                const legacyData = await tradeService.bateaToLegacy(data);
-                setOrder(legacyData);
+                const data = { id: tradeSnap.id, ...tradeSnap.data() } as any;
+                setOrder(data);
                 if (!order) {
-                    pushViewItemFromOrder(legacyData);
-                    if (legacyData.view_count === 4) pushHotOrderDetected(legacyData, 5);
+                    pushViewItemFromOrder(data);
+                    if (data.view_count === 4) pushHotOrderDetected(data, 5);
                 }
             }
             setLoading(false);

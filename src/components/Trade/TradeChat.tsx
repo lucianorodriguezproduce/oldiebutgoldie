@@ -43,17 +43,10 @@ export default function TradeChat({ tradeId, currentUser, trade, otherParticipan
     const [disputeDetails, setDisputeDetails] = useState("");
     const [isSubmittingDispute, setIsSubmittingDispute] = useState(false);
 
-    const isComprador = currentUser?.uid === trade?.buyerId || 
-                       currentUser?.uid === trade?.buyer_uid ||
-                       currentUser?.uid === trade?.participants?.senderId ||
-                       currentUser?.uid === trade?.highest_bidder_uid;
+    const isComprador = currentUser?.uid === trade?.participants?.senderId;
+    const isVendedor = currentUser?.uid === trade?.participants?.receiverId;
     
-    const isVendedor = currentUser?.uid === trade?.sellerId ||
-                      currentUser?.uid === trade?.participants?.receiverId ||
-                      currentUser?.uid === trade?.owner_uid ||
-                      currentUser?.uid === trade?.user_id;
-    
-    const isCompleted = trade?.status === 'completed' || trade?.status === 'venta_finalizada';
+    const isCompleted = trade?.status === 'completed' || trade?.status === 'venta_finalizada' || trade?.status === 'completed_unpaid';
     const isDisputed = trade?.status === 'disputed';
 
     // Protocol V66.0: Can open dispute?
@@ -82,7 +75,7 @@ export default function TradeChat({ tradeId, currentUser, trade, otherParticipan
         // Protocolo V56.6: NATIVO V2
         // El id proporcionado (chatId o tradeId derivado) debe ser un ID de p2p_chats
         
-        const finalChatId = chatId || (trade?.buyerId ? `${tradeId}_${trade.buyerId}` : tradeId);
+        const finalChatId = chatId || tradeId;
         
         console.log("[InboxV2] Subscribing to native chat:", finalChatId);
         const unsub = tradeService.onSnapshotP2PMessages(finalChatId, callback);
@@ -99,7 +92,7 @@ export default function TradeChat({ tradeId, currentUser, trade, otherParticipan
         setIsSending(true);
         try {
             // Protocolo V56.6: sendPrivateMessage ahora solo acepta chatId nativo
-            const finalChatId = chatId || (trade?.buyerId ? `${tradeId}_${trade.buyerId}` : tradeId);
+            const finalChatId = chatId || tradeId;
             await tradeService.sendPrivateMessage(tradeId, finalChatId, currentUser.uid, newMessage.trim());
             setNewMessage("");
         } catch (error) {
@@ -113,9 +106,10 @@ export default function TradeChat({ tradeId, currentUser, trade, otherParticipan
         if (rating === 0 || isSubmittingReview) return;
         setIsSubmittingReview(true);
         try {
+            const reviewee_uid = isComprador ? trade.participants.receiverId : trade.participants.senderId;
             await tradeService.submitTradeReview(tradeId, {
                 reviewer_uid: currentUser.uid,
-                reviewee_uid: trade.owner_uid || trade.user_id, // Owner is the reviewee
+                reviewee_uid,
                 rating,
                 comment: comment.trim()
             });
@@ -133,7 +127,7 @@ export default function TradeChat({ tradeId, currentUser, trade, otherParticipan
         if (!disputeReason || isSubmittingDispute) return;
         setIsSubmittingDispute(true);
         try {
-            const finalChatId = chatId || (trade?.buyerId ? `${tradeId}_${trade.buyerId}` : tradeId);
+            const finalChatId = chatId || tradeId;
             await tradeService.openDispute(tradeId, finalChatId, disputeReason, disputeDetails, currentUser.uid);
             setShowDisputeModal(false);
         } catch (error) {
@@ -155,7 +149,7 @@ export default function TradeChat({ tradeId, currentUser, trade, otherParticipan
 
         setIsResolving(true);
         try {
-            const finalChatId = chatId || (trade?.buyerId ? `${tradeId}_${trade.buyerId}` : tradeId);
+            const finalChatId = chatId || tradeId;
             await tradeService.resolveDispute(tradeId, finalChatId, type, currentUser.uid);
         } catch (error) {
             console.error("Resolution error:", error);
@@ -197,7 +191,7 @@ export default function TradeChat({ tradeId, currentUser, trade, otherParticipan
                         onClick={async () => {
                             if (window.confirm("¿Estás seguro de reservar este ítem para este usuario? Pasará a estado 'Pendiente de Pago'.")) {
                                 try {
-                                    await tradeService.adjudicateTrade(tradeId, trade.buyerId || trade.participants?.senderId, otherParticipantName);
+                                    await tradeService.adjudicateTrade(tradeId, trade.participants?.senderId, otherParticipantName);
                                     // El cambio de estado en Firestore disparará la actualización de la UI
                                 } catch (error) {
                                     console.error("Adjudication error:", error);
