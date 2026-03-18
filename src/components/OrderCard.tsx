@@ -25,7 +25,6 @@ import {
 } from 'lucide-react';
 import { TEXTS } from '@/constants/texts';
 import { useAuth } from '@/context/AuthContext';
-import type { OrderData } from '@/utils/whatsapp';
 import { formatDate, getReadableDate } from '@/utils/date';
 import { LazyImage } from '@/components/ui/LazyImage';
 import { db } from '@/lib/firebase';

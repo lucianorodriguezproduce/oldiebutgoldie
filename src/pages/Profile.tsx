@@ -42,10 +42,7 @@ import { TEXTS } from "@/constants/texts";
 import { CardSkeleton } from "@/components/ui/Skeleton";
 import { Link, useSearchParams } from "react-router-dom";
 import OrderDetailsDrawer from "@/components/OrderDetailsDrawer";
-import { whatsappService } from '@/services/whatsappService';
-import type { OrderData } from '@/utils/whatsapp';
 import OrderCard from '@/components/OrderCard';
-import { pushWhatsAppContactFromOrder } from "@/utils/analytics";
 import NegotiationBanner from "@/components/NegotiationBanner";
 import { LazyImage } from "@/components/ui/LazyImage";
 import { userAssetService } from "@/services/userAssetService";
@@ -270,7 +267,7 @@ export default function Profile() {
             });
 
             setSelectedOrder((prev: any) => prev ? { ...prev, status: "venta_finalizada" } : null);
-            alert("¡Felicidades! Has finalizado la venta. Coordina el pago por WhatsApp.");
+            alert("¡Felicidades! Has finalizado la venta. Coordiná los detalles del envío por el chat oficial.");
         } catch (error) {
             console.error("Error accepting proposal:", error);
             alert("Hubo un error al procesar la aceptación.");
@@ -464,7 +461,7 @@ export default function Profile() {
 
     const getStatusBadge = (status: string) => {
         const map: Record<string, { label: string; color: string }> = {
-            pending: { label: "Pendiente", color: "bg-primary/10 text-primary border-primary/20" },
+            pending: { label: "Búsqueda en curso", color: "bg-primary/10 text-primary border-primary/20" },
             quoted: { label: "Cotizado", color: "bg-purple-500/10 text-purple-400 border-purple-500/20" },
             negotiating: { label: "En Negociación", color: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
             pending_acceptance: { label: "Esperando tu ok", color: "bg-secondary/10 text-secondary border-secondary/20" },
@@ -472,10 +469,11 @@ export default function Profile() {
             counteroffered: { label: "Esperando tu ok", color: "bg-secondary/10 text-secondary border-secondary/20" },
             contraoferta_usuario: { label: "En Revisión", color: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
             pending_payment: { label: "Pendiente de Pago", color: "bg-orange-500/10 text-orange-400 border-orange-500/20" },
-            payment_confirmed: { label: "Pago Confirmado / Preparando", color: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
+            payment_confirmed: { label: "Preparando Envío", color: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
             confirmed: { label: "Confirmado", color: "bg-primary/10 text-primary border-primary/20" },
             venta_finalizada: { label: "Trato Cerrado", color: "bg-primary/10 text-primary border-primary/20" },
             completed: { label: "Completado", color: "bg-green-500/10 text-green-500 border-green-500/20" },
+            completed_unpaid: { label: "Aceptado / Pago Pendiente", color: "bg-amber-500/10 text-amber-500 border-amber-500/20" },
             cancelled: { label: "Cancelado", color: "bg-red-500/10 text-red-500 border-red-500/20" },
         };
         const s = map[status] || map.pending;
@@ -687,16 +685,6 @@ export default function Profile() {
                                 <Search className="h-4 w-4" /> Link Público del Lote
                             </Link>
 
-                            {/* WhatsApp Fallback */}
-                            <button
-                                onClick={() => {
-                                    pushWhatsAppContactFromOrder(selectedOrder);
-                                    window.open(whatsappService.generateTradeLink(selectedOrder.id), "_blank");
-                                }}
-                                className="w-full text-center py-2 text-[9px] font-black text-gray-600 hover:text-green-500 uppercase tracking-widest transition-colors"
-                            >
-                                Contacto Directo vía WhatsApp →
-                            </button>
                         </div>
                     )
                 }
@@ -975,7 +963,7 @@ export default function Profile() {
                                         </div>
                                         <div className="flex-1">
                                             <p className="text-[10px] font-black text-green-500 uppercase tracking-widest">Canje Realizado</p>
-                                            <p className="text-sm font-bold text-white">El intercambio ha sido confirmado. Coordina la entrega por WhatsApp.</p>
+                                            <p className="text-sm font-bold text-white">El intercambio ha sido confirmado. Coordina la entrega por el Chat Oficial.</p>
                                         </div>
                                     </div>
                                 )}

@@ -21,51 +21,23 @@ export function PremiumShowcase() {
     useEffect(() => {
         console.log("PremiumShowcase: Component mounted");
 
-        // 1. Listen to Featured Trades (Admin Offers)
-        const qOrders = query(
-            collection(db, "trades"),
-            where("is_admin_offer", "==", true)
-        );
-
-        // 2. Listen to Active Inventory (The batea)
+        // 1. Listen to Active Inventory (The batea)
         const qInventory = query(
             collection(db, "inventory"),
             where("logistics.status", "==", "active"),
             limit(50)
         );
 
-        let activeOrders: any[] = [];
         let activeInventory: any[] = [];
 
         const updateShowcase = () => {
-            const combined = [
-                ...activeInventory.map(item => ({ ...item, isFromInventory: true })),
-                ...activeOrders
-            ]
+            const combined = activeInventory.map(item => ({ ...item, isFromInventory: true }))
                 .sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0))
                 .slice(0, 20);
 
             setOrders(combined);
             setLoading(false);
         };
-
-        const unsubOrders = onSnapshot(qOrders, (snapshot) => {
-            activeOrders = snapshot.docs
-                .map(doc => ({ id: doc.id, ...doc.data() } as any))
-                .filter(item => {
-                    const isAdmin = item.is_admin_offer === true ||
-                        item.user_id === 'MKPlxxi9JENQt0hS3V1QNeF8oOS2' ||
-                        item.user_id === 'oldiebutgoldie' ||
-                        isAdminEmail(item.user_email);
-
-                    const isAvailable = !['sold', 'venta_finalizada', 'completed', 'cancelled', 'rejected'].includes(item.status);
-
-                    return isAdmin && isAvailable;
-                });
-            updateShowcase();
-        }, (error) => {
-            console.warn("Orders fetch error:", error);
-        });
 
         const unsubInventory = onSnapshot(qInventory, (snapshot) => {
             activeInventory = snapshot.docs
@@ -77,7 +49,6 @@ export function PremiumShowcase() {
         });
 
         return () => {
-            unsubOrders();
             unsubInventory();
         };
     }, []);

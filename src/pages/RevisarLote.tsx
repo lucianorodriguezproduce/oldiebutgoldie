@@ -9,8 +9,6 @@ import { authenticateUser, signInWithGoogle } from "@/lib/auth";
 import { db, auth } from "@/lib/firebase";
 import { LazyImage } from "@/components/ui/LazyImage";
 import { collection, addDoc, serverTimestamp, query, where, getDocs } from "firebase/firestore";
-import { pushWhatsAppContactFromOrder } from "@/utils/analytics";
-import { whatsappService } from "@/services/whatsappService";
 import { TEXTS } from "@/constants/texts";
 import { inventoryService } from "@/services/inventoryService";
 import { tradeService } from "@/services/tradeService";
@@ -274,7 +272,7 @@ export default function RevisarLote() {
             setIsSuccess(true);
             clearLote();
 
-            // Automatic navigation removed to allow success screen + WhatsApp button
+            // Automatic navigation removed to allow success screen + Chat button
             // If the user wants to jump directly, we could add a small delay or a redirect on the success screen.
 
         } catch (error) {
@@ -458,14 +456,11 @@ export default function RevisarLote() {
                 <div className="flex flex-col items-center gap-4 w-full max-w-sm mx-auto">
                     {submittedOrder && (
                         <button
-                            onClick={() => {
-                                pushWhatsAppContactFromOrder(submittedOrder);
-                                window.open(whatsappService.generateTradeLink(submittedOrder.id), "_blank");
-                            }}
-                            className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-500 text-white px-8 py-4 rounded-2xl font-black uppercase text-xs tracking-widest transition-all shadow-lg shadow-green-500/20"
+                            onClick={() => navigate(`/mensajes?chat=${submittedOrder.id}`)}
+                            className="w-full flex items-center justify-center gap-2 bg-primary text-black px-8 py-4 rounded-2xl font-black uppercase text-xs tracking-widest transition-all shadow-lg shadow-primary/20 hover:scale-105"
                         >
                             <MessageCircle className="h-5 w-5" />
-                            {TEXTS.revisarLote.batchReview.contactWhatsApp}
+                            ABRIR CHAT DEL LOTE (INBOX V2)
                         </button>
                     )}
                     <button

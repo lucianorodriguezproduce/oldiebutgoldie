@@ -12,9 +12,7 @@ import { authenticateUser, signInWithGoogle } from "@/lib/auth";
 
 import { useAuth } from "@/context/AuthContext";
 import { useLoading } from "@/context/LoadingContext";
-import { generateWhatsAppLink } from "@/utils/whatsapp";
-import { whatsappService } from "@/services/whatsappService";
-import { pushViewItem, pushWhatsAppContactFromOrder, pushWizardStep } from "@/utils/analytics";
+import { pushViewItem, pushWizardStep } from "@/utils/analytics";
 import { SEO } from "@/components/SEO";
 import { useLote } from "@/context/LoteContext";
 import { PremiumShowcase } from "@/components/PremiumShowcase";
@@ -73,7 +71,6 @@ export default function Home() {
     const [selectedItem, setSelectedItem] = useState<DiscogsSearchResult | null>(null);
     const [recommendations, setRecommendations] = useState<DiscogsSearchResult[]>([]);
     const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
-    const [publicOrder, setPublicOrder] = useState<any>(null); // For rendering the Collector Receipt
     const [showConfigModal, setShowConfigModal] = useState(false);
     const [selectedSearchItem, setSelectedSearchItem] = useState<any>(null);
     const [currentPage, setCurrentPage] = useState(1);
@@ -210,36 +207,8 @@ export default function Home() {
                                 normalizedAlbum: normalized.normalizedAlbum
                             } as any);
                         }
-                        setIsSearchActive(false);
-
-                        // SOBERANIA: Cross-reference with existing trades in Firebase
-                        try {
-                            const numericalRouteId = Number(routeId || 0);
-                            const q = firestoreQuery(
-                                collection(db, "trades"),
-                                where("manifest.requestedItems", "array-contains", isLocalItem ? routeId : numericalRouteId),
-                                limit(1)
-                            );
-                            const orderSnap = await getDocs(q);
-                            if (!orderSnap.empty) {
-                                const orderData = orderSnap.docs[0].data() as any;
-                                setPublicOrder({
-                                    id: orderSnap.docs[0].id,
-                                    order_number: orderSnap.docs[0].id?.slice(-5).toUpperCase(),
-                                    status: orderData.status || 'pending',
-                                    format: orderData.manifest?.items?.[0]?.format,
-                                    condition: orderData.manifest?.items?.[0]?.condition,
-                                    intent: 'COMPRAR',
-                                    price: orderData.manifest?.cashAdjustment || null,
-                                    timestamp: orderData.timestamp?.toDate() || new Date(),
-                                    isOwner: auth.currentUser?.uid === orderData.participants?.senderId
-                                });
-                            }
-                        } catch (err) {
-                            console.error("Failed to cross-reference order record:", err);
                         }
-                    }
-                } catch (error) {
+                    } catch (error) {
                     console.error("Failed to load item from route:", error);
                     navigate('/');
                 } finally {
@@ -638,11 +607,7 @@ export default function Home() {
             {selectedItem ? (
                 <SEO
                     title={`${selectedItem.title} - Oldie but Goldie`}
-                    description={
-                        publicOrder
-                            ? `Orden de ${selectedItem.title} generada en Oldie but Goldie. Estado: ${publicOrder.status.toUpperCase()}. Especialistas en formato físico.`
-                            : `Compra, vende o cotiza ${selectedItem.title} de forma instantánea.`
-                    }
+                    description={`Compra, vende o cotiza ${selectedItem.title} de forma instantánea.`}
                     image={selectedItem.cover_image || selectedItem.thumb}
                     url={`https://oldiebutgoldie.com.ar/item/${selectedItem.type}/${selectedItem.id}`}
                     type="product"
@@ -915,155 +880,6 @@ export default function Home() {
                             <h2 className="text-2xl md:text-5xl font-display font-black text-white uppercase tracking-tighter">{TEXTS.album.item.detailTitle}</h2>
                         </header>
 
-                        {/* Collector Receipt View Extracted Logic */}
-                        {publicOrder ? (
-                            <div className="bg-[#050505] border-2 border-white/5 rounded-[1.5rem] md:rounded-[3rem] overflow-hidden group relative w-full shadow-2xl">
-                                <div className="absolute top-0 right-0 p-8 z-30 flex items-center gap-3">
-                                    <button
-                                        onClick={handleShare}
-                                        className="h-10 px-4 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 backdrop-blur-md flex items-center justify-center gap-2 transition-all group"
-                                        title={TEXTS.album.item.share}
-                                    >
-                                        <Share className="h-4 w-4 text-gray-300 group-hover:text-white transition-colors" />
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-300 group-hover:text-white transition-colors hidden sm:block">{TEXTS.album.item.share}</span>
-                                    </button>
-                                    <div className={`px-4 py-2 rounded-full border backdrop-blur-md flex items-center gap-2 ${publicOrder.status === 'sold' ? 'bg-primary/10 border-primary/20 text-primary' :
-                                        publicOrder.status === 'quoted' ? 'bg-blue-500/10 border-blue-500/20 text-blue-400' :
-                                            'bg-white/5 border-white/10 text-gray-300'
-                                        }`}>
-                                        <div className={`w-2 h-2 rounded-full ${publicOrder.status === 'sold' ? 'bg-primary' :
-                                            publicOrder.status === 'quoted' ? 'bg-blue-400' :
-                                                'bg-gray-400'
-                                            } animate-pulse`} />
-                                        <span className="text-xs font-black uppercase tracking-widest">
-                                            {publicOrder.status === 'sold' ? TEXTS.admin.admin.statusOptions.venta_finalizada :
-                                                publicOrder.status === 'quoted' ? TEXTS.admin.admin.statusOptions.quoted :
-                                                    TEXTS.album.item.toConfirm}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <div className="flex flex-col md:flex-row relative">
-                                    <div className="w-full md:w-1/2 aspect-square relative overflow-hidden bg-black/50 p-8 md:p-12 flex items-center justify-center">
-                                        <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]" />
-                                        <img
-                                            src={selectedItem.cover_image || selectedItem.thumb}
-                                            alt={selectedItem.title}
-                                            className="w-full h-full max-w-[400px] max-h-[400px] object-cover shadow-[0_20px_50px_rgba(0,0,0,0.8)] z-10 transition-transform duration-700 hover:scale-[1.02]"
-                                        />
-                                        <div className="absolute bottom-0 inset-x-0 h-32 bg-gradient-to-t from-[#050505] via-transparent to-transparent z-10" />
-                                    </div>
-
-                                    <div className="flex-1 p-8 md:p-12 space-y-10 flex flex-col justify-center border-l border-white/5 z-20 bg-[#0A0A0A]">
-                                        <div className="space-y-4">
-                                            <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500">{TEXTS.album.item.receiptTitle}</h4>
-                                            <h3 className="text-3xl lg:text-5xl font-display font-black text-white uppercase tracking-tighter leading-none">
-                                                {(selectedItem as any).normalizedArtist} <br />
-                                                <span className="text-primary">{(selectedItem as any).normalizedAlbum}</span>
-                                            </h3>
-                                            <p className="text-primary font-mono tracking-widest text-sm">{publicOrder.order_number}</p>
-                                        </div>
-
-                                        <div className="grid grid-cols-2 gap-8 py-8 border-y border-white/5">
-                                            <div className="space-y-2">
-                                                <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">{TEXTS.album.item.registrationDate}</p>
-                                                <p className="text-white font-mono">{publicOrder.timestamp.toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                                            </div>
-                                            {publicOrder.isOwner && (
-                                                <div className="space-y-2">
-                                                    <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">{TEXTS.album.item.userPrice}</p>
-                                                    <p className="text-primary font-bold font-mono text-lg">{publicOrder.price ? `$${publicOrder.price.toLocaleString('es-AR')}` : TEXTS.album.item.toConfirm}</p>
-                                                </div>
-                                            )}
-                                            <div className="space-y-2">
-                                                <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">{TEXTS.album.item.format}</p>
-                                                <p className="text-white font-bold">{publicOrder.format || "N/A"}</p>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">{TEXTS.album.item.condition}</p>
-                                                <p className="text-white font-bold">{publicOrder.condition || "N/A"}</p>
-                                            </div>
-                                            <div className="space-y-2 flex flex-col items-start">
-                                                <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest mb-1">{TEXTS.album.item.operation}</p>
-                                                <div className={`px-2 py-0.5 rounded-[4px] border backdrop-blur-md ${publicOrder.intent === 'VENDER' ? 'bg-amber-500/10 border-amber-500/30 text-amber-500' : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'}`}>
-                                                    <span className="text-[10px] uppercase tracking-widest font-black">
-                                                        {publicOrder.intent === 'VENDER' ? TEXTS.album.item.sellIntent : TEXTS.album.item.buyIntent}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="pt-4 space-y-4">
-                                            {publicOrder.isOwner && publicOrder.status === 'quoted' ? (
-                                                <button
-                                                    onClick={() => {
-                                                        pushWhatsAppContactFromOrder(publicOrder);
-                                                        window.open(generateWhatsAppLink(publicOrder), "_blank");
-                                                    }}
-                                                    className="w-full bg-primary text-black py-6 rounded-xl font-black uppercase text-xs tracking-widest shadow-[0_0_30px_rgba(204,255,0,0.15)] hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
-                                                >
-                                                    <MessageCircle className="w-4 h-4" />
-                                                    {TEXTS.album.item.contactOrder}
-                                                </button>
-                                            ) : (
-                                                <button
-                                                    onClick={() => setPublicOrder(null)} // Returns to standard step 1 logic
-                                                    className="w-full bg-white/10 hover:bg-white/20 text-white py-6 rounded-xl font-black uppercase text-xs tracking-widest transition-all"
-                                                >
-                                                    {TEXTS.album.item.consultSimilar}
-                                                </button>
-                                            )}
-
-                                            <div className="text-center pt-2">
-                                                <button onClick={handleResetSelection} className="text-[10px] font-black uppercase tracking-widest text-gray-700 hover:text-white transition-colors underline decoration-white/20">{TEXTS.album.item.changeTitle}</button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="bg-[#050505] border-2 border-primary rounded-[1.5rem] md:rounded-[3rem] overflow-hidden shadow-[0_0_80px_rgba(204,255,0,0.12)] group relative w-full">
-                                <div className="flex flex-col md:flex-row">
-                                    <div className="w-full md:w-2/5 aspect-square relative overflow-hidden">
-                                        <img
-                                            src={selectedItem.cover_image || selectedItem.thumb}
-                                            alt={selectedItem.title}
-                                            className="w-full h-full object-cover grayscale-[0.5] group-hover:grayscale-0 transition-all duration-700"
-                                        />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
-                                    </div>
-                                    <div className="flex-1 p-8 md:p-12 space-y-8 flex flex-col justify-center relative">
-                                        <div className="absolute top-6 md:top-8 right-6 md:right-8 z-10">
-                                            <button
-                                                onClick={handleShare}
-                                                className="h-10 px-4 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 backdrop-blur-md flex items-center justify-center gap-2 transition-all group"
-                                                title="Compartir"
-                                            >
-                                                <Share className="h-4 w-4 text-gray-300 group-hover:text-white transition-colors" />
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-gray-300 group-hover:text-white transition-colors hidden sm:block">{TEXTS.album.item.share}</span>
-                                            </button>
-                                        </div>
-                                        <h3 className="text-3xl lg:text-4xl font-display font-black text-white uppercase tracking-tighter leading-none mt-4 md:mt-0">{selectedItem.title}</h3>
-                                        <div className="grid grid-cols-2 gap-6">
-                                            {selectedItem.year && selectedItem.year !== "0" && String(selectedItem.year).toUpperCase() !== "N/A" && (
-                                                <div>
-                                                    <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">{TEXTS.album.item.year}</p>
-                                                    <p className="text-white font-bold">{selectedItem.year}</p>
-                                                </div>
-                                            )}
-                                            {selectedItem.genre && selectedItem.genre.length > 0 && String(selectedItem.genre[0]).toUpperCase() !== "N/A" && (
-                                                <div>
-                                                    <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">{TEXTS.album.item.genre}</p>
-                                                    <p className="text-primary font-bold">{selectedItem.genre[0]}</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <button onClick={handleResetSelection} className="text-[10px] font-black uppercase tracking-widest text-gray-700 hover:text-primary transition-colors underline decoration-primary/20">{TEXTS.album.item.changeSelection}</button>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
                         {/* ItemConfigModal Trigger */}
                         <ItemConfigModal
                             isOpen={showConfigModal}
@@ -1073,7 +889,7 @@ export default function Home() {
                         />
 
                         {/* Step 1: Format, Condition, Intent (DEPRECATED BUTTONS V23.5) */}
-                        {step === 1 && !publicOrder && (
+                        {step === 1 && (
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}

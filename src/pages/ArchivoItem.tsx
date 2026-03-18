@@ -11,10 +11,14 @@ import { siteConfigService, type SiteConfig } from "@/services/siteConfigService
 import { db } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { useLote } from "@/context/LoteContext";
+import { tradeService } from "@/services/tradeService";
+import { ADMIN_UIDS } from "@/constants/admin";
+import { useAuth } from "@/context/AuthContext";
 
 export default function ArchivoItem() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { user } = useAuth();
     const { showLoading, hideLoading } = useLoading();
     const { addItemFromInventory } = useLote();
     const [item, setItem] = useState<UnifiedItem | null>(null);
@@ -22,6 +26,30 @@ export default function ArchivoItem() {
     const [siteConfig, setSiteConfig] = useState<SiteConfig | null>(null);
     const [isVideoAvailable, setIsVideoAvailable] = useState(true);
     const [showToast, setShowToast] = useState(false);
+
+    // Sourcing Flow (V75.1)
+    const handleSourcingRequest = async () => {
+        if (!item || !user) {
+            navigate('/login', { state: { from: `/archivo/${id}` } });
+            return;
+        }
+
+        showLoading("Generando pedido de sourcing...");
+        try {
+            const tradeId = await tradeService.startInquiry(
+                item.id,
+                user.uid,
+                user.displayName || user.email || 'Usuario',
+                ADMIN_UIDS[0] // Route to Admin for sourcing
+            );
+            navigate(`/mensajes?chat=${tradeId}`);
+        } catch (error) {
+            console.error("Sourcing failed:", error);
+            alert("Hubo un error al procesar tu pedido. Por favor intentá nuevamente.");
+        } finally {
+            hideLoading();
+        }
+    };
 
     // Track Intent Logic (V12.7)
     const trackIntent = async (type: string) => {
@@ -431,17 +459,15 @@ export default function ArchivoItem() {
                                             <span className="text-[10px] opacity-70 font-mono font-bold">DISPONIBILIDAD INMEDIATA</span>
                                         </button>
                                     ) : (
-                                        <Link
-                                            to="/trade/new"
-                                            state={{ requestedItem: item }}
-                                            onClick={() => trackIntent('init_trade')}
+                                        <button
+                                            onClick={handleSourcingRequest}
                                             className="group flex flex-col items-center justify-center w-full px-8 py-5 bg-white text-black rounded-2xl hover:scale-[1.02] transition-all"
                                         >
                                             <span className="font-black uppercase text-sm tracking-widest mb-1 flex items-center gap-2">
-                                                Iniciar Intercambio <Layers className="w-4 h-4 fill-black" />
+                                                Hacer un Pedido <Layers className="w-4 h-4 fill-black" />
                                             </span>
-                                            <span className="text-[10px] opacity-70 font-mono font-bold">VERIFICACIÓN GARANTIZADA</span>
-                                        </Link>
+                                            <span className="text-[10px] opacity-70 font-mono font-bold">SOURCING ASISTIDO</span>
+                                        </button>
                                     )}
                                 </div>
                             </div>

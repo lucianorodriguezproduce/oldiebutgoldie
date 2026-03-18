@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { tradeService } from "@/services/tradeService";
+import { ADMIN_UIDS } from "@/constants/admin";
 import TradeChat from "@/components/Trade/TradeChat";
 import { formatDate } from "@/utils/date";
 import { LazyImage } from "@/components/ui/LazyImage";
@@ -26,6 +27,7 @@ export default function MessageCenter() {
     const [searchTerm, setSearchTerm] = useState("");
 
     const chatIdFromUrl = searchParams.get("chat");
+    const isOtherAdminSelected = selectedConv && user && ADMIN_UIDS.includes(selectedConv.sellerId === user.uid ? selectedConv.buyerId : selectedConv.sellerId);
 
     useEffect(() => {
         if (!user) return;
@@ -111,7 +113,9 @@ export default function MessageCenter() {
                     ) : (
                         filteredConversations.map((conv) => {
                             const isMeSeller = conv.sellerId === user.uid;
-                            const otherPartyName = isMeSeller ? conv.buyerUsername : (conv.sellerUsername || "Vendedor");
+                            const otherPartyId = isMeSeller ? conv.buyerId : conv.sellerId;
+                            const isOtherAdmin = ADMIN_UIDS.includes(otherPartyId);
+                            const otherPartyName = isOtherAdmin ? "🌟 OBG Oficial" : (isMeSeller ? (conv.buyerUsername || conv.buyerName || "Cliente") : (conv.sellerUsername || conv.sellerName || "Vendedor"));
                             const isSelected = selectedConv?.id === conv.id;
 
                             return (
@@ -143,8 +147,8 @@ export default function MessageCenter() {
                                                 {formatDate(conv.updatedAt || conv.timestamp)}
                                             </span>
                                         </div>
-                                        <p className="text-xs font-bold truncate">
-                                            {conv.sellerId === user.uid ? (conv.buyerUsername || conv.buyerName || "Cliente") : (conv.sellerUsername || conv.sellerName || "Vendedor")}
+                                        <p className={`text-xs font-bold truncate ${isOtherAdmin ? 'text-primary drop-shadow-[0_0_8px_rgba(204,255,0,0.4)]' : ''}`}>
+                                            {otherPartyName}
                                         </p>
                                         <p className={`text-[10px] truncate ${isSelected ? 'text-black/70' : 'text-gray-500'}`}>
                                             {conv.lastMessage}
@@ -178,9 +182,13 @@ export default function MessageCenter() {
                                 <div>
                                     <h3 className="text-sm font-black text-white uppercase tracking-widest">{selectedConv.title}</h3>
                                     <div className="flex items-center gap-2">
-                                        <p className="text-[10px] font-bold text-gray-500 uppercase">
-                                            Chat con {selectedConv.sellerId === user.uid ? (selectedConv.buyerUsername || selectedConv.buyerName || "Cliente") : (selectedConv.sellerUsername || selectedConv.sellerName || "Vendedor")}
-                                        </p>
+                                    <p className="text-[10px] font-bold text-gray-500 uppercase">
+                                        Chat con <span className={isOtherAdminSelected ? "text-primary drop-shadow-[0_0_12px_rgba(204,255,0,0.5)] font-black" : ""}>
+                                            {isOtherAdminSelected ? "🌟 OBG Oficial" : (selectedConv.sellerId === user.uid 
+                                                ? (selectedConv.buyerUsername || selectedConv.buyerName || "Cliente") 
+                                                : (selectedConv.sellerUsername || selectedConv.sellerName || "Vendedor"))}
+                                        </span>
+                                    </p>
                                         <div className="flex items-center gap-1.5 px-2 py-0.5 bg-primary/10 border border-primary/20 rounded-full">
                                             <ShieldCheck className="w-2.5 h-2.5 text-primary" />
                                             <span className="text-[8px] font-black text-primary uppercase">Transacción Segura</span>

@@ -270,7 +270,7 @@ export default function AdminCollection() {
                                                 { id: 'instagram', label: 'Copy Instagram', icon: '📸' },
                                                 { id: 'x', label: 'Copy X / Thread', icon: '🐦' },
                                                 { id: 'tiktok', label: 'Copy TikTok Script', icon: '🎵' },
-                                                { id: 'whatsapp', label: 'Copy Technical Data', icon: '💬' }
+                                                { id: 'external', label: 'Copy Official Data', icon: '💬' }
                                             ].map((plat) => (
                                                 <button
                                                     key={plat.id}
@@ -288,7 +288,7 @@ export default function AdminCollection() {
                                                             text = `🚨 [NEW ACQUISITION] ${artist} - ${title}\n\nEste ejemplar acaba de entrar al La Batea vía permuta.\n\nMiralo acá:\n${url}`;
                                                         } else if (plat.id === 'tiktok') {
                                                             text = `[Community Script]\n(Intro) Mirá lo que acaba de entrar al La Batea.\n(Body) ${artist} - ${title}. Un disco increíble que conseguimos hoy.\n(CTA) ¿Tenés algo para permutar? Seguime para ver más ingresos.`;
-                                                        } else if (plat.id === 'whatsapp') {
+                                                        } else if (plat.id === 'external') {
                                                             text = `*NUEVO INGRESO (INTERCAMBIO) - OBG*\n\n💿 *${title}*\n👤 *${artist}*\n🏛️ Origen: Intercambio con Comunidad\n\n🔗 Ver en el archivo:\n${url}`;
                                                         }
 

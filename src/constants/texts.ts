@@ -22,7 +22,7 @@ export const TEXTS = {
         success: {
             orderRegistered: "Orden Registrada",
             successMessage: "Tu orden ha sido registrada. Contacta a Oldie but Goldie para obtener más detalles de tu pedido.",
-            contactWhatsApp: "Contactar por WhatsApp",
+            contactWhatsApp: "Abrir Chat Oficial",
             newSearch: "Nueva Búsqueda"
         },
         common: {
@@ -181,7 +181,7 @@ export const TEXTS = {
             processing: "Procesando...",
             confirmingDeal: "Confirmando trato...",
             saleFinished: "Venta Finalizada 🎉",
-            saleSuccess: "¡Felicidades! Has finalizado la venta. Coordina el pago por WhatsApp.",
+            saleSuccess: "¡Felicidades! Has finalizado la venta. Coordina el pago en nuestro Chat Oficial.",
             genericError: "Hubo un error al procesar la solicitud.",
             sendingCounterOffer: "Enviando contraoferta...",
             userCounterOffer: "Nueva Contraoferta del Usuario",
@@ -408,7 +408,7 @@ export const TEXTS = {
         batchReview: {
             batchRegistered: "Lote Registrado",
             intentionsRegistered: "Tus orden fue registrada. Contacta a Oldie but Goldie para procesar tu pedido.",
-            contactWhatsApp: "Contactar por WhatsApp",
+            contactWhatsApp: "Abrir Chat Oficial",
             backToStart: "Volver al Inicio",
             batchEmpty: "Tu Lote está vacío",
             exploreCatalog: "Explorar Catálogo",

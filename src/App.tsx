@@ -1,4 +1,4 @@
-import { Routes, Route, Outlet } from "react-router-dom";
+import { Routes, Route, Outlet, useParams, Navigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import * as Sentry from "@sentry/react";
 import ErrorFallback from "@/components/ui/ErrorFallback";
@@ -50,9 +50,17 @@ const URLParameterHandler = () => {
   return null;
 };
 
+const NavigateWithParams = ({ to }: { to: string }) => {
+  const params = useParams();
+  const target = Object.entries(params).reduce(
+    (acc, [key, val]) => acc.replace(`:${key}`, val || ''),
+    to.includes(':') ? to : `${to}/${Object.values(params)[0]}`
+  ) as string;
+  return <Navigate to={target} replace />;
+};
+
 const PublicOrders = lazy(() => import("@/pages/PublicOrders"));
 const PublicOrderView = lazy(() => import("@/pages/PublicOrderView"));
-const AlbumDetail = lazy(() => import("@/pages/AlbumDetail"));
 const Editorial = lazy(() => import("@/pages/Editorial"));
 const ArticleDetail = lazy(() => import("@/pages/ArticleDetail"));
 const Eventos = lazy(() => import("@/pages/Eventos"));
@@ -80,7 +88,6 @@ const PermissionConsole = lazy(() => import("@/pages/Admin/PermissionConsole"));
 
 import Guias from "@/pages/Guias";
 import { ProtectedRoute } from "@/components/Guard/ProtectedRoute";
-import { Navigate } from "react-router-dom";
 
 
 const queryClient = new QueryClient({
@@ -197,7 +204,7 @@ function AppContent() {
               <Route path="/revisar-lote" element={<RevisarLote />} />
               <Route path="/item/:type/:id" element={<Home />} />
               <Route path="/login" element={<Login />} />
-              <Route path="/album/:id" element={<AlbumDetail />} />
+              <Route path="/album/:id" element={<NavigateWithParams to="/archivo" />} />
               <Route path="/comunidad" element={<Editorial />} />
               <Route path="/comunidad/:id" element={<ArticleDetail />} />
               <Route path="/guias" element={<Guias />} />

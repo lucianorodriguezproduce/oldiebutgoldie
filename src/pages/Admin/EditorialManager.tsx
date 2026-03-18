@@ -502,7 +502,7 @@ export default function EditorialManager() {
                                                         { id: 'instagram', label: 'Copy Instagram', icon: '📸' },
                                                         { id: 'x', label: 'Copy X / Thread', icon: '🐦' },
                                                         { id: 'tiktok', label: 'Copy TikTok Script', icon: '🎵' },
-                                                        { id: 'whatsapp', label: 'Copy WA Summary', icon: '💬' }
+                                                        { id: 'external', label: 'Copy Official Summary', icon: '💬' }
                                                     ].map((plat) => (
                                                         <Button
                                                             key={plat.id}
@@ -520,7 +520,7 @@ export default function EditorialManager() {
                                                                     text = `🚨 [INTEL DISPATCH] ${currentArticle.title}\n\n${currentArticle.ai_summary?.slice(0, 150) || currentArticle.excerpt}\n\nLee el reporte completo acá 👇\n\n${url}`;
                                                                 } else if (plat.id === 'tiktok') {
                                                                     text = `[Script Narrativo]\n(Intro) ¿Conocías la historia detrás de ${currentArticle.title}?\n(Desarrollo) ${currentArticle.ai_summary?.slice(0, 200) || currentArticle.excerpt}\n(CTA) Si sos coleccionista, tenés que leer esto. Seguime para más info. Link en comentarios.`;
-                                                                } else if (plat.id === 'whatsapp') {
+                                                                } else if (plat.id === 'external') {
                                                                     text = `*REPORT [${currentArticle.category}]*\n\n*${currentArticle.title}*\n\n${currentArticle.excerpt}\n\n🔗 Lee más en el La Batea:\n${url}`;
                                                                 }
 

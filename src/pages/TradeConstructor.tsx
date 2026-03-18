@@ -9,7 +9,6 @@ import { useLoading } from "@/context/LoadingContext";
 import { userAssetService } from "@/services/userAssetService";
 import { inventoryService } from "@/services/inventoryService";
 import { tradeService } from "@/services/tradeService";
-import { whatsappService } from "@/services/whatsappService";
 import { ADMIN_UIDS } from "@/constants/admin";
 import { LazyImage } from "@/components/ui/LazyImage";
 import UsernameClaimModal from "@/components/Profile/UsernameClaimModal";
@@ -414,11 +413,11 @@ export default function TradeConstructor() {
                         </Link>
                         <button
                             onClick={() => {
-                                window.open(whatsappService.generateTradeLink(createdTradeId || ''), '_blank');
+                                navigate(`/mensajes?chat=${createdTradeId}`);
                             }}
-                            className="w-full flex items-center justify-center gap-2 bg-green-600/20 hover:bg-green-600/30 text-green-400 border border-green-500/20 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all"
+                            className="w-full flex items-center justify-center gap-2 bg-white/5 border border-white/10 text-white py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-white/10 transition-all font-bold"
                         >
-                            <MessageCircle className="w-4 h-4" /> Consultar por WhatsApp
+                            <MessageCircle className="w-4 h-4" /> Abrir Chat del Trato
                         </button>
                     </div>
                 </motion.div>

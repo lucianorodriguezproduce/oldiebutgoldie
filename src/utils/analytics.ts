@@ -74,12 +74,12 @@ export const pushViewItemFromOrder = (order: any) => {
     }
 };
 
-export const pushWhatsAppContactFromOrder = (order: any) => {
+export const pushOfficialChatContactFromOrder = (order: any) => {
     if (typeof window !== 'undefined') {
         window.dataLayer = window.dataLayer || [];
 
         window.dataLayer.push({
-            'event': 'whatsapp_contact',
+            'event': 'official_chat_contact',
             'item_id': order.item_id?.toString() || 'N/A',
             'item_name': order.details?.album || 'Unknown',
             'intent': order.details?.intent || 'UNKNOWN',

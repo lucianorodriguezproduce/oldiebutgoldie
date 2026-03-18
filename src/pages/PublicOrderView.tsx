@@ -15,7 +15,6 @@ import { pushViewItemFromOrder, pushHotOrderDetected } from "@/utils/analytics";
 import UsernameClaimModal from "@/components/Profile/UsernameClaimModal";
 import { getCleanOrderMetadata } from "@/utils/orderMetadata";
 import { tradeService } from "@/services/tradeService";
-import { generateWhatsAppAcceptDealMsg } from "@/utils/whatsapp";
 import { ADMIN_UIDS, isAdminEmail } from '@/constants/admin';
 import { siteConfigService } from "@/services/siteConfigService";
 import type { SiteConfig } from "@/services/siteConfigService";

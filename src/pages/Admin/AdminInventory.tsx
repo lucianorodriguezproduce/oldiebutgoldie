@@ -908,7 +908,7 @@ export default function AdminInventory() {
                                                 { id: 'instagram', label: 'Copy Instagram', icon: '📸' },
                                                 { id: 'x', label: 'Copy X / Thread', icon: '🐦' },
                                                 { id: 'tiktok', label: 'Copy TikTok Script', icon: '🎵' },
-                                                { id: 'whatsapp', label: 'Copy Technical Data', icon: '💬' }
+                                                { id: 'external', label: 'Copy Official Data', icon: '💬' }
                                             ].map((plat) => (
                                                 <button
                                                     key={plat.id}
@@ -923,7 +923,7 @@ export default function AdminInventory() {
                                                             text = `🚨 [INVENTORY ALERT] ${marketingItem.metadata.artist} - ${marketingItem.metadata.title}\n\nCondición: ${marketingItem.logistics.condition}\nStock: ${marketingItem.logistics.stock}\n\nConseguilo acá antes que vuele 👇\n\n${url}`;
                                                         } else if (plat.id === 'tiktok') {
                                                             text = `[Viral Script]\n(Intro) Escuchá el sonido de esta joya: ${marketingItem.metadata.title}.\n(Body) Tenemos una copia en estado ${marketingItem.logistics.condition} disponible ahora.\n(CTA) No te duermas. Link en el perfil.`;
-                                                        } else if (plat.id === 'whatsapp') {
+                                                        } else if (plat.id === 'external') {
                                                             text = `*FICHA TÉCNICA - OLDIE BUT GOLDIE*\n\n💿 *${marketingItem.metadata.title}*\n👤 *${marketingItem.metadata.artist}*\n✨ Condición: ${marketingItem.logistics.condition}\n💰 Precio: $${marketingItem.logistics.price.toLocaleString()}\n📦 Stock: ${marketingItem.logistics.stock}\n\n🔗 Ver más:\n${url}`;
                                                         }
 
