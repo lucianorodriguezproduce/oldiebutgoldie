@@ -713,6 +713,12 @@ export const tradeService = {
             cover = itemData.media?.thumbnail || "";
             sourceCollection = "inventory";
         }
+        else if (forcedSellerId) {
+            // SOURCING FLOW (V74.1): If the item is not in DB but we force a seller (Admin)
+            console.log(`[V74.1-SOURCING] Item no encontrado en DB, usando ForcedSellerId: ${forcedSellerId}`);
+            sellerId = forcedSellerId;
+            sourceCollection = "sourcing";
+        }
         else {
             // Si no está en user_assets ni en inventory, es un activo huérfano. ABORTAR.
             console.error(`[V49-FATAL] No se pudo verificar la propiedad del activo ${discoId}. Abortando.`);

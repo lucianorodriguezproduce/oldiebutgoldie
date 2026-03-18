@@ -109,14 +109,21 @@ export default function TradeConstructor() {
     const [isSuccess, setIsSuccess] = useState(false);
     const [createdTradeId, setCreatedTradeId] = useState<string | null>(null);
 
-    // Handle initial requested item from location state (V51.0)
+    // Handle initial state / admin_negotiation (V74.1)
     useEffect(() => {
-        const state = location.state as { requestedItem?: any };
+        const state = location.state as { requestedItem?: any, admin_negotiation?: boolean };
+        const isAdminNegotiationQuery = searchParams.get("mode") === "admin_negotiation";
+        
+        if (state?.admin_negotiation || isAdminNegotiationQuery) {
+            setReceiverUid(ADMIN_UIDS[0]);
+            setModalidad("exchange");
+            setStep(1); // Start offering items
+            return;
+        }
+
         if (state?.requestedItem) {
             const item = state.requestedItem;
-            // Add to requested set
             setSelectedRequested(new Set([item.id]));
-            // Set modality based on item source
             if (item.source === 'user_assets' || item.ownerId) {
                 setModalidad("direct_sale");
                 setViewMode("community");
@@ -124,10 +131,9 @@ export default function TradeConstructor() {
             } else {
                 setReceiverUid(ADMIN_UIDS[0]);
             }
-            // Advance to step 1 (Offer) since request is already set
             setStep(1);
         }
-    }, [location.state]);
+    }, [location.state, searchParams]);
 
     // Load user's collection
     useEffect(() => {

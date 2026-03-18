@@ -621,12 +621,19 @@ export default function Profile() {
                         </div>
                     ) : (
                         <div className="space-y-6">
-                            <div className="flex justify-end">
+                            <div className="flex flex-wrap justify-end gap-3">
+                                <Link
+                                    to="/trade/new?mode=admin_negotiation"
+                                    state={{ admin_negotiation: true }}
+                                    className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-primary/10 to-primary/20 border border-primary/30 text-primary hover:from-primary/20 hover:to-primary/30 text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-primary/5"
+                                >
+                                    <BadgeDollarSign className="w-4 h-4" /> Vender mi Colección a OBG
+                                </Link>
                                 <Link
                                     to="/trade/new"
                                     className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-violet-500/10 to-purple-500/10 border border-violet-500/30 text-violet-400 hover:from-violet-500/20 hover:to-purple-500/20 hover:text-violet-300 text-[10px] font-black uppercase tracking-widest transition-all"
                                 >
-                                    <Handshake className="w-4 h-4" /> Iniciar Intercambio
+                                    <Handshake className="w-4 h-4" /> Intercambio P2P
                                 </Link>
                             </div>
                             <UserCollection userId={user?.uid || ""} />

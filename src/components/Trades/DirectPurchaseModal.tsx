@@ -9,6 +9,7 @@ import { useLoading } from '@/context/LoadingContext';
 import { LazyImage } from '@/components/ui/LazyImage';
 import { getCleanOrderMetadata } from '@/utils/orderMetadata';
 import UsernameClaimModal from '@/components/Profile/UsernameClaimModal';
+import { ADMIN_UIDS } from '@/constants/admin';
 
 interface DirectPurchaseModalProps {
     isOpen: boolean;
@@ -54,9 +55,9 @@ export default function DirectPurchaseModal({ isOpen, onClose, order }: DirectPu
             }
 
             console.log("[V49-PAYLOAD] Identificando Vendedor Real ->", sellerId);
-
-            if (!sellerId || sellerId === 'O5bs8eTZQdwMMQ9P6eDbJyVEZV2') {
-                console.error("[V49-FATAL] No se puede iniciar comercio P2P con identidad Admin o nula.");
+            
+            if (!sellerId) {
+                console.error("[V49-FATAL] No se puede iniciar comercio P2P sin identidad verificada.");
                 throw new Error("ERROR_PROPIEDAD_NO_VERIFICADA");
             }
 

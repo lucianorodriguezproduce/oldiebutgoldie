@@ -33,7 +33,7 @@ import { doc, updateDoc, arrayUnion, addDoc, serverTimestamp, collection } from 
 import { getCleanOrderMetadata } from '@/utils/orderMetadata';
 import { useLoading } from '@/context/LoadingContext';
 import { tradeService } from '@/services/tradeService';
-import { isAdminEmail } from '@/constants/admin';
+import { isAdminEmail, ADMIN_UIDS } from '@/constants/admin';
 import { CountdownTimer } from './Auction/CountdownTimer';
 import DirectPurchaseModal from './Trades/DirectPurchaseModal';
 import PaymentMethodModal from './Trades/PaymentMethodModal';
@@ -337,6 +337,7 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                 group relative bg-white/[0.02] border rounded-[1.5rem] overflow-hidden transition-all duration-300
                 ${context !== 'public' ? 'cursor-pointer hover:border-primary/30' : 'hover:border-white/10'}
                 ${isHot ? "border-secondary/50 shadow-[0_0_15px_rgba(255,77,0,0.15)]" : (order.admin_offer_price ? "border-purple-500/20" : "border-white/5")}
+                ${(ADMIN_UIDS.includes(senderId) || ADMIN_UIDS.includes(order.user_id) || isAdminEmail(order.user_email)) ? "border-primary/30 shadow-[0_10px_40px_rgba(255,184,0,0.1)] bg-gradient-to-b from-primary/[0.03] to-transparent" : ""}
             `}
         >
             {/* Context Badge Corner - Floating Island to prevent overlaps */}
@@ -412,9 +413,9 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                             </span>
                         )}
                         {(isBatch || order.is_admin_offer || isDirectSaleP2P) && (
-                            (order.is_admin_offer || order.user_id === 'MKPlxxi9JENQt0hS3V1QNeF8oOS2' || order.user_id === 'oldiebutgoldie' || isAdminEmail(order.user_email)) && !isDirectSaleP2P ? (
-                                <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-primary/20 to-primary/40 border border-primary/50 text-primary text-[9px] font-black uppercase tracking-widest shadow-[0_0_10px_rgba(255,184,0,0.2)]">
-                                    {TEXTS.global.badges.storeObg}
+                            (order.is_admin_offer || ADMIN_UIDS.includes(order.user_id) || isAdminEmail(order.user_email)) && !isDirectSaleP2P ? (
+                                <span className="px-3 py-1 rounded-full bg-gradient-to-r from-primary to-primary/60 text-black text-[10px] font-black uppercase tracking-widest shadow-[0_0_20px_rgba(255,184,0,0.4)] flex items-center gap-1.5 border border-white/20">
+                                    <span className="text-sm">🌟</span> {TEXTS.global.badges.storeObg}
                                 </span>
                             ) : isDirectSaleP2P ? (
                                 <span className="px-2 py-0.5 rounded-full bg-primary/20 border border-primary/50 text-primary text-[9px] font-black uppercase tracking-widest shadow-lg shadow-primary/10">

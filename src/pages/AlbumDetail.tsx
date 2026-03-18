@@ -1,4 +1,4 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -18,10 +18,13 @@ import { TEXTS } from "@/constants/texts";
 import { useLote } from "@/context/LoteContext";
 import { ShoppingBag, Check } from "lucide-react";
 import { useGTM } from "@/context/GTMContext";
+import { tradeService } from "@/services/tradeService";
+import { ADMIN_UIDS } from "@/constants/admin";
 
 export default function AlbumDetail() {
     const { id } = useParams<{ id: string }>();
-    const { user } = useAuth();
+    const { user, dbUser } = useAuth();
+    const navigate = useNavigate();
     const { hasItem: isInCollection, toggleItem: toggleCollection } = useUserCollection("collection");
     const { hasItem: isInWantlist, toggleItem: toggleWantlist } = useUserCollection("wantlist");
     const { trackEvent } = useTelemetry();
@@ -191,32 +194,43 @@ export default function AlbumDetail() {
                             </Button>
                         </div>
 
-                        {album.isLocal && (
-                            <Button
-                                onClick={() => {
-                                    if (album.stock > 0) {
-                                        addItemFromInventory(album.raw);
-                                    }
-                                }}
-                                disabled={album.stock <= 0 || isInLote(album.id)}
-                                className={`h-24 text-xl font-black transition-all transform hover:-translate-y-2 rounded-2xl shadow-2xl select-none overflow-hidden relative group ${isInLote(album.id)
-                                    ? "bg-green-500/20 text-green-400 border-2 border-green-500/50"
-                                    : "bg-gradient-to-r from-primary to-secondary text-black hover:scale-[1.02]"
-                                    }`}
-                            >
-                                {isInLote(album.id) ? (
-                                    <>
-                                        <Check className="mr-3 h-7 w-7" />
-                                        EN EL LOTE
-                                    </>
-                                ) : (
-                                    <>
-                                        <ShoppingBag className="mr-3 h-7 w-7" />
-                                        {album.stock > 0 ? "¡COMPRAR AHORA!" : "AGOTADO"}
-                                    </>
-                                )}
-                            </Button>
-                        )}
+                        {/* Sourcing / P2P Integration (V74.1) */}
+                        <Button
+                            onClick={async () => {
+                                if (!user) return alert(TEXTS.comunidad.syncToCollect);
+                                if (!dbUser?.username) return alert("Debes reclamar un @usuario para hacer un pedido.");
+                                
+                                try {
+                                    showLoading("Iniciando pedido oficial...");
+                                    // Sourcing Logic: Start inquiry with Admin
+                                    const tradeId = await tradeService.startInquiry(
+                                        album.id.toString(), 
+                                        user.uid, 
+                                        dbUser.username, 
+                                        ADMIN_UIDS[0]
+                                    );
+                                    
+                                    // Send automatic lead message
+                                    await tradeService.sendMessage(
+                                        tradeId, 
+                                        user.uid, 
+                                        `Hola OBG, me interesa conseguir este ejemplar: ${album.artists?.[0]?.name || ''} - ${album.title}. ¿Podrían cotizarlo?`
+                                    );
+                                    
+                                    hideLoading();
+                                    navigate(`/mensajes?chat=${tradeId}_${user.uid}`);
+                                } catch (error: any) {
+                                    console.error("Sourcing error:", error);
+                                    hideLoading();
+                                    alert("Error al iniciar el pedido.");
+                                }
+                            }}
+                            variant="secondary"
+                            className="h-24 text-xl font-black transition-all transform hover:-translate-y-2 rounded-2xl shadow-2xl bg-white text-black hover:bg-primary border-2 border-white/20"
+                        >
+                            <ShoppingBag className="mr-3 h-7 w-7" />
+                            {album.isLocal ? (album.stock > 0 ? "¡COMPRAR AHORA!" : "PEDIR REPOSICIÓN") : "LO QUIERO / PEDIR COTIZACIÓN"}
+                        </Button>
 
                         <Button variant="ghost" className="h-14 text-gray-500 hover:text-white hover:bg-white/5 rounded-2xl font-black uppercase tracking-[0.15em] text-[11px] border border-white/5 transition-all">
                             <Share2 className="mr-3 h-5 w-5" /> {TEXTS.comunidad.transmissionLink}
