@@ -58,6 +58,31 @@ export default function AdminTrades() {
         cashAdjustment: 0
     });
 
+    // Protocol V77.0: Admin Center States
+    const [searchTerm, setSearchTerm] = useState("");
+    const [statusFilter, setStatusFilter] = useState<Trade['status'] | 'all'>('all');
+
+    const filteredTrades = trades.filter(t => {
+        const type = t.type || 'exchange';
+        const matchesType = activeView === 'exchange' ? type === 'exchange' : (type === 'direct_sale' || type === 'admin_negotiation');
+        const matchesStatus = statusFilter === 'all' || t.status === statusFilter;
+        const matchesSearch = !searchTerm || 
+            t.id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            t.participants.senderName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            t.participants.senderId.toLowerCase().includes(searchTerm.toLowerCase());
+        
+        return matchesType && matchesStatus && matchesSearch;
+    });
+
+    // KPI Calculations
+    const kpis = {
+        pendingShipment: trades.filter(t => t.status === 'completed' && t.logistics?.shipping_status !== 'delivered').length,
+        openDisputes: trades.filter(t => t.status === 'disputed').length,
+        monthlySales: trades
+            .filter(t => t.status === 'completed' && t.timestamp?.toDate().getMonth() === new Date().getMonth())
+            .reduce((acc, t) => acc + (t.manifest?.cashAdjustment || 0), 0)
+    };
+
     useEffect(() => {
         initialLoad();
     }, []);
@@ -262,8 +287,64 @@ export default function AdminTrades() {
                     onClick={() => setIsWizardOpen(true)}
                     className="flex items-center gap-3 px-8 py-4 bg-primary text-black rounded-2xl font-black uppercase tracking-widest hover:bg-white transition-all shadow-xl shadow-primary/20"
                 >
-                    <Handshake className="h-5 w-5" /> Iniciar Propuesta
+                    <PlusCircle className="h-5 w-5" /> 
+                    {activeView === 'exchange' ? 'Iniciar Propuesta' : 'Crear Pedido B2C Manual'}
                 </button>
+            </div>
+
+            {/* Protocol V77.0: Command Center KPIs */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-white/5 border border-white/10 p-6 rounded-[2rem] space-y-2">
+                    <div className="flex items-center gap-3 text-orange-400">
+                        <ShoppingBag className="h-4 w-4" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Envíos Pendientes</span>
+                    </div>
+                    <p className="text-4xl font-display font-black text-white">{kpis.pendingShipment}</p>
+                </div>
+                <div className="bg-white/5 border border-white/10 p-6 rounded-[2rem] space-y-2">
+                    <div className="flex items-center gap-3 text-red-500">
+                        <AlertCircle className="h-4 w-4" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Disputas Abiertas</span>
+                    </div>
+                    <p className="text-4xl font-display font-black text-white">{kpis.openDisputes}</p>
+                </div>
+                <div className="bg-white/5 border border-white/10 p-6 rounded-[2rem] space-y-2">
+                    <div className="flex items-center gap-3 text-emerald-400">
+                        <DollarSign className="h-4 w-4" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Ventas del Mes</span>
+                    </div>
+                    <p className="text-4xl font-display font-black text-white">${kpis.monthlySales.toLocaleString()}</p>
+                </div>
+            </div>
+
+            {/* Search & Filter Bar */}
+            <div className="flex flex-col md:flex-row gap-4 items-center">
+                <div className="relative flex-1 group">
+                    <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 group-focus-within:text-primary transition-colors" />
+                    <input 
+                        type="text"
+                        placeholder="Buscar por ID, Nombre o Cliente..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full bg-white/5 border border-white/10 rounded-3xl py-4 pl-14 pr-6 text-sm text-white outline-none focus:border-primary/50 transition-all font-bold"
+                    />
+                </div>
+                
+                <div className="flex items-center gap-2 p-1.5 bg-white/5 border border-white/10 rounded-2xl">
+                    {['all', 'pending', 'accepted', 'completed', 'cancelled'].map((val) => (
+                        <button
+                            key={val}
+                            onClick={() => setStatusFilter(val as any)}
+                            className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
+                                statusFilter === val 
+                                ? 'bg-primary text-black' 
+                                : 'text-gray-500 hover:text-white'
+                            }`}
+                        >
+                            {val}
+                        </button>
+                    ))}
+                </div>
             </div>
 
             {/* View Selector Tabs */}
@@ -298,106 +379,135 @@ export default function AdminTrades() {
                         <div className="h-12 w-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
                         <span className="text-xs font-black uppercase tracking-[0.3em] text-gray-500">Sincronizando Trades...</span>
                     </div>
-                ) : trades.filter(t => {
-                    const type = t.type || 'exchange';
-                    return activeView === 'exchange' ? type === 'exchange' : (type === 'direct_sale' || type === 'admin_negotiation');
-                }).length === 0 ? (
+                ) : filteredTrades.length === 0 ? (
                     <div className="py-32 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[2rem] space-y-4 text-center">
                         {activeView === 'exchange' ? <ArrowRightLeft className="h-12 w-12 text-gray-700" /> : <ShoppingBag className="h-12 w-12 text-gray-700" />}
                         <p className="text-xl font-display font-medium text-gray-500">
-                            {activeView === 'exchange' ? 'No hay propuestas de intercambio activas.' : 'No se encontraron ventas o pedidos registrados.'}
+                            No se encontraron resultados para los filtros aplicados.
                         </p>
                     </div>
-                ) : (
+                ) : activeView === 'exchange' ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                        {trades.filter(t => {
-                            const type = t.type || 'exchange';
-                            return activeView === 'exchange' ? type === 'exchange' : (type === 'direct_sale' || type === 'admin_negotiation');
-                        }).map(trade => {
-                            const isPurchase = trade.manifest.requestedItems.length > 0 && trade.manifest.offeredItems.length === 0;
-                            const isSale = trade.manifest.offeredItems.length > 0 && trade.manifest.requestedItems.length === 0;
-                            const isExchange = trade.manifest.requestedItems.length > 0 && trade.manifest.offeredItems.length > 0;
-
-                            return (
-                                <motion.div
-                                    key={trade.id}
-                                    layoutId={trade.id}
-                                    onClick={() => setSelectedTrade(trade)}
-                                    className={`group relative bg-white/[0.02] border rounded-[2rem] overflow-hidden transition-all cursor-pointer p-6 space-y-6 ${selectedTrade?.id === trade.id ? 'border-primary border-2 shadow-lg shadow-primary/10' : 'border-white/5 hover:border-primary/30'
-                                        }`}
-                                >
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2.5 bg-white/5 rounded-xl">
-                                                {trade.type === 'direct_sale' || isPurchase ? (
-                                                    <ShoppingBag className="h-4 w-4 text-emerald-400" />
-                                                ) : isSale ? (
-                                                    <DollarSign className="h-4 w-4 text-orange-400" />
-                                                ) : (
-                                                    <User className="h-4 w-4 text-gray-400" />
-                                                )}
-                                            </div>
-                                            <div className="flex flex-col">
-                                                <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest leading-none">
-                                                    {trade.type === 'direct_sale' || isPurchase ? 'COMPRA (PEDIDO)' : isSale ? 'VENTA (OFERTA)' : 'INTERCAMBIO'}
-                                                </span>
-                                                <span className="text-xs font-bold text-white truncate max-w-[120px]">
-                                                    {(trade.participants.senderId || 'Anon').slice(-8)}
-                                                </span>
-                                            </div>
+                        {filteredTrades.map(trade => (
+                            <motion.div
+                                key={trade.id}
+                                layoutId={trade.id}
+                                onClick={() => setSelectedTrade(trade)}
+                                className={`group relative bg-white/[0.02] border rounded-[2rem] overflow-hidden transition-all cursor-pointer p-6 space-y-6 ${selectedTrade?.id === trade.id ? 'border-primary border-2 shadow-lg shadow-primary/10' : 'border-white/5 hover:border-primary/30'}`}
+                            >
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2.5 bg-white/5 rounded-xl">
+                                            <ArrowRightLeft className="h-4 w-4 text-blue-400" />
                                         </div>
-                                        {getStatusBadge(trade.status)}
-                                        <button
-                                            onClick={(e) => trade.id && handleDeleteTrade(e, trade.id)}
-                                            className="p-2 hover:bg-red-500/20 text-gray-700 hover:text-red-500 rounded-xl transition-all"
-                                            title="Eliminar Trade"
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </button>
+                                        <div className="flex flex-col">
+                                            <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest leading-none">Intercambio</span>
+                                            <span className="text-xs font-bold text-white truncate max-w-[120px]">
+                                                {trade.id?.slice(-8).toUpperCase()}
+                                            </span>
+                                        </div>
                                     </div>
-
+                                    {getStatusBadge(trade.status)}
+                                </div>
+                                
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-1">
-                                        <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Ofrece</span>
-                                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                                            <Disc className="h-3 w-3 text-blue-400" />
-                                            <span className="text-xs font-black text-white">{trade.manifest.offeredItems.length}</span>
-                                        </div>
+                                    <div className="p-3 bg-white/5 rounded-xl border border-white/5">
+                                        <span className="text-[8px] font-black text-gray-500 uppercase block mb-1">Ofrece</span>
+                                        <span className="text-sm font-black text-white">{trade.manifest.offeredItems.length} Discos</span>
                                     </div>
-                                    <div className="space-y-1">
-                                        <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Solicita</span>
-                                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500/10 border border-orange-500/20 rounded-lg">
-                                            <ShoppingBag className="h-3 w-3 text-orange-400" />
-                                            <span className="text-xs font-black text-white">{trade.manifest.requestedItems.length}</span>
-                                        </div>
+                                    <div className="p-3 bg-white/5 rounded-xl border border-white/5">
+                                        <span className="text-[8px] font-black text-gray-500 uppercase block mb-1">Pide</span>
+                                        <span className="text-sm font-black text-white">{trade.manifest.requestedItems.length} Discos</span>
                                     </div>
                                 </div>
 
-                                {trade.manifest.cashAdjustment !== 0 && (
-                                    <div className={`p-4 rounded-2xl flex items-center justify-between ${trade.manifest.cashAdjustment > 0 ? 'bg-green-500/5 border border-green-500/10 text-green-400' : 'bg-red-500/5 border border-red-500/10 text-red-500'}`}>
-                                        <span className="text-[9px] font-black uppercase tracking-widest">Ajuste de Efectivo</span>
-                                        <span className="text-sm font-black whitespace-nowrap">
-                                            {trade.manifest.cashAdjustment > 0 ? `+ $${trade.manifest.cashAdjustment}` : `- $${Math.abs(trade.manifest.cashAdjustment)}`}
-                                        </span>
-                                    </div>
-                                )}
-
-                                <div className="flex items-center justify-between pt-2">
-                                    <div className="text-[9px] font-black text-gray-600 uppercase tracking-widest flex items-center gap-1">
-                                        {trade.currentTurn === user?.uid ? (
-                                            <span className="text-primary flex items-center gap-1"><AlertCircle className="h-3 w-3" /> TU TURNO</span>
-                                        ) : (
-                                            <span>TURNO DEL CLIENTE</span>
-                                        )}
-                                    </div>
-                                    <div className="flex items-center gap-2 text-primary group-hover:translate-x-1 transition-transform">
-                                        <span className="text-[10px] font-black uppercase tracking-widest">Ver Detalle</span>
-                                        <ChevronRight className="h-4 w-4" />
-                                    </div>
+                                <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                                    <span className="text-[9px] font-black text-gray-600 uppercase">Turno: {trade.currentTurn === user?.uid ? "TUYO" : "Suyo"}</span>
+                                    <ChevronRight className="h-4 w-4 text-primary" />
                                 </div>
                             </motion.div>
-                        );
-                    })}
+                        ))}
+                    </div>
+                ) : (
+                    /* Protocol V77.0: Dynamic Data Table for Sales */
+                    <div className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] overflow-hidden shadow-2xl">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="bg-white/[0.03] border-b border-white/5">
+                                    <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">ID Pedido</th>
+                                    <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Ítem Principal</th>
+                                    <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Cliente</th>
+                                    <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Fecha</th>
+                                    <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Monto</th>
+                                    <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/5">
+                                {filteredTrades.map(trade => {
+                                    const firstItemId = trade.manifest.offeredItems[0] || trade.manifest.requestedItems[0];
+                                    const item = itemDetails[firstItemId];
+                                    
+                                    return (
+                                        <tr 
+                                            key={trade.id} 
+                                            onClick={() => setSelectedTrade(trade)}
+                                            className="hover:bg-white/[0.04] transition-colors cursor-pointer group"
+                                        >
+                                            <td className="px-8 py-6">
+                                                <span className="text-xs font-mono font-bold text-gray-400 group-hover:text-primary transition-colors uppercase">
+                                                    #{trade.id?.slice(-6)}
+                                                </span>
+                                            </td>
+                                            <td className="px-8 py-6">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-12 h-12 bg-white/5 rounded-xl border border-white/10 overflow-hidden shrink-0">
+                                                        {item?.media.thumbnail && <img src={item.media.thumbnail} className="w-full h-full object-cover" alt="" />}
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="text-xs font-black text-white truncate max-w-[150px] uppercase tracking-tighter">
+                                                            {item?.metadata.title || "Varios Ítems"}
+                                                        </p>
+                                                        <p className="text-[9px] font-bold text-gray-600 truncate max-w-[150px] uppercase">
+                                                            {item?.metadata.artist || "Multi-pack"}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-8 py-6">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center border border-primary/20">
+                                                        <User className="h-3 w-3 text-primary" />
+                                                    </div>
+                                                    <p className="text-xs font-bold text-white uppercase tracking-tighter">
+                                                        {trade.participants.senderName || trade.participants.senderId.slice(-6)}
+                                                    </p>
+                                                </div>
+                                            </td>
+                                            <td className="px-8 py-6">
+                                                <p className="text-xs font-bold text-gray-400">
+                                                    {trade.timestamp?.toDate ? trade.timestamp.toDate().toLocaleDateString() : 'Pendiente'}
+                                                </p>
+                                            </td>
+                                            <td className="px-8 py-6">
+                                                <p className="text-xs font-black text-white">
+                                                    ${(trade.manifest.cashAdjustment || 0).toLocaleString()}
+                                                </p>
+                                            </td>
+                                            <td className="px-8 py-6 text-right">
+                                                <div className="flex flex-col items-end gap-1">
+                                                    {getStatusBadge(trade.status)}
+                                                    {trade.logistics?.shipping_status && (
+                                                        <span className="text-[7px] font-black text-primary uppercase tracking-widest bg-primary/10 px-2 py-0.5 rounded-sm">
+                                                            {trade.logistics.shipping_status}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
                     </div>
                 )}
 

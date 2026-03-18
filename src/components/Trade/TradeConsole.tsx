@@ -12,7 +12,11 @@ import {
     Edit2,
     Users,
     MessageSquare,
-    Trophy
+    Trophy,
+    Truck,
+    Hash,
+    Package,
+    ClipboardCheck
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { tradeService } from "@/services/tradeService";
@@ -35,6 +39,31 @@ export default function TradeConsole({ trade, onUpdate, onClose }: TradeConsoleP
     const { user, dbUser } = useAuth();
     const [isEditing, setIsEditing] = useState(false);
     const [editedManifest, setEditedManifest] = useState<TradeManifest | null>(null);
+
+    // Protocol V77.0: Logistics Management
+    const [courier, setCourier] = useState(trade.logistics?.courier || "");
+    const [trackingCode, setTrackingCode] = useState(trade.logistics?.tracking_code || "");
+    const [shippingStatus, setShippingStatus] = useState<string>(trade.logistics?.shipping_status || 'pending');
+
+    const handleUpdateLogistics = async () => {
+        if (!trade.id) return;
+        showLoading("Actualizando logística...");
+        try {
+            await tradeService.updateTradeLogistics(trade.id, {
+                courier,
+                tracking_code: trackingCode,
+                shipping_status: shippingStatus as any,
+                lastUpdated: new Date()
+            });
+            alert("Información logística actualizada.");
+            onUpdate();
+        } catch (error) {
+            console.error("Error updating logistics:", error);
+            alert("Error al actualizar logística.");
+        } finally {
+            hideLoading();
+        }
+    };
 
     // Multi-chat management
     const [conversations, setConversations] = useState<any[]>([]);
@@ -217,6 +246,65 @@ export default function TradeConsole({ trade, onUpdate, onClose }: TradeConsoleP
                     </div>
                 )}
             </div>
+
+            {/* Protocol V77.0: Logistics Section for Admins */}
+            {isAdmin && (trade.status === 'completed' || trade.status === 'accepted' || trade.status === 'payment_reported') && (
+                <div className="p-8 bg-white/[0.03] border border-white/10 rounded-[2.5rem] space-y-6">
+                    <div className="flex items-center gap-3">
+                        <Truck className="w-5 h-5 text-primary" />
+                        <h4 className="text-sm font-black text-white uppercase tracking-tight">Gestión Logística Operativa</h4>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="space-y-2">
+                            <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                                <Package className="w-3 h-3" /> Correo / Courier
+                            </label>
+                            <input 
+                                type="text"
+                                value={courier}
+                                onChange={(e) => setCourier(e.target.value)}
+                                placeholder="Ej: Correo Argentino"
+                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-primary/50 transition-all font-bold"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                                <Hash className="w-3 h-3" /> Tracking Code
+                            </label>
+                            <input 
+                                type="text"
+                                value={trackingCode}
+                                onChange={(e) => setTrackingCode(e.target.value)}
+                                placeholder="N° de seguimiento"
+                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-primary/50 transition-all font-bold"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                                <ClipboardCheck className="w-3 h-3" /> Estado de Envío
+                            </label>
+                            <select 
+                                value={shippingStatus}
+                                onChange={(e) => setShippingStatus(e.target.value as any)}
+                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-primary/50 transition-all font-bold"
+                            >
+                                <option value="pending" className="bg-black">Pendiente de Procesar</option>
+                                <option value="ready_for_pickup" className="bg-black">Listo para Despacho</option>
+                                <option value="shipped" className="bg-black">Enviado / En Camino</option>
+                                <option value="delivered" className="bg-black">Entregado</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <button
+                        onClick={handleUpdateLogistics}
+                        className="w-full py-3 bg-white/5 border border-white/10 text-white rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-primary hover:text-black transition-all"
+                    >
+                        Guardar Información Logística
+                    </button>
+                </div>
+            )}
 
             {isDirectSale && (isOwner || isAdmin) && (trade.status === 'pending' || trade.status === 'accepted') ? (
                 /* Multi-Conversation Interface */

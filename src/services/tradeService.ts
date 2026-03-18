@@ -668,6 +668,17 @@ export const tradeService = {
     },
 
     /**
+     * Protocolo V76.0: Actualizar Logística (Admin Trigger)
+     */
+    async updateTradeLogistics(tradeId: string, logisticsData: any) {
+        const tradeRef = doc(db, "trades", tradeId);
+        await updateDoc(tradeRef, {
+            logistics: logisticsData,
+            updatedAt: serverTimestamp()
+        });
+    },
+
+    /**
      * Protocolo V76.0: Solicitar Pago (Admin Trigger)
      */
     async requestOfficialPayment(tradeId: string, chatId: string, amount: number) {
