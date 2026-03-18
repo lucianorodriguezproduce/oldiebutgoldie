@@ -181,6 +181,10 @@ export default function TradeConsole({ trade, onUpdate, onClose }: TradeConsoleP
                 return <span className="bg-blue-500/10 text-blue-500 border border-blue-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 animate-pulse"><Disc className="h-3 w-3" /> EN PROCESO (BÚSQUEDA)</span>;
             case 'accepted':
                 return <span className="bg-orange-500/10 text-orange-500 border border-orange-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 animate-pulse"><Handshake className="h-3 w-3" /> PENDIENTE PAGO / COORDINANDO</span>;
+            case 'pending_payment':
+                return <span className="bg-orange-500/10 text-orange-500 border border-orange-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 animate-pulse"><DollarSign className="h-3 w-3" /> PENDIENTE PAGO (OFICIAL)</span>;
+            case 'payment_reported':
+                return <span className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 animate-pulse"><CheckCircle2 className="h-3 w-3" /> PAGO REPORTADO</span>;
             case 'cancelled':
                 return <span className="bg-red-500/10 text-red-500 border border-red-500/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5"><XCircle className="h-3 w-3" /> CANCELLED</span>;
             case 'counter_offer':

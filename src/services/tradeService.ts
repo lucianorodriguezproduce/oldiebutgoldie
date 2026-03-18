@@ -667,6 +667,108 @@ export const tradeService = {
         });
     },
 
+    /**
+     * Protocolo V76.0: Solicitar Pago (Admin Trigger)
+     */
+    async requestOfficialPayment(tradeId: string, chatId: string, amount: number) {
+        const tradeRef = doc(db, COLLECTION_NAME, tradeId);
+        const messagesRef = collection(db, "p2p_chats", chatId, "messages");
+
+        await runTransaction(db, async (transaction) => {
+            // 1. Update Trade Status and agreed amount
+            transaction.update(tradeRef, {
+                status: "pending_payment",
+                "manifest.cashAdjustment": amount,
+                paymentRequestedAt: serverTimestamp()
+            });
+
+            // 2. Send System CTA Message
+            const newMessageRef = doc(messagesRef);
+            transaction.set(newMessageRef, {
+                sender_uid: "system",
+                text: `El Administrador ha fijado el precio final en $${amount.toLocaleString()}. Por favor, procede al pago para finalizar la orden.`,
+                is_payment_cta: true,
+                payment_amount: amount,
+                timestamp: serverTimestamp(),
+                read_status: false
+            });
+        });
+    },
+
+    /**
+     * Protocolo V76.0: Reportar Pago (User Action)
+     */
+    async reportOfficialPayment(tradeId: string, chatId: string, method: "cash" | "transfer") {
+        const tradeRef = doc(db, COLLECTION_NAME, tradeId);
+        const messagesRef = collection(db, "p2p_chats", chatId, "messages");
+
+        const methodLabel = method === "cash" ? "EFECTIVO / A CONVENIR" : "TRANSFERENCIA BANCARIA";
+        const systemMessage = method === "cash" 
+            ? "El comprador acordó el pago en efectivo." 
+            : "El comprador reportó el pago por transferencia.";
+
+        await runTransaction(db, async (transaction) => {
+            transaction.update(tradeRef, {
+                status: "payment_reported",
+                paymentMethod: method,
+                paymentReportedAt: serverTimestamp()
+            });
+
+            const newMessageRef = doc(messagesRef);
+            transaction.set(newMessageRef, {
+                sender_uid: "system",
+                text: systemMessage,
+                timestamp: serverTimestamp(),
+                read_status: false,
+                is_alert: true
+            });
+        });
+    },
+
+    /**
+     * Protocolo V76.0: Confirmar Pago Recibido (Admin Crossover)
+     */
+    async confirmOfficialPayment(tradeId: string, chatId: string) {
+        const tradeRef = doc(db, COLLECTION_NAME, tradeId);
+        const p2pChatRef = doc(db, "p2p_chats", chatId);
+        const systemMessageRef = doc(collection(db, "p2p_chats", chatId, "messages"));
+
+        // 1. Resolve Trade (Atomic Stock & Asset Transfer)
+        // Note: resolveTrade handles its own transaction.
+        const tradeSnap = await getDoc(tradeRef);
+        if (!tradeSnap.exists()) throw new Error("Trade no encontrado");
+        const tradeData = tradeSnap.data() as any;
+
+        if (tradeData.status !== 'completed' && tradeData.status !== 'completed_unpaid') {
+            console.log(`[V76.0] Resolving trade stock and assets for: ${tradeId}`);
+            await this.resolveTrade(tradeId, tradeData.manifest);
+        }
+
+        // 2. Finalize statuses and send messages in a fresh transaction
+        await runTransaction(db, async (transaction) => {
+            transaction.update(tradeRef, {
+                status: "completed",
+                payment_status: 'paid',
+                completedAt: serverTimestamp(),
+                updatedAt: serverTimestamp()
+            });
+
+            transaction.update(p2pChatRef, {
+                status: "completed",
+                lastMessage: "✅ Pago confirmado. ¡Venta finalizada!",
+                updatedAt: serverTimestamp()
+            });
+
+            transaction.set(systemMessageRef, {
+                sender_uid: "system",
+                text: "¡Pago confirmado! La operación ha sido finalizada con éxito. Se ha generado tu recibo digital y la propiedad de los ítems ha sido transferida.",
+                timestamp: serverTimestamp(),
+                read_status: false,
+                is_success: true
+            });
+        });
+    },
+
     async startInquiry(tradeId: string, buyerUid: string, buyerName: string, forcedSellerId?: string) {
         if (!buyerName) throw new Error("USERNAME_REQUIRED");
         const buyerUsername = buyerName.startsWith('@') ? buyerName : `@${buyerName}`;

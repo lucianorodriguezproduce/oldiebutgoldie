@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Send, User as UserIcon, Star, X, CheckCircle2, AlertTriangle, ShieldAlert } from "lucide-react";
+import { Send, User as UserIcon, Star, X, CheckCircle2, AlertTriangle, ShieldAlert, DollarSign, ArrowRightLeft } from "lucide-react";
 import { tradeService } from "@/services/tradeService";
 import { formatDate } from "@/utils/date";
 import { useAuth } from "@/context/AuthContext";
@@ -43,11 +43,21 @@ export default function TradeChat({ tradeId, currentUser, trade, otherParticipan
     const [disputeDetails, setDisputeDetails] = useState("");
     const [isSubmittingDispute, setIsSubmittingDispute] = useState(false);
 
+    // Protocol V76.0: Payment Flow State
+    const [showPaymentRequest, setShowPaymentRequest] = useState(false);
+    const [requestedAmount, setRequestedAmount] = useState("");
+    const [isRequesting, setIsRequesting] = useState(false);
+    const [showCheckout, setShowCheckout] = useState(false);
+    const [isReporting, setIsReporting] = useState(false);
+    const [checkoutType, setCheckoutType] = useState<'options' | 'transfer'>('options');
+
     const isComprador = currentUser?.uid === trade?.participants?.senderId;
     const isVendedor = currentUser?.uid === trade?.participants?.receiverId;
     
     const isCompleted = trade?.status === 'completed' || trade?.status === 'venta_finalizada' || trade?.status === 'completed_unpaid';
     const isDisputed = trade?.status === 'disputed';
+    const isPendingPayment = trade?.status === 'pending_payment';
+    const isPaymentReported = trade?.status === 'payment_reported';
 
     // Protocol V66.0: Can open dispute?
     const canOpenDispute = !isDisputed && (
@@ -99,6 +109,58 @@ export default function TradeChat({ tradeId, currentUser, trade, otherParticipan
             console.error("Chat error:", error);
         } finally {
             setIsSending(false);
+        }
+    };
+
+    // Protocolo V76.0: Admin Request Payment
+    const handleRequestPayment = async () => {
+        const amount = parseFloat(requestedAmount);
+        if (isNaN(amount) || amount <= 0 || isRequesting) return;
+
+        setIsRequesting(true);
+        try {
+            const finalChatId = chatId || tradeId;
+            await tradeService.requestOfficialPayment(tradeId, finalChatId, amount);
+            setShowPaymentRequest(false);
+            setRequestedAmount("");
+        } catch (error) {
+            console.error("Payment request error:", error);
+            alert("Error al solicitar el pago.");
+        } finally {
+            setIsRequesting(false);
+        }
+    };
+
+    // Protocolo V76.0: User Report Payment
+    const handleReportPayment = async (method: 'cash' | 'transfer') => {
+        if (isReporting) return;
+        setIsReporting(true);
+        try {
+            const finalChatId = chatId || tradeId;
+            await tradeService.reportOfficialPayment(tradeId, finalChatId, method);
+            setShowCheckout(false);
+        } catch (error) {
+            console.error("Report payment error:", error);
+            alert("Error al reportar el pago.");
+        } finally {
+            setIsReporting(false);
+        }
+    };
+
+    // Protocolo V76.0: Admin Finalize
+    const handleConfirmOfficialReceived = async () => {
+        if (isResolving || !isAdmin) return;
+        if (!window.confirm("¿Confirmar que has recibido el pago oficial? La orden pasará a COMPLETADA.")) return;
+
+        setIsResolving(true);
+        try {
+            const finalChatId = chatId || tradeId;
+            await tradeService.confirmOfficialPayment(tradeId, finalChatId);
+        } catch (error) {
+            console.error("Finalization error:", error);
+            alert("Error al confirmar el pago.");
+        } finally {
+            setIsResolving(false);
         }
     };
 
@@ -174,6 +236,29 @@ export default function TradeChat({ tradeId, currentUser, trade, otherParticipan
                         </p>
                     </div>
                 </div>
+
+                {/* Protocol V76.0: Admin Payment Actions */}
+                {isAdmin && (
+                    <div className="flex gap-2">
+                        {(!isPendingPayment && !isPaymentReported && !isCompleted) && (
+                            <button 
+                                onClick={() => setShowPaymentRequest(true)}
+                                className="px-4 py-2 bg-primary hover:bg-white text-black rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-primary/20"
+                            >
+                                <DollarSign className="w-3.5 h-3.5 inline mr-1" /> Solicitar Pago
+                            </button>
+                        )}
+                        {isPaymentReported && (
+                            <button 
+                                onClick={handleConfirmOfficialReceived}
+                                disabled={isResolving}
+                                className="px-4 py-2 bg-emerald-500 hover:bg-white text-black rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-emerald-500/20"
+                            >
+                                {isResolving ? 'Procesando...' : 'Confirmar Pago Recibido'}
+                            </button>
+                        )}
+                    </div>
+                )}
 
                 {isComprador && trade?.status === 'accepted' && (
                     <button 
@@ -351,6 +436,25 @@ export default function TradeChat({ tradeId, currentUser, trade, otherParticipan
                                         : 'bg-white/10 text-white font-medium rounded-tl-none border border-white/5'
                                 } shadow-lg`}>
                                     {msg.text}
+                                    
+                                    {/* Protocol V76.0: Payment CTA Card */}
+                                    {(msg as any).is_payment_cta && isComprador && !isCompleted && trade?.status !== 'payment_reported' && (
+                                        <div className="mt-4 p-4 bg-black/40 border border-white/10 rounded-2xl space-y-3">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-primary">Monto Total</span>
+                                                <span className="text-lg font-black text-white">${(msg as any).payment_amount?.toLocaleString()}</span>
+                                            </div>
+                                            <button
+                                                onClick={() => {
+                                                    setCheckoutType('options');
+                                                    setShowCheckout(true);
+                                                }}
+                                                className="w-full py-3 bg-primary text-black rounded-xl font-black uppercase text-[10px] tracking-widest hover:scale-[1.02] transition-all shadow-lg shadow-primary/20"
+                                            >
+                                                Pagar Ahora
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                                 <span className="text-[8px] text-gray-500 font-mono uppercase px-1">
                                     {formatDate(msg.timestamp)}
@@ -515,6 +619,121 @@ export default function TradeChat({ tradeId, currentUser, trade, otherParticipan
                                     </button>
                                 </div>
                             </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Protocol V76.0: Admin Payment Fee Modal */}
+            <AnimatePresence>
+                {showPaymentRequest && (
+                    <motion.div 
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="absolute inset-0 z-40 bg-black/95 backdrop-blur-xl flex items-center justify-center p-6"
+                    >
+                        <div className="w-full max-w-sm space-y-8 text-center">
+                            <div className="space-y-2">
+                                <DollarSign className="w-12 h-12 text-primary mx-auto mb-4" />
+                                <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Fijar Precio y Solicitar</h3>
+                                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Ingresa el monto final que el comprador debe abonar.</p>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div className="relative">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-primary font-black">$</span>
+                                    <input
+                                        type="number"
+                                        value={requestedAmount}
+                                        onChange={(e) => setRequestedAmount(e.target.value)}
+                                        placeholder="0.00"
+                                        className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-10 pr-4 text-xl font-black text-white outline-none focus:border-primary"
+                                    />
+                                </div>
+                                <div className="flex gap-3">
+                                    <button onClick={() => setShowPaymentRequest(false)} className="flex-1 py-4 bg-white/5 text-gray-400 rounded-xl font-black uppercase text-[10px]">Cancelar</button>
+                                    <button 
+                                        onClick={handleRequestPayment}
+                                        disabled={!requestedAmount || isRequesting}
+                                        className="flex-1 py-4 bg-primary text-black rounded-xl font-black uppercase text-[10px] shadow-xl shadow-primary/20 disabled:opacity-50"
+                                    >
+                                        {isRequesting ? "Enviando..." : "Confirmar y Enviar"}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Protocol V76.0: Hybrid Checkout Modal (Buyer) */}
+            <AnimatePresence>
+                {showCheckout && (
+                    <motion.div 
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="absolute inset-0 z-40 bg-black/95 backdrop-blur-xl flex items-center justify-center p-6"
+                    >
+                        <div className="w-full max-w-sm space-y-8">
+                            <div className="text-center space-y-2">
+                                <ShieldAlert className="w-12 h-12 text-primary mx-auto mb-4" />
+                                <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Checkout Oficial</h3>
+                                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Selecciona el medio de pago preferido</p>
+                            </div>
+
+                            {checkoutType === 'options' ? (
+                                <div className="space-y-3">
+                                    <button 
+                                        onClick={() => setCheckoutType('transfer')}
+                                        className="w-full p-6 bg-white/5 border border-white/10 rounded-3xl text-left hover:border-primary/50 transition-all group"
+                                    >
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-sm font-black text-white uppercase">Transferencia Bancaria</span>
+                                            <ArrowRightLeft className="w-4 h-4 text-primary group-hover:translate-x-1 transition-transform" />
+                                        </div>
+                                        <p className="text-[9px] text-gray-500 font-bold leading-relaxed">Paga vía CBU/Alias. Recibirás los datos a continuación.</p>
+                                    </button>
+
+                                    <button 
+                                        onClick={() => handleReportPayment('cash')}
+                                        className="w-full p-6 bg-white/5 border border-white/10 rounded-3xl text-left hover:border-emerald-500/50 transition-all"
+                                    >
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-sm font-black text-white uppercase">Efectivo / A Convenir</span>
+                                            <DollarSign className="w-4 h-4 text-emerald-500" />
+                                        </div>
+                                        <p className="text-[9px] text-gray-500 font-bold leading-relaxed">Coordina el pago en mano en el showroom oficial.</p>
+                                    </button>
+
+                                    <button onClick={() => setShowCheckout(false)} className="w-full py-4 text-[10px] font-black text-gray-600 uppercase">Cancelar</button>
+                                </div>
+                            ) : (
+                                <div className="space-y-6">
+                                    <div className="p-6 bg-primary/10 border border-primary/20 rounded-3xl space-y-4">
+                                        <div className="space-y-1">
+                                            <p className="text-[8px] font-black text-primary uppercase">Alias de Destino</p>
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xl font-black text-white tracking-widest">obg.vinilos</span>
+                                                <button onClick={() => navigator.clipboard.writeText('obg.vinilos')} className="text-[9px] font-black text-primary uppercase border-b border-primary">Copiar</button>
+                                            </div>
+                                        </div>
+                                        <div className="pt-4 border-t border-primary/10 space-y-3 text-[10px] font-bold text-gray-400">
+                                            <p>1. Realiza la transferencia por el monto acordado.</p>
+                                            <p>2. Guarda el comprobante por cualquier eventualidad.</p>
+                                            <p>3. Haz clic en el botón de abajo al finalizar.</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="flex flex-col gap-3">
+                                        <button 
+                                            onClick={() => handleReportPayment('transfer')}
+                                            disabled={isReporting}
+                                            className="w-full py-4 bg-primary text-black rounded-xl font-black uppercase text-[10px] shadow-xl shadow-primary/20"
+                                        >
+                                            {isReporting ? "Informando..." : "Ya transferí"}
+                                        </button>
+                                        <button onClick={() => setCheckoutType('options')} className="w-full py-2 text-[10px] font-black text-gray-600 uppercase">Volver</button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </motion.div>
                 )}

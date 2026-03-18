@@ -73,7 +73,7 @@ export interface Trade {
         receiverName?: string;
     };
     manifest: TradeManifest;
-    status: "pending" | "accepted" | "counter_offer" | "completed" | "venta_finalizada" | "completed_unpaid" | "in_process" | "cancelled" | "resolved" | "rejected" | "pending_publish_fee" | "pending_payment";
+    status: "pending" | "accepted" | "counter_offer" | "completed" | "venta_finalizada" | "completed_unpaid" | "in_process" | "cancelled" | "resolved" | "rejected" | "pending_publish_fee" | "pending_payment" | "payment_reported";
     type: "direct_sale" | "exchange" | "admin_negotiation" | "p2p_market" | "auction";
     isPublicOrder?: boolean; // True if it should appear in the global market
     currentTurn: string; // UID of the user who must decide
