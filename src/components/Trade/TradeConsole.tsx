@@ -16,12 +16,15 @@ import {
     Truck,
     Hash,
     Package,
-    ClipboardCheck
+    ClipboardCheck,
+    Maximize2,
+    Minimize2
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { tradeService } from "@/services/tradeService";
 import TradeChat from "./TradeChat";
 import type { Trade, TradeManifest } from "@/types/inventory";
+import { cn } from "@/lib/utils";
 import { useLoading } from "@/context/LoadingContext";
 import { useAuth } from "@/context/AuthContext";
 import { ADMIN_UIDS, isAdminEmail } from "@/constants/admin";
@@ -43,6 +46,7 @@ export default function TradeConsole({ trade, onUpdate, onClose }: TradeConsoleP
     // Protocol V77.0: Logistics Management
     const [courier, setCourier] = useState(trade.logistics?.courier || "");
     const [trackingCode, setTrackingCode] = useState(trade.logistics?.tracking_code || "");
+    const [isChatExpanded, setIsChatExpanded] = useState(false);
     const [shippingStatus, setShippingStatus] = useState<string>(trade.logistics?.shipping_status || 'pending');
 
     const handleUpdateLogistics = async () => {
@@ -347,26 +351,42 @@ export default function TradeConsole({ trade, onUpdate, onClose }: TradeConsoleP
                     <div className="lg:col-span-2 space-y-6">
                         {selectedBuyerId ? (
                             <>
-                                <div className="p-6 bg-white/[0.03] border border-white/10 rounded-[2.5rem] space-y-6">
+                                <div className={cn(
+                                    "bg-black border border-white/10 transition-all duration-500 overflow-hidden",
+                                    isChatExpanded 
+                                        ? "fixed inset-0 z-[100] flex flex-col p-6 md:p-12" 
+                                        : "p-6 bg-white/[0.03] rounded-[2.5rem] space-y-6"
+                                )}>
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-3">
                                             <MessageSquare className="w-5 h-5 text-primary" />
                                             <h4 className="text-sm font-black text-white uppercase tracking-tight">Chat con @{selectedConv?.buyerName || selectedConv?.buyerUsername}</h4>
                                         </div>
-                                        <button
-                                            onClick={handleAdjudicate}
-                                            className="px-6 py-2.5 bg-primary text-black rounded-xl font-black uppercase text-[10px] tracking-widest hover:scale-105 transition-all shadow-lg shadow-primary/20"
-                                        >
-                                            <Trophy className="w-3.5 h-3.5 inline mr-2" /> Adjudicar Venta
-                                        </button>
+                                        <div className="flex items-center gap-3">
+                                            <button
+                                                onClick={() => setIsChatExpanded(!isChatExpanded)}
+                                                className="p-2 bg-white/5 border border-white/10 rounded-xl text-gray-400 hover:text-primary transition-all"
+                                                title={isChatExpanded ? "Contraer" : "Expandir"}
+                                            >
+                                                {isChatExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                                            </button>
+                                            <button
+                                                onClick={handleAdjudicate}
+                                                className="px-6 py-2.5 bg-primary text-black rounded-xl font-black uppercase text-[10px] tracking-widest hover:scale-105 transition-all shadow-lg shadow-primary/20"
+                                            >
+                                                <Trophy className="w-3.5 h-3.5 inline mr-2" /> Adjudicar
+                                            </button>
+                                        </div>
                                     </div>
-                                    <TradeChat 
-                                        tradeId={trade.id!}
-                                        chatId={selectedConv?.id}
-                                        currentUser={user} 
-                                        trade={trade} 
-                                        otherParticipantName={`@${selectedConv?.buyerName || selectedConv?.buyerUsername}`} 
-                                    />
+                                    <div className={cn("flex-1 overflow-hidden", isChatExpanded ? "h-full py-6" : "")}>
+                                        <TradeChat 
+                                            tradeId={trade.id!}
+                                            chatId={selectedConv?.id}
+                                            currentUser={user} 
+                                            trade={trade} 
+                                            otherParticipantName={`@${selectedConv?.buyerName || selectedConv?.buyerUsername}`} 
+                                        />
+                                    </div>
                                 </div>
                             </>
                         ) : (

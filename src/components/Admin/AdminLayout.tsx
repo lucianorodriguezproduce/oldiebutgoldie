@@ -1,9 +1,26 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Activity, Terminal, Shield, LogOut, Disc, Newspaper, ShoppingBag, BarChart3, UploadCloud, Handshake, Package, Trash2 } from "lucide-react";
+import { 
+    LayoutDashboard, 
+    Shield, 
+    LogOut, 
+    Disc, 
+    Newspaper, 
+    ShoppingBag, 
+    UploadCloud, 
+    Handshake, 
+    Package, 
+    Trash2,
+    Terminal,
+    Menu,
+    X,
+} from "lucide-react";
 
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
+import AdminLogo from "./AdminLogo";
+import AdminNotificationBell from "./AdminNotificationBell";
 
 interface AdminLayoutProps {
     children: ReactNode;
@@ -12,6 +29,7 @@ interface AdminLayoutProps {
 export default function AdminLayout({ children }: AdminLayoutProps) {
     const location = useLocation();
     const { logout } = useAuth();
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     const navItems = [
         { label: "Estadísticas", href: "/admin", icon: LayoutDashboard },
@@ -25,21 +43,47 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         { label: "🔥 Purga Total", href: "/admin/purge", icon: Trash2 },
     ];
 
-
     return (
-        <div className="flex h-screen bg-[#050505] text-white font-sans selection:bg-primary/30">
-            {/* Sidebar */}
-            <aside className="w-72 border-r border-white/5 bg-[#0a0a0a] flex flex-col">
-                <div className="p-8 pb-12">
-                    <Link to="/" className="flex items-center gap-3 group">
-                        <div className="p-2.5 bg-primary rounded-xl shadow-lg shadow-primary/20 group-hover:scale-105 transition-transform">
-                            <Disc className="h-6 w-6 text-black" />
-                        </div>
-                        <div className="flex flex-col">
-                            <span className="text-lg font-black tracking-tighter uppercase leading-none">System Pilot</span>
-                            <span className="text-[10px] text-primary font-bold uppercase tracking-[0.2em] mt-1">Admin Interface</span>
-                        </div>
-                    </Link>
+        <div className="flex flex-col md:flex-row h-screen bg-[#050505] text-white font-sans selection:bg-primary/30">
+            {/* Mobile Header */}
+            <header className="md:hidden flex items-center justify-between px-6 py-4 bg-[#0a0a0a] border-b border-white/5 z-[60]">
+                <AdminLogo showText={false} className="scale-75 origin-left" />
+                <div className="flex items-center gap-4">
+                    <AdminNotificationBell />
+                    <button 
+                        onClick={() => setIsSidebarOpen(true)}
+                        className="p-2 text-gray-400 hover:text-white"
+                    >
+                        <Menu className="w-6 h-6" />
+                    </button>
+                </div>
+            </header>
+
+            {/* Sidebar / Overlay mobile */}
+            <AnimatePresence>
+                {isSidebarOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setIsSidebarOpen(false)}
+                        className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[70] md:hidden"
+                    />
+                )}
+            </AnimatePresence>
+
+            <aside className={cn(
+                "fixed inset-y-0 left-0 w-72 bg-[#0a0a0a] border-r border-white/5 flex flex-col z-[80] transition-transform duration-300 md:relative md:translate-x-0 overflow-y-auto shadow-2xl shadow-black",
+                isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+            )}>
+                <div className="p-8 pb-12 flex items-center justify-between">
+                    <AdminLogo />
+                    <button 
+                        onClick={() => setIsSidebarOpen(false)}
+                        className="md:hidden p-2 text-gray-500 hover:text-white"
+                    >
+                        <X className="w-6 h-6" />
+                    </button>
                 </div>
 
                 <nav className="flex-1 px-4 space-y-2">
@@ -49,10 +93,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                             <Link
                                 key={item.href}
                                 to={item.href}
+                                onClick={() => setIsSidebarOpen(false)}
                                 className={cn(
                                     "flex items-center gap-4 px-6 py-4 rounded-2xl font-bold transition-all group",
                                     isActive
-                                        ? "bg-primary text-black shadow-lg shadow-primary/10"
+                                        ? "bg-primary text-black shadow-lg shadow-primary/20 border-b-2 border-primary/40"
                                         : "text-gray-500 hover:text-white hover:bg-white/5"
                                 )}
                             >
@@ -75,9 +120,21 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 overflow-y-auto relative">
-                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 blur-[120px] rounded-full pointer-events-none" />
-                <div className="max-w-7xl mx-auto p-12 relative">
+            <main className="flex-1 overflow-y-auto relative min-w-0">
+                <div className="absolute top-0 right-0 w-full max-w-[500px] h-[500px] bg-primary/5 blur-[120px] rounded-full pointer-events-none" />
+                
+                {/* Desktop TopBar for Notifications (Hidden on mobile as it's in header) */}
+                <div className="hidden md:flex justify-end p-8 pb-0">
+                    <div className="flex items-center gap-6">
+                        <div className="flex flex-col items-end">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Estado del Sistema</span>
+                            <span className="text-[10px] font-bold text-primary uppercase">🌟 Oldie but Goldie Oficial</span>
+                        </div>
+                        <AdminNotificationBell />
+                    </div>
+                </div>
+
+                <div className="max-w-7xl mx-auto p-6 md:p-12 relative">
                     {children}
                 </div>
             </main>

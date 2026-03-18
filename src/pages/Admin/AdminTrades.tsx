@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     Handshake,
@@ -17,10 +18,13 @@ import {
     Plus,
     PlusCircle,
     Search,
-    Trash2,
     ChevronDown,
-    Loader2
+    Loader2,
+    Filter,
+    ChevronLeft
 } from "lucide-react";
+
+import { useWindowSize } from "@/hooks/useWindowSize";
 
 import { tradeService } from "@/services/tradeService";
 import { inventoryService } from "@/services/inventoryService";
@@ -36,6 +40,8 @@ import TradeConsole from "@/components/Trade/TradeConsole";
 const PAGE_SIZE = 15;
 
 export default function AdminTrades() {
+    const { width } = useWindowSize();
+    const isMobile = width < 768;
     const { showLoading, hideLoading } = useLoading();
     const { user } = useAuth();
     const [trades, setTrades] = useState<Trade[]>([]);
@@ -45,7 +51,6 @@ export default function AdminTrades() {
     const [hasMore, setHasMore] = useState(true);
     const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
     const [itemDetails, setItemDetails] = useState<Record<string, InventoryItem>>({});
-    const [activeView, setActiveView] = useState<'exchange' | 'direct_sale'>('exchange');
 
     // Wizard State
     const [isWizardOpen, setIsWizardOpen] = useState(false);
@@ -59,9 +64,30 @@ export default function AdminTrades() {
     });
 
     // Protocol V77.0: Admin Center States
+    const [searchParams] = useSearchParams();
     const [searchTerm, setSearchTerm] = useState("");
-    const [statusFilter, setStatusFilter] = useState<Trade['status'] | 'all'>('all');
+    const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'accepted' | 'completed' | 'cancelled'>('all');
+    const [activeView, setActiveView] = useState<'exchange' | 'direct_sale'>('direct_sale');
 
+    // Protocol V77.2: Sync with Notification Center
+    useEffect(() => {
+        const status = searchParams.get('status');
+        const id = searchParams.get('id');
+        
+        if (status) {
+            // Map payment_confirmed to pending-like if necessary, but here we just pass it or adjust filters
+            if (['pending', 'accepted', 'completed', 'cancelled'].includes(status)) {
+                setStatusFilter(status as any);
+            } else if (status === 'payment_confirmed' || status === 'payment_reported' || status === 'disputed') {
+                setStatusFilter('all'); // Show all but search by ID
+            }
+        }
+        
+        if (id) {
+            setSearchTerm(id);
+        }
+    }, [searchParams]);
+    
     const filteredTrades = trades.filter(t => {
         const type = t.type || 'exchange';
         const matchesType = activeView === 'exchange' ? type === 'exchange' : (type === 'direct_sale' || type === 'admin_negotiation');
@@ -270,6 +296,60 @@ export default function AdminTrades() {
         </div>
     );
 
+    const MobileTradeCard = ({ trade }: { trade: Trade }) => {
+        const firstItemId = trade.manifest.offeredItems[0] || trade.manifest.requestedItems[0];
+        const item = itemDetails[firstItemId];
+        
+        return (
+            <motion.div
+                layout
+                onClick={() => setSelectedTrade(trade)}
+                className="bg-white/[0.03] border border-white/10 rounded-3xl p-5 space-y-4 active:scale-[0.98] transition-all"
+            >
+                <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono font-bold text-primary uppercase">#{trade.id?.slice(-6)}</span>
+                    {getStatusBadge(trade.status)}
+                </div>
+                
+                <div className="flex gap-4">
+                    <div className="w-16 h-16 bg-white/5 rounded-2xl border border-white/10 overflow-hidden shrink-0">
+                        {item?.media.thumbnail && <img src={item.media.thumbnail} className="w-full h-full object-cover" alt="" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <p className="text-sm font-black text-white truncate uppercase tracking-tighter">
+                            {item?.metadata.title || "Varios Ítems"}
+                        </p>
+                        <p className="text-[10px] font-bold text-gray-500 truncate uppercase">
+                            {item?.metadata.artist || "Multi-pack"}
+                        </p>
+                        <div className="mt-2 flex items-center justify-between">
+                            <span className="text-xs font-black text-white">${(trade.manifest.cashAdjustment || 0).toLocaleString()}</span>
+                            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">
+                                {trade.timestamp?.toDate ? trade.timestamp.toDate().toLocaleDateString() : 'Pendiente'}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="pt-3 border-t border-white/5 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                         <div className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center border border-primary/20">
+                            <User className="h-3 w-3 text-primary" />
+                        </div>
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
+                            {trade.participants.senderName || trade.participants.senderId.slice(-6)}
+                        </span>
+                    </div>
+                    {trade.logistics?.shipping_status && (
+                        <span className="text-[8px] font-black text-primary uppercase tracking-[0.2em] bg-primary/10 px-2 py-1 rounded-md">
+                            {trade.logistics.shipping_status}
+                        </span>
+                    )}
+                </div>
+            </motion.div>
+        );
+    };
+
     return (
         <div className="space-y-10">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -293,52 +373,55 @@ export default function AdminTrades() {
             </div>
 
             {/* Protocol V77.0: Command Center KPIs */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white/5 border border-white/10 p-6 rounded-[2rem] space-y-2">
-                    <div className="flex items-center gap-3 text-orange-400">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                <div className="bg-white/5 border border-white/10 p-8 rounded-[2.5rem] space-y-2 relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 blur-3xl rounded-full" />
+                    <div className="flex items-center gap-3 text-orange-400 relative z-10">
                         <ShoppingBag className="h-4 w-4" />
                         <span className="text-[10px] font-black uppercase tracking-widest">Envíos Pendientes</span>
                     </div>
-                    <p className="text-4xl font-display font-black text-white">{kpis.pendingShipment}</p>
+                    <p className="text-4xl md:text-5xl font-display font-black text-white relative z-10">{kpis.pendingShipment}</p>
                 </div>
-                <div className="bg-white/5 border border-white/10 p-6 rounded-[2rem] space-y-2">
-                    <div className="flex items-center gap-3 text-red-500">
+                <div className="bg-white/5 border border-white/10 p-8 rounded-[2.5rem] space-y-2 relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 blur-3xl rounded-full" />
+                    <div className="flex items-center gap-3 text-red-500 relative z-10">
                         <AlertCircle className="h-4 w-4" />
                         <span className="text-[10px] font-black uppercase tracking-widest">Disputas Abiertas</span>
                     </div>
-                    <p className="text-4xl font-display font-black text-white">{kpis.openDisputes}</p>
+                    <p className="text-4xl md:text-5xl font-display font-black text-white relative z-10">{kpis.openDisputes}</p>
                 </div>
-                <div className="bg-white/5 border border-white/10 p-6 rounded-[2rem] space-y-2">
-                    <div className="flex items-center gap-3 text-emerald-400">
-                        <DollarSign className="h-4 w-4" />
+                <div className="bg-white/5 border border-white/10 p-8 rounded-[2.5rem] space-y-2 relative overflow-hidden group sm:col-span-2 md:col-span-1">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-3xl rounded-full" />
+                    <div className="flex items-center gap-3 text-primary relative z-10">
+                        <DollarSign className="h-4 w-4 shadow-primary/50" />
                         <span className="text-[10px] font-black uppercase tracking-widest">Ventas del Mes</span>
                     </div>
-                    <p className="text-4xl font-display font-black text-white">${kpis.monthlySales.toLocaleString()}</p>
+                    <p className="text-4xl md:text-5xl font-display font-black text-white relative z-10">${kpis.monthlySales.toLocaleString()}</p>
                 </div>
             </div>
 
             {/* Search & Filter Bar */}
-            <div className="flex flex-col md:flex-row gap-4 items-center">
+            <div className="flex flex-col lg:flex-row gap-4 items-stretch lg:items-center">
                 <div className="relative flex-1 group">
                     <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 group-focus-within:text-primary transition-colors" />
                     <input 
                         type="text"
-                        placeholder="Buscar por ID, Nombre o Cliente..."
+                        placeholder="Buscar por ID o Cliente..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full bg-white/5 border border-white/10 rounded-3xl py-4 pl-14 pr-6 text-sm text-white outline-none focus:border-primary/50 transition-all font-bold"
+                        className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 pl-14 pr-6 text-sm text-white outline-none focus:border-primary/50 transition-all font-bold"
                     />
                 </div>
                 
-                <div className="flex items-center gap-2 p-1.5 bg-white/5 border border-white/10 rounded-2xl">
+                <div className="flex items-center gap-1.5 p-1.5 bg-white/5 border border-white/10 rounded-2xl overflow-x-auto no-scrollbar">
                     {['all', 'pending', 'accepted', 'completed', 'cancelled'].map((val) => (
                         <button
                             key={val}
                             onClick={() => setStatusFilter(val as any)}
-                            className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
+                            className={`px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
                                 statusFilter === val 
-                                ? 'bg-primary text-black' 
-                                : 'text-gray-500 hover:text-white'
+                                ? 'bg-primary text-black shadow-lg shadow-primary/20' 
+                                : 'text-gray-500 hover:text-white hover:bg-white/5'
                             }`}
                         >
                             {val}
@@ -348,43 +431,50 @@ export default function AdminTrades() {
             </div>
 
             {/* View Selector Tabs */}
-            <div className="flex items-center gap-2 p-1.5 bg-white/5 border border-white/10 rounded-2xl w-fit">
+            <div className="flex items-center gap-2 p-1.5 bg-white/5 border border-white/10 rounded-2xl w-full sm:w-fit overflow-x-auto no-scrollbar">
                 <button
                     onClick={() => setActiveView('exchange')}
-                    className={`px-8 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeView === 'exchange'
+                    className={`flex-1 sm:flex-none px-8 py-4 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeView === 'exchange'
                         ? 'bg-primary text-black shadow-lg shadow-primary/20'
                         : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
                 >
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-center gap-2">
                         <ArrowRightLeft className="h-3 w-3" />
                         Intercambios
                     </div>
                 </button>
                 <button
                     onClick={() => setActiveView('direct_sale')}
-                    className={`px-8 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeView === 'direct_sale'
+                    className={`flex-1 sm:flex-none px-8 py-4 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeView === 'direct_sale'
                         ? 'bg-primary text-black shadow-lg shadow-primary/20'
                         : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
                 >
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-center gap-2">
                         <ShoppingBag className="h-3 w-3" />
                         Ventas / Pedidos
                     </div>
                 </button>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
+            <div className="grid grid-cols-1 gap-6">
                 {loading ? (
-                    <div className="py-32 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[2rem] gap-4">
+                    <div className="py-32 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[2.5rem] gap-4">
                         <div className="h-12 w-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-                        <span className="text-xs font-black uppercase tracking-[0.3em] text-gray-500">Sincronizando Trades...</span>
+                        <span className="text-xs font-black uppercase tracking-[0.3em] text-gray-500">Sincronizando Dashboard...</span>
                     </div>
                 ) : filteredTrades.length === 0 ? (
-                    <div className="py-32 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[2rem] space-y-4 text-center">
-                        {activeView === 'exchange' ? <ArrowRightLeft className="h-12 w-12 text-gray-700" /> : <ShoppingBag className="h-12 w-12 text-gray-700" />}
-                        <p className="text-xl font-display font-medium text-gray-500">
-                            No se encontraron resultados para los filtros aplicados.
+                    <div className="py-32 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[2.5rem] space-y-4 text-center px-6">
+                        {activeView === 'exchange' ? <ArrowRightLeft className="h-12 w-12 text-gray-800" /> : <ShoppingBag className="h-12 w-12 text-gray-800" />}
+                        <p className="text-xl font-display font-medium text-gray-600">
+                            No se encontraron resultados.
                         </p>
+                    </div>
+                ) : isMobile ? (
+                    /* Mobile View: Vertical Card List */
+                    <div className="space-y-4">
+                        {filteredTrades.map(trade => (
+                            <MobileTradeCard key={trade.id} trade={trade} />
+                        ))}
                     </div>
                 ) : activeView === 'exchange' ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
