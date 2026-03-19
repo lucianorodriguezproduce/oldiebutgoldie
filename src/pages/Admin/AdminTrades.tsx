@@ -69,12 +69,24 @@ export default function AdminTrades() {
     const [searchParams] = useSearchParams();
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'accepted' | 'completed' | 'cancelled'>('all');
-    const [activeView, setActiveView] = useState<'exchange' | 'direct_sale'>('direct_sale');
+    const [activeTab, setActiveTab] = useState<'b2c' | 'sourcing' | 'negotiations'>('b2c');
+
+    const ADMIN_IDS = ['O5bs8eTZQdwMMQ9P6eDbJyVEZV2', 'MKPlxxi9JENQt0hS3V1QNeF8oOS2', 'oldiebutgoldie'];
 
     // Protocol V77.2: Sync with Notification Center
     useEffect(() => {
         const status = searchParams.get('status');
         const id = searchParams.get('id');
+        const view = searchParams.get('view'); // This 'view' variable is used.
+        
+        // Map 'view' parameter to 'activeTab'
+        if (view === 'exchange' || view === 'admin_negotiation') {
+            setActiveTab('negotiations');
+        } else if (view === 'direct_sale') {
+            setActiveTab('b2c');
+        } else if (view === 'sourcing_request') {
+            setActiveTab('sourcing');
+        }
         
         if (status) {
             // Map payment_confirmed to pending-like if necessary, but here we just pass it or adjust filters
@@ -92,14 +104,37 @@ export default function AdminTrades() {
     
     const filteredTrades = trades.filter(t => {
         const type = t.type || 'exchange';
-        const matchesType = activeView === 'exchange' ? type === 'exchange' : (type === 'direct_sale' || type === 'admin_negotiation');
+        const offeredItemsCount = t.manifest?.offeredItems?.length || 0;
+        const requestedItemsCount = t.manifest?.requestedItems?.length || 0;
+        const isAdminReceiver = ADMIN_IDS.includes(t.participants.receiverId || '');
+        const isAdminSender = ADMIN_IDS.includes(t.participants.senderId || '');
+        const isAdminInvolved = isAdminReceiver || isAdminSender;
+
+        let matchesTab = false;
+        if (activeTab === 'b2c') {
+            // Tab 1: VENTAS DIRECTAS (B2C)
+            // Seller is Admin, Buyer is User, Modalidad is direct_sale (no items offered by user if Admin is receiver)
+            matchesTab = type === 'direct_sale' && isAdminReceiver && offeredItemsCount === 0;
+        } else if (activeTab === 'sourcing') {
+            // Tab 2: PEDIDOS EXTERNOS (Sourcing)
+            matchesTab = type === 'sourcing_request';
+        } else if (activeTab === 'negotiations') {
+            // Tab 3: NEGOCIACIONES Y OFERTAS (C2B)
+            // Admin is part, but user is offering items (sell to admin or exchange)
+            matchesTab = isAdminInvolved && (
+                (isAdminReceiver && offeredItemsCount > 0) || 
+                (isAdminSender && requestedItemsCount > 0) ||
+                (type === 'admin_negotiation')
+            );
+        }
+
         const matchesStatus = statusFilter === 'all' || t.status === statusFilter;
         const matchesSearch = !searchTerm || 
             t.id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             t.participants.senderName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             t.participants.senderId.toLowerCase().includes(searchTerm.toLowerCase());
         
-        return matchesType && matchesStatus && matchesSearch;
+        return matchesTab && matchesStatus && matchesSearch;
     });
 
     // KPI Calculations
@@ -107,7 +142,7 @@ export default function AdminTrades() {
         pendingShipment: trades.filter(t => (t.status === 'completed' || t.status === 'accepted') && t.logistics?.shipping_status !== 'delivered').length,
         openDisputes: trades.filter(t => t.status === 'disputed').length,
         monthlySales: trades
-            .filter(t => (t.status === 'completed' || t.status === 'resolved') && t.timestamp?.toDate().getMonth() === new Date().getMonth())
+            .filter(t => (t.status === 'completed' || t.status === 'resolved' || t.status === 'pending_payment' || t.status === 'payment_reported') && t.timestamp?.toDate().getMonth() === new Date().getMonth())
             .reduce((acc, t) => acc + (t.manifest?.cashAdjustment || 0), 0)
     };
 
@@ -214,7 +249,7 @@ export default function AdminTrades() {
                     receiverId: targetUserEmail // For now using email as proxy for ID if not found, or ideally a real ID
                 },
                 manifest: wizardManifest,
-                type: activeView
+                type: activeTab === 'b2c' ? 'direct_sale' : activeTab === 'sourcing' ? 'sourcing_request' : 'exchange'
             });
 
             if (autoApprove) {
@@ -380,12 +415,14 @@ export default function AdminTrades() {
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div className="space-y-1">
                     <h2 className="text-4xl md:text-6xl font-display font-black text-white uppercase tracking-tighter">
-                        {activeView === 'exchange' ? 'Intercambios' : 'Ventas / Pedidos'}
+                        {activeTab === 'b2c' ? 'Ventas Directas' : activeTab === 'sourcing' ? 'Pedidos Externos' : 'Negociaciones'}
                     </h2>
                     <p className="text-gray-500 font-medium text-lg">
-                        {activeView === 'exchange'
-                            ? 'Resolución de intercambios y conflictos de stock.'
-                            : 'Gestión de pedidos directos y entregas inmediatas.'}
+                        {activeTab === 'b2c'
+                            ? 'Gestión de ventas minoristas de la batea oficial.'
+                            : activeTab === 'sourcing'
+                            ? 'Búsquedas de material por pedido externo.'
+                            : 'Gestión de intercambios y compras a usuarios.'}
                     </p>
                 </div>
                 <button
@@ -393,7 +430,7 @@ export default function AdminTrades() {
                     className="flex items-center gap-3 px-8 py-4 bg-primary text-black rounded-2xl font-black uppercase tracking-widest hover:bg-white transition-all shadow-xl shadow-primary/20"
                 >
                     <PlusCircle className="h-5 w-5" /> 
-                    {activeView === 'exchange' ? 'Iniciar Propuesta' : 'Crear Pedido B2C Manual'}
+                    {activeTab === 'negotiations' ? 'Iniciar Propuesta' : 'Crear Operación Manual'}
                 </button>
             </div>
 
@@ -455,28 +492,39 @@ export default function AdminTrades() {
                 </div>
             </div>
 
-            {/* View Selector Tabs */}
-            <div className="flex items-center gap-2 p-1.5 bg-white/5 border border-white/10 rounded-2xl w-full sm:w-fit overflow-x-auto no-scrollbar">
+            {/* View Selector Tabs (Protocol V80.1) */}
+            <div className="flex items-center gap-2 p-1.5 bg-white/5 border border-white/10 rounded-2xl w-full lg:w-fit overflow-x-auto no-scrollbar">
                 <button
-                    onClick={() => setActiveView('exchange')}
-                    className={`flex-1 sm:flex-none px-8 py-4 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeView === 'exchange'
-                        ? 'bg-primary text-black shadow-lg shadow-primary/20'
-                        : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
-                >
-                    <div className="flex items-center justify-center gap-2">
-                        <ArrowRightLeft className="h-3 w-3" />
-                        Intercambios
-                    </div>
-                </button>
-                <button
-                    onClick={() => setActiveView('direct_sale')}
-                    className={`flex-1 sm:flex-none px-8 py-4 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeView === 'direct_sale'
+                    onClick={() => setActiveTab('b2c')}
+                    className={`flex-1 lg:flex-none px-8 py-4 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeTab === 'b2c'
                         ? 'bg-primary text-black shadow-lg shadow-primary/20'
                         : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
                 >
                     <div className="flex items-center justify-center gap-2">
                         <ShoppingBag className="h-3 w-3" />
-                        Ventas / Pedidos
+                        Ventas Directas (B2C)
+                    </div>
+                </button>
+                <button
+                    onClick={() => setActiveTab('sourcing')}
+                    className={`flex-1 lg:flex-none px-8 py-4 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeTab === 'sourcing'
+                        ? 'bg-primary text-black shadow-lg shadow-primary/20'
+                        : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
+                >
+                    <div className="flex items-center justify-center gap-2">
+                        <Search className="h-3 w-3" />
+                        Pedidos Externos
+                    </div>
+                </button>
+                <button
+                    onClick={() => setActiveTab('negotiations')}
+                    className={`flex-1 lg:flex-none px-8 py-4 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeTab === 'negotiations'
+                        ? 'bg-primary text-black shadow-lg shadow-primary/20'
+                        : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
+                >
+                    <div className="flex items-center justify-center gap-2">
+                        <ArrowRightLeft className="h-3 w-3" />
+                        Negociaciones (C2B)
                     </div>
                 </button>
             </div>
@@ -489,19 +537,19 @@ export default function AdminTrades() {
                     </div>
                 ) : filteredTrades.length === 0 ? (
                     <div className="py-32 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[2.5rem] space-y-4 text-center px-6">
-                        {activeView === 'exchange' ? <ArrowRightLeft className="h-12 w-12 text-gray-800" /> : <ShoppingBag className="h-12 w-12 text-gray-800" />}
+                        {activeTab === 'negotiations' ? <ArrowRightLeft className="h-12 w-12 text-gray-800" /> : <ShoppingBag className="h-12 w-12 text-gray-800" />}
                         <p className="text-xl font-display font-medium text-gray-600">
-                            No se encontraron resultados.
+                            No se encontraron resultados en esta categoría.
                         </p>
                     </div>
                 ) : isMobile ? (
-                    /* Mobile View: Vertical Card List */
+                    /* Mobile View */
                     <div className="space-y-4">
                         {filteredTrades.map(trade => (
                             <MobileTradeCard key={trade.id} trade={trade} />
                         ))}
                     </div>
-                ) : activeView === 'exchange' ? (
+                ) : activeTab === 'negotiations' ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                         {filteredTrades.map(trade => (
                             <motion.div

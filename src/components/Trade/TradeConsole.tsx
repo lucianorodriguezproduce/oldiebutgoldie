@@ -119,16 +119,18 @@ export default function TradeConsole({ trade, onUpdate, onClose }: TradeConsoleP
 
     const handleMarkAsPaid = async () => {
         if (!trade.id) return;
-        if (!window.confirm("¿Confirmar que este pedido ha sido pagado? El estado pasará a COMPLETADO.")) return;
+        if (!window.confirm("¿Confirmar que este pedido ha sido pagado? Esto cerrará la operación y descontará el stock.")) return;
         
-        showLoading("Actualizando estado de pago...");
+        showLoading("Confirmando pago y resolviendo assets...");
         try {
-            await tradeService.updateTradeStatus(trade.id, 'completed');
-            alert("Pedido marcado como PAGADO.");
+            // Protocol V80.1: Linking payment with resolution
+            await tradeService.resolveTrade(trade.id, trade.manifest, { forceExecution: true });
+            alert("Pedido marcado como PAGADO y stock actualizado.");
             onUpdate();
             onClose();
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error marking as paid:", error);
+            alert(`Error crítico en resolución: ${error.message}`);
         } finally {
             hideLoading();
         }
@@ -446,7 +448,7 @@ export default function TradeConsole({ trade, onUpdate, onClose }: TradeConsoleP
                                 </>
                             ) : (
                                 <>
-                                    {(trade.status === 'completed_unpaid' || trade.status === 'accepted') && (isAdmin || isOwner) ? (
+                                    {(trade.status === 'completed_unpaid' || trade.status === 'accepted' || (trade.status === 'pending_payment' && isDirectSale)) && (isAdmin || isOwner) ? (
                                         <button
                                             onClick={handleMarkAsPaid}
                                             className="flex-1 flex items-center justify-center gap-3 py-4 bg-green-500 text-black rounded-2xl font-black uppercase tracking-widest hover:bg-white transition-all shadow-lg shadow-green-500/20"
@@ -456,18 +458,18 @@ export default function TradeConsole({ trade, onUpdate, onClose }: TradeConsoleP
                                     ) : trade.status === 'in_process' && isAdmin ? (
                                         <button
                                             onClick={handleFoundRequest}
-                                            className="flex-1 flex items-center justify-center gap-3 py-4 bg-primary text-black rounded-2xl font-black uppercase tracking-widest hover:bg-white transition-all shadow-lg shadow-primary/20"
+                                            className="flex-1 flex items-center justify-center gap-3 py-4 bg-primary text-black rounded-2xl font-black uppercase tracking-widest hover:bg-white transition-all shadow-xl shadow-primary/20"
                                         >
                                             <CheckCircle2 className="h-5 w-5" /> Pedido Encontrado
                                         </button>
-                                    ) : (
+                                    ) : !isDirectSale ? (
                                         <button
                                             onClick={handleAcceptTrade}
                                             className="flex-1 flex items-center justify-center gap-3 py-4 bg-primary text-black rounded-2xl font-black uppercase tracking-widest hover:bg-white transition-all shadow-lg shadow-primary/20"
                                         >
                                             <CheckCircle2 className="h-5 w-5" /> Aceptar Propuesta
                                         </button>
-                                    )}
+                                    ) : null}
                                     
                                     <button
                                         onClick={() => { setEditedManifest(trade.manifest); setIsEditing(true); }}

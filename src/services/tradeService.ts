@@ -343,7 +343,7 @@ export const tradeService = {
         });
     },
 
-    async resolveTrade(tradeId: string, manifest: Trade['manifest']) {
+    async resolveTrade(tradeId: string, manifest: Trade['manifest'], options?: { forceExecution?: boolean }) {
         const tradeRef = doc(db, COLLECTION_NAME, tradeId);
 
         await runTransaction(db, async (transaction) => {
@@ -403,8 +403,29 @@ export const tradeService = {
             // PHASE 2: ALL WRITES (using cached read data)
             // ═══════════════════════════════════════════════════════
 
-            // --- Process requested items (Receiver -> Sender) ---
-            for (const { ref, snap, itemId, isAdmin } of requestedReads) {
+            // Protocol V80.1: Stricter logic for direct sales resolution.
+            // Direct sales ONLY resolve if forceExecution is true (usually from handleMarkAsPaid).
+            // P2P/Exchange deals resolve normally upon acceptance.
+            const isDirectSale = tradeData.type === 'direct_sale';
+            const isP2P = tradeData.type === 'exchange' || tradeData.type === 'admin_negotiation';
+            const isAdminReceiver = ADMIN_UIDS.includes(tradeData.participants.receiverId || '');
+            const isDirectSaleToAdmin = isDirectSale && isAdminReceiver;
+            
+            const shouldExecuteTransfer = isP2P || (isDirectSale && options?.forceExecution);
+            
+            // Safety break: If it's a direct sale to Admin but NOT forced, we don't transfer assets yet.
+            if (isDirectSaleToAdmin && !options?.forceExecution) {
+                console.log("Blocking atomic resolution for Direct Sale to Admin. Waiting for payment confirmation.");
+                transaction.update(tradeRef, { 
+                    status: 'accepted',
+                    lastUpdated: serverTimestamp()
+                });
+                return;
+            }
+
+            if (shouldExecuteTransfer) {
+                // --- Process requested items (Receiver -> Sender) ---
+                for (const { ref, snap, itemId, isAdmin } of requestedReads) {
                 if (isAdmin) {
                     if (snap.exists()) {
                         const invData = snap.data() as InventoryItem;
@@ -548,6 +569,7 @@ export const tradeService = {
                     }
                 }
             }
+        }
 
             // ═══════════════════════════════════════════════════════
             // PHASE 3: STATUS DETERMINATION
@@ -555,9 +577,13 @@ export const tradeService = {
             
             let finalStatus: Trade['status'] = "completed";
             
-            // If it's a direct sale, mark as completed_unpaid (V23.5)
-            if (tradeData.type === 'direct_sale') {
-                finalStatus = "completed_unpaid";
+            // Protocol V80.0: B2C State Machine
+            if (isDirectSale) {
+                if (options?.forceExecution) {
+                    finalStatus = "completed";
+                } else {
+                    finalStatus = "pending_payment"; // Store ACCEPTED, waiting for payment
+                }
             }
             
             // If it's an admin negotiation for Discogs items, mark as in_process
@@ -808,8 +834,8 @@ export const tradeService = {
         const tradeData = tradeSnap.data() as any;
 
         if (tradeData.status !== 'completed' && tradeData.status !== 'completed_unpaid') {
-            console.log(`[V76.0] Resolving trade stock and assets for: ${tradeId}`);
-            await this.resolveTrade(tradeId, tradeData.manifest);
+            console.log(`[V80.0] Forcing trade stock and asset resolution for B2C: ${tradeId}`);
+            await this.resolveTrade(tradeId, tradeData.manifest, { forceExecution: true });
         }
 
         // 2. Finalize statuses and send messages in a fresh transaction
@@ -911,24 +937,31 @@ export const tradeService = {
 
         // HEALING: Ensure Trade record exists and is synced with master source
         if (!tradeSnap.exists() || (tradeSnap.data() as any).participants?.receiverId !== sellerId) {
-            console.log(`[V43.0] Healing/Creating root trade...`);
+            // Protocol V80.0: Extract price for Economic Adjustment ($0 Bug Fix)
+            const economicAdjustment = (inventorySnap.data() as any)?.logistics?.price || 0;
+            const currency = (inventorySnap.data() as any)?.logistics?.currency || 'ARS';
+
+            console.log(`[V80.0] Healing/Creating root trade with price: ${economicAdjustment}...`);
             await setDoc(tradeRef, scrubData({
                 participants: {
-                    senderId: buyerUid, // Comprador
-                    receiverId: sellerId // Vendedor
+                    senderId: buyerUid,
+                    receiverId: sellerId
                 },
                 type: 'direct_sale',
                 status: ADMIN_UIDS.includes(sellerId) ? 'pending_payment' : 'pending',
-                currentTurn: sellerId, // V47.1: El vendedor debe aceptar
+                currentTurn: sellerId,
                 isPublicOrder: true, 
                 is_admin_offer: ADMIN_UIDS.includes(sellerId),
                 manifest: {
                     requestedItems: [tradeId],
                     offeredItems: [],
+                    cashAdjustment: economicAdjustment, // FIX: Hydrate the price correctly
+                    currency: currency,
                     items: [{
                         id: tradeId,
                         title: title,
-                        cover_image: cover
+                        cover_image: cover,
+                        price: economicAdjustment
                     }]
                 },
                 createdAt: (tradeSnap.exists() ? (tradeSnap.data() as any).createdAt : serverTimestamp()),

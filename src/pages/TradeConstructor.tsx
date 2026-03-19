@@ -154,6 +154,36 @@ export default function TradeConstructor() {
         return () => unsubscribe();
     }, []);
 
+    // Protocol V80.1: Price Hydration (Official Store Items)
+    useEffect(() => {
+        const isAdminReceiver = receiverUid && ADMIN_UIDS.includes(receiverUid);
+        if (!isAdminReceiver) return;
+
+        // Sum prices of store items (Requested)
+        const requestedTotal = Array.from(selectedRequested).reduce((sum, id) => {
+            const item = storeItems.find(i => i.id === id);
+            return sum + (item?.logistics?.price || 0);
+        }, 0);
+
+        // Sum suggested values of offered items (Optional/C2B)
+        const offeredTotal = Array.from(selectedOffered).reduce((sum, id) => {
+            const asset = userAssets.find(a => a.id === id);
+            return sum + (asset?.valuation || 0);
+        }, 0);
+
+        const delta = requestedTotal - offeredTotal;
+
+        if (delta > 0) {
+            setCashAmount(delta.toString());
+            setCashDirection("PAGAR");
+        } else if (delta < 0) {
+            setCashAmount(Math.abs(delta).toString());
+            setCashDirection("RECIBIR");
+        } else {
+            setCashAmount("");
+        }
+    }, [selectedRequested, selectedOffered, receiverUid, storeItems, userAssets]);
+
     // Filtered store items
     const filteredStore = storeSearch
         ? storeItems.filter(item =>

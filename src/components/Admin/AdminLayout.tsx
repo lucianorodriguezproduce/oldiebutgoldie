@@ -33,10 +33,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
     const navItems = [
         { label: "Estadísticas", href: "/admin", icon: LayoutDashboard },
-        { label: "🚀 Ingesta Masiva", href: "/admin/bulk-upload", icon: UploadCloud },
+        { label: "🚚 Ventas / Despachos", href: "/admin/trades?view=direct_sale", icon: ShoppingBag },
+        { label: "🤝 Intercambios P2P", href: "/admin/trades?view=exchange", icon: Handshake },
         { label: "📦 Inventario Pro", href: "/admin/inventory", icon: Package },
-        { label: "🤝 Intercambios", href: "/admin/trades", icon: Handshake },
-        { label: "💎 Colección", href: "/admin/collection", icon: ShoppingBag },
+        { label: "🚀 Ingesta Masiva", href: "/admin/bulk-upload", icon: UploadCloud },
+        { label: "💎 Colección", href: "/admin/collection", icon: Disc },
         { label: "Identidad Marca", href: "/admin/branding", icon: Shield },
         { label: "Permisos", href: "/admin/permissions", icon: Terminal },
         { label: "Editorial Hub", href: "/admin/editorial", icon: Newspaper },

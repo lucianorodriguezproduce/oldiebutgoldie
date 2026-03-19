@@ -105,7 +105,10 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
     };
 
     const lastNegotiation = order.negotiationHistory?.[order.negotiationHistory.length - 1];
-    const requiresAction = context === 'admin' && lastNegotiation?.sender === 'user';
+    const requiresAction = context === 'admin' && (
+        lastNegotiation?.sender === 'user' ||
+        (order.type === 'direct_sale' && order.status === 'pending')
+    );
 
     const handleQuickOffer = async (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -629,7 +632,10 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                                 <button
                                     onClick={async (e) => {
                                         e.stopPropagation();
-                                        if (!window.confirm("¿Aceptar esta propuesta del cliente? Esto completará la orden.")) return;
+                                        const confirmMsg = order.type === 'direct_sale' 
+                                            ? "¿Aceptar esta propuesta? Esto moverá la orden a 'Pendiente de Pago'. El stock se descontará recién al confirmar el pago."
+                                            : "¿Aceptar esta propuesta del cliente? Esto completará la orden y transferirá los activos.";
+                                        if (!window.confirm(confirmMsg)) return;
                                         setIsSubmitting(true);
                                         showLoading("Aceptando propuesta...");
                                         try {

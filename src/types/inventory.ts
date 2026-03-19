@@ -74,7 +74,7 @@ export interface Trade {
     };
     manifest: TradeManifest;
     status: "pending" | "accepted" | "counter_offer" | "completed" | "venta_finalizada" | "completed_unpaid" | "in_process" | "cancelled" | "resolved" | "rejected" | "pending_publish_fee" | "pending_payment" | "payment_reported" | "disputed";
-    type: "direct_sale" | "exchange" | "admin_negotiation" | "p2p_market" | "auction";
+    type: "direct_sale" | "exchange" | "admin_negotiation" | "p2p_market" | "auction" | "sourcing_request";
     isPublicOrder?: boolean; // True if it should appear in the global market
     currentTurn: string; // UID of the user who must decide
     negotiationHistory: TradeManifest[]; // Previous versions of the manifest

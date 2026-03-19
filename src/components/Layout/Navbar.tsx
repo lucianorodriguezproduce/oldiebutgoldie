@@ -103,6 +103,14 @@ export const Navbar = () => {
 
                         {/* Auth / User Section (Desktop only) */}
                         <div className="hidden md:flex items-center gap-4">
+                            {isAdmin && (
+                                <Link 
+                                    to="/admin/trades" 
+                                    className="flex items-center gap-2 bg-primary/10 text-primary px-4 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-primary/20 hover:bg-primary hover:text-black transition-all"
+                                >
+                                    System Pilot
+                                </Link>
+                            )}
                             {user ? (
                                 <div className="flex items-center gap-4">
                                     <Link to="/perfil" className="flex items-center gap-3 bg-white/5 pl-2 pr-4 py-1.5 rounded-full border border-white/5 hover:bg-white/10 transition-all group relative">
@@ -167,6 +175,15 @@ export const Navbar = () => {
                                 {item.label}
                             </Link>
                         ))}
+                        {isAdmin && (
+                            <Link
+                                to="/admin/trades"
+                                className="flex items-center gap-5 text-xl font-black uppercase tracking-tighter p-6 rounded-[2rem] transition-all border text-primary bg-[#0A0A0A] border-primary/20"
+                            >
+                                <ShoppingBag className="h-6 w-6" />
+                                System Pilot
+                            </Link>
+                        )}
                         <div className="mt-auto pt-8 border-t border-white/10 flex flex-col gap-4 pb-12">
                             {user ? (
                                 <>
