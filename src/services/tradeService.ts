@@ -121,6 +121,66 @@ export const tradeService = {
         const docRef = await addDoc(collection(db, COLLECTION_NAME), scrubData(tradeData));
         console.log(`[P2P-FINAL] Orden creada con ID: ${docRef.id}. Vendedor asignado: ${receiverId} | Comprador: ${finalSenderId}`);
 
+        // V78.1: Inicialización Automática de Chat P2P (Inbox V2)
+        if (receiverId && !isListing) {
+            const newChatId = `${docRef.id}_${finalSenderId}`;
+            const p2pChatRef = doc(db, "p2p_chats", newChatId);
+            
+            // Get user data for usernames
+            let buyerUsername = "Comprador";
+            let sellerUsername = "Vendedor";
+            
+            try {
+                const [buyerDoc, sellerDoc] = await Promise.all([
+                    getDoc(doc(db, "users", finalSenderId || "")),
+                    getDoc(doc(db, "users", receiverId || ""))
+                ]);
+
+                if (buyerDoc.exists()) {
+                    const bData = buyerDoc.data();
+                    buyerUsername = bData.username ? (bData.username.startsWith('@') ? bData.username : `@${bData.username}`) : bData.display_name || "Comprador";
+                }
+                if (sellerDoc.exists()) {
+                    const sData = sellerDoc.data();
+                    sellerUsername = sData.username ? (sData.username.startsWith('@') ? sData.username : `@${sData.username}`) : sData.display_name || "Vendedor";
+                }
+            } catch (e) {
+                console.warn("[V78.1-CHAT] Falló fetch de usernames:", e);
+            }
+
+            // Fallback content logic
+            const firstItem = trade.manifest?.items?.[0];
+            const title = firstItem?.title || (trade.manifest?.requestedItems?.length ? `Pedido Store (${trade.manifest.requestedItems.length} ítems)` : "Nuevo Lote");
+            const cover = firstItem?.cover_image || firstItem?.thumbnail || "";
+
+            const chatData = {
+                id: newChatId,
+                tradeId: docRef.id,
+                buyerId: finalSenderId,
+                sellerId: receiverId,
+                participants: [finalSenderId, receiverId],
+                buyerUsername,
+                sellerUsername,
+                title,
+                cover,
+                lastMessage: isDirectSale ? "Compra iniciada" : "Intercambio iniciado",
+                updatedAt: serverTimestamp(),
+                createdAt: serverTimestamp(),
+                status: "active"
+            };
+
+            await setDoc(p2pChatRef, scrubData(chatData));
+
+            // Initial System Message
+            const p2pMessageRef = doc(collection(db, "p2p_chats", newChatId, "messages"));
+            await setDoc(p2pMessageRef, {
+                sender_uid: "system",
+                text: isDirectSale ? `¡Orden de compra creada! Coordinen aquí el pago y envío.` : `¡Propuesta de intercambio enviada! Esperando respuesta.`,
+                timestamp: serverTimestamp(),
+                read_status: false
+            });
+        }
+
         // Tracking DataLayer
         if (tradeData.type === 'admin_negotiation') {
             pushLeadGenerated('c2b_offer', tradeData.manifest?.cashAdjustment || 0, tradeData.manifest?.items?.length || 1, docRef.id);

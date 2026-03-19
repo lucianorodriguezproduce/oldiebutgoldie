@@ -41,7 +41,7 @@ export default function ArchivoItem() {
                 user.displayName || user.email || 'Usuario',
                 ADMIN_UIDS[0] // Route to Admin for sourcing
             );
-            navigate(`/mensajes?chat=${tradeId}`);
+            navigate(`/mensajes?chat=${tradeId}_${user.uid}`);
         } catch (error) {
             console.error("Sourcing failed:", error);
             alert("Hubo un error al procesar tu pedido. Por favor intentá nuevamente.");

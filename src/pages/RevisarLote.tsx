@@ -274,7 +274,7 @@ export default function RevisarLote() {
 
             // V78.0: Redirección automática inmediata al Inbox V2
             if (createdDocs[0]) {
-                const newChatId = createdDocs[0];
+                const newChatId = `${createdDocs[0]}_${uid}`;
                 console.log(`[V78.0] Checkout exitoso. Redirigiendo a chat: ${newChatId}`);
                 setTimeout(() => {
                     navigate(`/mensajes?chat=${newChatId}`);
@@ -462,7 +462,7 @@ export default function RevisarLote() {
                 <div className="flex flex-col items-center gap-4 w-full max-w-sm mx-auto">
                     {submittedOrder && (
                         <button
-                            onClick={() => navigate(`/mensajes?chat=${submittedOrder.id}`)}
+                            onClick={() => navigate(`/mensajes?chat=${submittedOrder.id}_${user?.uid}`)}
                             className="w-full flex items-center justify-center gap-2 bg-primary text-black px-8 py-4 rounded-2xl font-black uppercase text-xs tracking-widest transition-all shadow-lg shadow-primary/20 hover:scale-105"
                         >
                             <MessageCircle className="h-5 w-5" />
