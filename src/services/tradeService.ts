@@ -26,6 +26,7 @@ import type { Trade, InventoryItem, UserAsset } from "@/types/inventory";
 
 import { ADMIN_UIDS } from "@/constants/admin";
 import { scrubData } from "@/utils/firestore";
+import { inventoryService } from "@/services/inventoryService";
 
 const COLLECTION_NAME = "trades";
 
@@ -33,210 +34,226 @@ const COLLECTION_NAME = "trades";
 export const tradeService = {
 
     async createTrade(trade: Omit<Trade, 'id' | 'timestamp' | 'status' | 'currentTurn' | 'negotiationHistory'> & { tradeOrigin?: 'INVENTORY' | 'DISCOGS' }) {
-        // --- ASSET LOCKING: Only lock items for direct sales ---
-        // Exchange trades don't lock items — stock is checked atomically at resolution time.
-        // This allows the same store item to be in multiple pending exchange proposals.
-        const allItems = [...(trade.manifest?.requestedItems || []), ...(trade.manifest?.offeredItems || [])];
+        try {
+            console.log(`[V88.0-AUDIT] Starting createTrade. Origin: ${trade.tradeOrigin} | Type: ${trade.type}`);
+            
+            const allItems = [...(trade.manifest?.requestedItems || []), ...(trade.manifest?.offeredItems || [])];
 
-        // --- ASSET LOCKING ---
-        // Eliminated broad check that caused permission errors for non-admin users.
-        // resolveTrade() performs atomic stock validation during resolution.
+            // --- TYPE DETERMINATION ---
+            const hasNoOfferedItems = (trade.manifest?.offeredItems?.length || 0) === 0;
+            const isDirectSale = trade.tradeOrigin === 'DISCOGS'
+                ? false
+                : trade.tradeOrigin === 'INVENTORY'
+                    ? hasNoOfferedItems
+                    : hasNoOfferedItems;
+            
+            const tradeType = trade.type || (isDirectSale ? "direct_sale" : "exchange");
+            
+            const { tradeOrigin, ...tradeWithoutOrigin } = trade;
+            
+            let receiverId = trade.participants.receiverId;
+            const isListing = trade.isPublicOrder === true && !receiverId;
 
-        // --- TYPE DETERMINATION ---
-        // Direct sale ONLY if origin is INVENTORY and intent is buy (no offeredItems)
-        // Discogs items ALWAYS create exchanges (negotiations), never auto-resolve
-        const hasNoOfferedItems = (trade.manifest?.offeredItems?.length || 0) === 0;
-        const isDirectSale = trade.tradeOrigin === 'DISCOGS'
-            ? false  // Discogs = siempre intercambio
-            : trade.tradeOrigin === 'INVENTORY'
-                ? hasNoOfferedItems  // Inventory + COMPRAR = venta directa
-                : hasNoOfferedItems; // Fallback: comportamiento legacy
-        const tradeType = trade.type || (isDirectSale ? "direct_sale" : "exchange");
-        
-        const { tradeOrigin, ...tradeWithoutOrigin } = trade;
-        
-        // V46 Hard-Link: receiverId is mandatory for P2P. No more Admin fallback.
-        // V53 Saneamiento: receiverId puede ser opcional SOLO si es una publicación pública (Listing).
-        let receiverId = trade.participants.receiverId;
-        const isListing = trade.isPublicOrder === true && !receiverId;
-
-        if (!receiverId && !isListing) {
-            console.error("[V46] createTrade failed: receiverId is mandatory for identity linkage.");
-            throw new Error("SISTEMA_IDENTIDAD_PARTICIPANTE_REQUERIDO");
-        }
-
-        // V78.0: Determinar si es una venta directa al Store ANTES de fijar el estado inicial
-        const isStoreDirectSale = isDirectSale && (ADMIN_UIDS.includes(receiverId || "") || receiverId === 'oldie_but_goldie');
-
-        // FIX: Respect status override (V24.2)
-        let initialStatus = (trade as any).status || "pending";
-        if (isStoreDirectSale && initialStatus === 'pending') {
-            initialStatus = 'pending_payment'; // V78.0: Forzar flujo de pago
-        }
-
-        const currentUserId = auth.currentUser?.uid;
-        const finalSenderId = currentUserId || trade.participants.senderId;
-
-        // V48.0 Zero Trust: Re-validate receiverId against source of truth if it's P2P
-        // V53: Si es un Listing (receiverId null), no sobreescribimos con el owner del item, 
-        // ya que el seller is the sender y el receiver queda libre.
-        const p2pItem = trade.manifest?.items?.find((i: any) => i.source === 'user_asset');
-        const userAssetId = p2pItem?.userAssetId || p2pItem?.id;
-
-        if (userAssetId) {
-            // V53.1 FINAL GUARD: Prohibir Admin como receptor de assets P2P
-            if (ADMIN_UIDS.includes(receiverId || "")) {
-                console.warn("[V53.1-GUARD] Intento de asignar ADMIN_UID como receptor de un User Asset. Corrigiendo a NULL para listing.");
-                receiverId = null;
+            if (!receiverId && !isListing) {
+                throw new Error("SISTEMA_IDENTIDAD_PARTICIPANTE_REQUERIDO");
             }
 
-            if (receiverId) {
-                console.log(`[V48-ZERO-TRUST] Re-validando dueño para asset: ${userAssetId}`);
-                const assetSnap = await getDoc(doc(db, "user_assets", userAssetId));
-                if (assetSnap.exists()) {
-                    const realOwnerId = assetSnap.data().ownerId || assetSnap.data().uid;
-                    if (realOwnerId && realOwnerId !== receiverId) {
-                        console.warn(`[V48-ZERO-TRUST] ¡ATAQUE O FALLO DE IDENTIDAD DETECTADO! UI envió: ${receiverId}, Firestore exige: ${realOwnerId}. Sobreescribiendo.`);
-                        receiverId = realOwnerId;
+            const currentUserId = auth.currentUser?.uid;
+            const finalSenderId = currentUserId || trade.participants.senderId;
+
+            // FASE 2: Enforzamiento "Inventory is King" (Sourcing)
+            let updatedRequestedItems = [...(tradeWithoutOrigin.manifest?.requestedItems || [])];
+            let updatedManifestItems = [...(tradeWithoutOrigin.manifest?.items || [])];
+
+            if (tradeType === 'sourcing_request' && trade.tradeOrigin === 'DISCOGS') {
+                console.log(`[V88.0-SOURCING] Processing sourcing request for ${updatedManifestItems.length} items...`);
+                
+                for (let i = 0; i < updatedManifestItems.length; i++) {
+                    const itemMeta = updatedManifestItems[i];
+                    // Solo procedemos si el item no tiene un ID de inventario local aún
+                    if (itemMeta.source === 'DISCOGS' || !itemMeta.inventoryId) {
+                        try {
+                            console.log(`[V88.0-SOURCING] Creating shadow inventory record for: ${itemMeta.title}`);
+                            const importResult = await inventoryService.importFromDiscogs(itemMeta, {
+                                stock: 0,
+                                price: itemMeta.price || 0,
+                                condition: itemMeta.condition || 'M/NM',
+                                status: 'requested' // Core Rule V88.0
+                            });
+                            
+                            // Vinculamos el trade al nuevo itemId
+                            updatedRequestedItems[i] = importResult.id;
+                            updatedManifestItems[i] = {
+                                ...itemMeta,
+                                inventoryId: importResult.id,
+                                id: importResult.id,
+                                source: 'INVENTORY' // Ahora "es" inventario
+                            };
+                        } catch (err) {
+                            console.error(`[V88.0-SOURCING-ERROR] Failed to create shadow item for ${itemMeta.title}:`, err);
+                        }
                     }
                 }
             }
-        }
 
-        const normalizedManifest = {
-            ...tradeWithoutOrigin.manifest,
-            items: tradeWithoutOrigin.manifest?.items?.map((it: any) => ({
+            // Normalización final de Payloads (Dual-Write & Metadata Persistence)
+            const normalizedManifestItems = updatedManifestItems.map((it: any) => ({
                 ...it,
-                thumb_url: it.thumb_url || it.thumbnail || it.cover_image || ''
-            })) || []
-        };
+                thumb_url: it.thumb_url || it.thumbnail || it.cover_image || it.media?.thumbnail || '',
+                title: it.title || it.metadata?.title || 'Sin Título',
+                artist: it.artist || it.metadata?.artist || 'Varios'
+            }));
 
-        // Protocol V87.0: Backend Inspection Logs
-        if (isStoreDirectSale) {
-            console.log(`[V87.0-B2C] Creando manifest para venta directa:`, {
-                itemsCount: normalizedManifest.items.length,
-                firstItemTitle: normalizedManifest.items[0]?.title || 'VACÍO',
-                hasThumb: !!normalizedManifest.items[0]?.thumb_url
-            });
-            
-            // Forzado de metadata si viene vacío (Healer)
-            if (normalizedManifest.items.length === 0 && trade.manifest?.requestedItems?.length > 0) {
-                console.warn(`[V87.0-B2C] ¡DETECTADO PAYLOAD VACÍO! Intentando inyección de emergencia...`);
-                // Note: Full hydration would require async fetch, but we can at least ensure the array isn't null
-            }
-        }
-
-        const tradeData = {
-            ...tradeWithoutOrigin,
-            manifest: normalizedManifest,
-            participants: {
-                ...trade.participants,
-                senderId: finalSenderId, // V47.1: Forzado al usuario actual
-                receiverId
-            },
-            type: tradeType,
-            isPublicOrder: trade.isPublicOrder || false,
-            status: initialStatus as any,
-            currentTurn: receiverId, // V47.1: El vendedor debe aceptar
-            negotiationHistory: [],
-            createdAt: serverTimestamp(),
-            timestamp: serverTimestamp()
-        };
-        const docRef = await addDoc(collection(db, COLLECTION_NAME), scrubData(tradeData));
-        console.log(`[P2P-FINAL] Orden creada con ID: ${docRef.id}. Vendedor asignado: ${receiverId} | Comprador: ${finalSenderId}`);
-
-        // V78.1: Inicialización Automática de Chat P2P (Inbox V2)
-        if (receiverId && !isListing) {
-            const newChatId = `${docRef.id}_${finalSenderId}`;
-            const p2pChatRef = doc(db, "p2p_chats", newChatId);
-            
-            // Get user data for usernames
-            let buyerUsername = "Comprador";
-            let sellerUsername = "Vendedor";
-            
-            try {
-                const [buyerDoc, sellerDoc] = await Promise.all([
-                    getDoc(doc(db, "users", finalSenderId || "")),
-                    getDoc(doc(db, "users", receiverId || ""))
-                ]);
-
-                if (buyerDoc.exists()) {
-                    const bData = buyerDoc.data();
-                    buyerUsername = bData.username ? (bData.username.startsWith('@') ? bData.username : `@${bData.username}`) : bData.display_name || "Comprador";
-                }
-                if (sellerDoc.exists()) {
-                    const sData = sellerDoc.data();
-                    sellerUsername = sData.username ? (sData.username.startsWith('@') ? sData.username : `@${sData.username}`) : sData.display_name || "Vendedor";
-                }
-            } catch (e) {
-                console.warn("[V78.1-CHAT] Falló fetch de usernames:", e);
-            }
-
-            // Fallback content logic
-            const firstItem = trade.manifest?.items?.[0];
-            const title = firstItem?.title || (trade.manifest?.requestedItems?.length ? `Pedido Store (${trade.manifest.requestedItems.length} ítems)` : "Nuevo Lote");
-            const cover = firstItem?.cover_image || firstItem?.thumbnail || "";
-
-            const chatData = {
-                id: newChatId,
-                tradeId: docRef.id,
-                buyerId: finalSenderId,
-                sellerId: receiverId,
-                participants: [finalSenderId, receiverId],
-                buyerUsername,
-                sellerUsername,
-                title,
-                cover,
-                lastMessage: isDirectSale ? "Compra iniciada" : "Intercambio iniciado",
-                updatedAt: serverTimestamp(),
-                createdAt: serverTimestamp(),
-                status: "active"
+            const normalizedManifest = {
+                ...tradeWithoutOrigin.manifest,
+                requestedItems: updatedRequestedItems,
+                items: normalizedManifestItems
             };
 
-            await setDoc(p2pChatRef, scrubData(chatData));
+            // FASE 3: Enforzamiento de Snapshots B2C
+            const isStoreDirectSale = tradeType === 'direct_sale' && (ADMIN_UIDS.includes(receiverId || "") || receiverId === 'oldie_but_goldie');
 
-            // Protocol V84.0: Dynamic text and automatic payment CTA for B2C
-            let initialText = isStoreDirectSale 
-                ? `¡Orden de compra creada! Coordinen aquí el pago y envío.` 
-                : (tradeType === 'sourcing_request'
-                    ? `Pedido de búsqueda ingresado. El Administrador verificará disponibilidad.`
-                    : (tradeType === 'admin_negotiation'
-                        ? `Oferta C2B ingresada: El usuario solicita $${(trade.manifest?.cashAdjustment || 0).toLocaleString()} por este lote.`
-                        : `¡Propuesta de intercambio enviada! Esperando respuesta.`)
-                  );
-
-            const systemMessage: any = {
-                sender_uid: "system",
-                text: initialText,
-                timestamp: serverTimestamp(),
-                read_status: false
-            };
-
-            // Protocol V84.0: RAMA 1 - Auto-CTA for Direct Sales
             if (isStoreDirectSale) {
-                systemMessage.is_payment_cta = true;
-                systemMessage.payment_amount = trade.manifest?.cashAdjustment || 0;
+                console.log(`[V88.0-B2C-SNAPSHOT] Verifying metadata for direct sale. Items count: ${normalizedManifest.items.length}`);
+                if (normalizedManifest.items.length === 0) {
+                    console.warn(`[V88.0-FATAL] Payload vacío detectado en venta directa B2C!`);
+                } else {
+                    console.log(`[V88.0-B2C-OK] First item: ${normalizedManifest.items[0].title} | Thumb: ${!!normalizedManifest.items[0].thumb_url}`);
+                }
             }
 
-            const messageDocRef = doc(collection(db, "p2p_chats", newChatId, "messages"));
-            await setDoc(messageDocRef, scrubData(systemMessage));
-        }
+            let initialStatus = (trade as any).status || "pending";
+            if (isStoreDirectSale && initialStatus === 'pending') {
+                initialStatus = 'pending_payment';
+            }
 
-        // Tracking DataLayer
-        if (tradeData.type === 'admin_negotiation') {
-            pushLeadGenerated('c2b_offer', tradeData.manifest?.cashAdjustment || 0, tradeData.manifest?.items?.length || 1, docRef.id);
-        }
+            const tradeData = {
+                ...tradeWithoutOrigin,
+                manifest: normalizedManifest,
+                participants: {
+                    ...trade.participants,
+                    senderId: finalSenderId,
+                    receiverId
+                },
+                type: tradeType,
+                isPublicOrder: trade.isPublicOrder || false,
+                status: initialStatus as any,
+                currentTurn: receiverId,
+                negotiationHistory: [],
+                createdAt: serverTimestamp(),
+                timestamp: serverTimestamp()
+            };
 
-        // V78.0: Se elimina la auto-resolución imperativa para forzar el flujo de chat/pago
-        if (isStoreDirectSale) {
-            console.log(`[V78.0] Tienda: Transacción registrada como ${initialStatus}. Esperando pago.`);
-        } else if (isDirectSale) {
-            console.log(`[batea] P2P Direct sale created: ${docRef.id}. Waiting for acceptance/resolution.`);
-        } else {
-            console.log(`[batea] Exchange/negotiation created: ${docRef.id} (origin: ${tradeOrigin || 'legacy'})`);
-        }
+            // AUDITORÍA FINAL ANTES DE GUARDAR
+            console.log(`[V88.0-FINAL-PAYLOAD] Persisting Trade ${tradeType}... Metadata check:`, {
+                hasItems: !!tradeData.manifest.items,
+                itemsCount: tradeData.manifest.items?.length,
+                manifest: JSON.stringify(tradeData.manifest).substring(0, 500)
+            });
 
-        return docRef.id;
+            const docRef = await addDoc(collection(db, COLLECTION_NAME), scrubData(tradeData));
+            console.log(`[V88.0-SUCCESS] Trade persisted with ID: ${docRef.id}`);
+
+            // V78.1: Inicialización Automática de Chat P2P (Inbox V2)
+            if (receiverId && !isListing) {
+                const newChatId = `${docRef.id}_${finalSenderId}`;
+                const p2pChatRef = doc(db, "p2p_chats", newChatId);
+                
+                // Get user data for usernames
+                let buyerUsername = "Comprador";
+                let sellerUsername = "Vendedor";
+                
+                try {
+                    const [buyerDoc, sellerDoc] = await Promise.all([
+                        getDoc(doc(db, "users", finalSenderId || "")),
+                        getDoc(doc(db, "users", receiverId || ""))
+                    ]);
+
+                    if (buyerDoc.exists()) {
+                        const bData = buyerDoc.data();
+                        buyerUsername = bData.username ? (bData.username.startsWith('@') ? bData.username : `@${bData.username}`) : bData.display_name || "Comprador";
+                    }
+                    if (sellerDoc.exists()) {
+                        const sData = sellerDoc.data();
+                        sellerUsername = sData.username ? (sData.username.startsWith('@') ? sData.username : `@${sData.username}`) : sData.display_name || "Vendedor";
+                    }
+                } catch (e) {
+                    console.warn("[V78.1-CHAT] Falló fetch de usernames:", e);
+                }
+
+                // Fallback content logic
+                const firstItem = normalizedManifest.items[0];
+                const title = firstItem?.title || (normalizedManifest.requestedItems?.length ? `Pedido Store (${normalizedManifest.requestedItems.length} ítems)` : "Nuevo Lote");
+                const cover = firstItem?.thumb_url || firstItem?.thumbnail || "";
+
+                const chatData = {
+                    id: newChatId,
+                    tradeId: docRef.id,
+                    buyerId: finalSenderId,
+                    sellerId: receiverId,
+                    participants: [finalSenderId, receiverId],
+                    buyerUsername,
+                    sellerUsername,
+                    title,
+                    cover,
+                    lastMessage: isDirectSale ? "Compra iniciada" : "Intercambio iniciado",
+                    updatedAt: serverTimestamp(),
+                    createdAt: serverTimestamp(),
+                    status: "active"
+                };
+
+                await setDoc(p2pChatRef, scrubData(chatData));
+
+                // Protocol V84.0: Dynamic text and automatic payment CTA for B2C
+                let initialText = isStoreDirectSale 
+                    ? `¡Orden de compra creada! Coordinen aquí el pago y envío.` 
+                    : (tradeType === 'sourcing_request'
+                        ? `Pedido de búsqueda ingresado. El Administrador verificará disponibilidad.`
+                        : (tradeType === 'admin_negotiation'
+                            ? `Oferta C2B ingresada: El usuario solicita $${(trade.manifest?.cashAdjustment || 0).toLocaleString()} por este lote.`
+                            : `¡Propuesta de intercambio enviada! Esperando respuesta.`)
+                      );
+
+                const systemMessage: any = {
+                    sender_uid: "system",
+                    text: initialText,
+                    timestamp: serverTimestamp(),
+                    read_status: false
+                };
+
+                // Protocol V84.0: RAMA 1 - Auto-CTA for Direct Sales
+                if (isStoreDirectSale) {
+                    systemMessage.is_payment_cta = true;
+                    systemMessage.payment_amount = trade.manifest?.cashAdjustment || 0;
+                }
+
+                const messageDocRef = doc(collection(db, "p2p_chats", newChatId, "messages"));
+                await setDoc(messageDocRef, scrubData(systemMessage));
+            }
+
+            // Tracking DataLayer
+            if (tradeData.type === 'admin_negotiation') {
+                pushLeadGenerated('c2b_offer', tradeData.manifest?.cashAdjustment || 0, tradeData.manifest?.items?.length || 1, docRef.id);
+            }
+
+            // V78.0: Final Logs
+            if (isStoreDirectSale) {
+                console.log(`[V88.0-B2C] Tienda: Transacción registrada como ${initialStatus}. Esperando pago.`);
+            } else if (isDirectSale) {
+                console.log(`[V88.0-P2P] P2P Direct sale created: ${docRef.id}. Waiting for acceptance/resolution.`);
+            } else {
+                console.log(`[V88.0-EXCHANGE] Exchange/negotiation created: ${docRef.id} (origin: ${trade.tradeOrigin || 'legacy'})`);
+            }
+
+            return docRef.id;
+
+        } catch (error) {
+            console.error(`[V88.0-FATAL] createTrade crasheó estrepitosamente:`, error);
+            if (error instanceof Error) {
+                console.error(`Stack trace completo:`, error.stack);
+            }
+            throw error;
+        }
     },
 
     async counterTrade(tradeId: string, newManifest: Trade['manifest'], myUid: string, isAdminForce: boolean = false) {

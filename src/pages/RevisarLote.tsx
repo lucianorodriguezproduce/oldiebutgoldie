@@ -140,7 +140,10 @@ export default function RevisarLote() {
                 }
 
                 if (discogsItems.length > 0) {
-                    const importedDiscogsIds = await Promise.all(discogsItems.map(async (item) => {
+                    const hydratedItems: any[] = [];
+                    const discogsIds: string[] = [];
+
+                    for (const item of discogsItems) {
                         const itemId = item.id.toString();
                         let fullData: any = item;
                         try {
@@ -155,21 +158,28 @@ export default function RevisarLote() {
                                 fullData = await discogsService.getReleaseDetails(itemId);
                             }
                         } catch (e) {
-                            console.warn(`[Lote-Hydration] Falló hidratación para ${item.title} (ID: ${itemId}, Type: ${item.type}), usando data del lote.`);
+                            console.warn(`[Lote-Hydration] Falló hidratación para ${item.title}, usando data básica.`);
                         }
 
-                        return await inventoryService.importFromDiscogs(fullData as any, {
-                            stock: 0,
+                        discogsIds.push(itemId);
+                        hydratedItems.push({
+                            ...fullData,
+                            id: itemId,
+                            type: item.type,
+                            source: 'DISCOGS', // Indicar al backend que debe procesar
                             price: item.price || 0,
-                            condition: item.condition,
-                            status: 'archived'
+                            thumbnail: fullData.images?.[0]?.uri || (item as any).thumbnail || (item as any).thumb_url || "",
+                            title: fullData.title,
+                            artist: fullData.artists?.[0]?.name || fullData.artist || item.artist || "Desconocido",
+                            format: fullData.formats?.[0]?.name || fullData.format || item.format || "Vinyl"
                         });
-                    }));
+                    }
 
                     const discogsTradeId = await tradeService.createTrade({
                         participants: { senderId: uid, receiverId: ADMIN_UIDS[0] },
                         manifest: {
-                            requestedItems: importedDiscogsIds,
+                            requestedItems: discogsIds,
+                            items: hydratedItems, // Inyectar metadata snapshot
                             offeredItems: [],
                             cashAdjustment: totalEstimated,
                             currency: 'ARS'
@@ -186,7 +196,9 @@ export default function RevisarLote() {
             // 2. Logic for PEDIR (External items - Unified via Trades V23.5)
             if (action === 'PEDIR') {
                 const hydratedItems: any[] = [];
-                const importedDiscogsIds = await Promise.all(discogsItems.map(async (item) => {
+                const discogsIds: string[] = [];
+
+                for (const item of discogsItems) {
                     const itemId = item.id.toString();
                     let fullData: any = item;
                     try {
@@ -200,40 +212,32 @@ export default function RevisarLote() {
                         } else {
                             fullData = await discogsService.getReleaseDetails(itemId);
                         }
-                        
-                        // Hydrate metadata for manifest (Phase V83.0)
-                        hydratedItems.push({
-                            ...fullData,
-                            id: itemId,
-                            type: item.type,
-                            price: item.price || 0,
-                            thumbnail: fullData.images?.[0]?.uri || (item as any).thumbnail || (item as any).thumb_url || "",
-                            title: fullData.title,
-                            artist: fullData.artists?.[0]?.name || fullData.artist || item.artist || "Desconocido",
-                            format: fullData.formats?.[0]?.name || fullData.format || item.format || "Vinyl"
-                        });
                     } catch (e) {
-                        console.warn(`[Lote-Hydration] Falló hidratación para ${item.title} (ID: ${itemId}, Type: ${item.type}), usando data del lote.`);
-                        hydratedItems.push(item);
+                        console.warn(`[Lote-Hydration] Falló hidratación para ${item.title}, usando data básica.`);
                     }
 
-                    // Importar a inventario (archived) para que "viaje al archivo" (Protocolo V21.1)
-                    return await inventoryService.importFromDiscogs(fullData as any, {
-                        stock: 0,
+                    discogsIds.push(itemId);
+                    hydratedItems.push({
+                        ...fullData,
+                        id: itemId,
+                        type: item.type,
+                        source: 'DISCOGS', // Indicar al backend que debe procesar
                         price: item.price || 0,
-                        condition: item.condition,
-                        status: 'archived'
+                        thumbnail: fullData.images?.[0]?.uri || (item as any).thumbnail || (item as any).thumb_url || "",
+                        title: fullData.title,
+                        artist: fullData.artists?.[0]?.name || fullData.artist || item.artist || "Desconocido",
+                        format: fullData.formats?.[0]?.name || fullData.format || item.format || "Vinyl"
                     });
-                }));
+                }
 
                 const tradeId = await tradeService.createTrade({
                     participants: { senderId: uid, receiverId: ADMIN_UIDS[0] },
                     manifest: {
-                        requestedItems: importedDiscogsIds,
+                        requestedItems: discogsIds,
+                        items: hydratedItems, // Core Fix V83.0: Injecting Meta
                         offeredItems: [],
                         cashAdjustment: calculatedTotal,
-                        currency: 'ARS',
-                        items: hydratedItems // Core Fix V83.0: Injecting Meta
+                        currency: 'ARS'
                     },
                     type: 'sourcing_request', // Core Fix V83.0: Strict Type
                     isPublicOrder: false,

@@ -314,7 +314,8 @@ export const inventoryService = {
                 ...(isGoldenSelection && { is_golden_selection: isGoldenSelection }),
                 ...(integrityWarning && { status_warning: integrityWarning }),
                 bpm: finalBpm,
-                key: finalKey
+                key: finalKey,
+                isVisible: logistics.status === 'requested' ? false : (discogsData.isVisible !== undefined ? discogsData.isVisible : true)
             },
             media: {
                 thumbnail: discogsData.thumb || "",

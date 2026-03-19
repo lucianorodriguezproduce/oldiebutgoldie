@@ -20,6 +20,7 @@ export interface InventoryItem {
         notes?: string;
         is_golden_selection?: boolean;
         status_warning?: string;
+        isVisible?: boolean;
     };
     media: {
         thumbnail: string;
@@ -33,7 +34,7 @@ export interface InventoryItem {
         stock: number;
         price: number;
         condition: string;
-        status: "active" | "sold_out" | "archived";
+        status: "active" | "sold_out" | "archived" | "requested";
         internal_category?: string;
     };
     items?: {
