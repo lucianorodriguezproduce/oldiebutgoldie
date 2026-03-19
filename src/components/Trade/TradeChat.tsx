@@ -438,7 +438,7 @@ export default function TradeChat({ tradeId, currentUser, trade, otherParticipan
                                     {msg.text}
                                     
                                     {/* Protocol V76.0: Payment CTA Card */}
-                                    {(msg as any).is_payment_cta && isComprador && !isCompleted && trade?.status !== 'payment_reported' && (
+                                    {(msg as any).is_payment_cta && isComprador && !isAdmin && !isCompleted && trade?.status !== 'payment_reported' && (
                                         <div className="mt-4 p-4 bg-black/40 border border-white/10 rounded-2xl space-y-3">
                                             <div className="flex items-center justify-between">
                                                 <span className="text-[10px] font-black uppercase tracking-widest text-primary">Monto Total</span>

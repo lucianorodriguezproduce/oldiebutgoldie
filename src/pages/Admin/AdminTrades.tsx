@@ -99,8 +99,18 @@ export default function AdminTrades() {
         
         if (id) {
             setSearchTerm(id);
+            // Protocol V81.1: Auto-select if found in currently loaded trades
+            const trade = trades.find(t => t.id === id);
+            if (trade) {
+                setSelectedTrade(trade);
+            } else if (!loading) {
+                // If not in current list, try to fetch it directly
+                tradeService.getTradeById(id).then(t => {
+                   if (t) setSelectedTrade(t as Trade);
+                });
+            }
         }
-    }, [searchParams]);
+    }, [searchParams, trades, loading]);
     
     const filteredTrades = trades.filter(t => {
         const type = t.type || 'exchange';
@@ -117,7 +127,7 @@ export default function AdminTrades() {
             matchesTab = type === 'direct_sale' && isAdminReceiver && offeredItemsCount === 0;
         } else if (activeTab === 'sourcing') {
             // Tab 2: PEDIDOS EXTERNOS (Sourcing)
-            matchesTab = type === 'sourcing_request';
+            matchesTab = type === 'sourcing_request' || (type === 'admin_negotiation' && requestedItemsCount > 0 && offeredItemsCount === 0);
         } else if (activeTab === 'negotiations') {
             // Tab 3: NEGOCIACIONES Y OFERTAS (C2B)
             // Admin is part, but user is offering items (sell to admin or exchange)
@@ -186,54 +196,65 @@ export default function AdminTrades() {
     };
 
     const resolveItemDetails = async (newTrades: Trade[]) => {
-        const allItemIds = new Set<string>();
-        newTrades.forEach(t => {
-            if (t.manifest) {
-                t.manifest.offeredItems.forEach((id: string) => allItemIds.add(id));
-                t.manifest.requestedItems.forEach((id: string) => allItemIds.add(id));
-            }
-        });
-
         const details: Record<string, any> = { ...itemDetails };
 
-        // Seed from manifest if possible
+        // 1. Seed from manifest strictly (highest priority for external items)
         newTrades.forEach(t => {
             if (t.manifest?.items && Array.isArray(t.manifest.items)) {
                 t.manifest.items.forEach((item: any) => {
-                    const itemId = item.userAssetId || item.id;
+                    const itemId = item.userAssetId || item.id || item.discoId;
                     if (itemId && !details[itemId]) {
                         details[itemId] = {
                             id: itemId,
-                            metadata: { title: item.title || 'Sin Título', artist: item.artist || 'Sin Artista' },
-                            media: { thumbnail: item.cover_image || '' },
-                            logistics: { price: item.price || 0 }
+                            metadata: { 
+                                title: item.title || item.metadata?.title || 'Sin Título', 
+                                artist: item.artist || item.metadata?.artist || 'Sin Artista' 
+                            },
+                            media: { thumbnail: item.cover_image || item.media?.thumbnail || '' },
+                            logistics: { price: item.price || item.valuation || 0 }
                         };
                     }
                 });
             }
         });
 
-        // Resolve missing IDs
+        // 2. Identify missing IDs that weren't in manifest
+        const allItemIds = new Set<string>();
+        newTrades.forEach(t => {
+            if (t.manifest) {
+                t.manifest.offeredItems.forEach((id: string) => { if(id) allItemIds.add(id); });
+                t.manifest.requestedItems.forEach((id: string) => { if(id) allItemIds.add(id); });
+            }
+        });
+
         const missingIds = Array.from(allItemIds).filter(id => !details[id]);
+
         if (missingIds.length > 0) {
             await Promise.all(missingIds.map(async (id: string) => {
-                const item = await inventoryService.getItemById(id);
-                if (item) {
-                    details[id] = item;
-                } else {
-                    const asset = await userAssetService.getAssetById(id);
-                    if (asset) {
-                        details[id] = {
-                            id: asset.id,
-                            metadata: asset.metadata,
-                            media: asset.media,
-                            logistics: { price: asset.valuation || 0 }
-                        };
+                try {
+                    // Try inventory
+                    const inventoryItem = await inventoryService.getItemById(id).catch(() => null);
+                    if (inventoryItem) {
+                        details[id] = inventoryItem;
+                    } else {
+                        // Try user assets
+                        const asset = await userAssetService.getAssetById(id).catch(() => null);
+                        if (asset) {
+                            details[id] = {
+                                id: asset.id,
+                                metadata: asset.metadata,
+                                media: asset.media,
+                                logistics: { price: asset.valuation || 0 }
+                            };
+                        }
                     }
+                } catch (e) {
+                    console.error(`Failed to resolve item ${id}`, e);
                 }
             }));
-            setItemDetails(prev => ({ ...prev, ...details }));
         }
+        
+        setItemDetails(details);
     };
 
     const fetchTrades = initialLoad;

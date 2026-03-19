@@ -776,15 +776,22 @@ export const tradeService = {
                 paymentRequestedAt: serverTimestamp()
             });
 
-            // 2. Send System CTA Message
-            const newMessageRef = doc(messagesRef);
-            transaction.set(newMessageRef, {
-                sender_uid: "system",
-                text: `El Administrador ha fijado el precio final en $${amount.toLocaleString()}. Por favor, procede al pago para finalizar la orden.`,
-                is_payment_cta: true,
-                payment_amount: amount,
+            // 3. Notification for Buyer (Protocol V81.1)
+            const tradeSnap = await transaction.get(tradeRef);
+            const tradeData = tradeSnap.data() as any;
+            const buyerId = tradeData.participants.senderId;
+            
+            const notifRef = doc(collection(db, "notifications"));
+            transaction.set(notifRef, {
+                uid: buyerId,
+                user_id: buyerId,
+                title: "Pago solicitado 💸",
+                message: `El Administrador ha fijado el precio en $${amount.toLocaleString()}. Procede al pago.`,
+                read: false,
                 timestamp: serverTimestamp(),
-                read_status: false
+                order_id: tradeId,
+                type: "order",
+                link: `/mensajes?chat=${chatId}`
             });
         });
     },
@@ -815,6 +822,24 @@ export const tradeService = {
                 timestamp: serverTimestamp(),
                 read_status: false,
                 is_alert: true
+            });
+
+            // 3. Notification for Admin/Seller (Protocol V81.1)
+            const tradeSnap = await transaction.get(tradeRef);
+            const tradeData = tradeSnap.data() as any;
+            const sellerId = tradeData.participants.receiverId;
+
+            const adminNotifRef = doc(collection(db, "notifications"));
+            transaction.set(adminNotifRef, {
+                uid: sellerId,
+                user_id: sellerId,
+                title: "Pago reportado 💰",
+                message: `El comprador ha reportado el pago vía ${methodLabel}.`,
+                read: false,
+                timestamp: serverTimestamp(),
+                order_id: tradeId,
+                type: "order",
+                link: `/admin/trades?id=${tradeId}&status=payment_reported`
             });
         });
     },
@@ -938,8 +963,10 @@ export const tradeService = {
         // HEALING: Ensure Trade record exists and is synced with master source
         if (!tradeSnap.exists() || (tradeSnap.data() as any).participants?.receiverId !== sellerId) {
             // Protocol V80.0: Extract price for Economic Adjustment ($0 Bug Fix)
-            const economicAdjustment = (inventorySnap.data() as any)?.logistics?.price || 0;
-            const currency = (inventorySnap.data() as any)?.logistics?.currency || 'ARS';
+            const inventoryPrice = (inventorySnap.data() as any)?.logistics?.price;
+            const assetValuation = (assetSnap.data() as any)?.valuation;
+            const economicAdjustment = inventoryPrice || assetValuation || 0;
+            const currency = (inventorySnap.data() as any)?.logistics?.currency || (assetSnap.data() as any)?.currency || 'ARS';
 
             console.log(`[V80.0] Healing/Creating root trade with price: ${economicAdjustment}...`);
             await setDoc(tradeRef, scrubData({
