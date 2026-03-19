@@ -62,6 +62,11 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
     const orderType = isAdminNegotiation ? (isSale ? 'sell' : 'buy') : (order?.type || 'buy');
 
     const { user, dbUser, isAdmin } = useAuth();
+    const isStoreDirectSale = order?.type === 'direct_sale' && (
+        !order.participants?.receiverId || 
+        ADMIN_UIDS.includes(order.participants.receiverId) || 
+        order.participants.receiverId === 'admin'
+    );
     const { showLoading, hideLoading } = useLoading();
     const [isExpanded, setIsExpanded] = useState(false);
     const [quickOffer, setQuickOffer] = useState("");
@@ -415,9 +420,9 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                             </span>
                         )}
                         {(isBatch || order.is_admin_offer || isDirectSaleP2P) && (
-                            (order.is_admin_offer || ADMIN_UIDS.includes(order.user_id) || isAdminEmail(order.user_email)) && !isDirectSaleP2P ? (
+                            ((order.is_admin_offer || ADMIN_UIDS.includes(order.user_id) || isAdminEmail(order.user_email)) && !isDirectSaleP2P) || isStoreDirectSale ? (
                                 <span className="px-3 py-1 rounded-full bg-gradient-to-r from-primary to-primary/60 text-black text-[10px] font-black uppercase tracking-widest shadow-[0_0_20px_rgba(255,184,0,0.4)] flex items-center gap-1.5 border border-white/20">
-                                    <span className="text-sm">🌟</span> {TEXTS.global.badges.storeObg}
+                                    <span className="text-sm">🌟</span> {isStoreDirectSale ? "Compra Oficial en OBG" : TEXTS.global.badges.storeObg}
                                 </span>
                             ) : isDirectSaleP2P ? (
                                 <span className="px-2 py-0.5 rounded-full bg-primary/20 border border-primary/50 text-primary text-[9px] font-black uppercase tracking-widest shadow-lg shadow-primary/10">
@@ -438,7 +443,9 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
 
                     <div className="flex flex-col">
                         <h3 className={`text-xl md:text-2xl font-display font-black text-white uppercase tracking-tight truncate ${context !== 'public' ? 'group-hover:text-primary transition-colors' : ''}`}>
-                            {artist || album}
+                            {context === 'public' && isStoreDirectSale 
+                                ? `${order.user_name || 'Alguien'} realizó una compra oficial en OBG`
+                                : (artist || album)}
                         </h3>
                         {album && artist && (
                             <h4 className="text-sm font-bold text-gray-400 uppercase tracking-widest truncate mt-0.5 opacity-80">

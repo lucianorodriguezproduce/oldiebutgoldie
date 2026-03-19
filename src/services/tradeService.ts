@@ -103,8 +103,17 @@ export const tradeService = {
             }
         }
 
+        const normalizedManifest = {
+            ...tradeWithoutOrigin.manifest,
+            items: tradeWithoutOrigin.manifest?.items?.map((it: any) => ({
+                ...it,
+                thumb_url: it.thumb_url || it.thumbnail || it.cover_image || ''
+            }))
+        };
+
         const tradeData = {
             ...tradeWithoutOrigin,
+            manifest: normalizedManifest,
             participants: {
                 ...trade.participants,
                 senderId: finalSenderId, // V47.1: Forzado al usuario actual
@@ -795,7 +804,7 @@ export const tradeService = {
                 updatedAt: serverTimestamp()
             });
 
-            // 2. Core Fix V84.0: Dispatch UI CTA Card
+            // 2. Core Fix V86.0: Dispatch UI CTA Card with standardized schema
             const newMessageRef = doc(messagesRef);
             transaction.set(newMessageRef, {
                 sender_uid: "system",
@@ -1026,6 +1035,7 @@ export const tradeService = {
                         title: title,
                         artist: (inventorySnap.data() as any)?.metadata?.artist || (assetSnap.data() as any)?.metadata?.artist || 'Varios',
                         cover_image: cover,
+                        thumb_url: cover, // V86.0: Ensure dual-write persistence
                         format: (inventorySnap.data() as any)?.metadata?.format_description || (assetSnap.data() as any)?.metadata?.format_description || 'Vinyl',
                         price: economicAdjustment
                     }]
