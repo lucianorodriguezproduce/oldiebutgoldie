@@ -62,7 +62,7 @@ export default function DirectPurchaseModal({ isOpen, onClose, order }: DirectPu
             }
 
             // Usamos el nuevo método de consulta en lugar de compra directa
-            const tradeId = await tradeService.startInquiry(order.id, user.uid, dbUser.username, sellerId);
+            const tradeId = await tradeService.startInquiry(order.id, user.uid, dbUser.username, sellerId, meta);
             onClose();
             // Redirect to messages instead of profile
             navigate(`/mensajes?chat=${tradeId}`);

@@ -119,6 +119,15 @@ export default function RevisarLote() {
                             participants: { senderId: uid, receiverId: sellerId },
                             manifest: {
                                 requestedItems: items.map(i => i.id.toString()),
+                                items: items.map(i => ({
+                                    id: i.id.toString(),
+                                    title: i.title,
+                                    artist: i.artist,
+                                    thumb_url: i.cover_image || "",
+                                    price: i.price,
+                                    format: i.format,
+                                    condition: i.condition
+                                })),
                                 offeredItems: [],
                                 cashAdjustment: totalCash
                             },

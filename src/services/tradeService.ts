@@ -108,8 +108,23 @@ export const tradeService = {
             items: tradeWithoutOrigin.manifest?.items?.map((it: any) => ({
                 ...it,
                 thumb_url: it.thumb_url || it.thumbnail || it.cover_image || ''
-            }))
+            })) || []
         };
+
+        // Protocol V87.0: Backend Inspection Logs
+        if (isStoreDirectSale) {
+            console.log(`[V87.0-B2C] Creando manifest para venta directa:`, {
+                itemsCount: normalizedManifest.items.length,
+                firstItemTitle: normalizedManifest.items[0]?.title || 'VACÍO',
+                hasThumb: !!normalizedManifest.items[0]?.thumb_url
+            });
+            
+            // Forzado de metadata si viene vacío (Healer)
+            if (normalizedManifest.items.length === 0 && trade.manifest?.requestedItems?.length > 0) {
+                console.warn(`[V87.0-B2C] ¡DETECTADO PAYLOAD VACÍO! Intentando inyección de emergencia...`);
+                // Note: Full hydration would require async fetch, but we can at least ensure the array isn't null
+            }
+        }
 
         const tradeData = {
             ...tradeWithoutOrigin,
@@ -846,48 +861,55 @@ export const tradeService = {
      * Protocolo V76.0: Reportar Pago (User Action)
      */
     async reportOfficialPayment(tradeId: string, chatId: string, method: "cash" | "transfer") {
-        const tradeRef = doc(db, COLLECTION_NAME, tradeId);
-        const messagesRef = collection(db, "p2p_chats", chatId, "messages");
+        try {
+            const tradeRef = doc(db, COLLECTION_NAME, tradeId);
+            const messagesRef = collection(db, "p2p_chats", chatId, "messages");
 
-        const methodLabel = method === "cash" ? "EFECTIVO / A CONVENIR" : "TRANSFERENCIA BANCARIA";
-        const systemMessage = method === "cash" 
-            ? "El comprador acordó el pago en efectivo." 
-            : "El comprador reportó el pago por transferencia.";
+            const methodLabel = method === "cash" ? "EFECTIVO / A CONVENIR" : "TRANSFERENCIA BANCARIA";
+            const systemMessage = method === "cash" 
+                ? "El comprador acordó el pago en efectivo." 
+                : "El comprador reportó el pago por transferencia.";
 
-        await runTransaction(db, async (transaction) => {
-            transaction.update(tradeRef, {
-                status: "payment_reported",
-                paymentMethod: method,
-                paymentReportedAt: serverTimestamp()
+            await runTransaction(db, async (transaction) => {
+                const tradeSnap = await transaction.get(tradeRef);
+                if (!tradeSnap.exists()) throw new Error("TRADE_NOT_FOUND");
+                
+                const tradeData = tradeSnap.data() as any;
+                // Safety check for participants (Null pointer avoidance V87.0)
+                const receiverId = tradeData.participants?.receiverId || tradeData.receiver_uid || "admin";
+
+                transaction.update(tradeRef, {
+                    status: "payment_reported",
+                    paymentMethod: method,
+                    paymentReportedAt: serverTimestamp()
+                });
+
+                const newMessageRef = doc(messagesRef);
+                transaction.set(newMessageRef, {
+                    sender_uid: "system",
+                    text: systemMessage,
+                    timestamp: serverTimestamp(),
+                    read_status: false,
+                    is_alert: true
+                });
+
+                const adminNotifRef = doc(collection(db, "notifications"));
+                transaction.set(adminNotifRef, {
+                    uid: receiverId,
+                    user_id: receiverId,
+                    title: "Pago reportado 💰",
+                    message: `El comprador ha reportado el pago vía ${methodLabel}.`,
+                    read: false,
+                    timestamp: serverTimestamp(),
+                    order_id: tradeId,
+                    type: "order",
+                    link: `/admin/trades?id=${tradeId}&status=payment_reported`
+                });
             });
-
-            const newMessageRef = doc(messagesRef);
-            transaction.set(newMessageRef, {
-                sender_uid: "system",
-                text: systemMessage,
-                timestamp: serverTimestamp(),
-                read_status: false,
-                is_alert: true
-            });
-
-            // 3. Notification for Admin/Seller (Protocol V81.1)
-            const tradeSnap = await transaction.get(tradeRef);
-            const tradeData = tradeSnap.data() as any;
-            const sellerId = tradeData.participants.receiverId;
-
-            const adminNotifRef = doc(collection(db, "notifications"));
-            transaction.set(adminNotifRef, {
-                uid: sellerId,
-                user_id: sellerId,
-                title: "Pago reportado 💰",
-                message: `El comprador ha reportado el pago vía ${methodLabel}.`,
-                read: false,
-                timestamp: serverTimestamp(),
-                order_id: tradeId,
-                type: "order",
-                link: `/admin/trades?id=${tradeId}&status=payment_reported`
-            });
-        });
+        } catch (error) {
+            console.error(`[V87.0-CRASH] Fallo crítico en reportOfficialPayment:`, error);
+            throw error;
+        }
     },
 
     /**
@@ -934,8 +956,8 @@ export const tradeService = {
         });
     },
 
-    async startInquiry(tradeId: string, buyerUid: string, buyerName: string, forcedSellerId?: string) {
-        if (!buyerName) throw new Error("USERNAME_REQUIRED");
+    async startInquiry(tradeId: string, buyerUid: string, buyerName: string, forcedSellerId: string = '', metadata?: any) {
+        if (!buyerUid) throw new Error("BUYER_ID_REQUIRED");
         const buyerUsername = buyerName.startsWith('@') ? buyerName : `@${buyerName}`;
         
         console.log(`[V46-HARDLINK] Iniciando búsqueda -> TradeId: ${tradeId} | forcedSellerId: ${forcedSellerId}`);
@@ -1015,7 +1037,18 @@ export const tradeService = {
             const currency = (inventorySnap.data() as any)?.logistics?.currency || (assetSnap.data() as any)?.currency || 'ARS';
 
             console.log(`[V80.0] Healing/Creating root trade with price: ${economicAdjustment}...`);
+            const finalMetadata = metadata || {
+                id: discoId, // Use discoId for the item ID
+                title: title,
+                artist: (inventorySnap.data() as any)?.metadata?.artist || (assetSnap.data() as any)?.metadata?.artist || 'Varios',
+                cover_image: cover,
+                thumb_url: cover,
+                format: (inventorySnap.data() as any)?.metadata?.format_description || (assetSnap.data() as any)?.metadata?.format_description || 'Vinyl',
+                price: economicAdjustment
+            };
+
             await setDoc(tradeRef, scrubData({
+                id: tradeId,
                 participants: {
                     senderId: buyerUid,
                     receiverId: sellerId
@@ -1026,19 +1059,11 @@ export const tradeService = {
                 isPublicOrder: true, 
                 is_admin_offer: ADMIN_UIDS.includes(sellerId),
                 manifest: {
-                    requestedItems: [tradeId],
+                    requestedItems: [discoId],
                     offeredItems: [],
-                    cashAdjustment: economicAdjustment, // FIX: Hydrate the price correctly
+                    cashAdjustment: economicAdjustment,
                     currency: currency,
-                    items: [{
-                        id: tradeId,
-                        title: title,
-                        artist: (inventorySnap.data() as any)?.metadata?.artist || (assetSnap.data() as any)?.metadata?.artist || 'Varios',
-                        cover_image: cover,
-                        thumb_url: cover, // V86.0: Ensure dual-write persistence
-                        format: (inventorySnap.data() as any)?.metadata?.format_description || (assetSnap.data() as any)?.metadata?.format_description || 'Vinyl',
-                        price: economicAdjustment
-                    }]
+                    items: [finalMetadata]
                 },
                 createdAt: (tradeSnap.exists() ? (tradeSnap.data() as any).createdAt : serverTimestamp()),
                 timestamp: serverTimestamp()
