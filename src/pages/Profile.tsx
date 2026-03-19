@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { formatDate, getReadableDate } from "@/utils/date";
+import { getCleanOrderMetadata } from "@/utils/orderMetadata"; // Protocol V88.3
 import { collection, onSnapshot, query, orderBy, where, doc, deleteDoc, updateDoc, addDoc, serverTimestamp, arrayUnion, getDocs } from "firebase/firestore";
 import { useState, useEffect } from "react";
 import { TEXTS } from "@/constants/texts";
@@ -695,7 +696,7 @@ export default function Profile() {
                         <div className="flex items-center gap-5 p-4 bg-white/[0.02] border border-white/5 rounded-3xl">
                             <div className="w-24 h-24 rounded-2xl overflow-hidden shrink-0 shadow-2xl border border-white/10 bg-black/40">
                                 <LazyImage 
-                                    src={selectedOrder.items?.[0]?.cover_image || selectedOrder.details?.cover_image || '/default-album.png'} 
+                                    src={getCleanOrderMetadata(selectedOrder).image} 
                                     alt="" 
                                     className="w-full h-full object-cover" 
                                 />
@@ -756,7 +757,7 @@ export default function Profile() {
                                 {(selectedOrder.items || []).map((item: any, idx: number) => (
                                     <div key={idx} className="flex items-center gap-3 p-3 bg-white/5 border border-white/5 rounded-2xl">
                                         <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 bg-black/20">
-                                            <LazyImage src={item.cover_image || '/default-album.png'} alt="" className="w-full h-full object-cover" />
+                                            <LazyImage src={item.thumb_url || item.thumbnail || item.cover_image || item.thumb || '/default-album.png'} alt="" className="w-full h-full object-cover" />
                                         </div>
                                         <div className="min-w-0 flex-1">
                                             <p className="text-[10px] font-bold text-white uppercase truncate">{item.title}</p>

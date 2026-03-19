@@ -25,7 +25,7 @@ export const getCleanOrderMetadata = (order: any) => {
             album: first.album || first.title || (isBatch ? `Lote de ${items.length} discos` : 'Detalle del Disco'),
             format: first.format || 'Vinyl',
             condition: first.condition || 'N/A',
-            image: first.cover_image || first.thumb || "https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png",
+            image: first.thumb_url || first.thumbnail || first.cover_image || first.thumb || "https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png",
             isBatch,
             itemsCount: items.length
         };
@@ -104,6 +104,8 @@ export const getCleanOrderMetadata = (order: any) => {
 
     // 3. IMAGE EXTRACTION
     const image =
+        items[0]?.thumb_url ||
+        items[0]?.thumbnail ||
         items[0]?.cover_image ||
         items[0]?.thumb ||
         order.details?.cover_image ||
@@ -111,6 +113,12 @@ export const getCleanOrderMetadata = (order: any) => {
         order.cover_image ||
         order.thumb ||
         "https://raw.githubusercontent.com/lucianorodriguezproduce/buscadordiscogs2/refs/heads/main/public/obg.png";
+
+    // Clean image URL (Protocol V88.3: Robustness)
+    let cleanImage = (typeof image === 'string') ? image : "";
+    if (cleanImage.startsWith('http://')) {
+        cleanImage = cleanImage.replace('http://', 'https://');
+    }
 
     // 4. PRICE & CURRENCY EXTRACTION (New for P2P Sync)
     const price = order.totalPrice || order.details?.price || order.manifest?.cashAdjustment || order.starting_price || 0;
@@ -121,7 +129,7 @@ export const getCleanOrderMetadata = (order: any) => {
         album,
         format,
         condition,
-        image: image.startsWith('http://') ? image.replace('http://', 'https://') : image,
+        image: cleanImage,
         isBatch,
         itemsCount: items.length,
         price,
