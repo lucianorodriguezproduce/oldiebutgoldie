@@ -1024,7 +1024,9 @@ export const tradeService = {
                     items: [{
                         id: tradeId,
                         title: title,
+                        artist: (inventorySnap.data() as any)?.metadata?.artist || (assetSnap.data() as any)?.metadata?.artist || 'Varios',
                         cover_image: cover,
+                        format: (inventorySnap.data() as any)?.metadata?.format_description || (assetSnap.data() as any)?.metadata?.format_description || 'Vinyl',
                         price: economicAdjustment
                     }]
                 },

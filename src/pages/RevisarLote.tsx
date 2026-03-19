@@ -200,7 +200,8 @@ export default function RevisarLote() {
                             price: item.price || 0,
                             thumbnail: fullData.images?.[0]?.uri || (item as any).thumbnail || (item as any).thumb_url || "",
                             title: fullData.title,
-                            artist: fullData.artists?.[0]?.name || fullData.artist || item.artist || ""
+                            artist: fullData.artists?.[0]?.name || fullData.artist || item.artist || "Desconocido",
+                            format: fullData.formats?.[0]?.name || fullData.format || item.format || "Vinyl"
                         });
                     } catch (e) {
                         console.warn(`[Lote-Hydration] Falló hidratación para ${item.title} (ID: ${itemId}, Type: ${item.type}), usando data del lote.`);
@@ -262,7 +263,8 @@ export default function RevisarLote() {
                             price: item.price || 0,
                             thumbnail: fullData.images?.[0]?.uri || (item as any).thumbnail || (item as any).thumb_url || "",
                             title: fullData.title,
-                            artist: fullData.artists?.[0]?.name || fullData.artist || item.artist || ""
+                            artist: fullData.artists?.[0]?.name || fullData.artist || item.artist || "Desconocido",
+                            format: fullData.formats?.[0]?.name || fullData.format || item.format || "Vinyl"
                         });
                     } catch (e) {
                         console.warn(`[Lote-Hydration] Falló hidratación para ${item.title} (ID: ${itemId}, Type: ${item.type}), usando data del lote.`);

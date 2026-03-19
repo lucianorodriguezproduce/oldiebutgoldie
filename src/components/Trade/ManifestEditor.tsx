@@ -41,38 +41,31 @@ export default function ManifestEditor({
         resolveItems();
     }, [manifest]);
 
-    const resolveItems = async () => {
-        const allIds = [...manifest.offeredItems, ...manifest.requestedItems];
+    const resolveItems = () => {
         const details: Record<string, any> = { ...itemDetails };
         
-        // --- PHASE 0: Use cached items from manifest if available ---
+        // Protocol V85.0: Snapshot-First Policy
+        // We exclusively use the 'items' array inside the manifest. 
+        // Live fetches to external collections are prohibited to ensure 
+        // persistence for Sourcing/Discogs items.
         if (manifest.items && Array.isArray(manifest.items)) {
             manifest.items.forEach((it: any) => {
                 const id = it.id || it.userAssetId || it.id?.toString();
-                if (id) details[id] = it;
+                if (id) {
+                    details[id] = {
+                        ...it,
+                        // Normalize structure for the editor's renderer
+                        media: it.media || { thumbnail: it.cover_image || it.thumbnail || "" },
+                        metadata: it.metadata || { 
+                            title: it.title || "Sin Título", 
+                            artist: it.artist || "Sin Artista",
+                            format_description: it.format || "Vinyl"
+                        }
+                    };
+                }
             });
         }
 
-        await Promise.all(allIds.map(async id => {
-            if (!details[id]) {
-                // Try inventory first
-                let item = await inventoryService.getItemById(id);
-                if (item) {
-                    details[id] = item;
-                } else {
-                    // Fallback to user_assets
-                    const asset = await userAssetService.getAssetById(id);
-                    if (asset) {
-                        details[id] = {
-                            id: asset.id,
-                            metadata: asset.metadata,
-                            media: asset.media,
-                            logistics: { price: asset.valuation || 0 }
-                        };
-                    }
-                }
-            }
-        }));
         setItemDetails(details);
     };
 

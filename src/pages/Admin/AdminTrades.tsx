@@ -29,8 +29,6 @@ import {
 import { useWindowSize } from "@/hooks/useWindowSize";
 
 import { tradeService } from "@/services/tradeService";
-import { inventoryService } from "@/services/inventoryService";
-import { userAssetService } from "@/services/userAssetService";
 import type { Trade, InventoryItem, TradeManifest } from "@/types/inventory";
 import { useLoading } from "@/context/LoadingContext";
 import { useAuth } from "@/context/AuthContext";
@@ -195,10 +193,11 @@ export default function AdminTrades() {
         }
     };
 
-    const resolveItemDetails = async (newTrades: Trade[]) => {
+    const resolveItemDetails = (newTrades: Trade[]) => {
         const details: Record<string, any> = { ...itemDetails };
 
-        // 1. Seed from manifest strictly (highest priority for external items)
+        // Protocol V85.0: Snapshot-First Policy
+        // Only seed from manifest strictly. Live fetches to inventory/user_assets are PROHIBITED.
         newTrades.forEach(t => {
             if (t.manifest?.items && Array.isArray(t.manifest.items)) {
                 t.manifest.items.forEach((item: any) => {
@@ -208,51 +207,16 @@ export default function AdminTrades() {
                             id: itemId,
                             metadata: { 
                                 title: item.title || item.metadata?.title || 'Sin Título', 
-                                artist: item.artist || item.metadata?.artist || 'Sin Artista' 
+                                artist: item.artist || item.metadata?.artist || 'Sin Artista',
+                                format_description: item.format || item.metadata?.format_description || 'Vinyl'
                             },
-                            media: { thumbnail: item.cover_image || item.media?.thumbnail || '' },
+                            media: { thumbnail: item.cover_image || item.thumbnail || item.media?.thumbnail || '' },
                             logistics: { price: item.price || item.valuation || 0 }
                         };
                     }
                 });
             }
         });
-
-        // 2. Identify missing IDs that weren't in manifest
-        const allItemIds = new Set<string>();
-        newTrades.forEach(t => {
-            if (t.manifest) {
-                t.manifest.offeredItems.forEach((id: string) => { if(id) allItemIds.add(id); });
-                t.manifest.requestedItems.forEach((id: string) => { if(id) allItemIds.add(id); });
-            }
-        });
-
-        const missingIds = Array.from(allItemIds).filter(id => !details[id]);
-
-        if (missingIds.length > 0) {
-            await Promise.all(missingIds.map(async (id: string) => {
-                try {
-                    // Try inventory
-                    const inventoryItem = await inventoryService.getItemById(id).catch(() => null);
-                    if (inventoryItem) {
-                        details[id] = inventoryItem;
-                    } else {
-                        // Try user assets
-                        const asset = await userAssetService.getAssetById(id).catch(() => null);
-                        if (asset) {
-                            details[id] = {
-                                id: asset.id,
-                                metadata: asset.metadata,
-                                media: asset.media,
-                                logistics: { price: asset.valuation || 0 }
-                            };
-                        }
-                    }
-                } catch (e) {
-                    console.error(`Failed to resolve item ${id}`, e);
-                }
-            }));
-        }
         
         setItemDetails(details);
     };
