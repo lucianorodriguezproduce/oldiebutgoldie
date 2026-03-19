@@ -242,13 +242,44 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                     </div>
                 );
         }
+    }    // 3. ROLE & SEMANTIC LABELING (Protocol V90.0: Semantic Refactor)
+    const getTradeRoleLabel = () => {
+        if (isAdmin && context === 'admin') {
+            if (isDirectSaleP2P) return "VENTA (B2C)";
+            if (order.type === 'sourcing_request' || (isAdminNegotiation && order.manifest?.requestedItems?.length > 0)) return "SOURCING";
+            return "NEGOCIACIÓN";
+        }
+
+        const isStoreReceiver = ADMIN_UIDS.includes(receiverId || "");
+        const isStoreSender = ADMIN_UIDS.includes(senderId || "");
+
+        // A. Official Store Branch (User vs. OBG)
+        if (isStoreReceiver || isStoreSender) {
+            if (isDirectSaleP2P) return "COMPRA";
+            if (order.type === 'sourcing_request') return "PEDIDO";
+            if (isAdminNegotiation) {
+                // Sourcing logic check
+                if (order.manifest?.requestedItems?.length > 0 && order.manifest?.offeredItems?.length === 0) return "PEDIDO";
+                return "VENTA"; // User selling to OBG
+            }
+        }
+
+        // B. Peer-to-Peer Branch
+        if (isExchange) {
+            const cash = order.manifest?.cashAdjustment || 0;
+            if (cash > 0) return isSender ? "COMPRA" : "VENTA";
+            if (cash < 0) return isSender ? "VENTA" : "COMPRA";
+            return "INTERCAMBIO";
+        }
+
+        if (isAuction) return "SUBASTA";
+
+        // Fallback robusto
+        return isSender ? "VENTA" : "COMPRA";
     };
 
-    // Refined P2P Intent detection
-    const isP2P = isDirectSaleP2P || isExchange || isAuction;
-    const refinedIntent = isP2P 
-        ? (isSender ? 'VENDER' : isReceiver ? 'COMPRAR' : orderIntent)
-        : orderIntent;
+    const refinedIntent = getTradeRoleLabel();
+    const intent = refinedIntent;
 
     // [STRICT-EXTRACT] Uso del helper centralizado para integridad de datos
     const meta = getCleanOrderMetadata(order);
@@ -261,10 +292,6 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
     const coverImage = image;
     const title = isBatch ? `LOTE DE ${itemsFromHelper} DISCOS` : album;
 
-    // Fallback intent for legacy admin orders
-    const isSellerOfferLegacy = order.admin_offer_price || order.adminPrice;
-
-    const intent = isExchange ? 'INTERCAMBIO' : (isBatch ? (orderType === 'buy' ? TEXTS.global.badges.buying : TEXTS.global.badges.forSale) : (refinedIntent || (isSellerOfferLegacy ? 'VENDER' : 'COMPRAR')));
     const format = isBatch ? 'Varios Formatos' : (order.details?.format || 'N/A');
     const condition = isBatch ? 'Varias Condiciones' : (order.details?.condition || 'N/A');
     const status = orderStatus;
@@ -274,7 +301,7 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
         // If it's a VENDER (Sell) order, the user's price is their bid.
         const userPrice = order.totalPrice || order.details?.price;
         const userCurrency = order.currency || order.details?.currency || "ARS";
-        const isSellOrder = intent.includes("VENDER");
+        const isSellOrder = intent.includes("VENDER") || intent === "VENTA" || intent === "COMPRA" || intent === "PEDIDO";
 
         // 2. CONTRAOFERTA (From Admin)
         // This is the new adminPrice field for negotiation.
@@ -460,10 +487,14 @@ export default function OrderCard({ order, context, onClick }: OrderCardProps) {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 md:gap-3 mt-1">
-                        <span className={`px-2 md:px-3 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest border ${isExchange ? "bg-violet-500/10 text-violet-400 border-violet-500/20" : refinedIntent.includes("COMPRAR") ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-secondary/10 text-secondary border-secondary/20"
+                        <span className={`px-2 md:px-3 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest border ${
+                            intent === "INTERCAMBIO" ? "bg-violet-500/10 text-violet-400 border-violet-500/20" : 
+                            intent === "COMPRA" || intent.includes("COMPRAR") ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : 
+                            intent === "PEDIDO" || intent === "SOURCING" ? "bg-blue-500/10 text-blue-400 border-blue-500/20" :
+                            "bg-secondary/10 text-secondary border-secondary/20"
                             }`}>
-                            {isExchange && <Handshake className="w-3 h-3 inline mr-1" />}
-                            {refinedIntent}
+                            {intent === "INTERCAMBIO" && <Handshake className="w-3 h-3 inline mr-1" />}
+                            {intent}
                         </span>
                         {!isBatch && (
                             <>

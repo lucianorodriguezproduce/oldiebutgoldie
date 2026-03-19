@@ -714,25 +714,53 @@ export default function Profile() {
                             </div>
                         </div>
 
-                        {/* Bloque Contraparte */}
-                        <div className="flex items-center justify-between px-6 py-4 bg-white/5 border border-white/10 rounded-2xl">
-                            <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-black text-[10px]">
-                                    {selectedOrder.participants?.senderId === user?.uid ? "V" : "C"}
+                        {/* Bloque Contraparte (Protocol V90.0: Semantic Refactor) */}
+                        {(() => {
+                            const isDirectSale = selectedOrder.type === 'direct_sale';
+                            const isSourcing = selectedOrder.type === 'sourcing_request' || (selectedOrder.type === 'admin_negotiation' && selectedOrder.manifest?.requestedItems?.length > 0 && selectedOrder.manifest?.offeredItems?.length === 0);
+                            const isC2B = selectedOrder.type === 'admin_negotiation' && selectedOrder.manifest?.offeredItems?.length > 0;
+                            const isSender = user?.uid === (selectedOrder.participants?.senderId || selectedOrder.user_id);
+
+                            let roleLabel = "";
+                            let counterpartRole = "";
+                            let initial = "";
+
+                            if (isDirectSale || isSourcing) {
+                                roleLabel = isSender ? "Eres Comprador" : "Eres Vendedor";
+                                counterpartRole = isSender ? "Vendedor" : "Comprador";
+                                initial = isSender ? "C" : "V";
+                            } else if (isC2B) {
+                                roleLabel = isSender ? "Eres Vendedor" : "Eres Comprador";
+                                counterpartRole = isSender ? "Comprador (OBG)" : "Vendedor";
+                                initial = isSender ? "V" : "C";
+                            } else {
+                                // P2P Exchange fallback
+                                roleLabel = isSender ? "Eres Iniciador" : "Eres Contraparte";
+                                counterpartRole = isSender ? "Contraparte" : "Iniciador";
+                                initial = isSender ? "I" : "C";
+                            }
+
+                            return (
+                                <div className="flex items-center justify-between px-6 py-4 bg-white/5 border border-white/10 rounded-2xl">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-[10px] ${initial === 'C' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-primary/20 text-primary'}`}>
+                                            {initial}
+                                        </div>
+                                        <div>
+                                            <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest">
+                                                Operación con
+                                            </p>
+                                            <p className="text-xs font-bold text-white">
+                                                @{isSender ? (selectedOrder.participants?.receiverName || "Vendedor") : (selectedOrder.participants?.senderName || "Comprador")}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <span className={`text-[10px] font-black uppercase tracking-widest ${initial === 'C' ? 'text-emerald-400' : 'text-orange-400'}`}>
+                                        {roleLabel}
+                                    </span>
                                 </div>
-                                <div>
-                                    <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest">
-                                        Operación con
-                                    </p>
-                                    <p className="text-xs font-bold text-white">
-                                        @{selectedOrder.participants?.senderId === user?.uid ? (selectedOrder.participants?.receiverName || "Vendedor") : (selectedOrder.participants?.senderName || "Comprador")}
-                                    </p>
-                                </div>
-                            </div>
-                            <span className={`text-[10px] font-black uppercase tracking-widest ${selectedOrder.participants?.senderId === user?.uid ? 'text-orange-400' : 'text-emerald-400'}`}>
-                                {selectedOrder.participants?.senderId === user?.uid ? 'Eres Vendedor' : 'Eres Comprador'}
-                            </span>
-                        </div>
+                            );
+                        })()}
 
                         {/* Resumen Financiero Mini */}
                         <div className="grid grid-cols-2 gap-4">
