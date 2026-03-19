@@ -165,8 +165,12 @@ export default function ManifestEditor({
                                     {item?.media.thumbnail && <img src={item.media.thumbnail} alt="" className="w-full h-full object-cover" />}
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-xs font-bold text-white truncate">{item?.metadata.title || "Cargando..."}</p>
-                                    <p className="text-[9px] text-gray-500 font-bold uppercase tracking-tighter truncate">{item?.metadata.artist}</p>
+                                    <p className="text-xs font-bold text-white truncate">
+                                        {item?.metadata?.title || item?.title || "Cargando..."}
+                                    </p>
+                                    <p className="text-[9px] text-gray-500 font-bold uppercase tracking-tighter truncate">
+                                        {item?.metadata?.artist || item?.artist || "Desconocido"}
+                                    </p>
                                 </div>
                                 {!isLocked && (
                                     <button

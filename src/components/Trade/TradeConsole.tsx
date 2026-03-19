@@ -100,10 +100,32 @@ export default function TradeConsole({ trade, onUpdate, onClose }: TradeConsoleP
 
     const handleAcceptTrade = async () => {
         if (!trade.id) return;
-        const confirm = window.confirm("¿Confirmar resolución de Trade? Esto gestionará el stock y los activos según el tipo de operación.");
+        
+        // Protocol V82.0: Resolution Braking for Sourcing & C2B
+        const isOfficialFlow = ['sourcing_request', 'admin_negotiation', 'direct_sale'].includes(trade.type || '');
+        
+        if (isOfficialFlow) {
+            if (!window.confirm("¿Aceptar esta propuesta? El estado cambiará a ACEPTADO y se notificará al cliente. El stock NO se moverá hasta la confirmación del pago.")) return;
+            
+            showLoading("Actualizando estado...");
+            try {
+                await tradeService.updateTradeStatus(trade.id, 'accepted');
+                alert("Propuesta aceptada. Pendiente de pago/coordinación.");
+                onUpdate();
+                onClose();
+            } catch (error: any) {
+                console.error("Error accepting official trade:", error);
+                alert(`Error: ${error.message}`);
+            } finally {
+                hideLoading();
+            }
+            return;
+        }
+
+        const confirm = window.confirm("¿Confirmar resolución de INTERCAMBIO P2P? Esto gestionará el stock y los activos de forma atómica.");
         if (!confirm) return;
 
-        showLoading("Resolviendo transacción...");
+        showLoading("Resolviendo transacción P2P...");
         try {
             await tradeService.resolveTrade(trade.id, trade.manifest);
             alert("Operación procesada correctamente.");
@@ -249,28 +271,59 @@ export default function TradeConsole({ trade, onUpdate, onClose }: TradeConsoleP
     };
 
     return (
-        <div className="p-8 space-y-8 flex flex-col h-full overflow-y-auto">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <h3 className="text-2xl font-black text-white uppercase tracking-tighter">
-                        {isEditing ? (
-                            "Editando Propuesta"
-                        ) : isDirectSale ? (
-                            "Gestión de Venta Directa"
-                        ) : (
-                            trade.manifest.requestedItems.length > 0 && trade.manifest.offeredItems.length === 0 ? "Detalle de Compra" :
-                            trade.manifest.offeredItems.length > 0 && trade.manifest.requestedItems.length === 0 ? "Detalle de Venta" :
-                            "Detalle de Propuesta"
-                        )}
-                    </h3>
-                    {getStatusBadge(trade.status, trade.logistics)}
-                </div>
-                {!isDirectSale && (
-                    <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest bg-white/5 px-3 py-1.5 rounded-xl">
-                        Turno: {isMyTurn ? "Tú" : "Contraparte"}
+        <div className="flex flex-col h-full bg-[#0a0a0a] border border-white/10 rounded-3xl overflow-hidden shadow-2xl relative">
+            {/* Header / Protocol V82.0 */}
+            <div className="p-8 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
+                <div className="flex items-center gap-6">
+                    <div className="p-4 bg-primary rounded-2xl shadow-lg shadow-primary/20">
+                        <Handshake className="w-6 h-6 text-black" />
                     </div>
-                )}
+                    <div>
+                        <div className="flex items-center gap-3">
+                            <h2 className="text-xl font-black uppercase tracking-tighter text-white">
+                                {trade.type === 'direct_sale' ? 'VENTA DIRECTA B2C' : 
+                                 trade.type === 'sourcing_request' ? 'PEDIDO DE BÚSQUEDA' : 
+                                 trade.type === 'admin_negotiation' ? 'OFERTA DE USUARIO (C2B)' : 
+                                 'DETALLE DE INTERCAMBIO'}
+                            </h2>
+                            {getStatusBadge(trade.status, trade.logistics)}
+                        </div>
+                        <div className="flex items-center gap-4 mt-1">
+                            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500">
+                                ID Operación: {trade.id?.slice(-8)}
+                            </p>
+                            {isAdmin && (
+                                <button 
+                                    onClick={() => {
+                                        const buyerId = trade.participants.senderId;
+                                        const chatId = `${trade.id}_${buyerId}`;
+                                        window.open(`/mensajes?chat=${chatId}`, '_blank');
+                                    }}
+                                    className="px-3 py-1 bg-primary text-black rounded-lg hover:bg-white transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-wider"
+                                >
+                                    <MessageSquare size={12} />
+                                    Abrir Chat con el Cliente
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+                <div className="flex items-center gap-4">
+                    {!isDirectSale && (
+                        <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest bg-white/5 px-3 py-1.5 rounded-xl border border-white/5">
+                            Turno: {isMyTurn ? "Tú" : "Contraparte"}
+                        </div>
+                    )}
+                    <button 
+                        onClick={onClose}
+                        className="p-3 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-colors"
+                    >
+                        <XCircle className="w-6 h-6 text-gray-400" />
+                    </button>
+                </div>
             </div>
+
+            <div className="p-8 space-y-8 flex flex-col h-full overflow-y-auto">
 
             {/* Protocol V77.0: Logistics Section for Admins */}
             {isAdmin && (trade.status === 'completed' || trade.status === 'accepted' || trade.status === 'payment_reported') && (
@@ -519,6 +572,7 @@ export default function TradeConsole({ trade, onUpdate, onClose }: TradeConsoleP
                     <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Esperando respuesta de la contraparte...</p>
                 </div>
             )}
+            </div>
         </div>
     );
 }

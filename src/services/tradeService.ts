@@ -1035,9 +1035,19 @@ export const tradeService = {
             const p2pMessageRef = doc(collection(db, "p2p_chats", newChatId, "messages"));
             const orderLink = `https://www.oldiebutgoldie.com.ar/orden/${tradeId}`;
             
+            // dynamic text based on type (Protocol V82.0)
+            const type = tradeSnap.exists() ? (tradeSnap.data() as any).type : 'direct_sale';
+            let initialText = `¡Hola! ${buyerUsername} te escribió por "${title}". Link al pedido: ${orderLink}`;
+            
+            if (type === 'sourcing_request') {
+                initialText = `Pedido de búsqueda ingresado por ${buyerUsername} para "${title}". El Administrador verificará disponibilidad.`;
+            } else if (type === 'admin_negotiation') {
+                initialText = `Oferta C2B enviada por ${buyerUsername} para "${title}". La tienda oficial revisará la propuesta.`;
+            }
+
             const systemMessage = {
                 sender_uid: "system",
-                text: `¡Hola! ${buyerUsername} te escribió por "${title}". Link al pedido: ${orderLink}`,
+                text: initialText,
                 timestamp: serverTimestamp(),
                 read_status: false
             };
