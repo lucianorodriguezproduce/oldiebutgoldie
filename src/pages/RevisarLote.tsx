@@ -176,6 +176,7 @@ export default function RevisarLote() {
 
             // 2. Logic for PEDIR (External items - Unified via Trades V23.5)
             if (action === 'PEDIR') {
+                const hydratedItems: any[] = [];
                 const importedDiscogsIds = await Promise.all(discogsItems.map(async (item) => {
                     const itemId = item.id.toString();
                     let fullData: any = item;
@@ -190,8 +191,20 @@ export default function RevisarLote() {
                         } else {
                             fullData = await discogsService.getReleaseDetails(itemId);
                         }
+                        
+                        // Hydrate metadata for manifest (Phase V83.0)
+                        hydratedItems.push({
+                            ...fullData,
+                            id: itemId,
+                            type: item.type,
+                            price: item.price || 0,
+                            thumbnail: fullData.images?.[0]?.uri || (item as any).thumbnail || (item as any).thumb_url || "",
+                            title: fullData.title,
+                            artist: fullData.artists?.[0]?.name || fullData.artist || item.artist || ""
+                        });
                     } catch (e) {
                         console.warn(`[Lote-Hydration] Falló hidratación para ${item.title} (ID: ${itemId}, Type: ${item.type}), usando data del lote.`);
+                        hydratedItems.push(item);
                     }
 
                     // Importar a inventario (archived) para que "viaje al archivo" (Protocolo V21.1)
@@ -209,9 +222,10 @@ export default function RevisarLote() {
                         requestedItems: importedDiscogsIds,
                         offeredItems: [],
                         cashAdjustment: calculatedTotal,
-                        currency: 'ARS'
+                        currency: 'ARS',
+                        items: hydratedItems // Core Fix V83.0: Injecting Meta
                     },
-                    type: 'admin_negotiation',
+                    type: 'sourcing_request', // Core Fix V83.0: Strict Type
                     isPublicOrder: false,
                     tradeOrigin: 'DISCOGS',
                     transactionId
@@ -239,10 +253,16 @@ export default function RevisarLote() {
                         } else {
                             fullData = await discogsService.getReleaseDetails(itemId);
                         }
+                        
+                        // Hydrate metadata for manifest (Phase V83.0)
                         hydratedItems.push({
                             ...fullData,
-                            userAssetId: itemId,
-                            price: item.price || 0
+                            id: itemId,
+                            type: item.type,
+                            price: item.price || 0,
+                            thumbnail: fullData.images?.[0]?.uri || (item as any).thumbnail || (item as any).thumb_url || "",
+                            title: fullData.title,
+                            artist: fullData.artists?.[0]?.name || fullData.artist || item.artist || ""
                         });
                     } catch (e) {
                         console.warn(`[Lote-Hydration] Falló hidratación para ${item.title} (ID: ${itemId}, Type: ${item.type}), usando data del lote.`);
@@ -252,16 +272,16 @@ export default function RevisarLote() {
                 }));
 
                 const tradeId = await tradeService.createTrade({
-                    participants: { senderId: uid, receiverId: null }, // V53: Permitir listing público o resolución atómica
+                    participants: { senderId: uid, receiverId: ADMIN_UIDS[0] }, // C2B goes to Admin
                     manifest: {
                         requestedItems: [], 
                         offeredItems: [...allInventoryIds, ...importedDiscogsIds],
-                        cashAdjustment: Number(totalPrice) || calculatedTotal,
+                        cashAdjustment: Number(totalPrice) > 0 ? Number(totalPrice) : calculatedTotal, // User requests this
                         currency: currency || 'ARS',
-                        items: hydratedItems 
+                        items: hydratedItems // Core Fix V83.0
                     },
-                    type: action === 'OFRECER' ? 'p2p_market' : 'admin_negotiation', // V53 classification
-                    isPublicOrder: true,
+                    type: 'admin_negotiation', // Core Fix V83.0: User offers to Store
+                    isPublicOrder: false,
                     tradeOrigin: discogsItems.length > 0 ? 'DISCOGS' : 'INVENTORY',
                     transactionId
                 } as any);

@@ -171,14 +171,31 @@ export const tradeService = {
 
             await setDoc(p2pChatRef, scrubData(chatData));
 
-            // Initial System Message
-            const p2pMessageRef = doc(collection(db, "p2p_chats", newChatId, "messages"));
-            await setDoc(p2pMessageRef, {
+            // Protocol V84.0: Dynamic text and automatic payment CTA for B2C
+            let initialText = isStoreDirectSale 
+                ? `¡Orden de compra creada! Coordinen aquí el pago y envío.` 
+                : (tradeType === 'sourcing_request'
+                    ? `Pedido de búsqueda ingresado. El Administrador verificará disponibilidad.`
+                    : (tradeType === 'admin_negotiation'
+                        ? `Oferta C2B ingresada: El usuario solicita $${(trade.manifest?.cashAdjustment || 0).toLocaleString()} por este lote.`
+                        : `¡Propuesta de intercambio enviada! Esperando respuesta.`)
+                  );
+
+            const systemMessage: any = {
                 sender_uid: "system",
-                text: isDirectSale ? `¡Orden de compra creada! Coordinen aquí el pago y envío.` : `¡Propuesta de intercambio enviada! Esperando respuesta.`,
+                text: initialText,
                 timestamp: serverTimestamp(),
                 read_status: false
-            });
+            };
+
+            // Protocol V84.0: RAMA 1 - Auto-CTA for Direct Sales
+            if (isStoreDirectSale) {
+                systemMessage.is_payment_cta = true;
+                systemMessage.payment_amount = trade.manifest?.cashAdjustment || 0;
+            }
+
+            const messageDocRef = doc(collection(db, "p2p_chats", newChatId, "messages"));
+            await setDoc(messageDocRef, scrubData(systemMessage));
         }
 
         // Tracking DataLayer
@@ -766,6 +783,7 @@ export const tradeService = {
      */
     async requestOfficialPayment(tradeId: string, chatId: string, amount: number) {
         const tradeRef = doc(db, COLLECTION_NAME, tradeId);
+        const p2pChatRef = doc(db, "p2p_chats", chatId);
         const messagesRef = collection(db, "p2p_chats", chatId, "messages");
 
         await runTransaction(db, async (transaction) => {
@@ -773,10 +791,29 @@ export const tradeService = {
             transaction.update(tradeRef, {
                 status: "pending_payment",
                 "manifest.cashAdjustment": amount,
-                paymentRequestedAt: serverTimestamp()
+                paymentRequestedAt: serverTimestamp(),
+                updatedAt: serverTimestamp()
             });
 
-            // 3. Notification for Buyer (Protocol V81.1)
+            // 2. Core Fix V84.0: Dispatch UI CTA Card
+            const newMessageRef = doc(messagesRef);
+            transaction.set(newMessageRef, {
+                sender_uid: "system",
+                text: `El Administrador ha fijado el precio final en $${amount.toLocaleString()}. Puedes proceder al pago seguro.`,
+                timestamp: serverTimestamp(),
+                read_status: false,
+                is_payment_cta: true,
+                payment_amount: amount
+            });
+
+            // 3. Update Chat Meta
+            transaction.update(p2pChatRef, {
+                status: "pending_payment",
+                lastMessage: `Pago solicitado: $${amount.toLocaleString()}`,
+                updatedAt: serverTimestamp()
+            });
+
+            // 4. Notification for Buyer (Protocol V81.1)
             const tradeSnap = await transaction.get(tradeRef);
             const tradeData = tradeSnap.data() as any;
             const buyerId = tradeData.participants.senderId;

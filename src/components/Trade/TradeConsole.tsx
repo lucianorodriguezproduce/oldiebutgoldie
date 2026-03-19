@@ -109,8 +109,15 @@ export default function TradeConsole({ trade, onUpdate, onClose }: TradeConsoleP
             
             showLoading("Actualizando estado...");
             try {
-                await tradeService.updateTradeStatus(trade.id, 'accepted');
-                alert("Propuesta aceptada. Pendiente de pago/coordinación.");
+                // Protocol V84.0: RAMA 3 - C2B Resolution on Acceptance
+                if (trade.type === 'admin_negotiation') {
+                    showLoading("Resolviendo oferta C2B y coordinando entrega...");
+                    await tradeService.resolveTrade(trade.id, trade.manifest, { forceExecution: true });
+                    alert("Oferta C2B aceptada y procesada. Los activos han sido transferidos al búnker.");
+                } else {
+                    await tradeService.updateTradeStatus(trade.id, 'accepted');
+                    alert("Propuesta aceptada. Pendiente de pago/coordinación.");
+                }
                 onUpdate();
                 onClose();
             } catch (error: any) {
@@ -187,6 +194,25 @@ export default function TradeConsole({ trade, onUpdate, onClose }: TradeConsoleP
             onClose();
         } catch (error: any) {
             console.error("Error sending counter offer:", error);
+            alert(`Error: ${error.message}`);
+        } finally {
+            hideLoading();
+        }
+    };
+
+    const handleRequestPayment = async () => {
+        if (!trade.id) return;
+        const amount = prompt("Ingrese el monto final para generar la tarjeta de cobro:", trade.manifest?.cashAdjustment?.toString());
+        if (!amount || isNaN(Number(amount))) return;
+
+        showLoading("Generando tarjeta de cobro...");
+        try {
+            const chatId = `${trade.id}_${trade.participants.senderId}`;
+            await tradeService.requestOfficialPayment(trade.id, chatId, Number(amount));
+            alert("Tarjeta de cobro enviada al chat.");
+            onUpdate();
+        } catch (error: any) {
+            console.error("Error generating payment card:", error);
             alert(`Error: ${error.message}`);
         } finally {
             hideLoading();
@@ -295,11 +321,15 @@ export default function TradeConsole({ trade, onUpdate, onClose }: TradeConsoleP
                             {isAdmin && (
                                 <button 
                                     onClick={() => {
-                                        const buyerId = trade.participants.senderId;
-                                        const chatId = `${trade.id}_${buyerId}`;
-                                        window.open(`/mensajes?chat=${chatId}`, '_blank');
+                                        const buyerId = trade.participants.senderId || trade.participants.receiverId; 
+                                        if (buyerId) {
+                                            const chatId = `${trade.id}_${buyerId}`;
+                                            window.open(`/mensajes?chat=${chatId}`, '_blank');
+                                        } else {
+                                            alert("No se pudo identificar al cliente para abrir el chat.");
+                                        }
                                     }}
-                                    className="px-3 py-1 bg-primary text-black rounded-lg hover:bg-white transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-wider"
+                                    className="px-3 py-1.5 bg-primary text-black rounded-xl hover:bg-white transition-all flex items-center gap-2 text-[9px] font-black uppercase tracking-wider shadow-lg shadow-primary/20"
                                 >
                                     <MessageSquare size={12} />
                                     Abrir Chat con el Cliente
@@ -536,6 +566,16 @@ export default function TradeConsole({ trade, onUpdate, onClose }: TradeConsoleP
                                     >
                                         <XCircle className="h-5 w-5" /> Rechazar
                                     </button>
+
+                                    {/* Protocol V84.0: GENERAR COBRO (Sourcing & Negotiations) */}
+                                    {isAdmin && (trade.type === 'sourcing_request' || trade.type === 'admin_negotiation') && trade.status !== 'pending_payment' && (
+                                        <button
+                                            onClick={handleRequestPayment}
+                                            className="w-full mt-4 flex items-center justify-center gap-3 py-4 bg-orange-500 text-black rounded-2xl font-black uppercase tracking-widest hover:bg-white transition-all shadow-lg shadow-orange-500/20"
+                                        >
+                                            <DollarSign className="h-5 w-5" /> Generar Cobro
+                                        </button>
+                                    )}
                                 </>
                             )}
                         </div>
