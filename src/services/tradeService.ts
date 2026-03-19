@@ -828,7 +828,19 @@ export const tradeService = {
         const messagesRef = collection(db, "p2p_chats", chatId, "messages");
 
         await runTransaction(db, async (transaction) => {
-            // 1. Update Trade Status and agreed amount
+            // 1. Fetch data FIRST (Transaction Rule)
+            const tradeSnap = await transaction.get(tradeRef);
+            if (!tradeSnap.exists()) throw new Error("TRADE_NOT_FOUND");
+            const tradeData = tradeSnap.data() as any;
+
+            // 2. Identify Buyer (Defensive)
+            const buyerId = tradeData.participants?.senderId || tradeData.buyer_uid;
+            if (!buyerId) {
+                console.error("[V88.2-FATAL] No se pudo identificar al comprador para el cobro:", tradeId);
+                throw new Error("ERROR_IDENTIDAD_COMPRADOR_DESCONOCIDA");
+            }
+
+            // 3. Update Trade Status and agreed amount
             transaction.update(tradeRef, {
                 status: "pending_payment",
                 "manifest.cashAdjustment": amount,
@@ -836,7 +848,7 @@ export const tradeService = {
                 updatedAt: serverTimestamp()
             });
 
-            // 2. Core Fix V86.0: Dispatch UI CTA Card with standardized schema
+            // 4. Core Fix V86.0: Dispatch UI CTA Card with standardized schema
             const newMessageRef = doc(messagesRef);
             transaction.set(newMessageRef, {
                 sender_uid: "system",
@@ -847,18 +859,14 @@ export const tradeService = {
                 payment_amount: amount
             });
 
-            // 3. Update Chat Meta
+            // 5. Update Chat Meta
             transaction.update(p2pChatRef, {
                 status: "pending_payment",
                 lastMessage: `Pago solicitado: $${amount.toLocaleString()}`,
                 updatedAt: serverTimestamp()
             });
 
-            // 4. Notification for Buyer (Protocol V81.1)
-            const tradeSnap = await transaction.get(tradeRef);
-            const tradeData = tradeSnap.data() as any;
-            const buyerId = tradeData.participants.senderId;
-            
+            // 6. Notification for Buyer (Protocol V81.1)
             const notifRef = doc(collection(db, "notifications"));
             transaction.set(notifRef, {
                 uid: buyerId,
