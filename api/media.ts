@@ -136,8 +136,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const apiKey = process.env.YOUTUBE_API_KEY;
             if (!apiKey) return res.status(401).json({ error: 'YouTube API Key missing' });
 
-            const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(String(q))}&key=${apiKey}&maxResults=1&type=video`;
-            const response = await fetch(url);
+            const url = new URL('https://www.googleapis.com/youtube/v3/search');
+            url.searchParams.append('part', 'snippet');
+            url.searchParams.append('q', String(q));
+            url.searchParams.append('key', apiKey);
+            url.searchParams.append('maxResults', '1');
+            url.searchParams.append('type', 'video');
+            
+            const response = await fetch(url.toString());
             const data = await response.json();
 
             if (!response.ok) return res.status(response.status).json(data);
@@ -159,7 +165,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const decodedUrl = decodeURIComponent(urlString);
             console.log(`[Proxy] Fetching: ${decodedUrl}`);
 
-            const response = await fetch(decodedUrl);
+            // Protocol V82.1: WHATWG URL refactor to avoid DEP0169
+            const targetUrl = new URL(decodedUrl);
+            const response = await fetch(targetUrl.toString());
             if (!response.ok) {
                 console.error(`[Proxy] Upstream Error: ${response.status}`);
                 return res.status(response.status).json({ error: 'Upstream Fetch Error', status: response.status });
