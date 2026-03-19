@@ -531,7 +531,7 @@ export default function TradeConsole({ trade, onUpdate, onClose }: TradeConsoleP
                                 </>
                             ) : (
                                 <>
-                                    {(trade.status === 'completed_unpaid' || trade.status === 'accepted' || (trade.status === 'pending_payment' && isDirectSale)) && (isAdmin || isOwner) ? (
+                                    {(trade.status === 'completed_unpaid' || trade.status === 'accepted' || trade.status === 'payment_reported' || (trade.status === 'pending_payment' && isDirectSale)) && (isAdmin || isOwner) ? (
                                         <button
                                             onClick={handleMarkAsPaid}
                                             className="flex-1 flex items-center justify-center gap-3 py-4 bg-green-500 text-black rounded-2xl font-black uppercase tracking-widest hover:bg-white transition-all shadow-lg shadow-green-500/20"
@@ -554,18 +554,22 @@ export default function TradeConsole({ trade, onUpdate, onClose }: TradeConsoleP
                                         </button>
                                     ) : null}
                                     
-                                    <button
-                                        onClick={() => { setEditedManifest(trade.manifest); setIsEditing(true); }}
-                                        className="flex-1 flex items-center justify-center gap-3 py-4 bg-white/5 text-white border border-white/10 rounded-2xl font-black uppercase tracking-widest hover:bg-primary hover:text-black transition-all"
-                                    >
-                                        <Edit2 className="h-5 w-5" /> Regatear
-                                    </button>
-                                    <button
-                                        onClick={handleDeclineTrade}
-                                        className="flex-1 flex items-center justify-center gap-3 py-4 bg-white/5 text-red-500 border border-red-500/20 rounded-2xl font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all"
-                                    >
-                                        <XCircle className="h-5 w-5" /> Rechazar
-                                    </button>
+                                    {!isDirectSale && trade.type !== 'sourcing_request' && (
+                                        <>
+                                            <button
+                                                onClick={() => { setEditedManifest(trade.manifest); setIsEditing(true); }}
+                                                className="flex-1 flex items-center justify-center gap-3 py-4 bg-white/5 text-white border border-white/10 rounded-2xl font-black uppercase tracking-widest hover:bg-primary hover:text-black transition-all"
+                                            >
+                                                <Edit2 className="h-5 w-5" /> Regatear
+                                            </button>
+                                            <button
+                                                onClick={handleDeclineTrade}
+                                                className="flex-1 flex items-center justify-center gap-3 py-4 bg-white/5 text-red-500 border border-red-500/20 rounded-2xl font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all"
+                                            >
+                                                <XCircle className="h-5 w-5" /> Rechazar
+                                            </button>
+                                        </>
+                                    )}
 
                                     {/* Protocol V84.0: GENERAR COBRO (Sourcing & Negotiations) */}
                                     {isAdmin && (trade.type === 'sourcing_request' || trade.type === 'admin_negotiation') && trade.status !== 'pending_payment' && (
