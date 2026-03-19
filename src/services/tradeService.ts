@@ -1653,11 +1653,14 @@ export const tradeService = {
     /**
      * Listen for P2P chats where user is a participant (Inbox V2)
      */
-    onSnapshotP2PChats(userId: string, callback: (chats: any[]) => void) {
-        console.log(`[InboxV2] Listening for chats for user: ${userId}`);
+    onSnapshotP2PChats(userId: string, callback: (chats: any[]) => void, isAdmin: boolean = false) {
+        console.log(`[InboxV2] Listening for chats for user: ${userId} (isAdmin: ${isAdmin})`);
+        
         const q = query(
             collection(db, "p2p_chats"),
-            where("participants", "array-contains", userId),
+            isAdmin 
+                ? where("participants", "array-contains-any", ADMIN_UIDS)
+                : where("participants", "array-contains", userId),
             orderBy("updatedAt", "desc")
         );
 

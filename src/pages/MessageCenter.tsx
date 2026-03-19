@@ -19,7 +19,7 @@ import { LazyImage } from "@/components/ui/LazyImage";
 import { useSearchParams } from "react-router-dom";
 
 export default function MessageCenter() {
-    const { user, dbUser } = useAuth();
+    const { user, dbUser, isAdmin } = useAuth();
     const [searchParams, setSearchParams] = useSearchParams();
     const [conversations, setConversations] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -33,7 +33,7 @@ export default function MessageCenter() {
         if (!user) return;
 
         setLoading(true);
-        console.log("[InboxV2] Initializing modern snapshot for:", user.uid);
+        console.log("[InboxV2] Initializing modern snapshot for:", user.uid, "(isAdmin:", isAdmin, ")");
         
         const unsub = tradeService.onSnapshotP2PChats(user.uid, (chats) => {
             console.log("[InboxV2] Chats received:", chats.length);
@@ -55,7 +55,7 @@ export default function MessageCenter() {
                 }
             }
             setLoading(false);
-        });
+        }, isAdmin);
 
         return () => unsub();
     }, [user, chatIdFromUrl]);
