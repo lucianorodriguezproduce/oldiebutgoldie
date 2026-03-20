@@ -554,7 +554,7 @@ export default function TradeConsole({ trade, onUpdate, onClose }: TradeConsoleP
                                         </button>
                                     ) : null}
                                     
-                                    {!isDirectSale && trade.type !== 'sourcing_request' && (
+                                    {(trade.type !== 'direct_sale' && trade.type !== 'sourcing_request') && (
                                         <>
                                             <button
                                                 onClick={() => { setEditedManifest(trade.manifest); setIsEditing(true); }}
