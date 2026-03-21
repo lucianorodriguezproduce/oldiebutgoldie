@@ -35,6 +35,8 @@ import { useLoading } from "@/context/LoadingContext";
 import { LazyImage } from "@/components/ui/LazyImage";
 import { useDebounce } from "@/hooks/useDebounce";
 import type { DiscogsSearchResult } from "@/lib/discogs";
+import { CompactSearchCard } from "@/components/ui/CompactSearchCard";
+import ItemConfigModal from "@/components/discogs/ItemConfigModal";
 
 const PAGE_SIZE = 25;
 
@@ -59,6 +61,7 @@ export default function AdminInventory() {
     const [discogsId, setDiscogsId] = useState("");
     const [showBulkModal, setShowBulkModal] = useState(false);
     const [bulkData, setBulkData] = useState({ category: "", mode: "percentage" as "fixed" | "percentage", value: 0 });
+    const [showConfigModal, setShowConfigModal] = useState(false);
 
     // Protocol V79.0: Integrated Search States
     const [ingestionQuery, setIngestionQuery] = useState("");
@@ -246,40 +249,33 @@ export default function AdminInventory() {
     };
 
     const handleIngestManual = async () => {
-        showLoading("Creando registro manual...");
+        showLoading("Creando registro manual (Universal Ingest)...");
         try {
-            const newItem: Omit<InventoryItem, 'id'> = {
-                metadata: {
-                    title: manualData.title,
-                    artist: manualData.artist,
-                    year: new Date().getFullYear(),
-                    country: "Unknown",
-                    genres: [],
-                    styles: [],
-                    format_description: manualData.format
-                },
-                media: {
-                    thumbnail: "",
-                    full_res_image_url: ""
-                },
-                reference: {
-                    originalDiscogsId: 0,
-                    originalDiscogsUrl: ""
-                },
-                logistics: {
-                    price: manualData.price,
-                    stock: manualData.stock,
-                    condition: manualData.condition,
-                    status: (manualData.stock > 0) ? "active" : "sold_out",
-                    internal_category: manualData.internal_category
-                }
+            // Protocol V96.0: Redirect manual ingest through the universal pipeline
+            const mockDiscogsItem = {
+                id: 0,
+                title: `${manualData.artist} - ${manualData.title}`,
+                cover_image: "",
+                thumb: "",
+                type: "release",
+                isLocal: false,
+                normalizedArtist: manualData.artist,
+                normalizedAlbum: manualData.title
             };
-            await inventoryService.createItem(newItem);
+
+            await inventoryService.universalIngest(mockDiscogsItem, 'admin', {
+                price: manualData.price,
+                stock: manualData.stock,
+                condition: manualData.condition,
+                format: manualData.format,
+                internal_category: manualData.internal_category
+            });
+
             setShowIngestionModal(false);
             setManualData({ title: "", artist: "", price: 0, stock: 1, condition: "M/NM", format: "Vinyl", internal_category: "" });
             fetchInventory();
         } catch (error) {
-            console.error("Error creating manual item:", error);
+            console.error("Error creating manual item via universalIngest:", error);
             alert("Error al crear el registro.");
         } finally {
             hideLoading();
@@ -770,129 +766,47 @@ export default function AdminInventory() {
 
                             {ingestionMode === "discogs" ? (
                                 <div className="space-y-6">
-                                    {!selectedSearchItem ? (
-                                        <div className="space-y-4">
-                                            <label className="text-[10px] text-gray-400 font-bold uppercase tracking-widest flex justify-between items-center">
-                                                <span>Buscar en Discogs</span>
-                                                <span onClick={() => {
-                                                    const manualId = prompt("Ingresar ID manual:");
-                                                    if (manualId) setDiscogsId(manualId);
-                                                }} className="text-primary hover:underline cursor-pointer">ID Manual</span>
-                                            </label>
-                                            <div className="relative group">
-                                                <div className="absolute left-6 top-1/2 -translate-y-1/2">
-                                                    {isSearchingIngestion ? <Loader2 className="h-5 w-5 text-primary animate-spin" /> : <SearchIcon className="h-5 w-5 text-gray-500 group-focus-within:text-primary transition-colors" />}
-                                                </div>
-                                                <input
-                                                    type="text"
-                                                    placeholder="Artista, Álbum, Sello..."
-                                                    autoFocus
-                                                    value={ingestionQuery}
-                                                    onChange={e => setIngestionQuery(e.target.value)}
-                                                    className="w-full bg-white/5 border border-white/10 rounded-2xl pl-16 pr-6 py-5 text-lg text-white focus:border-primary/40 focus:outline-none transition-all"
+                                    <div className="space-y-4">
+                                        <label className="text-[10px] text-gray-400 font-bold uppercase tracking-widest flex justify-between items-center">
+                                            <span>Buscar en Discogs</span>
+                                            <span onClick={() => {
+                                                const manualId = prompt("Ingresar ID manual:");
+                                                if (manualId) setDiscogsId(manualId);
+                                            }} className="text-primary hover:underline cursor-pointer">ID Manual</span>
+                                        </label>
+                                        <div className="relative group">
+                                            <div className="absolute left-6 top-1/2 -translate-y-1/2">
+                                                {isSearchingIngestion ? <Loader2 className="h-5 w-5 text-primary animate-spin" /> : <SearchIcon className="h-5 w-5 text-gray-500 group-focus-within:text-primary transition-colors" />}
+                                            </div>
+                                            <input
+                                                type="text"
+                                                placeholder="Artista, Álbum, Sello..."
+                                                autoFocus
+                                                value={ingestionQuery}
+                                                onChange={e => setIngestionQuery(e.target.value)}
+                                                className="w-full bg-white/5 border border-white/10 rounded-2xl pl-16 pr-6 py-5 text-lg text-white focus:border-primary/40 focus:outline-none transition-all"
+                                            />
+                                        </div>
+
+                                        {/* Protocol V96.0: Resultados de Búsqueda Estilo Home */}
+                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                                            {ingestionResults.map((res, idx) => (
+                                                <CompactSearchCard
+                                                    key={res.id}
+                                                    result={res}
+                                                    idx={idx}
+                                                    onClick={() => {
+                                                        setSelectedSearchItem(res);
+                                                        setDiscogsId(res.id.toString());
+                                                        setShowConfigModal(true);
+                                                    }}
                                                 />
-                                            </div>
-
-                                            {/* Resultados de Búsqueda Mini */}
-                                            <div className="grid grid-cols-1 gap-2 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
-                                                {ingestionResults.map((res, idx) => (
-                                                    <motion.button
-                                                        key={res.id}
-                                                        initial={{ opacity: 0, x: -10 }}
-                                                        animate={{ opacity: 1, x: 0 }}
-                                                        transition={{ delay: idx * 0.03 }}
-                                                        onClick={() => {
-                                                            setSelectedSearchItem(res);
-                                                            setDiscogsId(res.id.toString());
-                                                        }}
-                                                        className="flex items-center gap-4 p-3 bg-white/5 border border-white/5 rounded-2xl hover:border-primary/30 hover:bg-white/10 transition-all text-left group"
-                                                    >
-                                                        <div className="w-12 h-12 rounded-xl overflow-hidden border border-white/10 shrink-0">
-                                                            <img src={res.thumb} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
-                                                        </div>
-                                                        <div className="min-w-0 flex-1">
-                                                            <div className="text-xs font-bold text-white truncate uppercase tracking-tighter">
-                                                                {res.title.includes(' - ') ? res.title.split(' - ')[1] : res.title}
-                                                            </div>
-                                                            <div className="text-[9px] text-gray-500 font-black uppercase tracking-widest truncate">
-                                                                {res.title.includes(' - ') ? res.title.split(' - ')[0] : 'Artist unknown'}
-                                                            </div>
-                                                        </div>
-                                                        <ChevronRight className="h-4 w-4 text-gray-600 group-hover:text-primary transition-colors" />
-                                                    </motion.button>
-                                                ))}
-                                                {ingestionQuery.length >= 3 && ingestionResults.length === 0 && !isSearchingIngestion && (
-                                                    <div className="py-12 text-center text-gray-600 italic text-sm">Sin resultados para "{ingestionQuery}"</div>
-                                                )}
-                                            </div>
+                                            ))}
+                                            {ingestionQuery.length >= 3 && ingestionResults.length === 0 && !isSearchingIngestion && (
+                                                <div className="col-span-full py-12 text-center text-gray-600 italic text-sm">Sin resultados para "{ingestionQuery}"</div>
+                                            )}
                                         </div>
-                                    ) : (
-                                        <div className="space-y-6 animate-in fade-in zoom-in duration-300">
-                                            <div className="flex items-center gap-4 bg-primary/5 border border-primary/20 p-4 rounded-3xl relative overflow-hidden group">
-                                                <div className="w-20 h-20 rounded-2xl overflow-hidden border border-primary/20 shrink-0 relative z-10">
-                                                    <img src={selectedSearchItem.cover_image || selectedSearchItem.thumb} alt="" className="w-full h-full object-cover" />
-                                                </div>
-                                                <div className="min-w-0 flex-1 relative z-10">
-                                                    <div className="text-[8px] font-black text-primary uppercase tracking-[0.3em] mb-1">Seleccionado para Ingesta</div>
-                                                    <div className="text-lg font-black text-white truncate tracking-tighter uppercase leading-tight">{selectedSearchItem.title.includes(' - ') ? selectedSearchItem.title.split(' - ')[1] : selectedSearchItem.title}</div>
-                                                    <div className="text-xs font-bold text-gray-500 truncate uppercase mt-0.5">{selectedSearchItem.title.includes(' - ') ? selectedSearchItem.title.split(' - ')[0] : ''}</div>
-                                                    <button 
-                                                        onClick={() => {
-                                                            setSelectedSearchItem(null);
-                                                            setDiscogsId("");
-                                                        }}
-                                                        className="mt-2 text-[9px] font-black text-white/40 hover:text-white uppercase tracking-widest flex items-center gap-1 transition-colors"
-                                                    >
-                                                        <Edit2 className="h-3 w-3" /> Cambiar Disco
-                                                    </button>
-                                                </div>
-                                                <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-                                                    <Disc className="h-24 w-24 animate-spin-slow" />
-                                                </div>
-                                            </div>
-
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div className="space-y-2">
-                                                    <label className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Precio (ARS)</label>
-                                                    <input
-                                                        type="number"
-                                                        value={manualData.price}
-                                                        onChange={e => setManualData({ ...manualData, price: parseFloat(e.target.value) })}
-                                                        autoFocus
-                                                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-primary/40 focus:outline-none transition-all"
-                                                    />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Stock</label>
-                                                    <input
-                                                        type="number"
-                                                        value={manualData.stock}
-                                                        onChange={e => setManualData({ ...manualData, stock: parseInt(e.target.value) })}
-                                                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-primary/40 focus:outline-none transition-all"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <label className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Categoría Interna</label>
-                                                <select
-                                                    value={manualData.internal_category}
-                                                    onChange={e => setManualData({ ...manualData, internal_category: e.target.value })}
-                                                    className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-primary/40 focus:outline-none transition-all appearance-none cursor-pointer"
-                                                >
-                                                    <option value="" className="bg-[#0a0a0a]">Ninguna / Sin Categoría</option>
-                                                    {categories.map(cat => (
-                                                        <option key={cat.id} value={cat.name} className="bg-[#0a0a0a]">{cat.name}</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                            <button
-                                                onClick={handleIngestDiscogs}
-                                                className="w-full py-6 bg-primary text-black rounded-3xl font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
-                                            >
-                                                Importar al La Batea
-                                            </button>
-                                        </div>
-                                    )}
+                                    </div>
                                 </div>
                             ) : (
                                 <div className="space-y-6">
@@ -1223,6 +1137,40 @@ export default function AdminInventory() {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* Ingestion Config Wizard (V96.0) */}
+            {selectedSearchItem && (
+                <ItemConfigModal
+                    isOpen={showConfigModal}
+                    onClose={() => {
+                        setShowConfigModal(false);
+                        setSelectedSearchItem(null);
+                    }}
+                    item={selectedSearchItem}
+                    showPrice={true}
+                    onConfirm={async (config) => {
+                        showLoading("Finalizando carga técnica...");
+                        try {
+                            await inventoryService.universalIngest(selectedSearchItem, 'admin', {
+                                price: config.price || 0,
+                                stock: 1,
+                                condition: config.condition,
+                                format: config.format,
+                                internal_category: manualData.internal_category
+                            });
+                            setShowConfigModal(false);
+                            setShowIngestionModal(false);
+                            setSelectedSearchItem(null);
+                            fetchInventory();
+                        } catch (error) {
+                            console.error("Config Ingest Error:", error);
+                            alert("Error al finalizar la carga.");
+                        } finally {
+                            hideLoading();
+                        }
+                    }}
+                />
+            )}
         </div>
     );
 }

@@ -9,15 +9,17 @@ interface ItemConfigModalProps {
     isOpen: boolean;
     onClose: () => void;
     item: any;
-    onConfirm: (config: { format: string; condition: string }, action: 'another' | 'finish') => void;
+    showPrice?: boolean;
+    onConfirm: (config: { format: string; condition: string, price?: number }, action: 'another' | 'finish') => void;
 }
 
 const FORMATS = ['VINILO', 'CD', 'CASETTE', 'DVD'];
 const CONDITIONS = ['NUEVO', 'USADO'];
 
-export default function ItemConfigModal({ isOpen, onClose, item, onConfirm }: ItemConfigModalProps) {
+export default function ItemConfigModal({ isOpen, onClose, item, showPrice = false, onConfirm }: ItemConfigModalProps) {
     const [format, setFormat] = useState<string>('');
     const [condition, setCondition] = useState<string>('');
+    const [price, setPrice] = useState<number>(0);
 
     const isComplete = format !== '' && condition !== '';
 
@@ -124,11 +126,30 @@ export default function ItemConfigModal({ isOpen, onClose, item, onConfirm }: It
                                 </div>
                             </div>
 
+                            {/* Price Input (Admin Only) */}
+                            {showPrice && (
+                                <div className="space-y-4">
+                                    <label className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500 italic px-2">
+                                        PRECIO DE VENTA (ARS)
+                                    </label>
+                                    <div className="relative group">
+                                        <div className="absolute left-6 top-1/2 -translate-y-1/2 text-primary font-black">$</div>
+                                        <input
+                                            type="number"
+                                            value={price}
+                                            onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
+                                            className="w-full bg-white/5 border border-white/10 rounded-2xl pl-12 pr-6 py-5 text-lg text-white font-black focus:border-primary/40 focus:outline-none transition-all"
+                                            placeholder="0.00"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Actions */}
                             <div className="pt-4 space-y-3">
                                 <button
                                     disabled={!isComplete}
-                                    onClick={() => onConfirm({ format, condition }, 'another')}
+                                    onClick={() => onConfirm({ format, condition, price }, 'another')}
                                     className="w-full flex items-center justify-center gap-2 py-5 rounded-2xl bg-white/5 border border-white/10 text-white font-black uppercase text-[10px] tracking-widest hover:bg-white/10 transition-all disabled:opacity-20 disabled:grayscale"
                                 >
                                     <Plus className="w-4 h-4" />
@@ -137,7 +158,7 @@ export default function ItemConfigModal({ isOpen, onClose, item, onConfirm }: It
 
                                 <button
                                     disabled={!isComplete}
-                                    onClick={() => onConfirm({ format, condition }, 'finish')}
+                                    onClick={() => onConfirm({ format, condition, price }, 'finish')}
                                     className="w-full flex items-center justify-center gap-2 py-5 rounded-2xl bg-primary text-black font-black uppercase text-[10px] tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-20 disabled:grayscale"
                                 >
                                     {TEXTS.album.item.steps.finishOrder}

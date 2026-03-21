@@ -51,8 +51,8 @@ export function SEO({
             <meta name="description" content={description} />
             <link rel="canonical" href={currentUrl} />
 
-            {/* Robots directive for staging */}
-            <meta name="robots" content="noindex, nofollow" />
+            {/* Robots directive: Removed noindex for Production (V95.0) */}
+            <meta name="robots" content="index, follow" />
 
             {/* Open Graph / Facebook */}
             <meta property="og:type" content={type} />
