@@ -64,7 +64,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
                 )}
             </div>
 
-            {showText && (!config?.logo?.url || loading === false) && (
+            {showText && !config?.logo?.url && !loading && (
                 <span className={cn(
                     "font-display font-bold tracking-tightest text-white uppercase",
                     s.text,
