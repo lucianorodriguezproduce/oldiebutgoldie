@@ -27,6 +27,7 @@ import type { Trade, InventoryItem, UserAsset } from "@/types/inventory";
 import { ADMIN_UIDS } from "@/constants/admin";
 import { scrubData } from "@/utils/firestore";
 import { inventoryService } from "@/services/inventoryService";
+import { idService } from "@/services/idService";
 
 const COLLECTION_NAME = "trades";
 
@@ -150,12 +151,24 @@ export const tradeService = {
                 manifest: JSON.stringify(tradeData.manifest).substring(0, 500)
             });
 
-            const docRef = await addDoc(collection(db, COLLECTION_NAME), scrubData(tradeData));
-            console.log(`[V88.0-SUCCESS] Trade persisted with ID: ${docRef.id}`);
-
+            // FASE 4: Protocol V103 - Serialized ID Generation
+            const tradePrefix = (tradeType === 'direct_sale' || isStoreDirectSale) ? 'VTA' : 
+                               (tradeType === 'exchange') ? 'CNJ' :
+                               (tradeType === 'sourcing_request') ? 'SRV' : 'SLO';
+                               
+            const tradeId = await idService.generateInternalID(tradePrefix as any);
+            const docRef = doc(db, COLLECTION_NAME, tradeId);
+            
+            await setDoc(docRef, scrubData({
+                ...tradeData,
+                id: tradeId
+            }));
+            
+            console.log(`[V103-SUCCESS] Trade persisted with Serialized ID: ${tradeId}`);
+            
             // V78.1: Inicialización Automática de Chat P2P (Inbox V2)
             if (receiverId && !isListing) {
-                const newChatId = `${docRef.id}_${finalSenderId}`;
+                const newChatId = `${tradeId}_${finalSenderId}`;
                 const p2pChatRef = doc(db, "p2p_chats", newChatId);
                 
                 // Get user data for usernames
@@ -187,7 +200,7 @@ export const tradeService = {
 
                 const chatData = {
                     id: newChatId,
-                    tradeId: docRef.id,
+                    tradeId: tradeId,
                     buyerId: finalSenderId,
                     sellerId: receiverId,
                     participants: [finalSenderId, receiverId],
@@ -244,7 +257,7 @@ export const tradeService = {
                 console.log(`[V88.0-EXCHANGE] Exchange/negotiation created: ${docRef.id} (origin: ${trade.tradeOrigin || 'legacy'})`);
             }
 
-            return docRef.id;
+            return tradeId;
 
         } catch (error) {
             console.error(`[V88.0-FATAL] createTrade crasheó estrepitosamente:`, error);

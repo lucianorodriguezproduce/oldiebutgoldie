@@ -22,6 +22,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { DriveUpload } from "@/components/Admin/DriveUpload";
 import { TEXTS } from "@/constants/texts";
 import { BlockEditor } from "@/components/Admin/Editorial/BlockEditor";
+import { idService } from "@/services/idService";
 import type { EditorialBlock } from "@/types/editorial";
 
 interface Article {
@@ -96,8 +97,10 @@ export default function EditorialManager() {
                     updatedAt: serverTimestamp()
                 });
             } else {
-                await addDoc(collection(db, "editorial"), {
+                const newId = await idService.generateInternalID('SLO');
+                await setDoc(doc(db, "editorial", newId), {
                     ...currentArticle,
+                    id: newId,
                     createdAt: serverTimestamp(),
                     status: 'draft',
                     featured: false

@@ -3,6 +3,7 @@ import { discogsService } from "@/lib/discogs";
 import { spotifyService } from "@/services/spotifyService";
 import { youtubeService } from "@/services/youtubeService";
 import { quotaService } from "@/services/quotaService";
+import { idService } from "@/services/idService";
 import {
     collection,
     doc,
@@ -45,7 +46,7 @@ export const inventoryService = {
     },
 
     async createItem(item: Omit<InventoryItem, 'id'>) {
-        const id = crypto.randomUUID();
+        const id = await idService.generateInternalID('VTA');
         const docRef = doc(db, COLLECTION_NAME, id);
         await setDoc(docRef, {
             ...item,
@@ -61,7 +62,7 @@ export const inventoryService = {
         stock: number,
         items: any[]
     }) {
-        const id = crypto.randomUUID();
+        const id = await idService.generateInternalID('VTA');
         const firstItem = batchData.items[0];
 
         // Use the first item's image as batch thumbnail
@@ -153,7 +154,7 @@ export const inventoryService = {
      * This is the "batea Entry" process.
      */
     async importFromDiscogs(discogsData: any, logistics: InventoryItem['logistics'], extraData?: { youtube_id?: string; notes?: string; internalId?: string }) {
-        const internalId = extraData?.internalId || crypto.randomUUID();
+        const internalId = extraData?.internalId || await idService.generateInternalID('VTA');
 
         // 1. Resolve High-Res Image (via batea Import API)
         let fullResUrl = discogsData.images?.[0]?.resource_url || discogsData.images?.[0]?.uri || discogsData.cover_image || discogsData.thumb;
