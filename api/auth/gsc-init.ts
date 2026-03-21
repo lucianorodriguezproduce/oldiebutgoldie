@@ -1,20 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { google } from 'googleapis';
-import { SecretManagerServiceClient } from '@google-cloud/secret-manager';
-
-const secretClient = new SecretManagerServiceClient();
-
-async function getSecret(name: string) {
-    try {
-        const [version] = await secretClient.accessSecretVersion({
-            name: `projects/344484307950/secrets/${name}/versions/latest`,
-        });
-        return version.payload?.data?.toString();
-    } catch (e) {
-        console.warn(`CRITICAL_SECRET_FETCH_FAILURE: ${name} not found in Bunker.`);
-        return undefined;
-    }
-}
+import { getSecret } from '../_lib/bunker';
 
 /**
  * Endpoint to initiate GSC OAuth2 flow.

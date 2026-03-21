@@ -1,38 +1,23 @@
 import admin from 'firebase-admin';
 import { google } from 'googleapis';
-import { SecretManagerServiceClient } from '@google-cloud/secret-manager';
 
-// IMPORTANTE: En Vercel, asegúrese de que esta variable sea exactamente el JSON de su Service Account
+// IMPORTANT: In Vercel, ensure this variable is exactly the JSON of your Service Account
 const rawConfig = process.env.FIREBASE_CONFIG_JSON_STRING || '{}';
 const credentials = JSON.parse(rawConfig);
 
-const secretClient = new SecretManagerServiceClient({
-    credentials,
-    projectId: credentials.project_id || 'buscador-discogs-11425'
-});
-
 export async function initBunkerIdentity() {
-    // Si ya hay una app, devolvemos Firestore inmediatamente para ahorrar tiempo
+    // If an app already exists, return Firestore immediately to save time
     if (admin.apps.length) return admin.firestore();
 
-    console.log('Bunker: Accediendo al Secret Manager...');
-    const [version] = await secretClient.accessSecretVersion({
-        name: 'projects/344484307950/secrets/FIREBASE_ADMIN_SDK_JSON/versions/latest',
-    });
-
-    const payload = version.payload?.data?.toString();
-    if (!payload) throw new Error('CRITICAL_IDENTITY_FAILURE: Bunker empty');
-
-    const serviceAccount = JSON.parse(payload);
-
-    // Verificación táctica de tipo
-    if (typeof serviceAccount !== 'object') {
-        throw new Error("ERROR_CRITICO: serviceAccount no es un objeto tras el parseo.");
+    console.log('Bunker: Initializing Identity from Environment...');
+    
+    if (!credentials || !credentials.project_id) {
+        throw new Error('CRITICAL_IDENTITY_FAILURE: FIREBASE_CONFIG_JSON_STRING missing or invalid');
     }
 
     admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
-        storageBucket: 'buscador-discogs-11425.firebasestorage.app'
+        credential: admin.credential.cert(credentials),
+        storageBucket: `${credentials.project_id}.firebasestorage.app`
     });
 
     console.log('Bunker: Firebase Initialized (Centralized).');
@@ -40,15 +25,8 @@ export async function initBunkerIdentity() {
 }
 
 export async function getSecret(name: string) {
-    try {
-        const [version] = await secretClient.accessSecretVersion({
-            name: `projects/344484307950/secrets/${name}/versions/latest`,
-        });
-        return version.payload?.data?.toString();
-    } catch (e) {
-        console.warn(`CRITICAL_SECRET_FETCH_FAILURE: ${name} no encontrado.`);
-        return undefined;
-    }
+    // Fallback: Read from process.env if Secret Manager is not available
+    return process.env[name];
 }
 
 export function getDiscogsToken() {
@@ -56,23 +34,18 @@ export function getDiscogsToken() {
 }
 
 /**
- * Initializes and returns a Google Drive API client using credentials from the Bunker.
+ * Initializes and returns a Google Drive API client using credentials from the environment.
  */
 export async function initDriveIdentity() {
-    const [version] = await secretClient.accessSecretVersion({
-        name: 'projects/344484307950/secrets/FIREBASE_ADMIN_SDK_JSON/versions/latest',
+    if (!credentials || !credentials.client_email) {
+        throw new Error('BUNKER_EMPTY: Credentials not found in environment');
+    }
+
+    const auth = new google.auth.JWT({
+        email: credentials.client_email,
+        key: credentials.private_key,
+        scopes: ['https://www.googleapis.com/auth/drive']
     });
-
-    const payload = version.payload?.data?.toString();
-    if (!payload) throw new Error('BUNKER_EMPTY');
-    const credentials = JSON.parse(payload);
-
-    const auth = new google.auth.JWT(
-        credentials.client_email,
-        undefined,
-        credentials.private_key,
-        ['https://www.googleapis.com/auth/drive']
-    );
 
     return google.drive({ version: 'v3', auth });
 }
@@ -165,5 +138,4 @@ export async function uploadToBunker(base64: string, path: string, mimeType: str
         name: file.name
     };
 }
-
-export { secretClient };
+

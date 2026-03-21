@@ -1,30 +1,12 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { google } from 'googleapis';
-import { SecretManagerServiceClient } from '@google-cloud/secret-manager';
-
-const secretClient = new SecretManagerServiceClient();
-
-async function getSecret(name: string) {
-    try {
-        const [version] = await secretClient.accessSecretVersion({
-            name: `projects/344484307950/secrets/${name}/versions/latest`,
-        });
-        return version.payload?.data?.toString();
-    } catch (e) {
-        console.warn(`Bunker Secret Fetch Failure: ${name}`);
-        return undefined;
-    }
-}
+import { getSecret, initBunkerIdentity } from '../_lib/bunker';
 
 async function getCredentials() {
-    // Attempt to get the Service Account JSON from Bunker
-    const payload = await getSecret('FIREBASE_ADMIN_SDK_JSON');
-    if (!payload) {
-        // Fallback to Env for local dev
-        const envConfig = process.env.FIREBASE_CONFIG_JSON_STRING;
-        return envConfig ? JSON.parse(envConfig) : null;
-    }
-    return JSON.parse(payload);
+    // In Vercel, the credentials are already in process.env.FIREBASE_CONFIG_JSON_STRING
+    const rawConfig = process.env.FIREBASE_CONFIG_JSON_STRING;
+    if (!rawConfig) throw new Error('FIREBASE_CONFIG_JSON_STRING missing');
+    return JSON.parse(rawConfig);
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -51,12 +33,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             throw new Error('Google Credentials not found in Bunker or Environment');
         }
 
-        const auth = new google.auth.JWT(
-            credentials.client_email,
-            undefined,
-            credentials.private_key,
-            ['https://www.googleapis.com/auth/analytics.readline']
-        );
+        const auth = new google.auth.JWT({
+            email: credentials.client_email,
+            key: credentials.private_key,
+            scopes: ['https://www.googleapis.com/auth/analytics.readonly']
+        });
 
         const analyticsData = google.analyticsdata({ version: 'v1beta', auth });
         const propertyId = process.env.VITE_GA_PROPERTY_ID || '388730990'; // Use fallback if not in env

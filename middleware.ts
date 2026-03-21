@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+// Use standard Web APIs for Vercel Edge Middleware in non-Next.js projects
+// import { NextResponse } from 'next/server'; // REMOVED: Next.js only
+// import type { NextRequest } from 'next/server'; // REMOVED: Next.js only
 
 const BOTS = [
     'whatsapp',
@@ -12,8 +13,8 @@ const BOTS = [
     'googlebot', // Optional but good for SEO previews
 ];
 
-export async function middleware(request: NextRequest) {
-    const url = request.nextUrl;
+export async function middleware(request: Request) {
+    const url = new URL(request.url);
     const userAgent = request.headers.get('user-agent')?.toLowerCase() || '';
     
     // Check if the request is from a social media bot
@@ -56,7 +57,7 @@ export async function middleware(request: NextRequest) {
                 const metaDesc = `Ítem disponible en Oldie But Goldie. Estado: ${fields.logistics?.mapValue?.fields?.condition?.stringValue || 'Verificado'}.`;
 
                 // Return a minimal HTML with meta tags
-                return new NextResponse(
+                return new Response(
                     `<!DOCTYPE html>
                     <html>
                         <head>
@@ -88,7 +89,7 @@ export async function middleware(request: NextRequest) {
         }
     }
 
-    return NextResponse.next();
+    return // Standard pass-through via absence of response (or return undefined)
 }
 
 // Config to limit where the middleware runs
