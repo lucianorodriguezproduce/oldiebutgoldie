@@ -9,6 +9,8 @@ import { db } from "@/lib/firebase";
 import { doc, onSnapshot } from "firebase/firestore";
 import { siteConfigService } from "@/services/siteConfigService";
 import type { SiteConfig } from "@/services/siteConfigService";
+import { BrandLogo } from "@/components/BrandLogo";
+import { useDynamicFavicon } from "@/hooks/useDynamicFavicon";
 
 export const Navbar = () => {
     const location = useLocation();
@@ -16,17 +18,11 @@ export const Navbar = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [config, setConfig] = useState<SiteConfig | null>(null);
 
-    // Phase III: Real-time Config Sync y Favicon Dinámico (V11.0)
+    // Dynamic Branding & Favicon Propagation (V98.0)
+    useDynamicFavicon();
+
     useEffect(() => {
-        return siteConfigService.onSnapshotConfig((newConfig) => {
-            setConfig(newConfig);
-            if (newConfig?.logo?.url) {
-                const link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
-                if (link) {
-                    link.href = newConfig.logo.url;
-                }
-            }
-        });
+        return siteConfigService.onSnapshotConfig(setConfig);
     }, []);
 
     const navItems = [
@@ -59,21 +55,8 @@ export const Navbar = () => {
         <nav className="fixed w-full z-[9999] top-0 left-0 border-b border-white/[0.08] bg-black transition-all duration-500">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between h-20">
-                    <Link to="/" className="flex items-center gap-3 group">
-                        {config?.logo?.url ? (
-                            <img
-                                src={config.logo.url}
-                                alt={TEXTS.global.navigation.brand}
-                                className="h-10 w-auto object-contain max-w-[180px] group-hover:scale-105 transition-transform duration-500"
-                            />
-                        ) : (
-                            <>
-                                <Disc className="h-8 w-8 text-primary group-hover:rotate-180 transition-transform duration-700" />
-                                <span className="text-xl font-display font-bold text-white tracking-tightest group-hover:text-primary transition-colors">
-                                    {TEXTS.global.navigation.brand}
-                                </span>
-                            </>
-                        )}
+                    <Link to="/" className="hover:opacity-80 transition-opacity">
+                        <BrandLogo size="md" />
                     </Link>
 
                     {/* Desktop Navigation */}

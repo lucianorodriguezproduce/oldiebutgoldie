@@ -1,6 +1,6 @@
-import { Disc } from "lucide-react";
 import { Link } from "react-router-dom";
 import { TEXTS } from "@/constants/texts";
+import { BrandLogo } from "@/components/BrandLogo";
 
 export function Footer() {
     const labels: Record<string, string> = {
@@ -14,12 +14,9 @@ export function Footer() {
         <footer className="border-t border-white/10 bg-black mt-auto">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
                 <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-                    <div className="flex items-center gap-3">
-                        <Disc className="h-6 w-6 text-primary" />
-                        <span className="font-display font-bold text-xl tracking-tighter text-white">
-                            Oldie but Goldie
-                        </span>
-                    </div>
+                    <Link to="/" className="hover:opacity-80 transition-opacity">
+                        <BrandLogo size="sm" />
+                    </Link>
                     <div className="flex flex-wrap gap-x-8 gap-y-4 text-sm text-gray-400 justify-center">
                         <Link to="/tienda" className="hover:text-primary transition-colors uppercase tracking-widest text-[10px] font-black">
                             {TEXTS.global.navigation.tienda}

@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Disc, Mail, Github, Chrome, Loader2, ArrowRight } from "lucide-react";
+import { BrandLogo } from "@/components/BrandLogo";
 import { useNavigate } from "react-router-dom";
 import {
     signInWithEmailAndPassword,
@@ -97,14 +98,12 @@ export default function Login() {
 
                     <CardHeader className="text-center pb-8">
                         <motion.div
-                            initial={{ rotate: -180, opacity: 0 }}
-                            animate={{ rotate: 0, opacity: 1 }}
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
                             transition={{ type: "spring", damping: 10, stiffness: 50 }}
                             className="flex justify-center mb-6"
                         >
-                            <div className="p-4 bg-primary rounded-2xl shadow-xl shadow-primary/20">
-                                <Disc className="h-10 w-10 text-black" />
-                            </div>
+                            <BrandLogo size="lg" showText={false} className="p-4 bg-white/5 rounded-3xl border border-white/10 shadow-2xl" />
                         </motion.div>
                         <CardTitle className="text-4xl font-display font-bold text-white tracking-tightest mb-2">
                             {isLogin ? TEXTS.login.auth.welcomeBack : TEXTS.login.auth.createAccount}

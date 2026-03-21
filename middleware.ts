@@ -20,23 +20,33 @@ export async function middleware(request: Request) {
     // Check if the request is from a social media bot
     const isBot = BOTS.some(bot => userAgent.includes(bot));
 
-    // Only intercept /item/:type/:id or /archivo/:id for bots
+    // Match rules
     const itemMatch = url.pathname.match(/\/item\/([^/]+)\/([^/]+)/);
     const archivoMatch = url.pathname.match(/\/archivo\/([^/]+)/);
 
-    if (isBot && (itemMatch || archivoMatch)) {
-        const type = itemMatch ? itemMatch[1] : 'release';
-        const id = itemMatch ? itemMatch[2] : archivoMatch![1];
+    const isItemRoute = itemMatch || archivoMatch;
+    
+    // We want branding info for BOTH item routes (as fallback) and potentially other routes
+    const projectId = process.env.VITE_FIREBASE_PROJECT_ID;
 
-        // Only fetch from Firestore if it looks like a local UUID (Inventory Sovereign)
-        // Non-local IDs (Discogs) would need a Discogs API fetch, but for now we focus on logistics.price
-        // which is only in our Firestore for local assets or imported assets in 'inventory' collection.
-        
-        const projectId = process.env.VITE_FIREBASE_PROJECT_ID;
+    // 1. Fetch Dynamic Branding (V98.0)
+    let dynamicLogo = 'https://www.oldiebutgoldie.com.ar/og-image.jpg'; // Hard fallback
+    try {
+        const configUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/settings/site_config`;
+        const configRes = await fetch(configUrl);
+        if (configRes.ok) {
+            const configData = await configRes.json();
+            dynamicLogo = configData.fields.logo?.mapValue?.fields?.url?.stringValue || dynamicLogo;
+        }
+    } catch (e) {
+        console.error('[SEO-Middleware] Branding Fetch Error:', e);
+    }
+
+    if (isBot && isItemRoute) {
+        const id = itemMatch ? itemMatch[2] : archivoMatch![1];
         
         try {
             // Using Firestore REST API (Edge compatible)
-            // We look into 'inventory' collection which contains the unified schema
             const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/inventory/${id}`;
             const response = await fetch(firestoreUrl);
             
@@ -44,19 +54,18 @@ export async function middleware(request: Request) {
                 const data = await response.json();
                 const fields = data.fields;
 
-                // Extract fields (Firestore REST format is nested)
+                // Extract fields
                 const title = fields.metadata?.mapValue?.fields?.title?.stringValue || 'Colección Oldie But Goldie';
                 const artist = fields.metadata?.mapValue?.fields?.artist?.stringValue || '';
                 const price = fields.logistics?.mapValue?.fields?.price?.doubleValue || 
                               fields.logistics?.mapValue?.fields?.price?.integerValue || '0';
                 const thumb = fields.media?.mapValue?.fields?.thumbnail?.stringValue || 
                               fields.media?.mapValue?.fields?.full_res_image_url?.stringValue || 
-                              'https://www.oldiebutgoldie.com.ar/og-image.jpg';
+                              dynamicLogo;
 
                 const metaTitle = `${artist} - ${title} | $${price} ARS`;
                 const metaDesc = `Ítem disponible en Oldie But Goldie. Estado: ${fields.logistics?.mapValue?.fields?.condition?.stringValue || 'Verificado'}.`;
 
-                // Return a minimal HTML with meta tags
                 return new Response(
                     `<!DOCTYPE html>
                     <html>
@@ -78,18 +87,15 @@ export async function middleware(request: Request) {
                             <h1>Redirigiendo a ${metaTitle}...</h1>
                         </body>
                     </html>`,
-                    {
-                        headers: { 'Content-Type': 'text/html' },
-                    }
+                    { headers: { 'Content-Type': 'text/html' } }
                 );
             }
         } catch (error) {
-            console.error('[SEO-Middleware] Error:', error);
-            // Fallback to default index.html if fetch fails
+            console.error('[SEO-Middleware] Item Fetch Error:', error);
         }
     }
 
-    return // Standard pass-through via absence of response (or return undefined)
+    return; // Pass-through
 }
 
 // Config to limit where the middleware runs
