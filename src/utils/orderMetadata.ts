@@ -121,8 +121,8 @@ export const getCleanOrderMetadata = (order: any) => {
     }
 
     // 4. PRICE & CURRENCY EXTRACTION (New for P2P Sync)
-    const price = order.totalPrice || order.details?.price || order.manifest?.cashAdjustment || order.starting_price || 0;
-    const currency = order.currency || order.details?.currency || order.manifest?.currency || 'ARS';
+    const price = order.totalPrice || order.logistics?.price || order.details?.price || order.manifest?.cashAdjustment || order.starting_price || 0;
+    const currency = order.currency || order.logistics?.currency || order.details?.currency || order.manifest?.currency || 'ARS';
 
     return {
         artist,

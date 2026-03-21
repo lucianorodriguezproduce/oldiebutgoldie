@@ -22,8 +22,8 @@ export default function UserAssetCard({
 }: UserAssetCardProps) {
     const [isUpdating, setIsUpdating] = useState(false);
     const [showPricing, setShowPricing] = useState(false);
-    const [price, setPrice] = useState(asset.valuation?.toString() || "");
-    const [localStock, setLocalStock] = useState(asset.stock ?? 1);
+    const [price, setPrice] = useState(asset.logistics?.price?.toString() || "0");
+    const [localStock, setLocalStock] = useState(asset.logistics?.stock ?? 1);
     const [isHovered, setIsHovered] = useState(false);
     const [isPlaying, setIsPlaying] = useState(false);
     const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -42,7 +42,7 @@ export default function UserAssetCard({
     const handleToggleTradeable = async () => {
         setIsUpdating(true);
         try {
-            await userAssetService.toggleTradeable(asset.id, !asset.isTradeable);
+            await userAssetService.toggleTradeable(asset.id, !asset.logistics.isTradeable);
             onUpdate();
         } catch (error) {
             console.error("Error toggling tradeable:", error);
@@ -57,7 +57,7 @@ export default function UserAssetCard({
 
         setIsUpdating(true);
         try {
-            await userAssetService.toggleTradeable(asset.id, asset.isTradeable, val);
+            await userAssetService.toggleTradeable(asset.id, asset.logistics.isTradeable, val);
             setShowPricing(false);
             onUpdate();
         } catch (error) {
@@ -155,7 +155,7 @@ export default function UserAssetCard({
                         <div className="bg-primary/80 backdrop-blur-md text-black px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-xl">
                             <ArrowRightLeft className="w-3 h-3" /> En Negociación
                         </div>
-                    ) : asset.isTradeable ? (
+                    ) : asset.logistics?.isTradeable ? (
                         <div className="bg-primary text-black px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-xl">
                             <ArrowRightLeft className="w-3 h-3" /> Disponible
                         </div>
@@ -218,7 +218,7 @@ export default function UserAssetCard({
                 <div className="flex items-center justify-between pt-2 border-t border-white/5">
                     <div className="flex flex-col">
                         <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Valoración</span>
-                        <span className="text-xs font-black text-white">${asset.valuation?.toLocaleString()}</span>
+                        <span className="text-xs font-black text-white">${asset.logistics?.price?.toLocaleString()}</span>
                     </div>
                     {!readonly && (
                         <button
@@ -276,12 +276,12 @@ export default function UserAssetCard({
                             className={`w-full py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
                                 isReserved
                                     ? "bg-white/5 text-gray-500 border border-white/10 cursor-not-allowed"
-                                    : asset.isTradeable
+                                    : asset.logistics?.isTradeable
                                         ? "bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20"
                                         : "bg-primary text-black hover:bg-white"
                                 }`}
                         >
-                            {isUpdating ? "Procesando..." : isReserved ? "ITEM CONGELADO / RESERVADO" : asset.isTradeable ? "Retirar de Comercio" : "Poner en Comercio"}
+                            {isUpdating ? "Procesando..." : isReserved ? "ITEM CONGELADO / RESERVADO" : asset.logistics?.isTradeable ? "Retirar de Comercio" : "Poner en Comercio"}
                         </button>
                     </div>
                 )}

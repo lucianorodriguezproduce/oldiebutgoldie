@@ -4,7 +4,7 @@ import { LazyImage } from "@/components/ui/LazyImage";
 import { Star } from "lucide-react";
 import type { DiscogsSearchResult } from "@/lib/discogs";
 
-export const CompactSearchCard = memo(({ result, idx, onClick }: { result: DiscogsSearchResult, idx: number, onClick: () => void }) => {
+export const CompactSearchCard = memo(({ result, idx, onClick, priority = false }: { result: DiscogsSearchResult, idx: number, onClick: () => void, priority?: boolean }) => {
     const isLocal = (result as any).isLocal === true;
 
     return (
@@ -19,6 +19,7 @@ export const CompactSearchCard = memo(({ result, idx, onClick }: { result: Disco
                 <LazyImage
                     src={result.cover_image || result.thumb}
                     alt={result.title}
+                    priority={priority}
                     className="w-full h-full object-cover grayscale-[0.3] group-hover:grayscale-0 transition-transform duration-700 group-hover:scale-110"
                 />
 

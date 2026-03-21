@@ -99,6 +99,7 @@ export function PremiumShowcase() {
                         return (
                             <div key={order.id} className="relative group">
                                 <CompactSearchCard
+                                    priority={idx < 4}
                                     result={{
                                         id: order.id,
                                         title: title,

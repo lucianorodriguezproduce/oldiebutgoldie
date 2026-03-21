@@ -338,63 +338,14 @@ export default function RevisarLote() {
 
         showLoading("Sincronizando con Discogs y añadiendo a tu batea...");
         try {
-            // Importación de Alta Fidelidad: Iterar y obtener detalles completos
+            // Protocol V93.0: Pipeline Universal
             for (const item of discogsItems) {
-                const itemId = item.id.toString();
-                let fullData: any = item;
-                try {
-                    // Intentamos obtener el release completo para tener el tracklist y más metadata
-                    if (item.type === 'master') {
-                        const master = await discogsService.getMasterDetails(itemId);
-                        if (master.main_release) {
-                            fullData = await discogsService.getReleaseDetails(master.main_release.toString());
-                        } else {
-                            fullData = { ...item, ...master };
-                        }
-                    } else {
-                        fullData = await discogsService.getReleaseDetails(itemId);
-                    }
-                } catch (e) {
-                    console.warn(`[Batea-Resilience] No se pudo hidratar ${item.title} (ID: ${itemId}, Type: ${item.type}), usando data parcial.`);
-                }
-
-                // Parse artist from title if needed
-                let parsedArtist = fullData.artist || fullData.metadata?.artist || '';
-                let parsedTitle = fullData.title || fullData.metadata?.title || fullData.album || '';
-
-                if (!parsedArtist && parsedTitle.includes(' - ')) {
-                    const parts = parsedTitle.split(' - ');
-                    parsedArtist = parts[0].trim();
-                    parsedTitle = parts.slice(1).join(' - ').trim();
-                }
-
-                // Seguridad de Tipos y NaN (Protocolo V21.4)
-                const rawYear = fullData.year || fullData.metadata?.year || '0';
-                const safeYear = parseInt(String(rawYear)) || 0;
-
-                // 1. También importar a inventario (archived) para que "viaje al archivo" (Protocolo V21.6)
-                // Usamos el nuevo retorno enriquecido (V25.0)
-                const importResult = await inventoryService.importFromDiscogs(fullData as any, {
-                    stock: 0,
+                await inventoryService.universalIngest(item, 'user_upload', {
+                    userId: user.uid,
                     price: item.price || 0,
                     condition: item.condition,
-                    status: 'archived'
+                    isTradeable: false
                 });
-
-                const enrichedItem = importResult.item;
-
-                // 2. Guardar en User Assets con Metadata de Alta Fidelidad
-                await userAssetService.addAsset(user.uid, {
-                    metadata: {
-                        ...enrichedItem.metadata,
-                        isBatch: enrichedItem.metadata.isBatch || false
-                    },
-                    media: enrichedItem.media,
-                    originalInventoryId: importResult.id,
-                    valuation: item.price || 0,
-                    tracklist: enrichedItem.tracklist || [],
-                    labels: enrichedItem.labels || []
-                } as any);
             }
 
             if (inventoryItems.length > 0) {

@@ -103,6 +103,52 @@ export const inventoryService = {
     },
 
     /**
+     * Protocol V93.0: Ingestor Universal (Single Source of Truth)
+     * Centraliza la carga de Admin, Sourcing y Batea de Usuario.
+     */
+    async universalIngest(sourceData: any, context: 'admin' | 'sourcing' | 'user_upload', extraData?: any) {
+        console.log(`[V93.0-INGESTOR] Starting universal ingest for context: ${context}`);
+        
+        // 1. Enriquecimiento y Normalización (Pipeline Maestro)
+        // Usamos importFromDiscogs como el motor de procesamiento base
+        const { id, item } = await this.importFromDiscogs(sourceData, {
+            stock: extraData?.stock ?? (context === 'user_upload' ? 1 : 0),
+            price: extraData?.price ?? 0,
+            condition: extraData?.condition ?? 'M/NM',
+            status: context === 'sourcing' ? 'requested' : (context === 'user_upload' ? 'archived' : 'active')
+        }, extraData);
+
+        // 2. Ruteo (Output Split)
+        if (context === 'user_upload') {
+            const userId = extraData?.userId;
+            if (!userId) throw new Error("SISTEMA_IDENTIDAD_USUARIO_REQUERIDO");
+
+            const { userAssetService } = await import("@/services/userAssetService");
+            
+            await userAssetService.addAsset(userId, {
+                originalInventoryId: id,
+                metadata: item.metadata,
+                media: item.media,
+                logistics: {
+                    price: extraData?.price ?? 0,
+                    stock: extraData?.stock ?? 1,
+                    condition: extraData?.condition ?? 'M/NM',
+                    status: 'active',
+                    isTradeable: extraData?.isTradeable ?? false
+                },
+                reference: item.reference,
+                tracklist: item.tracklist,
+                labels: item.labels,
+                items: item.items
+            } as any);
+
+            console.log(`[V93.0-INGESTOR] User asset created and linked to shadow item ${id}`);
+        }
+
+        return { id, item };
+    },
+
+    /**
      * Clones a Discogs release and persists it into the local inventory.
      * This is the "batea Entry" process.
      */

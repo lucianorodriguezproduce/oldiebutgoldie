@@ -29,16 +29,34 @@ export const userAssetService = {
             orderBy("acquiredAt", "desc")
         );
         const snapshot = await getDocs(q);
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserAsset));
+        return snapshot.docs.map(doc => {
+            const data = doc.data() as any;
+            if (!data.logistics && (data.valuation !== undefined || data.stock !== undefined)) {
+                return {
+                    id: doc.id,
+                    ...data,
+                    logistics: {
+                        price: data.valuation || 0,
+                        stock: data.stock || 1,
+                        condition: data.metadata?.condition || 'M/NM',
+                        status: data.status || 'active',
+                        isTradeable: data.isTradeable || false
+                    }
+                } as UserAsset;
+            }
+            return { id: doc.id, ...data } as UserAsset;
+        });
     },
 
     /**
      * Activa/Desactiva un ítem para intercambio público
      */
-    async toggleTradeable(assetId: string, isTradeable: boolean, valuation?: number) {
+    async toggleTradeable(assetId: string, isTradeable: boolean, price?: number) {
         const docRef = doc(db, COLLECTION_NAME, assetId);
-        const updateData: any = { isTradeable };
-        if (valuation !== undefined) updateData.valuation = valuation;
+        const updateData: any = { 
+            "logistics.isTradeable": isTradeable 
+        };
+        if (price !== undefined) updateData["logistics.price"] = price;
 
         await updateDoc(docRef, updateData);
     },
@@ -46,22 +64,24 @@ export const userAssetService = {
     /**
      * Añade un ítem a la batea personal del usuario
      */
-    async addAsset(userId: string, assetData: {
-        metadata: any;
-        media: any;
-        originalInventoryId?: string;
-        valuation?: number;
-    }) {
+    async addAsset(userId: string, assetData: Partial<UserAsset>) {
         const docRef = await addDoc(collection(db, COLLECTION_NAME), {
             ownerId: userId,
-            uid: userId, // Redundancia para compatibilidad con firestore.rules
+            uid: userId, 
             originalInventoryId: assetData.originalInventoryId || '',
             metadata: assetData.metadata,
             media: assetData.media,
-            valuation: assetData.valuation || 0,
-            stock: 1,
-            isTradeable: false,
-            status: 'active',
+            logistics: {
+                price: assetData.logistics?.price || 0,
+                stock: assetData.logistics?.stock || 1,
+                condition: assetData.logistics?.condition || 'M/NM',
+                status: 'active',
+                isTradeable: assetData.logistics?.isTradeable || false
+            },
+            reference: assetData.reference || null,
+            tracklist: assetData.tracklist || [],
+            labels: assetData.labels || [],
+            items: assetData.items || [],
             acquiredAt: serverTimestamp()
         });
 
@@ -77,11 +97,28 @@ export const userAssetService = {
     async getMarketplaceAssets(): Promise<UserAsset[]> {
         const q = query(
             collection(db, COLLECTION_NAME),
-            where("isTradeable", "==", true),
-            where("status", "==", "active")
+            where("logistics.isTradeable", "==", true),
+            where("logistics.status", "==", "active")
         );
         const snapshot = await getDocs(q);
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserAsset));
+        return snapshot.docs.map(doc => {
+            const data = doc.data() as any;
+            if (!data.logistics) {
+                // Fallback for non-migrated items (should be rare for marketplace)
+                return {
+                    id: doc.id,
+                    ...data,
+                    logistics: {
+                        price: data.valuation || 0,
+                        stock: data.stock || 1,
+                        condition: data.metadata?.condition || 'M/NM',
+                        status: data.status || 'active',
+                        isTradeable: data.isTradeable || false
+                    }
+                } as UserAsset;
+            }
+            return { id: doc.id, ...data } as UserAsset;
+        });
     },
 
     /**
@@ -89,7 +126,7 @@ export const userAssetService = {
      */
     async updateStock(assetId: string, newStock: number) {
         const docRef = doc(db, COLLECTION_NAME, assetId);
-        await updateDoc(docRef, { stock: Math.max(0, newStock) });
+        await updateDoc(docRef, { "logistics.stock": Math.max(0, newStock) });
     },
 
     /**
@@ -99,7 +136,21 @@ export const userAssetService = {
         const docRef = doc(db, COLLECTION_NAME, assetId);
         const snap = await getDoc(docRef);
         if (!snap.exists()) return null;
-        return { id: snap.id, ...snap.data() } as UserAsset;
+        const data = snap.data() as any;
+        if (!data.logistics) {
+            return {
+                id: snap.id,
+                ...data,
+                logistics: {
+                    price: data.valuation || 0,
+                    stock: data.stock || 1,
+                    condition: data.metadata?.condition || 'M/NM',
+                    status: data.status || 'active',
+                    isTradeable: data.isTradeable || false
+                }
+            } as UserAsset;
+        }
+        return { id: snap.id, ...data } as UserAsset;
     },
 
     /**

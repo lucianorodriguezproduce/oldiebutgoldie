@@ -161,9 +161,16 @@ export default function ManifestEditor({
                                     <p className="text-xs font-bold text-white truncate">
                                         {item?.metadata?.title || item?.title || "Cargando..."}
                                     </p>
-                                    <p className="text-[9px] text-gray-500 font-bold uppercase tracking-tighter truncate">
-                                        {item?.metadata?.artist || item?.artist || "Desconocido"}
-                                    </p>
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-[9px] text-gray-500 font-bold uppercase tracking-tighter truncate">
+                                            {item?.metadata?.artist || item?.artist || "Desconocido"}
+                                        </p>
+                                        {(item?.logistics?.price || item?.valuation) && (
+                                            <span className="text-[10px] font-black text-primary/80">
+                                                ${(item?.logistics?.price || item?.valuation).toLocaleString()}
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                                 {!isLocked && (
                                     <button

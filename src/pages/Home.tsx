@@ -650,8 +650,8 @@ export default function Home() {
                         animate={{ opacity: 1, scale: 1 }}
                         className={`w-full flex flex-col items-center min-h-[100dvh] ${isSearchActive ? 'justify-start' : 'justify-center gap-12 md:gap-16 text-center'}`}
                     >
-                        {/* BLOQUE SUPERIOR (Sticky Header) */}
-                        <div className={`w-full transition-all flex flex-col items-center ${isSearchActive ? 'sticky top-0 z-50 bg-[#050505]/95 backdrop-blur-xl pt-[env(safe-area-inset-top,1rem)] md:pt-8 pb-4 px-4 border-b border-white/5 shadow-2xl' : ''}`}>
+                        {/* BLOQUE SUPERIOR (Sticky Header) - Protocol V94.0: CLS Defense */}
+                        <div className={`w-full transition-all flex flex-col items-center min-h-[350px] md:min-h-[450px] ${isSearchActive ? 'sticky top-0 z-50 bg-[#050505]/95 backdrop-blur-xl pt-[env(safe-area-inset-top,1rem)] md:pt-8 pb-4 px-4 border-b border-white/5 shadow-2xl' : ''}`}>
                             <AnimatePresence mode="wait">
                                 {!isSearchActive ? (
                                     <motion.header

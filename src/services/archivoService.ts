@@ -101,11 +101,11 @@ export const archivoService = {
                         image: data.media.full_res_image_url || data.media.thumbnail,
                         full_res_image: data.media.full_res_image_url,
                         source: 'user_assets',
-                        valuation: data.valuation,
+                        valuation: data.logistics?.price || (data as any).valuation,
                         genres: data.metadata.genres,
                         styles: data.metadata.styles,
                         format: data.metadata.format_description,
-                        condition: data.metadata.isBatch ? 'MIXTO' : 'USADO',
+                        condition: data.logistics?.condition || (data.metadata.isBatch ? 'MIXTO' : 'USADO'),
                         tracklist: data.tracklist,
                         labels: data.labels,
                         youtube_id: data.metadata.youtube_id,
@@ -157,7 +157,7 @@ export const archivoService = {
 
         const assetQuery = query(
             collection(db, "user_assets"),
-            where("status", "==", "active"),
+            where("logistics.status", "==", "active"),
             orderBy("acquiredAt", "desc"),
             limit(pageSize / 2)
         );
@@ -207,7 +207,7 @@ export const archivoService = {
                 year: data.metadata.year,
                 image: data.media.thumbnail,
                 source: 'user_assets',
-                valuation: data.valuation,
+                valuation: data.logistics?.price || (data as any).valuation,
                 tracklist: data.tracklist,
                 labels: data.labels,
                 youtube_id: data.metadata.youtube_id,

@@ -60,6 +60,7 @@ const NavigateWithParams = ({ to }: { to: string }) => {
 };
 
 const PublicOrders = lazy(() => import("@/pages/PublicOrders"));
+const Guias = lazy(() => import("@/pages/Guias"));
 const PublicOrderView = lazy(() => import("@/pages/PublicOrderView"));
 const Editorial = lazy(() => import("@/pages/Editorial"));
 const ArticleDetail = lazy(() => import("@/pages/ArticleDetail"));
@@ -86,7 +87,10 @@ const AdminCollection = lazy(() => import("@/pages/Admin/AdminCollection"));
 const AdminTrades = lazy(() => import("@/pages/Admin/AdminTrades"));
 const PermissionConsole = lazy(() => import("@/pages/Admin/PermissionConsole"));
 
-import Guias from "@/pages/Guias";
+// Admin Lazy
+// const AdminLayout = lazy(() => import("@/components/Admin/AdminLayout")); // Fixed duplicate
+// ... existing imports ...
+
 import { ProtectedRoute } from "@/components/Guard/ProtectedRoute";
 
 

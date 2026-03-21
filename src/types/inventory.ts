@@ -102,10 +102,15 @@ export interface Trade {
 export interface UserAsset {
     id: string; // Internal UUID (UserAsset ID)
     ownerId: string;
+    uid?: string; // Redundancy for security rules
     originalInventoryId: string;
-    valuation: number;
-    isTradeable: boolean;
-    stock: number;
+    logistics: {
+        price: number; // Unified with inventory price
+        stock: number;
+        condition: string;
+        status: "active" | "traded" | "archived" | "promoted";
+        isTradeable: boolean;
+    };
     metadata: InventoryItem['metadata'];
     media: InventoryItem['media'];
     reference?: InventoryItem['reference'];
@@ -113,5 +118,4 @@ export interface UserAsset {
     labels?: InventoryItem['labels'];
     items?: InventoryItem['items'];
     acquiredAt: any;
-    status: "active" | "traded" | "archived" | "promoted";
 }

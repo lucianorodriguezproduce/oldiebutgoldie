@@ -224,39 +224,14 @@ export default function AdminInventory() {
         if (!discogsId) return;
         showLoading("Importando desde Discogs al La Batea...");
         try {
-            let releaseData: any;
-
-            if (selectedSearchItem) {
-                // Protocol V79.1: Use explicit type to avoid ID collisions between masters and releases
-                if (selectedSearchItem.type === "master") {
-                    const master = await discogsService.getMasterDetails(discogsId);
-                    if (master.main_release) {
-                        releaseData = await discogsService.getReleaseDetails(master.main_release.toString());
-                    } else {
-                        releaseData = { ...master, id: master.id };
-                    }
-                } else {
-                    releaseData = await discogsService.getReleaseDetails(discogsId);
-                }
-            } else {
-                // Manual ID Fallback
-                try {
-                    releaseData = await discogsService.getReleaseDetails(discogsId);
-                } catch (e) {
-                    const master = await discogsService.getMasterDetails(discogsId);
-                    if (master.main_release) {
-                        releaseData = await discogsService.getReleaseDetails(master.main_release.toString());
-                    } else {
-                        releaseData = { ...master, id: master.id };
-                    }
-                }
-            }
-
-            await inventoryService.importFromDiscogs(releaseData, {
+            // Protocol V93.0: Pipeline Universal
+            // El Ingestor se encarga de la hidratación profunda (Master -> Release) y enriquecimiento
+            const source = selectedSearchItem || { id: discogsId, type: 'release' };
+            
+            await inventoryService.universalIngest(source, 'admin', {
                 price: manualData.price || 0,
                 stock: manualData.stock || 1,
                 condition: manualData.condition,
-                status: "active",
                 internal_category: manualData.internal_category
             });
             setShowIngestionModal(false);

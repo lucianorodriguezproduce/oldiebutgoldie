@@ -74,11 +74,10 @@ export const tradeService = {
                     if (itemMeta.source === 'DISCOGS' || !itemMeta.inventoryId) {
                         try {
                             console.log(`[V88.0-SOURCING] Creating shadow inventory record for: ${itemMeta.title}`);
-                            const importResult = await inventoryService.importFromDiscogs(itemMeta, {
+                            const importResult = await inventoryService.universalIngest(itemMeta, 'sourcing', {
                                 stock: 0,
                                 price: itemMeta.price || 0,
-                                condition: itemMeta.condition || 'M/NM',
-                                status: 'requested' // Core Rule V88.0
+                                condition: itemMeta.condition || 'M/NM'
                             });
                             
                             // Vinculamos el trade al nuevo itemId
@@ -511,9 +510,7 @@ export const tradeService = {
                                 tracklist: invData.tracklist || [],
                                 labels: invData.labels || [],
                                 items: invData.items || [],
-                                acquiredAt: serverTimestamp(),
-                                stock: 1,
-                                status: "active"
+                                acquiredAt: serverTimestamp()
                             });
                         } else {
                             // If it's archived (External Request), we just let the trade resolve to 'in_process'
@@ -526,13 +523,13 @@ export const tradeService = {
                     const assetData = snap.data() as UserAsset;
 
                     if (assetData.ownerId !== receiverId) throw new Error("El vendedor ya no es dueño de este activo");
-                    if (assetData.status !== "active") {
+                    if (assetData.logistics.status !== "active") {
                         throw new Error(`El ítem "${assetData.metadata?.title || itemId}" ya no está disponible para intercambio`);
                     }
 
                     transaction.update(ref, {
                         ownerId: senderId,
-                        isTradeable: false,
+                        "logistics.isTradeable": false,
                         acquiredAt: serverTimestamp()
                     });
                 }
@@ -555,14 +552,16 @@ export const tradeService = {
                         transaction.set(newAssetRef, {
                             ownerId: receiverId,
                             originalInventoryId: itemId,
-                            valuation: invData.logistics.price || 0,
-                            isTradeable: false,
+                            logistics: {
+                                price: invData.logistics.price || 0,
+                                isTradeable: false,
+                                stock: 1,
+                                status: "active"
+                            },
                             metadata: invData.metadata,
                             media: invData.media,
                             items: invData.items || [],
-                            acquiredAt: serverTimestamp(),
-                            stock: 1,
-                            status: "active"
+                            acquiredAt: serverTimestamp()
                         });
                     }
                 } else if (isExternal) {
@@ -578,22 +577,25 @@ export const tradeService = {
                     transaction.set(newAssetRef, {
                         ownerId: receiverId,
                         originalInventoryId: itemId,
-                        valuation: invData.logistics.price || 0,
-                        isTradeable: false,
+                        logistics: {
+                            price: invData.logistics.price || 0,
+                            stock: 1,
+                            status: "active",
+                            isTradeable: false,
+                            condition: invData.logistics.condition || 'M/NM'
+                        },
                         metadata: invData.metadata,
                         media: invData.media,
                         items: invData.items || [],
-                        acquiredAt: serverTimestamp(),
-                        stock: 1,
-                        status: "active"
+                        acquiredAt: serverTimestamp()
                     });
                 } else {
                     if (!snap.exists()) throw new Error(`Activo ofrecido no encontrado: ${itemId}`);
                     const assetData = snap.data() as UserAsset;
 
                     if (assetData.ownerId !== senderId) throw new Error("Ya no eres dueño del activo que intentas ofrecer");
-                    const assetStock = assetData.stock ?? 1;
-                    if (assetData.status !== "active" || assetStock <= 0) {
+                    const assetStock = assetData.logistics.stock ?? 1;
+                    if (assetData.logistics.status !== "active" || assetStock <= 0) {
                         throw new Error(`Tu ítem "${assetData.metadata?.title || itemId}" ya no está disponible`);
                     }
 
@@ -601,28 +603,31 @@ export const tradeService = {
                         // Last unit → transfer ownership
                         transaction.update(ref, {
                             ownerId: receiverId,
-                            isTradeable: false,
-                            stock: 1,
+                            "logistics.isTradeable": false,
+                            "logistics.stock": 1,
                             acquiredAt: serverTimestamp()
                         });
                     } else {
                         // Multiple stock → decrement and create new asset for receiver
-                        transaction.update(ref, { stock: assetStock - 1 });
+                        transaction.update(ref, { "logistics.stock": assetStock - 1 });
                         const newAssetRef = doc(collection(db, "user_assets"));
                         transaction.set(newAssetRef, {
                             ownerId: receiverId,
                             originalInventoryId: assetData.originalInventoryId || '',
-                            valuation: assetData.valuation || 0,
-                            isTradeable: false,
+                            logistics: {
+                                price: assetData.logistics.price || 0,
+                                stock: 1,
+                                status: "active",
+                                isTradeable: false,
+                                condition: assetData.logistics.condition || 'M/NM'
+                            },
                             metadata: assetData.metadata,
                             media: assetData.media,
                             reference: assetData.reference || null,
                             tracklist: assetData.tracklist || [],
                             labels: assetData.labels || [],
                             items: assetData.items || [],
-                            acquiredAt: serverTimestamp(),
-                            stock: 1,
-                            status: "active"
+                            acquiredAt: serverTimestamp()
                         });
                     }
                 }
