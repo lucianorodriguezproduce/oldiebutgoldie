@@ -674,6 +674,11 @@ export const inventoryService = {
             console.error("FATAL ERROR en healRecord:", err);
             throw err;
         }
+    },
+
+    async patchBlocks(id: string, blocks: any[]) {
+        const docRef = doc(db, COLLECTION_NAME, id);
+        await updateDoc(docRef, { blocks });
     }
 };
 

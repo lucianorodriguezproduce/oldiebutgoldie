@@ -1,3 +1,5 @@
+import type { EditorialBlock } from './editorial';
+
 export interface InventoryItem {
     id: string; // Internal UUID
     metadata: {
@@ -55,6 +57,7 @@ export interface InventoryItem {
         name: string;
         catno: string;
     }[];
+    blocks?: EditorialBlock[];
 }
 
 export interface TradeManifest {

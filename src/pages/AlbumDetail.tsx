@@ -20,6 +20,9 @@ import { ShoppingBag, Check } from "lucide-react";
 import { useGTM } from "@/context/GTMContext";
 import { tradeService } from "@/services/tradeService";
 import { ADMIN_UIDS } from "@/constants/admin";
+import { BlockRenderer } from "@/components/Editorial/BlockRenderer";
+import { ReactLenis } from "@studio-freight/react-lenis";
+import { StickyBuyBar } from "@/components/ui/StickyBuyBar";
 
 export default function AlbumDetail() {
     const { id } = useParams<{ id: string }>();
@@ -59,6 +62,7 @@ export default function AlbumDetail() {
                         isLocal: true,
                         isBatch: localItem.metadata.isBatch,
                         items: localItem.items || [],
+                        blocks: localItem.blocks || [],
                         uri: localItem.reference.originalDiscogsUrl,
                         stock: localItem.logistics.stock,
                         raw: localItem // Pass the raw object for Lote compatibility
@@ -112,7 +116,39 @@ export default function AlbumDetail() {
         );
     }
 
-    return (
+    const handlePrimaryAction = async () => {
+        if (!user) return alert(TEXTS.comunidad.syncToCollect);
+        if (!dbUser?.username) return alert("Debes reclamar un @usuario para hacer un pedido.");
+        
+        try {
+            showLoading("Iniciando pedido oficial...");
+            // Sourcing Logic: Start inquiry with Admin
+            const tradeId = await tradeService.startInquiry(
+                album.id.toString(), 
+                user.uid, 
+                dbUser.username, 
+                ADMIN_UIDS[0]
+            );
+            
+            // Send automatic lead message
+            await tradeService.sendMessage(
+                tradeId, 
+                user.uid, 
+                `Hola OBG, me interesa conseguir este ejemplar: ${album.artists?.[0]?.name || ''} - ${album.title}. ¿Podrían cotizarlo?`
+            );
+            
+            hideLoading();
+            navigate(`/mensajes?chat=${tradeId}_${user.uid}`);
+        } catch (error: any) {
+            console.error("Sourcing error:", error);
+            hideLoading();
+            alert("Error al iniciar el pedido.");
+        }
+    };
+
+    const hasBlocks = album.blocks && album.blocks.length > 0;
+
+    const content = (
         <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -197,35 +233,7 @@ export default function AlbumDetail() {
 
                         {/* Sourcing / P2P Integration (V74.1) */}
                         <Button
-                            onClick={async () => {
-                                if (!user) return alert(TEXTS.comunidad.syncToCollect);
-                                if (!dbUser?.username) return alert("Debes reclamar un @usuario para hacer un pedido.");
-                                
-                                try {
-                                    showLoading("Iniciando pedido oficial...");
-                                    // Sourcing Logic: Start inquiry with Admin
-                                    const tradeId = await tradeService.startInquiry(
-                                        album.id.toString(), 
-                                        user.uid, 
-                                        dbUser.username, 
-                                        ADMIN_UIDS[0]
-                                    );
-                                    
-                                    // Send automatic lead message
-                                    await tradeService.sendMessage(
-                                        tradeId, 
-                                        user.uid, 
-                                        `Hola OBG, me interesa conseguir este ejemplar: ${album.artists?.[0]?.name || ''} - ${album.title}. ¿Podrían cotizarlo?`
-                                    );
-                                    
-                                    hideLoading();
-                                    navigate(`/mensajes?chat=${tradeId}_${user.uid}`);
-                                } catch (error: any) {
-                                    console.error("Sourcing error:", error);
-                                    hideLoading();
-                                    alert("Error al iniciar el pedido.");
-                                }
-                            }}
+                            onClick={handlePrimaryAction}
                             variant="secondary"
                             className="h-24 text-xl font-black transition-all transform hover:-translate-y-2 rounded-2xl shadow-2xl bg-white text-black hover:bg-primary border-2 border-white/20"
                         >
@@ -420,6 +428,26 @@ export default function AlbumDetail() {
                     </div>
                 </div>
             </div>
+
+            {hasBlocks && (
+                <div className="mt-10 md:mt-20 w-full max-w-none col-span-full">
+                    <Separator className="bg-white/[0.04] mb-20" />
+                    <BlockRenderer blocks={album.blocks} />
+                </div>
+            )}
+
+            {hasBlocks && (
+                <StickyBuyBar 
+                    title={album.title}
+                    artist={album.artists?.[0]?.name || "Artista"}
+                    price={album.lowest_price}
+                    stock={album.stock || 0}
+                    isLocal={album.isLocal}
+                    onBuy={handlePrimaryAction}
+                />
+            )}
         </motion.div>
     );
+
+    return hasBlocks ? <ReactLenis root>{content}</ReactLenis> : content;
 }

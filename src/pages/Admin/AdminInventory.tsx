@@ -24,7 +24,8 @@ import {
     Settings,
     ChevronDown,
     ChevronRight,
-    Loader2
+    Loader2,
+    BookOpen
 } from "lucide-react";
 import { SocialCardGenerator } from "@/components/Social/SocialCardGenerator";
 import { inventoryService, getInventoryPaged } from "@/services/inventoryService";
@@ -37,6 +38,7 @@ import { useDebounce } from "@/hooks/useDebounce";
 import type { DiscogsSearchResult } from "@/lib/discogs";
 import { CompactSearchCard } from "@/components/ui/CompactSearchCard";
 import ItemConfigModal from "@/components/discogs/ItemConfigModal";
+import { BlockEditor } from "@/components/Admin/Editorial/BlockEditor";
 
 const PAGE_SIZE = 25;
 
@@ -62,6 +64,10 @@ export default function AdminInventory() {
     const [showBulkModal, setShowBulkModal] = useState(false);
     const [bulkData, setBulkData] = useState({ category: "", mode: "percentage" as "fixed" | "percentage", value: 0 });
     const [showConfigModal, setShowConfigModal] = useState(false);
+
+    // Protocol V101.0: Storytelling Modal State
+    const [showStorytellingModal, setShowStorytellingModal] = useState(false);
+    const [storytellingItem, setStorytellingItem] = useState<InventoryItem | null>(null);
 
     // Protocol V79.0: Integrated Search States
     const [ingestionQuery, setIngestionQuery] = useState("");
@@ -691,6 +697,13 @@ export default function AdminInventory() {
                                                         <Sparkles className="h-4 w-4" />
                                                     </button>
                                                 )}
+                                                <button
+                                                    onClick={() => { setStorytellingItem(item); setShowStorytellingModal(true); }}
+                                                    className={`p-3 rounded-2xl transition-all opacity-0 group-hover:opacity-100 ${item.blocks && item.blocks.length > 0 ? "bg-primary/20 text-primary border border-primary/40 hover:bg-primary/40" : "bg-white/5 text-gray-400 hover:text-white hover:bg-white/10"}`}
+                                                    title="Modo Storytelling (Editorial Ficha)"
+                                                >
+                                                    <BookOpen className="h-4 w-4" />
+                                                </button>
                                                 <button
                                                     onClick={() => setMarketingItem(item)}
                                                     className="p-3 bg-white/5 text-primary rounded-2xl hover:bg-primary/10 transition-all opacity-0 group-hover:opacity-100"
