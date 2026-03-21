@@ -168,7 +168,7 @@ export default function TradeConstructor() {
         // Sum suggested values of offered items (Optional/C2B)
         const offeredTotal = Array.from(selectedOffered).reduce((sum, id) => {
             const asset = userAssets.find(a => a.id === id);
-            return sum + (asset?.valuation || 0);
+            return sum + (asset?.logistics?.price || 0);
         }, 0);
 
         const delta = requestedTotal - offeredTotal;
@@ -842,8 +842,8 @@ export default function TradeConstructor() {
                                                         <div className="p-3 space-y-1">
                                                             <h4 className="text-xs font-black text-white truncate">{asset.metadata?.title}</h4>
                                                             <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest truncate">{asset.metadata?.artist}</p>
-                                                            {asset.valuation && (
-                                                                <p className="text-[10px] font-mono text-primary">Valor: ${asset.valuation.toLocaleString()}</p>
+                                                            {asset.logistics?.price && (
+                                                                <p className="text-[10px] font-mono text-primary">Valor: ${asset.logistics.price.toLocaleString()}</p>
                                                             )}
                                                         </div>
                                                         {isSelected && (
