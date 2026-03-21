@@ -13,6 +13,9 @@ import { TEXTS } from "@/constants/texts";
 import { SEO } from "@/components/SEO";
 import { ShortcodeRenderer } from "@/components/Editorial/ShortcodeRenderer";
 import { pushEditorialView } from "@/utils/analytics";
+import { BlockRenderer } from "@/components/Editorial/BlockRenderer";
+import { ReactLenis } from "@studio-freight/react-lenis";
+import type { EditorialBlock } from "@/types/editorial";
 
 
 interface Article {
@@ -28,6 +31,7 @@ interface Article {
     slug?: string;
     tags_entidades?: string[];
     linked_items?: string[];
+    blocks?: EditorialBlock[];
     ai_summary?: string;
     _redirectUrl?: string;
 }
@@ -97,16 +101,17 @@ export default function ArticleDetail() {
     }
 
     return (
-        <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="max-w-4xl mx-auto py-8 md:py-16 px-4 md:px-0"
-        >
-            <SEO
-                title={`${article.title} | Editorial Oldie but Goldie`}
-                description={article.ai_summary || article.excerpt}
-                image={article.image}
-            />
+        <ReactLenis root>
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="max-w-4xl mx-auto py-8 md:py-16 px-4 md:px-0"
+            >
+                <SEO
+                    title={`${article.title} | Editorial Oldie but Goldie`}
+                    description={article.ai_summary || article.excerpt}
+                    image={article.image}
+                />
 
             {/* JSON-LD CreativeWork Schema */}
             <script type="application/ld+json">
@@ -184,8 +189,12 @@ export default function ArticleDetail() {
                 />
             </div>
 
-            <article className="mb-24 md:mb-32 overflow-hidden">
-                <ShortcodeRenderer content={article.content || article.excerpt} />
+            <article className="mb-24 md:mb-32 overflow-hidden w-full max-w-none">
+                {article.blocks?.length ? (
+                    <BlockRenderer blocks={article.blocks} />
+                ) : (
+                    <ShortcodeRenderer content={article.content || article.excerpt} />
+                )}
             </article>
 
             <Separator className="bg-white/5 my-24 md:my-32" />
@@ -200,5 +209,6 @@ export default function ArticleDetail() {
                 </Link>
             </footer>
         </motion.div>
+        </ReactLenis>
     );
 }

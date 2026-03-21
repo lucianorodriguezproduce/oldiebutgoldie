@@ -48,7 +48,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         <div className="flex flex-col md:flex-row h-screen bg-[#050505] text-white font-sans selection:bg-primary/30">
             {/* Mobile Header */}
             <header className="md:hidden flex items-center justify-between px-6 py-4 bg-[#0a0a0a] border-b border-white/5 z-[60]">
-                <AdminLogo showText={false} className="scale-75 origin-left" />
+                <AdminLogo className="scale-75 origin-left" />
                 <div className="flex items-center gap-4">
                     <AdminNotificationBell />
                     <button 

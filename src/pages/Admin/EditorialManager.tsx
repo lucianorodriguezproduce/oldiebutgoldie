@@ -21,6 +21,8 @@ import { SocialCardGenerator } from "@/components/Social/SocialCardGenerator";
 import { motion, AnimatePresence } from "framer-motion";
 import { DriveUpload } from "@/components/Admin/DriveUpload";
 import { TEXTS } from "@/constants/texts";
+import { BlockEditor } from "@/components/Admin/Editorial/BlockEditor";
+import type { EditorialBlock } from "@/types/editorial";
 
 interface Article {
     id: string;
@@ -32,6 +34,7 @@ interface Article {
     readTime: string;
     featured: boolean;
     status: 'draft' | 'published';
+    blocks?: EditorialBlock[];
     ai_summary?: string;
     tags_entidades?: string[];
     linked_items?: string[];
@@ -454,7 +457,15 @@ export default function EditorialManager() {
                                     </div>
                                 </div>
 
-                                <div className="flex items-center gap-12 pt-4">
+                                {/* BLOCK BUILDER INJECTION */}
+                                <div className="pt-8 border-t border-white/5 mt-8">
+                                    <BlockEditor 
+                                        blocks={currentArticle?.blocks || []} 
+                                        onChange={(newBlocks) => setCurrentArticle({ ...currentArticle, blocks: newBlocks })} 
+                                    />
+                                </div>
+
+                                <div className="flex items-center gap-12 pt-4 border-t border-white/5 mt-8">
                                     <div className="flex items-center gap-4">
                                         <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{TEXTS.admin.admin.editorial.protocolStatus}:</label>
                                         <div className="flex bg-white/5 p-1 rounded-xl">
