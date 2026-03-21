@@ -1151,6 +1151,80 @@ export default function AdminInventory() {
                 )}
             </AnimatePresence>
 
+            {/* Protocol V101.0: Storytelling Modal */}
+            <AnimatePresence>
+                {showStorytellingModal && storytellingItem && (
+                    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 bg-black/90 backdrop-blur-xl"
+                            onClick={() => setShowStorytellingModal(false)}
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 30 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 30 }}
+                            className="relative w-full max-w-4xl bg-[#0a0a0a] border border-white/10 rounded-[3rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+                        >
+                            <div className="p-8 border-b border-white/5 flex items-center justify-between shrink-0">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-xl overflow-hidden bg-black/40 border border-white/10 shrink-0">
+                                        <LazyImage
+                                            src={storytellingItem.media.full_res_image_url || storytellingItem.media.thumbnail}
+                                            alt={storytellingItem.metadata.title}
+                                            className="w-full h-full object-cover"
+                                        />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xl font-black text-white uppercase tracking-tighter">Storytelling: {storytellingItem.metadata.title}</h3>
+                                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{storytellingItem.metadata.artist}</p>
+                                    </div>
+                                </div>
+                                <button onClick={() => setShowStorytellingModal(false)} className="text-gray-500 hover:text-white transition-colors">
+                                    <X className="w-8 h-8" />
+                                </button>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                                <BlockEditor 
+                                    blocks={storytellingItem.blocks || []} 
+                                    onChange={(blocks) => setStorytellingItem({ ...storytellingItem, blocks })} 
+                                />
+                            </div>
+
+                            <div className="p-8 border-t border-white/5 bg-white/[0.01] flex justify-end gap-3 shrink-0">
+                                <button
+                                    onClick={() => setShowStorytellingModal(false)}
+                                    className="px-6 py-3 bg-white/5 text-gray-400 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={async () => {
+                                        showLoading("Guardando Storytelling...");
+                                        try {
+                                            await inventoryService.patchBlocks(storytellingItem.id, storytellingItem.blocks || []);
+                                            setShowStorytellingModal(false);
+                                            setItems(prev => prev.map(it => it.id === storytellingItem.id ? storytellingItem : it));
+                                        } catch (e) {
+                                            console.error("Error saving blocks:", e);
+                                            alert("Error al guardar.");
+                                        } finally {
+                                            hideLoading();
+                                        }
+                                    }}
+                                    className="px-8 py-3 bg-primary text-black rounded-2xl text-[10px] font-black uppercase tracking-widest hover:brightness-110 shadow-xl shadow-primary/20 transition-all"
+                                >
+                                    Guardar Cambios
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
             {/* Ingestion Config Wizard (V96.0) */}
             {selectedSearchItem && (
                 <ItemConfigModal
