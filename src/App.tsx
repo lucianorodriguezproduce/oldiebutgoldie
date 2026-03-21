@@ -83,6 +83,7 @@ const DatabasePurge = lazy(() => import("@/pages/Admin/DatabasePurge"));
 const BulkUpload = lazy(() => import("@/pages/Admin/BulkUpload"));
 const BrandingPage = lazy(() => import("@/pages/Admin/BrandingPage"));
 const AdminInventory = lazy(() => import("@/pages/Admin/AdminInventory"));
+const AdminGear = lazy(() => import("@/pages/Admin/AdminGear"));
 const AdminCollection = lazy(() => import("@/pages/Admin/AdminCollection"));
 const AdminTrades = lazy(() => import("@/pages/Admin/AdminTrades"));
 const PermissionConsole = lazy(() => import("@/pages/Admin/PermissionConsole"));
@@ -246,6 +247,7 @@ function AppContent() {
                 <Route index element={<AdminStats />} />
                 <Route path="analytics" element={<AdminStats />} />
                 <Route path="inventory" element={<AdminInventory />} />
+                <Route path="gear" element={<AdminGear />} />
                 <Route path="collection" element={<AdminCollection />} />
                 <Route path="trades" element={<AdminTrades />} />
                 <Route path="editorial" element={<EditorialManager />} />

@@ -14,6 +14,7 @@ import {
     Terminal,
     Menu,
     X,
+    Server,
 } from "lucide-react";
 
 import { useAuth } from "@/context/AuthContext";
@@ -35,7 +36,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         { label: "Estadísticas", href: "/admin", icon: LayoutDashboard },
         { label: "🚚 Ventas / Despachos", href: "/admin/trades?view=direct_sale", icon: ShoppingBag },
         { label: "🤝 Intercambios P2P", href: "/admin/trades?view=exchange", icon: Handshake },
-        { label: "📦 Inventario Pro", href: "/admin/inventory", icon: Package },
+        { label: "📦 Batea / Discos", href: "/admin/inventory", icon: Package },
+        { label: "🎛️ Búnker / Equipos", href: "/admin/gear", icon: Server },
         { label: "🚀 Ingesta Masiva", href: "/admin/bulk-upload", icon: UploadCloud },
         { label: "💎 Colección", href: "/admin/collection", icon: Disc },
         { label: "Identidad Marca", href: "/admin/branding", icon: Shield },
