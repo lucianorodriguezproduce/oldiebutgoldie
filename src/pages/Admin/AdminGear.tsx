@@ -944,6 +944,7 @@ export default function AdminGear() {
                                         Crear Registro Manual
                                     </button>
                                 </div>
+                            )}
                         </motion.div>
                     </div>
                 )}
