@@ -1,6 +1,7 @@
 import { db } from "@/lib/firebase";
 import { collection, query, where, getDocs, doc, getDoc, limit, startAfter, orderBy } from "firebase/firestore";
 import type { InventoryItem, UserAsset } from "@/types/inventory";
+import type { EditorialBlock } from "@/types/editorial";
 
 export interface UnifiedItem {
     id: string;
@@ -9,9 +10,10 @@ export interface UnifiedItem {
     year: number | string;
     image: string;
     full_res_image?: string;
-    source: 'inventory' | 'user_assets';
+    source: 'inventory' | 'user_assets' | 'hardware_inventory';
     price?: number;
     valuation?: number;
+    stock?: number;
     genres?: string[];
     styles?: string[];
     format?: string;
@@ -28,6 +30,7 @@ export interface UnifiedItem {
     notes?: string;
     preview_url?: string;
     status_warning?: string;
+    blocks?: EditorialBlock[];
     isBatch?: boolean;
     items?: any[];
     sellerId?: string;
@@ -54,20 +57,37 @@ export const archivoService = {
         // 2. Fetch from Source (Always executed to revalidate)
         const fetchSource = async () => {
             const start = performance.now();
-            const invRef = doc(db, "inventory", id);
-            const invSnap = await getDoc(invRef);
+            
+            // Try Inventory first
+            let itemRef = doc(db, "inventory", id);
+            let itemSnap = await getDoc(itemRef);
+            let source: 'inventory' | 'user_assets' | 'hardware_inventory' = 'inventory';
+
+            // Try Hardware Inventory (Gear) if not in Vinyl/Main
+            if (!itemSnap.exists()) {
+                itemRef = doc(db, "hardware_inventory", id);
+                itemSnap = await getDoc(itemRef);
+                source = 'hardware_inventory';
+            }
+
             emitHealthEvent('firebase', performance.now() - start);
-            if (invSnap.exists()) {
-                const data = invSnap.data() as InventoryItem;
+
+            if (itemSnap.exists()) {
+                const data = itemSnap.data() as InventoryItem;
+                
+                // Protocol V106: Resolve optimized image if available
+                const image = data.media.optimized_thumb || data.media.full_res_image_url || data.media.thumbnail;
+
                 const result: UnifiedItem = {
-                    id: invSnap.id,
+                    id: itemSnap.id,
                     title: data.metadata.title,
                     artist: data.metadata.artist,
                     year: data.metadata.year,
-                    image: data.media.full_res_image_url || data.media.thumbnail,
-                    full_res_image: data.media.full_res_image_url,
-                    source: 'inventory',
+                    image: image,
+                    full_res_image: data.media.optimized_detail || data.media.full_res_image_url,
+                    source: source === 'hardware_inventory' ? 'inventory' : source as any, // Map to inventory for UI consistency if needed, or keep discrete
                     price: data.logistics.price,
+                    stock: data.logistics.stock, // Added stock
                     genres: data.metadata.genres,
                     styles: data.metadata.styles,
                     format: data.metadata.format_description,
@@ -81,6 +101,7 @@ export const archivoService = {
                     wants: data.metadata.wants,
                     have: data.metadata.have,
                     notes: data.metadata.notes,
+                    blocks: data.blocks,
                     isBatch: data.metadata.isBatch,
                     items: data.items
                 };
@@ -88,6 +109,7 @@ export const archivoService = {
                 return result;
             }
 
+            // Fallback to User Assets
             try {
                 const assetRef = doc(db, "user_assets", id);
                 const assetSnap = await getDoc(assetRef);
@@ -98,10 +120,11 @@ export const archivoService = {
                         title: data.metadata.title,
                         artist: data.metadata.artist,
                         year: data.metadata.year,
-                        image: data.media.full_res_image_url || data.media.thumbnail,
-                        full_res_image: data.media.full_res_image_url,
+                        image: data.media.optimized_thumb || data.media.full_res_image_url || data.media.thumbnail,
+                        full_res_image: data.media.optimized_detail || data.media.full_res_image_url,
                         source: 'user_assets',
                         valuation: data.logistics?.price || (data as any).valuation,
+                        stock: data.logistics?.stock ?? 1,
                         genres: data.metadata.genres,
                         styles: data.metadata.styles,
                         format: data.metadata.format_description,

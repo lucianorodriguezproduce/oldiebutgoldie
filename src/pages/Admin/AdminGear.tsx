@@ -565,14 +565,14 @@ export default function AdminGear() {
                                     <td className="px-8 py-6">
                                                                  <div className="flex items-center gap-4">
                                             <div className="w-12 h-12 rounded-xl overflow-hidden bg-black/40 border border-white/10 shrink-0 relative">
-                                                {(item.media?.original_raw_url && !item.media?.detail_url) ? (
+                                                {(item.media?.full_res_image_url && !item.media?.optimized_detail) ? (
                                                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm animate-pulse">
                                                         <Loader2 className="h-4 w-4 text-primary animate-spin" />
                                                         <span className="text-[6px] font-black uppercase text-primary mt-1">OPTIMIZANDO</span>
                                                     </div>
                                                 ) : (
                                                     <LazyImage
-                                                        src={item.media?.detail_url || item.media?.full_res_image_url || item.media?.thumbnail}
+                                                        src={item.media?.optimized_detail || item.media?.full_res_image_url || item.media?.thumbnail}
                                                         alt={item.metadata.title}
                                                         className="w-full h-full object-cover"
                                                     />
@@ -799,18 +799,17 @@ export default function AdminGear() {
 
                                     {ingestionResults.length > 0 && !selectedSearchItem && (
                                         <div className="max-h-60 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
-                                            {ingestionResults.map((result) => (
-                                                <button
+                                            {ingestionResults.map((result, idx) => (
+                                                <CompactSearchCard 
                                                     key={`${result.type}-${result.id}`}
+                                                    result={result} 
+                                                    idx={idx}
                                                     onClick={() => {
                                                         setSelectedSearchItem(result);
                                                         setDiscogsId(result.id.toString());
                                                         setShowConfigModal(true);
                                                     }}
-                                                    className="w-full text-left"
-                                                >
-                                                    <CompactSearchCard result={result} />
-                                                </button>
+                                                />
                                             ))}
                                         </div>
                                     )}

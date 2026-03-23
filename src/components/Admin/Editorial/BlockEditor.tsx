@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import type { EditorialBlock, BlockType } from '@/types/editorial';
 import { Button } from '@/components/ui/button';
-import { Plus, Trash2, ChevronUp, ChevronDown, List, AlignLeft, AlignRight, AlignCenter, Image as ImageIcon, Type, Quote, Box, Disc } from 'lucide-react';
+import { Plus, Trash2, ChevronUp, ChevronDown, List, AlignLeft, AlignRight, AlignCenter, Image as ImageIcon, Type, Quote, Box, Disc, Repeat } from 'lucide-react';
 import { DriveUpload } from '@/components/Admin/DriveUpload';
 
 interface BlockEditorProps {
@@ -20,6 +20,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ blocks, onChange }) =>
         if (type === 'quote') payload = { quote: '', author: '', floating: false };
         if (type === 'spacer') payload = { height: 'md' };
         if (type === 'vinyl_card') payload = { releaseId: '' };
+        if (type === 'shared_storytelling') payload = { itemId: '' };
 
         onChange([...blocks, { id: generateId(), type, payload }]);
     };
@@ -142,6 +143,20 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ blocks, onChange }) =>
                         <option value="xl">X-Large (128px)</option>
                     </select>
                 );
+            case 'shared_storytelling':
+                return (
+                    <div className="space-y-2">
+                        <input 
+                            value={block.payload.itemId} 
+                            onChange={e => updateBlock(index, { itemId: e.target.value })}
+                            placeholder="Ítem ID a espejar (Ej: VTA-2603-0001)"
+                            className="w-full bg-white/5 border-white/5 rounded-xl p-3 text-white text-xs"
+                        />
+                        <p className="text-[10px] text-gray-500 italic px-2">
+                            Muestra todos los bloques de storytelling de este ítem sin duplicar data.
+                        </p>
+                    </div>
+                );
             default:
                 return null;
         }
@@ -178,6 +193,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({ blocks, onChange }) =>
                 <Button type="button" variant="outline" onClick={() => addBlock('image_asymmetric')} className="bg-white/5 border-white/10 hover:bg-primary hover:text-black text-xs h-10 gap-2"><ImageIcon className="w-4 h-4"/> Image</Button>
                 <Button type="button" variant="outline" onClick={() => addBlock('quote')} className="bg-white/5 border-white/10 hover:bg-primary hover:text-black text-xs h-10 gap-2"><Quote className="w-4 h-4"/> Quote</Button>
                 <Button type="button" variant="outline" onClick={() => addBlock('vinyl_card')} className="bg-white/5 border-white/10 hover:bg-primary hover:text-black text-xs h-10 gap-2"><Disc className="w-4 h-4"/> Vinyl Card</Button>
+                <Button type="button" variant="outline" onClick={() => addBlock('shared_storytelling')} className="bg-white/5 border-white/10 hover:bg-primary hover:text-black text-xs h-10 gap-2"><Repeat className="w-4 h-4"/> Shared Story</Button>
                 <Button type="button" variant="outline" onClick={() => addBlock('spacer')} className="bg-white/5 border-white/10 hover:bg-primary hover:text-black text-xs h-10 gap-2"><Box className="w-4 h-4"/> Spacer</Button>
             </div>
         </div>

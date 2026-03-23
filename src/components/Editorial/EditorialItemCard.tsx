@@ -1,15 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
 import { archivoService } from "@/services/archivoService";
-import { Link } from "react-router-dom";
-import { ShoppingCart, Zap, Layers } from "lucide-react";
+import { Link, useParams } from "react-router-dom";
+import { ShoppingCart, Zap, Layers, AlertCircle } from "lucide-react";
 import { LazyImage } from "@/components/ui/LazyImage";
 import { motion } from "framer-motion";
+import { Badge } from "@/components/ui/badge";
 
 interface EditorialItemCardProps {
     id: string;
 }
 
 export function EditorialItemCard({ id }: EditorialItemCardProps) {
+    const { id: articleId } = useParams<{ id: string }>();
     const { data: item, isLoading } = useQuery({
         queryKey: ['editorial-item', id],
         queryFn: () => archivoService.getItemById(id)
@@ -29,16 +31,37 @@ export function EditorialItemCard({ id }: EditorialItemCardProps) {
         );
     }
 
-    if (!item) return null;
+    // Protocol V106.1: Orphan Fallback
+    if (!item) {
+        return (
+            <div className="my-8 w-full max-w-md bg-red-500/5 border border-red-500/20 rounded-2xl p-6 flex flex-col items-center text-center gap-3">
+                <AlertCircle className="h-8 w-8 text-red-400 opacity-50" />
+                <div>
+                    <h4 className="text-white font-black text-xs uppercase tracking-widest">PRODUCTO NO DISPONIBLE</h4>
+                    <p className="text-gray-500 text-[10px] mt-1 italic">El item vinculado (ID: {id}) ya no forma parte del inventario activo.</p>
+                </div>
+            </div>
+        );
+    }
+
+    const isStoreItem = item.source === 'inventory' || item.source === 'hardware_inventory';
+    const isSoldOut = isStoreItem && (item.stock === 0);
+    const trackingRef = `?ref=blog&source_article=${articleId || 'editorial_note'}`;
 
     return (
         <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="my-8 w-full max-w-md bg-white/[0.03] border border-white/10 rounded-2xl overflow-hidden hover:border-primary/30 transition-all group"
+            className={`my-8 w-full max-w-md bg-white/[0.03] border border-white/10 rounded-2xl overflow-hidden hover:border-primary/30 transition-all group ${isSoldOut ? 'grayscale opacity-70' : ''}`}
         >
-            <div className="flex p-4 gap-5">
-                <div className="w-24 md:w-32 aspect-square rounded-xl overflow-hidden border border-white/10 shadow-xl flex-shrink-0">
+            <div className="flex p-4 gap-5 relative">
+                {isSoldOut && (
+                    <div className="absolute top-4 right-4 z-10">
+                        <Badge variant="outline" className="bg-black text-white border-white/20 font-black text-[8px] uppercase px-2 py-0.5">SOLD OUT</Badge>
+                    </div>
+                )}
+                
+                <div className="w-24 md:w-32 aspect-square rounded-xl overflow-hidden border border-white/10 shadow-xl flex-shrink-0 bg-black">
                     <LazyImage
                         src={item.image}
                         alt={item.title}
@@ -54,26 +77,33 @@ export function EditorialItemCard({ id }: EditorialItemCardProps) {
                         <p className="text-gray-500 text-[10px] font-mono uppercase tracking-widest mb-2 italic">
                             {item.artist}
                         </p>
-                        <div className="flex items-center gap-2">
-                            <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest ${item.source === 'inventory' ? 'bg-primary/20 text-primary' : 'bg-white/5 text-gray-400'
+                        
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                            <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest ${isStoreItem ? 'bg-primary/20 text-primary' : 'bg-white/5 text-gray-400'
                                 }`}>
-                                {item.source === 'inventory' ? 'TIENDA OBG' : 'COLECCIÓN PRIVADA'}
+                                {isStoreItem ? 'TIENDA OBG' : 'COLECCIÓN PRIVADA'}
                             </span>
+                            
+                            {isStoreItem && item.price && (
+                                <span className="text-primary font-mono text-[10px] font-black">
+                                    ${item.price.toLocaleString()}
+                                </span>
+                            )}
                         </div>
                     </div>
 
                     <div className="mt-4">
-                        {item.source === 'inventory' ? (
+                        {isStoreItem ? (
                             <Link
-                                to={`/?add=${item.id}`}
-                                className="flex items-center justify-center gap-2 w-full py-2.5 bg-primary text-black rounded-xl font-black uppercase text-[9px] tracking-widest hover:bg-white transition-all shadow-lg shadow-primary/10"
+                                to={`/album/${id}${trackingRef}`}
+                                className={`flex items-center justify-center gap-2 w-full py-2.5 bg-primary text-black rounded-xl font-black uppercase text-[9px] tracking-widest hover:bg-white transition-all shadow-lg shadow-primary/10 ${isSoldOut ? 'pointer-events-none bg-gray-500' : ''}`}
                             >
                                 <ShoppingCart className="w-3.5 h-3.5" />
-                                COMPRAR AHORA
+                                {isSoldOut ? 'AGOTADO' : 'VER DETALLES / COMPRAR'}
                             </Link>
                         ) : (
                             <Link
-                                to="/"
+                                to={`/album/${id}${trackingRef}`}
                                 className="flex items-center justify-center gap-2 w-full py-2.5 bg-white/10 text-white rounded-xl font-black uppercase text-[9px] tracking-widest hover:bg-primary hover:text-black transition-all border border-white/10"
                             >
                                 <Layers className="w-3.5 h-3.5" />

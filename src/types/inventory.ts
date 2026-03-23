@@ -27,6 +27,8 @@ export interface InventoryItem {
     media: {
         thumbnail: string;
         full_res_image_url: string; // Now in Firebase Storage
+        optimized_thumb?: string; // V106 WebP Variant
+        optimized_detail?: string; // V106 WebP Variant
     };
     reference: {
         originalDiscogsId: number;

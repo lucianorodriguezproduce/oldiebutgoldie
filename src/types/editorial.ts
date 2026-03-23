@@ -1,9 +1,10 @@
-export type BlockType = 'text' | 'image_asymmetric' | 'quote' | 'vinyl_card' | 'spacer';
+export type BlockType = 'text' | 'image_asymmetric' | 'quote' | 'vinyl_card' | 'spacer' | 'shared_storytelling';
 
 export interface EditorialBlock {
     id: string; // unique identifier for the block
     type: BlockType;
     payload: any; // specific data based on type
+    depth?: number; // Internal recursion control
 }
 
 // Payload Interfaces
@@ -29,6 +30,10 @@ export interface QuoteBlockPayload {
 
 export interface VinylCardPayload {
     releaseId: string; // For [DISCO:ID] replacement
+}
+
+export interface SharedStorytellingPayload {
+    itemId: string; // Internal_id to mirror blocks from
 }
 
 export interface SpacerPayload {
