@@ -1008,7 +1008,7 @@ export default function AdminGear() {
                                                     key={plat.id}
                                                     onClick={() => {
                                                         const baseUrl = 'https://www.oldiebutgoldie.com.ar';
-                                                        const url = `{baseUrl}/archivo/{marketingItem.id}?ref=social_{plat.id}`;
+                                                        const url = `${baseUrl}/archivo/${marketingItem.id}?ref=social_${plat.id}`;
                                                         let text = "";
 
                                                         if (plat.id === 'instagram') {
