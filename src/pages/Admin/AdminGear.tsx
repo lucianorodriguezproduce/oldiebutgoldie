@@ -90,6 +90,8 @@ export default function AdminGear() {
         format: "Vinyl",
         internal_category: ""
     });
+    const [manualFile, setManualFile] = useState<File | null>(null);
+
 
     // Protocol V79.0: Ingestion Search Effect
     useEffect(() => {
@@ -253,35 +255,28 @@ export default function AdminGear() {
             hideLoading();
         }
     };
-
     const handleIngestManual = async () => {
-        showLoading("Creando registro manual (Universal Ingest)...");
+        showLoading("Generando Identidad y Cargando Activos...");
         try {
-            // Protocol V96.0: Redirect manual ingest through the universal pipeline
-            const mockDiscogsItem = {
-                id: 0,
-                title: `${manualData.artist} - ${manualData.title}`,
-                cover_image: "",
-                thumb: "",
-                type: "release",
-                isLocal: false,
-                normalizedArtist: manualData.artist,
-                normalizedAlbum: manualData.title
-            };
-
-            await gearService.universalIngest(mockDiscogsItem, 'admin', {
-                price: manualData.price,
-                stock: manualData.stock,
-                condition: manualData.condition,
-                format: manualData.format,
-                internal_category: manualData.internal_category
+            // Protocol V106: Asset Optimization Pipeline Integration
+            const internalId = await gearService.createItem({ // We use createItem to get ID or just idService
+                metadata: { title: manualData.title, artist: manualData.artist, year: 0, country: "", genres: [], styles: [], format_description: manualData.format },
+                media: { thumbnail: "", full_res_image_url: "" },
+                reference: { originalDiscogsId: 0, originalDiscogsUrl: "" },
+                logistics: { price: manualData.price, stock: manualData.stock, condition: manualData.condition, status: "active", internal_category: manualData.internal_category }
             });
+
+            if (manualFile) {
+                showLoading("Subiendo imagen original al Búnker...");
+                await gearService.uploadImage(manualFile, internalId);
+            }
 
             setShowIngestionModal(false);
             setManualData({ title: "", artist: "", price: 0, stock: 1, condition: "M/NM", format: "Vinyl", internal_category: "" });
+            setManualFile(null);
             fetchInventory();
         } catch (error) {
-            console.error("Error creating manual item via universalIngest:", error);
+            console.error("Error creating manual item:", error);
             alert("Error al crear el registro.");
         } finally {
             hideLoading();
@@ -568,13 +563,20 @@ export default function AdminGear() {
                                         />
                                     </td>
                                     <td className="px-8 py-6">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-12 h-12 rounded-xl overflow-hidden bg-black/40 border border-white/10 shrink-0">
-                                                <LazyImage
-                                                    src={item.media.full_res_image_url || item.media.thumbnail}
-                                                    alt={item.metadata.title}
-                                                    className="w-full h-full object-cover"
-                                                />
+                                                                 <div className="flex items-center gap-4">
+                                            <div className="w-12 h-12 rounded-xl overflow-hidden bg-black/40 border border-white/10 shrink-0 relative">
+                                                {(item.media?.original_raw_url && !item.media?.detail_url) ? (
+                                                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm animate-pulse">
+                                                        <Loader2 className="h-4 w-4 text-primary animate-spin" />
+                                                        <span className="text-[6px] font-black uppercase text-primary mt-1">OPTIMIZANDO</span>
+                                                    </div>
+                                                ) : (
+                                                    <LazyImage
+                                                        src={item.media?.detail_url || item.media?.full_res_image_url || item.media?.thumbnail}
+                                                        alt={item.metadata.title}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                )}
                                             </div>
                                             <div className="min-w-0">
                                                 <div className="font-bold text-white truncate max-w-[200px]">{item.metadata.title}</div>
@@ -760,15 +762,132 @@ export default function AdminGear() {
                             className="relative w-full max-w-lg bg-[#0a0a0a] border border-white/10 rounded-[3rem] p-8 shadow-2xl space-y-8"
                         >
                             <div className="flex items-center justify-between mb-6">
-    <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Nuevo Equipo Mapeado</h3>
-</div>
-<div className="space-y-6">
+                                <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Nuevo Equipo Mapeado</h3>
+                            </div>
+
+                            <div className="flex bg-white/5 p-1 rounded-2xl mb-8 border border-white/5">
+                                <button
+                                    onClick={() => setIngestionMode("discogs")}
+                                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${ingestionMode === "discogs" ? "bg-primary text-black" : "text-gray-500 hover:text-gray-300"}`}
+                                >
+                                    <Disc className="h-3.5 w-3.5" /> Discogs Ingestor
+                                </button>
+                                <button
+                                    onClick={() => setIngestionMode("manual")}
+                                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${ingestionMode === "manual" ? "bg-primary text-black" : "text-gray-500 hover:text-gray-300"}`}
+                                >
+                                    <Edit2 className="h-3.5 w-3.5" /> Carga Manual
+                                </button>
+                            </div>
+
+                            {ingestionMode === "discogs" ? (
                                 <div className="space-y-6">
-                                    <div className="space-y-4">
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Modelo / Nombre del Ítem</label>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Buscador Inteligente</label>
+                                        <div className="flex bg-white/5 border border-white/10 rounded-2xl px-4 py-4">
+                                            <Search className="h-5 w-5 text-gray-500 mt-1" />
                                             <input
                                                 type="text"
+                                                placeholder="Artista, Álbum, Sello o Cat#"
+                                                value={ingestionQuery}
+                                                onChange={(e) => setIngestionQuery(e.target.value)}
+                                                className="bg-transparent border-none outline-none text-sm text-white px-3 w-full"
+                                            />
+                                            {isSearchingIngestion && <Loader2 className="h-5 w-5 text-primary animate-spin mt-1" />}
+                                        </div>
+                                    </div>
+
+                                    {ingestionResults.length > 0 && !selectedSearchItem && (
+                                        <div className="max-h-60 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                                            {ingestionResults.map((result) => (
+                                                <button
+                                                    key={`${result.type}-${result.id}`}
+                                                    onClick={() => {
+                                                        setSelectedSearchItem(result);
+                                                        setDiscogsId(result.id.toString());
+                                                        setShowConfigModal(true);
+                                                    }}
+                                                    className="w-full text-left"
+                                                >
+                                                    <CompactSearchCard result={result} />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    <div className="pt-4 border-t border-white/5 flex flex-col gap-4">
+                                        <div className="flex items-center gap-4">
+                                            <div className="h-px bg-white/5 flex-1" />
+                                            <span className="text-[8px] font-black text-gray-600 uppercase tracking-[0.3em]">O ingreso directo</span>
+                                            <div className="h-px bg-white/5 flex-1" />
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="text"
+                                                placeholder="Discogs Release ID..."
+                                                value={discogsId}
+                                                onChange={(e) => setDiscogsId(e.target.value)}
+                                                className="flex-1 bg-white/5 border border-white/5 rounded-2xl px-6 py-4 text-sm font-bold text-white focus:border-primary/40 focus:outline-none transition-all"
+                                            />
+                                            <button
+                                                onClick={handleIngestDiscogs}
+                                                disabled={!discogsId}
+                                                className="px-8 bg-primary text-black rounded-2xl font-black uppercase text-[10px] tracking-widest hover:brightness-110 transition-all disabled:opacity-50"
+                                            >
+                                                Mapear
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-6">
+                                    {/* Dropzone */}
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Imagen del Equipo</label>
+                                        <div
+                                            onDragOver={(e) => e.preventDefault()}
+                                            onDrop={(e) => {
+                                                e.preventDefault();
+                                                if (e.dataTransfer.files?.[0]) setManualFile(e.dataTransfer.files[0]);
+                                            }}
+                                            className="w-full h-32 border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center gap-2 hover:border-primary/40 transition-all cursor-pointer relative overflow-hidden group"
+                                            onClick={() => document.getElementById('manual-file-upload')?.click()}
+                                        >
+                                            <input
+                                                id="manual-file-upload"
+                                                type="file"
+                                                className="hidden"
+                                                onChange={(e) => {
+                                                    if (e.target.files?.[0]) setManualFile(e.target.files[0]);
+                                                }}
+                                                accept="image/*"
+                                            />
+                                            {manualFile ? (
+                                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center gap-2">
+                                                    <CheckCircle2 className="h-5 w-5 text-primary" />
+                                                    <span className="text-[10px] font-black text-white uppercase truncate max-w-[150px]">{manualFile.name}</span>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); setManualFile(null); }}
+                                                        className="p-1 bg-red-500 rounded-full"
+                                                    >
+                                                        <X className="h-3 w-3 text-white" />
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <PlusCircle className="h-6 w-6 text-gray-500 group-hover:text-primary transition-colors" />
+                                                    <span className="text-[10px] font-black text-gray-500 uppercase">Click o Arrastrar Imagen</span>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Título / Modelo</label>
+                                            <input
+                                                type="text"
+                                                placeholder="E.g. Technics SL-1200"
                                                 value={manualData.title}
                                                 onChange={e => setManualData({ ...manualData, title: e.target.value })}
                                                 className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-primary/40 focus:outline-none transition-all"
@@ -778,6 +897,7 @@ export default function AdminGear() {
                                             <label className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Marca / Fabricante</label>
                                             <input
                                                 type="text"
+                                                placeholder="E.g. Technics"
                                                 value={manualData.artist}
                                                 onChange={e => setManualData({ ...manualData, artist: e.target.value })}
                                                 className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-primary/40 focus:outline-none transition-all"
@@ -824,7 +944,6 @@ export default function AdminGear() {
                                         Crear Registro Manual
                                     </button>
                                 </div>
-                            </div>
                         </motion.div>
                     </div>
                 )}
@@ -889,21 +1008,21 @@ export default function AdminGear() {
                                                     key={plat.id}
                                                     onClick={() => {
                                                         const baseUrl = 'https://www.oldiebutgoldie.com.ar';
-                                                        const url = `${baseUrl}/archivo/${marketingItem.id}?ref=social_${plat.id}`;
+                                                        const url = `{baseUrl}/archivo/{marketingItem.id}?ref=social_{plat.id}`;
                                                         let text = "";
 
                                                         if (plat.id === 'instagram') {
-                                                            text = `🔥 DISPONIBLE EN EL BÚNKAR: ${marketingItem.metadata.artist} - ${marketingItem.metadata.title}\n\nCondición: ${marketingItem.logistics.condition}\nPrecio: $${marketingItem.logistics.price.toLocaleString()}\n\n🔗 Link en Bio / Stories para comprar\n\n#OldieButGoldie #VinylCollection #Vinilos #bateaOBG`;
+                                                            text = "🔥 DISPONIBLE EN EL BÚNKAR: " + marketingItem.metadata.artist + " - " + marketingItem.metadata.title + "\n\nCondición: " + marketingItem.logistics.condition + "\nPrecio: $" + marketingItem.logistics.price.toLocaleString() + "\n\n🔗 Link en Bio / Stories para comprar\n\n#OldieButGoldie #VinylCollection #Vinilos #bateaOBG";
                                                         } else if (plat.id === 'x') {
-                                                            text = `🚨 [INVENTORY ALERT] ${marketingItem.metadata.artist} - ${marketingItem.metadata.title}\n\nCondición: ${marketingItem.logistics.condition}\nStock: ${marketingItem.logistics.stock}\n\nConseguilo acá antes que vuele 👇\n\n${url}`;
+                                                            text = "🚨 [INVENTORY ALERT] " + marketingItem.metadata.artist + " - " + marketingItem.metadata.title + "\n\nCondición: " + marketingItem.logistics.condition + "\nStock: " + marketingItem.logistics.stock + "\n\nConseguilo acá antes que vuele 👇\n\n" + url;
                                                         } else if (plat.id === 'tiktok') {
-                                                            text = `[Viral Script]\n(Intro) Escuchá el sonido de esta joya: ${marketingItem.metadata.title}.\n(Body) Tenemos una copia en estado ${marketingItem.logistics.condition} disponible ahora.\n(CTA) No te duermas. Link en el perfil.`;
+                                                            text = "[Viral Script]\n(Intro) Escuchá el sonido de esta joya: " + marketingItem.metadata.title + ".\n(Body) Tenemos una copia en estado " + marketingItem.logistics.condition + " disponible ahora.\n(CTA) No te duermas. Link en el perfil.";
                                                         } else if (plat.id === 'external') {
-                                                            text = `*FICHA TÉCNICA - OLDIE BUT GOLDIE*\n\n💿 *${marketingItem.metadata.title}*\n👤 *${marketingItem.metadata.artist}*\n✨ Condición: ${marketingItem.logistics.condition}\n💰 Precio: $${marketingItem.logistics.price.toLocaleString()}\n📦 Stock: ${marketingItem.logistics.stock}\n\n🔗 Ver más:\n${url}`;
+                                                            text = "*FICHA TÉCNICA - OLDIE BUT GOLDIE*\n\n💿 *" + marketingItem.metadata.title + "*\n👤 *" + marketingItem.metadata.artist + "*\n✨ Condición: " + marketingItem.logistics.condition + "\n💰 Precio: $" + marketingItem.logistics.price.toLocaleString() + "\n📦 Stock: " + marketingItem.logistics.stock + "\n\n🔗 Ver más:\n" + url;
                                                         }
 
                                                         navigator.clipboard.writeText(text);
-                                                        alert(`${plat.label} copiado`);
+                                                        alert(plat.label + " copiado");
                                                     }}
                                                     className="w-full flex items-center justify-between bg-white/5 border border-white/5 hover:border-primary/40 p-4 rounded-2xl transition-all group"
                                                 >
@@ -922,6 +1041,7 @@ export default function AdminGear() {
                     </div>
                 )}
             </AnimatePresence>
+
             {/* Category Management Modal */}
             <AnimatePresence>
                 {showCategoryModal && (

@@ -25,6 +25,7 @@ import {
     getAggregateFromServer,
     sum
 } from "firebase/firestore";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import type { InventoryItem } from "@/types/inventory";
 
 const COLLECTION_NAME = "hardware_inventory";
@@ -680,6 +681,17 @@ export const gearService = {
     async patchBlocks(id: string, blocks: any[]) {
         const docRef = doc(db, COLLECTION_NAME, id);
         await updateDoc(docRef, { blocks });
+    },
+
+    async uploadImage(file: File, internalId: string) {
+        const storage = getStorage();
+        const extension = file.name.split('.').pop();
+        const storagePath = `${COLLECTION_NAME}/${internalId}_raw.${extension}`;
+        const storageRef = ref(storage, storagePath);
+
+        await uploadBytes(storageRef, file);
+        const downloadURL = await getDownloadURL(storageRef);
+        return downloadURL;
     }
 };
 
@@ -688,7 +700,7 @@ export const gearService = {
 export const getGearPaged = async (pageSize: number = 20, lastDoc?: any) => {
     try {
         let q = query(
-            collection(db, "inventory"),
+            collection(db, COLLECTION_NAME),
             where("logistics.status", "==", "active"),
             limit(pageSize)
         );
